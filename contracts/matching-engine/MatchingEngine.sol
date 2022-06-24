@@ -12,7 +12,7 @@ import "./TransferExecutor.sol";
 import "../interface/ITransferManager.sol";
 import "../lib/ExchangeFee.sol";
 
-abstract contract ExchangeModule is
+abstract contract MatchingEngine is
     Initializable,
     OwnableUpgradeable,
     AssetMatcher,
