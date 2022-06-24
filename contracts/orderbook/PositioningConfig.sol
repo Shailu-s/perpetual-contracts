@@ -2,14 +2,14 @@
 pragma solidity 0.7.6;
 
 import { SafeOwnable } from "../base/SafeOwnable.sol";
-import { VolmexPerpetualConfigStorageV2 } from "../storage/VolmexPerpetualConfigStorage.sol";
-import { IVolmexPerpetualConfig } from "../interface/IVolmexPerpetualConfig.sol";
+import { PositioningConfigStorageV2 } from "../storage/PositioningConfigStorage.sol";
+import { IPositioningConfig } from "../interface/IPositioningConfig.sol";
 
 // never inherit any new stateful contract. never change the orders of parent stateful contracts
-contract VolmexPerpetualConfig is
-    IVolmexPerpetualConfig,
+contract PositioningConfig is
+    IPositioningConfig,
     SafeOwnable,
-    VolmexPerpetualConfigStorageV2
+    PositioningConfigStorageV2
 {
     //
     // EVENT
@@ -98,47 +98,47 @@ contract VolmexPerpetualConfig is
     // EXTERNAL VIEW
     //
 
-    /// @inheritdoc IVolmexPerpetualConfig
+    /// @inheritdoc IPositioningConfig
     function getMaxMarketsPerAccount() external view override returns (uint8) {
         return _maxMarketsPerAccount;
     }
 
-    /// @inheritdoc IVolmexPerpetualConfig
+    /// @inheritdoc IPositioningConfig
     function getImRatio() external view override returns (uint24) {
         return _imRatio;
     }
 
-    /// @inheritdoc IVolmexPerpetualConfig
+    /// @inheritdoc IPositioningConfig
     function getMmRatio() external view override returns (uint24) {
         return _mmRatio;
     }
 
-    /// @inheritdoc IVolmexPerpetualConfig
+    /// @inheritdoc IPositioningConfig
     function getLiquidationPenaltyRatio() external view override returns (uint24) {
         return _liquidationPenaltyRatio;
     }
 
-    /// @inheritdoc IVolmexPerpetualConfig
+    /// @inheritdoc IPositioningConfig
     function getPartialCloseRatio() external view override returns (uint24) {
         return _partialCloseRatio;
     }
 
-    /// @inheritdoc IVolmexPerpetualConfig
+    /// @inheritdoc IPositioningConfig
     function getTwapInterval() external view override returns (uint32) {
         return _twapInterval;
     }
 
-    /// @inheritdoc IVolmexPerpetualConfig
+    /// @inheritdoc IPositioningConfig
     function getSettlementTokenBalanceCap() external view override returns (uint256) {
         return _settlementTokenBalanceCap;
     }
 
-    /// @inheritdoc IVolmexPerpetualConfig
+    /// @inheritdoc IPositioningConfig
     function getMaxFundingRate() external view override returns (uint24) {
         return _maxFundingRate;
     }
 
-    /// @inheritdoc IVolmexPerpetualConfig
+    /// @inheritdoc IPositioningConfig
     function isBackstopLiquidityProvider(address account) external view override returns (bool) {
         return _backstopLiquidityProviderMap[account];
     }

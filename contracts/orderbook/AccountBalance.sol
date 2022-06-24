@@ -5,19 +5,19 @@ pragma abicoder v2;
 import { AddressUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol";
 import { SafeMathUpgradeable } from "@openzeppelin/contracts-upgradeable/math/SafeMathUpgradeable.sol";
 import { SignedSafeMathUpgradeable } from "@openzeppelin/contracts-upgradeable/math/SignedSafeMathUpgradeable.sol";
-import { VolmexPerpetualCallee } from "../base/VolmexPerpetualCallee.sol";
+import { PositioningCallee } from "../base/PositioningCallee.sol";
 import { PerpSafeCast } from "../lib/PerpSafeCast.sol";
 import { PerpMath } from "../lib/PerpMath.sol";
 import { IExchange } from "../interface/IExchange.sol";
 import { IIndexPrice } from "../interface/IIndexPrice.sol";
 import { IOrderBook } from "../interface/IOrderBook.sol";
-import { IVolmexPerpetualConfig } from "../interface/IVolmexPerpetualConfig.sol";
+import { IPositioningConfig } from "../interface/IPositioningConfig.sol";
 import { AccountBalanceStorageV1, AccountMarket } from "../storage/AccountBalanceStorage.sol";
 import { BlockContext } from "../base/BlockContext.sol";
 import { IAccountBalance } from "../interface/IAccountBalance.sol";
 
 // never inherit any new stateful contract. never change the orders of parent stateful contracts
-contract AccountBalance is IAccountBalance, BlockContext, VolmexPerpetualCallee, AccountBalanceStorageV1 {
+contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, AccountBalanceStorageV1 {
     using AddressUpgradeable for address;
     using SafeMathUpgradeable for uint256;
     using SignedSafeMathUpgradeable for int256;
@@ -38,16 +38,16 @@ contract AccountBalance is IAccountBalance, BlockContext, VolmexPerpetualCallee,
     // EXTERNAL NON-VIEW
     //
 
-    function initialize(address VolmexPerpetualConfigArg, address orderBookArg) external initializer {
-        // IVolmexPerpetualConfig address is not contract
-        require(VolmexPerpetualConfigArg.isContract(), "AB_VPMMCNC");
+    function initialize(address PositioningConfigArg, address orderBookArg) external initializer {
+        // IPositioningConfig address is not contract
+        require(PositioningConfigArg.isContract(), "AB_VPMMCNC");
 
         // IOrderBook is not contract
         require(orderBookArg.isContract(), "AB_OBNC");
 
-        __VolmexPerpetualCallee_init();
+        __PositioningCallee_init();
 
-        _VolmexPerpetualConfig = VolmexPerpetualConfigArg;
+        _PositioningConfig = PositioningConfigArg;
         _orderBook = orderBookArg;
     }
 
@@ -65,13 +65,13 @@ contract AccountBalance is IAccountBalance, BlockContext, VolmexPerpetualCallee,
         int256 base,
         int256 quote
     ) external override returns (int256, int256) {
-        _requireOnlyVolmexPerpetual();
+        _requireOnlyPositioning();
         return _modifyTakerBalance(trader, baseToken, base, quote);
     }
 
     /// @inheritdoc IAccountBalance
     function modifyOwedRealizedPnl(address trader, int256 amount) external override {
-        _requireOnlyVolmexPerpetual();
+        _requireOnlyPositioning();
         _modifyOwedRealizedPnl(trader, amount);
     }
 
@@ -81,7 +81,7 @@ contract AccountBalance is IAccountBalance, BlockContext, VolmexPerpetualCallee,
         address baseToken,
         int256 amount
     ) external override {
-        _requireOnlyVolmexPerpetual();
+        _requireOnlyPositioning();
         _settleQuoteToOwedRealizedPnl(trader, baseToken, amount);
     }
 
@@ -104,7 +104,7 @@ contract AccountBalance is IAccountBalance, BlockContext, VolmexPerpetualCallee,
         int256 realizedPnl,
         int256 fee
     ) external override {
-        _requireOnlyVolmexPerpetual();
+        _requireOnlyPositioning();
         _modifyTakerBalance(maker, baseToken, takerBase, takerQuote);
         _modifyOwedRealizedPnl(maker, fee);
 
@@ -128,7 +128,7 @@ contract AccountBalance is IAccountBalance, BlockContext, VolmexPerpetualCallee,
 
     /// @inheritdoc IAccountBalance
     function registerBaseToken(address trader, address baseToken) external override {
-        _requireOnlyVolmexPerpetual();
+        _requireOnlyPositioning();
         address[] storage tokensStorage = _baseTokensMap[trader];
         if (_hasBaseToken(tokensStorage, baseToken)) {
             return;
@@ -138,14 +138,14 @@ contract AccountBalance is IAccountBalance, BlockContext, VolmexPerpetualCallee,
         // AB_MNE: markets number exceeds
         require(
             tokensStorage.length <=
-                IVolmexPerpetualConfig(_VolmexPerpetualConfig).getMaxMarketsPerAccount(),
+                IPositioningConfig(_PositioningConfig).getMaxMarketsPerAccount(),
             "AB_MNE"
         );
     }
 
     /// @inheritdoc IAccountBalance
     function deregisterBaseToken(address trader, address baseToken) external override {
-        _requireOnlyVolmexPerpetual();
+        _requireOnlyPositioning();
         _deregisterBaseToken(trader, baseToken);
     }
 
@@ -155,7 +155,7 @@ contract AccountBalance is IAccountBalance, BlockContext, VolmexPerpetualCallee,
         address baseToken,
         int256 lastTwPremiumGrowthGlobalX96
     ) external override {
-        _requireOnlyVolmexPerpetual();
+        _requireOnlyPositioning();
         _accountMarketMap[trader][baseToken].lastTwPremiumGrowthGlobalX96 = lastTwPremiumGrowthGlobalX96;
     }
 
@@ -164,8 +164,8 @@ contract AccountBalance is IAccountBalance, BlockContext, VolmexPerpetualCallee,
     //
 
     /// @inheritdoc IAccountBalance
-    function getVolmexPerpetualConfig() external view override returns (address) {
-        return _VolmexPerpetualConfig;
+    function getPositioningConfig() external view override returns (address) {
+        return _PositioningConfig;
     }
 
     /// @inheritdoc IAccountBalance
@@ -236,7 +236,7 @@ contract AccountBalance is IAccountBalance, BlockContext, VolmexPerpetualCallee,
     function getMarginRequirementForLiquidation(address trader) external view override returns (int256) {
         return
             getTotalAbsPositionValue(trader)
-                .mulRatio(IVolmexPerpetualConfig(_VolmexPerpetualConfig).getMmRatio())
+                .mulRatio(IPositioningConfig(_PositioningConfig).getMmRatio())
                 .toInt256();
     }
 
@@ -403,7 +403,7 @@ contract AccountBalance is IAccountBalance, BlockContext, VolmexPerpetualCallee,
     function _getIndexPrice(address baseToken) internal view returns (uint256) {
         return
             IIndexPrice(baseToken).getIndexPrice(
-                IVolmexPerpetualConfig(_VolmexPerpetualConfig).getTwapInterval()
+                IPositioningConfig(_PositioningConfig).getTwapInterval()
             );
     }
 

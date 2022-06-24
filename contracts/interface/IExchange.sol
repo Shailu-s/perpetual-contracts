@@ -6,7 +6,7 @@ import { Funding } from "../lib/Funding.sol";
 
 interface IExchange {
     /// @param amount when closing position, amount(uint256) == takerPositionSize(int256),
-    ///        as amount is assigned as takerPositionSize in VolmexPerpetual.closePosition()
+    ///        as amount is assigned as takerPositionSize in Positioning.closePosition()
     struct SwapParams {
         address trader;
         address baseToken;
@@ -56,7 +56,7 @@ interface IExchange {
     event AccountBalanceChanged(address accountBalance);
 
     /// @notice The actual swap function
-    /// @dev can only be called from VolmexPerpetual
+    /// @dev can only be called from Positioning
     /// @param params1 The parameters of the swap
     /// @param params2 The parameters of the swap
     /// @return swapResponse The result of the swap
@@ -106,7 +106,7 @@ interface IExchange {
     /// @return accountBalance `AccountBalance` contract address
     function getAccountBalance() external view returns (address accountBalance);
 
-    /// @notice Get `VolmexPerpetualConfig` contract address
-    /// @return VolmexPerpetual `VolmexPerpetualConfig` contract address
-    function getVolmexPerpetualConfig() external view returns (address VolmexPerpetual);
+    /// @notice Get `PositioningConfig` contract address
+    /// @return Positioning `PositioningConfig` contract address
+    function getPositioningConfig() external view returns (address Positioning);
 }

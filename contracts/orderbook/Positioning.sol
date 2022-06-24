@@ -15,25 +15,25 @@ import { IERC20Metadata } from "../interface/IERC20Metadata.sol";
 import { IVault } from "../interface/IVault.sol";
 import { IExchange } from "../interface/IExchange.sol";
 import { IOrderBook } from "../interface/IOrderBook.sol";
-import { IVolmexPerpetualConfig } from "../interface/IVolmexPerpetualConfig.sol";
+import { IPositioningConfig } from "../interface/IPositioningConfig.sol";
 import { IAccountBalance } from "../interface/IAccountBalance.sol";
 import { BaseRelayRecipient } from "../gsn/BaseRelayRecipient.sol";
-import { VolmexPerpetualStorageV1 } from "../storage/VolmexPerpetualStorage.sol";
+import { PositioningStorageV1 } from "../storage/PositioningStorage.sol";
 import { BlockContext } from "../base/BlockContext.sol";
-import { IVolmexPerpetual } from "../interface/IVolmexPerpetual.sol";
+import { IPositioning } from "../interface/IPositioning.sol";
 import { AccountMarket } from "../lib/AccountMarket.sol";
 import { OpenOrder } from "../lib/OpenOrder.sol";
 import "../interface/IIndexPrice.sol";
 import "../interface/IBaseToken.sol";
 
 // never inherit any new stateful contract. never change the orders of parent stateful contracts
-contract VolmexPerpetual is
-    IVolmexPerpetual,
+contract Positioning is
+    IPositioning,
     BlockContext,
     ReentrancyGuardUpgradeable,
     OwnerPausable,
     BaseRelayRecipient,
-    VolmexPerpetualStorageV1
+    PositioningStorageV1
 {
     using AddressUpgradeable for address;
     using SafeMathUpgradeable for uint256;
@@ -105,7 +105,7 @@ contract VolmexPerpetual is
     /// @dev this function is public for testing
     // solhint-disable-next-line func-order
     function initialize(
-        address VolmexPerpetualConfigArg,
+        address PositioningConfigArg,
         address vaultArg,
         address quoteTokenArg,
         address exchangeArg,
@@ -118,8 +118,8 @@ contract VolmexPerpetual is
         require(quoteTokenArg.isContract(), "CH_QANC");
         // CH_QDN18: QuoteToken decimals is not 18
         require(IERC20Metadata(quoteTokenArg).decimals() == 18, "CH_QDN18");
-        // VolmexPerpetualConfig address is not contract
-        require(VolmexPerpetualConfigArg.isContract(), "CH_CCNC");
+        // PositioningConfig address is not contract
+        require(PositioningConfigArg.isContract(), "CH_CCNC");
         // AccountBalance is not contract
         require(accountBalanceArg.isContract(), "CH_ABNC");
         // CH_ENC: Exchange is not contract
@@ -134,7 +134,7 @@ contract VolmexPerpetual is
         __ReentrancyGuard_init();
         __OwnerPausable_init();
 
-        _VolmexPerpetualConfig = VolmexPerpetualConfigArg;
+        _PositioningConfig = PositioningConfigArg;
         _vault = vaultArg;
         _quoteToken = quoteTokenArg;
         _exchange = exchangeArg;
@@ -153,7 +153,7 @@ contract VolmexPerpetual is
         emit TrustedForwarderChanged(trustedForwarderArg);
     }
 
-    /// @inheritdoc IVolmexPerpetual
+    /// @inheritdoc IPositioning
     function settleAllFunding(address trader) external override {
         address[] memory baseTokens = IAccountBalance(_accountBalance).getBaseTokens(trader);
         uint256 baseTokenLength = baseTokens.length;
@@ -162,7 +162,7 @@ contract VolmexPerpetual is
         }
     }
 
-    /// @inheritdoc IVolmexPerpetual
+    /// @inheritdoc IPositioning
     function openPosition(
         PositionParams memory positionLeft,
         bytes memory signatureLeft,
@@ -176,7 +176,7 @@ contract VolmexPerpetual is
         checkDeadline(positionLeft.deadline)
         returns (uint256 base, uint256 quote)
     {
-        require(positionLeft.isMaker, "VolmexPerpetual: Left order should be maker");
+        require(positionLeft.isMaker, "Positioning: Left order should be maker");
         // register token if it's the first time
         IAccountBalance(_accountBalance).registerBaseToken(positionLeft.trader, positionLeft.baseToken);
         IAccountBalance(_accountBalance).registerBaseToken(positionRight.trader, positionRight.baseToken);
@@ -209,42 +209,42 @@ contract VolmexPerpetual is
         return (response.base, response.quote);
     }
 
-    /// @inheritdoc IVolmexPerpetual
+    /// @inheritdoc IPositioning
     function getQuoteToken() external view override returns (address) {
         return _quoteToken;
     }
 
-    /// @inheritdoc IVolmexPerpetual
-    function getVolmexPerpetualConfig() external view override returns (address) {
-        return _VolmexPerpetualConfig;
+    /// @inheritdoc IPositioning
+    function getPositioningConfig() external view override returns (address) {
+        return _PositioningConfig;
     }
 
-    /// @inheritdoc IVolmexPerpetual
+    /// @inheritdoc IPositioning
     function getVault() external view override returns (address) {
         return _vault;
     }
 
-    /// @inheritdoc IVolmexPerpetual
+    /// @inheritdoc IPositioning
     function getExchange() external view override returns (address) {
         return _exchange;
     }
 
-    /// @inheritdoc IVolmexPerpetual
+    /// @inheritdoc IPositioning
     function getOrderBook() external view override returns (address) {
         return _orderBook;
     }
 
-    /// @inheritdoc IVolmexPerpetual
+    /// @inheritdoc IPositioning
     function getAccountBalance() external view override returns (address) {
         return _accountBalance;
     }
 
-    /// @inheritdoc IVolmexPerpetual
+    /// @inheritdoc IPositioning
     function getInsuranceFund() external view override returns (address) {
         return _insuranceFund;
     }
 
-    /// @inheritdoc IVolmexPerpetual
+    /// @inheritdoc IPositioning
     function getAccountValue(address trader) public view override returns (int256) {
         int256 fundingPayment = IExchange(_exchange).getAllPendingFundingPayment(trader);
         (int256 owedRealizedPnl, int256 unrealizedPnl, uint256 pendingFee) =
@@ -342,7 +342,7 @@ contract VolmexPerpetual is
             // CH_BD: trader has bad debt after reducing/closing position
             require(
                 (params1.isLiquidation &&
-                    IVolmexPerpetualConfig(_VolmexPerpetualConfig).isBackstopLiquidityProvider(
+                    IPositioningConfig(_PositioningConfig).isBackstopLiquidityProvider(
                         _msgSender()
                     )) || getAccountValue(params1.trader) >= 0,
                 "CH_BD"
@@ -414,7 +414,7 @@ contract VolmexPerpetual is
         require(
             _getFreeCollateralByRatio(
                 trader,
-                IVolmexPerpetualConfig(_VolmexPerpetualConfig).getImRatio()
+                IPositioningConfig(_PositioningConfig).getImRatio()
             ) >= 0,
             "CH_NEFCI"
         );
@@ -428,7 +428,7 @@ contract VolmexPerpetual is
         return
             isPartialClose
                 ? oppositeAmountBound.mulRatio(
-                    IVolmexPerpetualConfig(_VolmexPerpetualConfig).getPartialCloseRatio()
+                    IPositioningConfig(_PositioningConfig).getPartialCloseRatio()
                 )
                 : oppositeAmountBound;
     }
