@@ -4,7 +4,7 @@ pragma solidity 0.7.6;
 
 import "./IVolmexProtocol.sol";
 
-interface IVolmexOracle {
+interface IIndexPriceOracle {
     event SymbolIndexUpdated(uint256 indexed _index);
     event BaseVolatilityIndexUpdated(uint256 indexed baseVolatilityIndex);
     event BatchVolatilityTokenPriceUpdated(

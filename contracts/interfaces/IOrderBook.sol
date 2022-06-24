@@ -2,8 +2,8 @@
 pragma solidity 0.7.6;
 pragma abicoder v2;
 
-import { Funding } from "../lib/Funding.sol";
-import { OpenOrder } from "../lib/OpenOrder.sol";
+import { Funding } from "../libs/Funding.sol";
+import { OpenOrder } from "../libs/OpenOrder.sol";
 
 interface IOrderBook {
     struct AddLiquidityParams {

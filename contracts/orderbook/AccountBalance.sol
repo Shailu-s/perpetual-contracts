@@ -6,8 +6,8 @@ import { AddressUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/Ad
 import { SafeMathUpgradeable } from "@openzeppelin/contracts-upgradeable/math/SafeMathUpgradeable.sol";
 import { SignedSafeMathUpgradeable } from "@openzeppelin/contracts-upgradeable/math/SignedSafeMathUpgradeable.sol";
 import { PositioningCallee } from "../helpers/PositioningCallee.sol";
-import { PerpSafeCast } from "../lib/PerpSafeCast.sol";
-import { PerpMath } from "../lib/PerpMath.sol";
+import { PerpSafeCast } from "../libs/PerpSafeCast.sol";
+import { PerpMath } from "../libs/PerpMath.sol";
 import { IExchange } from "../interfaces/IExchange.sol";
 import { IIndexPrice } from "../interfaces/IIndexPrice.sol";
 import { IOrderBook } from "../interfaces/IOrderBook.sol";

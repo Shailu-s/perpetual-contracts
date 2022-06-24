@@ -3,14 +3,14 @@
 pragma solidity 0.7.6;
 pragma abicoder v2;
 
-import "../lib/LibFill.sol";
-import "../lib/LibOrderData.sol";
+import "../libs/LibFill.sol";
+import "../libs/LibOrderData.sol";
 import "./OrderValidator.sol";
 import "./AssetMatcher.sol";
 
 import "./TransferExecutor.sol";
 import "../interfaces/ITransferManager.sol";
-import "../lib/ExchangeFee.sol";
+import "../libs/ExchangeFee.sol";
 
 abstract contract MatchingEngine is
     Initializable,

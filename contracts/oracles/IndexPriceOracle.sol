@@ -3,41 +3,41 @@
 pragma solidity 0.7.6;
 
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/utils/introspection/ERC165StorageUpgradeable.sol";
 
+import "../helpers/ERC165StorageUpgradeable.sol";
 import "../interfaces/IVolmexProtocol.sol";
-import "../interfaces/IVolmexOracle.sol";
+import "../interfaces/IIndexPriceOracle.sol";
 import "./IndexTWAP.sol";
 
 /**
  * @title Volmex Oracle contract
  * @author volmex.finance [security@volmexlabs.com]
  */
-contract VolmexOracle is OwnableUpgradeable, ERC165StorageUpgradeable, IndexTWAP, IVolmexOracle {
+contract IndexPriceOracle is OwnableUpgradeable, ERC165StorageUpgradeable, IndexTWAP, IIndexPriceOracle {
     // price precision constant upto 6 decimal places
     uint256 private constant _VOLATILITY_PRICE_PRECISION = 1000000;
     // maximum allowed number of index volatility datapoints for calculating twap
     uint256 private constant _MAX_ALLOWED_TWAP_DATAPOINTS = 180;
     // Interface ID of VolmexOracle contract, hashId = 0xf9fffc9f
-    bytes4 private constant _IVOLMEX_ORACLE_ID = type(IVolmexOracle).interfaceId;
+    bytes4 private constant _IVOLMEX_ORACLE_ID = type(IIndexPriceOracle).interfaceId;
 
     // Store the price of volatility by indexes { 0 - ETHV, 1 = BTCV }
     mapping(uint256 => uint256) private _volatilityTokenPriceByIndex;
 
     // Store the volatilitycapratio by index
-    mapping(uint256 => uint256) public volatilityCapRatioByIndex;
+    mapping(uint256 => uint256) public override volatilityCapRatioByIndex;
     // Store the proof of hash of the current volatility token price
-    mapping(uint256 => bytes32) public volatilityTokenPriceProofHash;
+    mapping(uint256 => bytes32) public override volatilityTokenPriceProofHash;
     // Store the index of volatility by symbol
-    mapping(string => uint256) public volatilityIndexBySymbol;
+    mapping(string => uint256) public override volatilityIndexBySymbol;
     // Store the leverage on volatility by index
-    mapping(uint256 => uint256) public volatilityLeverageByIndex;
+    mapping(uint256 => uint256) public override volatilityLeverageByIndex;
     // Store the base volatility index by leverage volatility index
-    mapping(uint256 => uint256) public baseVolatilityIndex;
+    mapping(uint256 => uint256) public override baseVolatilityIndex;
     // Store the number of indexes
-    uint256 public indexCount;
+    uint256 public override indexCount;
     // Store the timestamp of volatility price update by index
-    mapping(uint256 => uint256) public volatilityLastUpdateTimestamp;
+    mapping(uint256 => uint256) public override volatilityLastUpdateTimestamp;
 
     /**
      * @notice Initializes the contract setting the deployer as the initial owner.
@@ -58,7 +58,7 @@ contract VolmexOracle is OwnableUpgradeable, ERC165StorageUpgradeable, IndexTWAP
         __Ownable_init();
         __ERC165Storage_init();
         _registerInterface(_IVOLMEX_ORACLE_ID);
-        _transferOwnership(_owner);
+        transferOwnership(_owner);
     }
 
     /**
@@ -66,7 +66,7 @@ contract VolmexOracle is OwnableUpgradeable, ERC165StorageUpgradeable, IndexTWAP
      * @param _index Number value of the index. { eg. 0 }
      * @param _tokenSymbol Symbol of the adding volatility token
      */
-    function updateIndexBySymbol(string calldata _tokenSymbol, uint256 _index) external onlyOwner {
+    function updateIndexBySymbol(string calldata _tokenSymbol, uint256 _index) external override onlyOwner {
         volatilityIndexBySymbol[_tokenSymbol] = _index;
 
         emit SymbolIndexUpdated(_index);
@@ -80,7 +80,7 @@ contract VolmexOracle is OwnableUpgradeable, ERC165StorageUpgradeable, IndexTWAP
     function updateBaseVolatilityIndex(
         uint256 _leverageVolatilityIndex,
         uint256 _newBaseVolatilityIndex
-    ) external onlyOwner {
+    ) external override onlyOwner {
         baseVolatilityIndex[_leverageVolatilityIndex] = _newBaseVolatilityIndex;
 
         emit BaseVolatilityIndexUpdated(_newBaseVolatilityIndex);
@@ -102,7 +102,7 @@ contract VolmexOracle is OwnableUpgradeable, ERC165StorageUpgradeable, IndexTWAP
         uint256 _leverage,
         uint256 _baseVolatilityIndex,
         bytes32 _proofHash
-    ) external onlyOwner {
+    ) external override onlyOwner {
         require(address(_protocol) != address(0), "VolmexOracle: protocol address can't be zero");
         uint256 _volatilityCapRatio = _protocol.volatilityCapRatio() * _VOLATILITY_PRICE_PRECISION;
         require(
@@ -167,7 +167,7 @@ contract VolmexOracle is OwnableUpgradeable, ERC165StorageUpgradeable, IndexTWAP
         uint256[] memory _volatilityIndexes,
         uint256[] memory _volatilityTokenPrices,
         bytes32[] memory _proofHashes
-    ) external onlyOwner {
+    ) external override onlyOwner {
         require(
             _volatilityIndexes.length == _volatilityTokenPrices.length &&
                 _volatilityIndexes.length == _proofHashes.length,
@@ -210,6 +210,7 @@ contract VolmexOracle is OwnableUpgradeable, ERC165StorageUpgradeable, IndexTWAP
     function getVolatilityPriceBySymbol(string calldata _volatilityTokenSymbol)
         external
         view
+        override
         returns (
             uint256 volatilityTokenPrice,
             uint256 iVolatilityTokenPrice,
@@ -231,6 +232,7 @@ contract VolmexOracle is OwnableUpgradeable, ERC165StorageUpgradeable, IndexTWAP
     function getVolatilityTokenPriceByIndex(uint256 _index)
         external
         view
+        override
         returns (
             uint256 volatilityTokenPrice,
             uint256 iVolatilityTokenPrice,
@@ -253,6 +255,7 @@ contract VolmexOracle is OwnableUpgradeable, ERC165StorageUpgradeable, IndexTWAP
     function getIndexTwap(uint256 _index)
         external
         view
+        override
         returns (
             uint256 volatilityTokenTwap,
             uint256 iVolatilityTokenTwap,

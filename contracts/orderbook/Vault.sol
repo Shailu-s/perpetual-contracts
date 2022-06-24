@@ -9,16 +9,16 @@ import {
     SafeERC20Upgradeable,
     IERC20Upgradeable
 } from "@openzeppelin/contracts-upgradeable/token/ERC20/SafeERC20Upgradeable.sol";
-import { PerpSafeCast } from "../lib/PerpSafeCast.sol";
-import { SettlementTokenMath } from "../lib/SettlementTokenMath.sol";
-import { PerpMath } from "../lib/PerpMath.sol";
+import { PerpSafeCast } from "../libs/PerpSafeCast.sol";
+import { SettlementTokenMath } from "../libs/SettlementTokenMath.sol";
+import { PerpMath } from "../libs/PerpMath.sol";
 import { IERC20Metadata } from "../interfaces/IERC20Metadata.sol";
 import { IInsuranceFund } from "../interfaces/IInsuranceFund.sol";
 import { IExchange } from "../interfaces/IExchange.sol";
 import { IAccountBalance } from "../interfaces/IAccountBalance.sol";
 import { IPositioningConfig } from "../interfaces/IPositioningConfig.sol";
 import { IPositioning } from "../interfaces/IPositioning.sol";
-import { BaseRelayRecipient } from "../gsn/helpersRelayRecipient.sol";
+import { BaseRelayRecipient } from "../gsn/BaseRelayRecipient.sol";
 import { OwnerPausable } from "../helpers/OwnerPausable.sol";
 import { VaultStorageV1 } from "../storage/VaultStorage.sol";
 import { IVault } from "../interfaces/IVault.sol";
