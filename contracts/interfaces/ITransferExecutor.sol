@@ -3,7 +3,7 @@
 pragma solidity 0.7.6;
 pragma abicoder v2;
 
-import { LibAsset } from "../lib/ExchangeFee.sol";
+import { LibAsset } from "../libs/ExchangeFee.sol";
 
 abstract contract ITransferExecutor {
     function transfer(

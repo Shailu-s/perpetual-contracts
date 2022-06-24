@@ -5,16 +5,16 @@ pragma abicoder v2;
 import { AddressUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol";
 import { SafeMathUpgradeable } from "@openzeppelin/contracts-upgradeable/math/SafeMathUpgradeable.sol";
 import { SignedSafeMathUpgradeable } from "@openzeppelin/contracts-upgradeable/math/SignedSafeMathUpgradeable.sol";
-import { PositioningCallee } from "../base/PositioningCallee.sol";
-import { PerpSafeCast } from "../lib/PerpSafeCast.sol";
-import { PerpMath } from "../lib/PerpMath.sol";
-import { IExchange } from "../interface/IExchange.sol";
-import { IIndexPrice } from "../interface/IIndexPrice.sol";
-import { IOrderBook } from "../interface/IOrderBook.sol";
-import { IPositioningConfig } from "../interface/IPositioningConfig.sol";
+import { PositioningCallee } from "../helpers/PositioningCallee.sol";
+import { PerpSafeCast } from "../libs/PerpSafeCast.sol";
+import { PerpMath } from "../libs/PerpMath.sol";
+import { IExchange } from "../interfaces/IExchange.sol";
+import { IIndexPrice } from "../interfaces/IIndexPrice.sol";
+import { IOrderBook } from "../interfaces/IOrderBook.sol";
+import { IPositioningConfig } from "../interfaces/IPositioningConfig.sol";
 import { AccountBalanceStorageV1, AccountMarket } from "../storage/AccountBalanceStorage.sol";
-import { BlockContext } from "../base/BlockContext.sol";
-import { IAccountBalance } from "../interface/IAccountBalance.sol";
+import { BlockContext } from "../helpers/BlockContext.sol";
+import { IAccountBalance } from "../interfaces/IAccountBalance.sol";
 
 // never inherit any new stateful contract. never change the orders of parent stateful contracts
 contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, AccountBalanceStorageV1 {

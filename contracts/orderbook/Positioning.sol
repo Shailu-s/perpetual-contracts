@@ -6,25 +6,25 @@ import { AddressUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/Ad
 import { SafeMathUpgradeable } from "@openzeppelin/contracts-upgradeable/math/SafeMathUpgradeable.sol";
 import { SignedSafeMathUpgradeable } from "@openzeppelin/contracts-upgradeable/math/SignedSafeMathUpgradeable.sol";
 import { ReentrancyGuardUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
-import { PerpSafeCast } from "../lib/PerpSafeCast.sol";
-import { PerpMath } from "../lib/PerpMath.sol";
-import { Funding } from "../lib/Funding.sol";
-import { SettlementTokenMath } from "../lib/SettlementTokenMath.sol";
-import { OwnerPausable } from "../base/OwnerPausable.sol";
-import { IERC20Metadata } from "../interface/IERC20Metadata.sol";
-import { IVault } from "../interface/IVault.sol";
-import { IExchange } from "../interface/IExchange.sol";
-import { IOrderBook } from "../interface/IOrderBook.sol";
-import { IPositioningConfig } from "../interface/IPositioningConfig.sol";
-import { IAccountBalance } from "../interface/IAccountBalance.sol";
+import { PerpSafeCast } from "../libs/PerpSafeCast.sol";
+import { PerpMath } from "../libs/PerpMath.sol";
+import { Funding } from "../libs/Funding.sol";
+import { SettlementTokenMath } from "../libs/SettlementTokenMath.sol";
+import { OwnerPausable } from "../helpers/OwnerPausable.sol";
+import { IERC20Metadata } from "../interfaces/IERC20Metadata.sol";
+import { IVault } from "../interfaces/IVault.sol";
+import { IExchange } from "../interfaces/IExchange.sol";
+import { IOrderBook } from "../interfaces/IOrderBook.sol";
+import { IPositioningConfig } from "../interfaces/IPositioningConfig.sol";
+import { IAccountBalance } from "../interfaces/IAccountBalance.sol";
 import { BaseRelayRecipient } from "../gsn/BaseRelayRecipient.sol";
 import { PositioningStorageV1 } from "../storage/PositioningStorage.sol";
-import { BlockContext } from "../base/BlockContext.sol";
-import { IPositioning } from "../interface/IPositioning.sol";
-import { AccountMarket } from "../lib/AccountMarket.sol";
-import { OpenOrder } from "../lib/OpenOrder.sol";
-import "../interface/IIndexPrice.sol";
-import "../interface/IBaseToken.sol";
+import { BlockContext } from "../helpers/BlockContext.sol";
+import { IPositioning } from "../interfaces/IPositioning.sol";
+import { AccountMarket } from "../libs/AccountMarket.sol";
+import { OpenOrder } from "../libs/OpenOrder.sol";
+import "../interfaces/IIndexPrice.sol";
+import "../interfaces/IBaseToken.sol";
 
 // never inherit any new stateful contract. never change the orders of parent stateful contracts
 contract Positioning is

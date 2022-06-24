@@ -2,7 +2,7 @@
 pragma solidity 0.7.6;
 pragma abicoder v2;
 
-import { Funding } from "../lib/Funding.sol";
+import { Funding } from "../libs/Funding.sol";
 
 interface IExchange {
     /// @param amount when closing position, amount(uint256) == takerPositionSize(int256),

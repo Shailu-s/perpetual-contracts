@@ -2,7 +2,7 @@
 pragma solidity 0.7.6;
 pragma abicoder v2;
 
-import { AccountMarket } from "../lib/AccountMarket.sol";
+import { AccountMarket } from "../libs/AccountMarket.sol";
 
 interface IAccountBalance {
     /// @param vault The address of the vault contract

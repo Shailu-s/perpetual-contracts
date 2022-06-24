@@ -5,19 +5,19 @@ pragma abicoder v2;
 import { AddressUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol";
 import { SafeMathUpgradeable } from "@openzeppelin/contracts-upgradeable/math/SafeMathUpgradeable.sol";
 import { SignedSafeMathUpgradeable } from "@openzeppelin/contracts-upgradeable/math/SignedSafeMathUpgradeable.sol";
-import { PerpSafeCast } from "../lib/PerpSafeCast.sol";
-import { SwapMath } from "../lib/SwapMath.sol";
-import { PerpFixedPoint96 } from "../lib/PerpFixedPoint96.sol";
-import { Funding } from "../lib/Funding.sol";
-import { PerpMath } from "../lib/PerpMath.sol";
+import { PerpSafeCast } from "../libs/PerpSafeCast.sol";
+import { SwapMath } from "../libs/SwapMath.sol";
+import { PerpFixedPoint96 } from "../libs/PerpFixedPoint96.sol";
+import { Funding } from "../libs/Funding.sol";
+import { PerpMath } from "../libs/PerpMath.sol";
 import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/Initializable.sol";
-import { PositioningCallee } from "../base/PositioningCallee.sol";
-import { BlockContext } from "../base/BlockContext.sol";
+import { PositioningCallee } from "../helpers/PositioningCallee.sol";
+import { BlockContext } from "../helpers/BlockContext.sol";
 import { ExchangeStorageV1 } from "../storage/ExchangeStorage.sol";
-import { IExchange } from "../interface/IExchange.sol";
-import { IPositioningConfig } from "../interface/IPositioningConfig.sol";
-import { IIndexPrice } from "../interface/IIndexPrice.sol";
-import { IMarkPriceOracle } from "../interface/IMarkPriceOracle.sol";
+import { IExchange } from "../interfaces/IExchange.sol";
+import { IPositioningConfig } from "../interfaces/IPositioningConfig.sol";
+import { IIndexPrice } from "../interfaces/IIndexPrice.sol";
+import { IMarkPriceOracle } from "../interfaces/IMarkPriceOracle.sol";
 
 // never inherit any new stateful contract. never change the orders of parent stateful contracts
 

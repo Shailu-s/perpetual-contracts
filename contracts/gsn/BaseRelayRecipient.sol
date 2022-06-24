@@ -1,5 +1,5 @@
 // copied from @opengsn/provider-2.2.4,
-// https://github.com/opengsn/gsn/blob/master/packages/contracts/src/BaseRelayRecipient.sol
+// https://github.com/opengsn/gsn/blob/master/packages/contracts/src/helpersRelayRecipient.sol
 // for adding `payable` property at the return value of _msgSender()
 // SPDX-License-Identifier: MIT
 // solhint-disable no-inline-assembly

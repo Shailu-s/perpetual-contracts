@@ -2,8 +2,8 @@
 pragma solidity 0.7.6;
 pragma abicoder v2;
 
-import { Funding } from "../lib/Funding.sol";
-import { OpenOrder } from "../lib/OpenOrder.sol";
+import { Funding } from "../libs/Funding.sol";
+import { OpenOrder } from "../libs/OpenOrder.sol";
 
 interface IOrderBook {
     struct AddLiquidityParams {
@@ -146,7 +146,7 @@ interface IOrderBook {
     /// @param trader The trader address
     /// @param baseToken The base token addresses
     /// @param fetchBase True if fetch base token amount, false if fetch quote token amount
-    /// @return tokenAmount The total quote/base token amount
+    /// @return tokenAmount The total quote/helpers token amount
     /// @return totalPendingFee The total pending fees in the orders
     function getTotalTokenAmountInPoolAndPendingFee(
         address trader,

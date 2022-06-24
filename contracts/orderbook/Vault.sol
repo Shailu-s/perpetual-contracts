@@ -9,19 +9,19 @@ import {
     SafeERC20Upgradeable,
     IERC20Upgradeable
 } from "@openzeppelin/contracts-upgradeable/token/ERC20/SafeERC20Upgradeable.sol";
-import { PerpSafeCast } from "../lib/PerpSafeCast.sol";
-import { SettlementTokenMath } from "../lib/SettlementTokenMath.sol";
-import { PerpMath } from "../lib/PerpMath.sol";
-import { IERC20Metadata } from "../interface/IERC20Metadata.sol";
-import { IInsuranceFund } from "../interface/IInsuranceFund.sol";
-import { IExchange } from "../interface/IExchange.sol";
-import { IAccountBalance } from "../interface/IAccountBalance.sol";
-import { IPositioningConfig } from "../interface/IPositioningConfig.sol";
-import { IPositioning } from "../interface/IPositioning.sol";
+import { PerpSafeCast } from "../libs/PerpSafeCast.sol";
+import { SettlementTokenMath } from "../libs/SettlementTokenMath.sol";
+import { PerpMath } from "../libs/PerpMath.sol";
+import { IERC20Metadata } from "../interfaces/IERC20Metadata.sol";
+import { IInsuranceFund } from "../interfaces/IInsuranceFund.sol";
+import { IExchange } from "../interfaces/IExchange.sol";
+import { IAccountBalance } from "../interfaces/IAccountBalance.sol";
+import { IPositioningConfig } from "../interfaces/IPositioningConfig.sol";
+import { IPositioning } from "../interfaces/IPositioning.sol";
 import { BaseRelayRecipient } from "../gsn/BaseRelayRecipient.sol";
-import { OwnerPausable } from "../base/OwnerPausable.sol";
+import { OwnerPausable } from "../helpers/OwnerPausable.sol";
 import { VaultStorageV1 } from "../storage/VaultStorage.sol";
-import { IVault } from "../interface/IVault.sol";
+import { IVault } from "../interfaces/IVault.sol";
 
 // never inherit any new stateful contract. never change the orders of parent stateful contracts
 contract Vault is IVault, ReentrancyGuardUpgradeable, OwnerPausable, BaseRelayRecipient, VaultStorageV1 {

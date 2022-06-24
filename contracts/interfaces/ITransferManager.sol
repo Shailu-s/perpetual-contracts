@@ -3,7 +3,7 @@
 pragma solidity 0.7.6;
 pragma abicoder v2;
 
-import "../lib/ExchangeFee.sol";
+import "../libs/ExchangeFee.sol";
 import "./ITransferExecutor.sol";
 
 abstract contract ITransferManager is ITransferExecutor {
