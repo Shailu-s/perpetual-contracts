@@ -371,6 +371,7 @@ contract Positioning is
     }
 
     /// @dev Settle trader's funding payment to his/her realized pnl.
+    /// TODO Create separate for settlement  
     function _settleFunding(address trader, address baseToken)
         internal
         returns (Funding.Growth memory fundingGrowthGlobal)
