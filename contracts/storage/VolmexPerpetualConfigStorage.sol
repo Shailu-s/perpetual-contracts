@@ -1,0 +1,20 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+pragma solidity 0.7.6;
+
+/// @notice For future upgrades, do not change VolmexPerpetualConfigStorageV1. Create a new
+/// contract which implements VolmexPerpetualConfigStorageV1 and following the naming convention
+/// VolmexPerpetualConfigStorageVX.
+abstract contract VolmexPerpetualConfigStorageV1 {
+    uint8 internal _maxMarketsPerAccount;
+    uint24 internal _imRatio;
+    uint24 internal _mmRatio;
+    uint24 internal _liquidationPenaltyRatio;
+    uint24 internal _partialCloseRatio;
+    uint24 internal _maxFundingRate;
+    uint32 internal _twapInterval;
+    uint256 internal _settlementTokenBalanceCap;
+}
+
+abstract contract VolmexPerpetualConfigStorageV2 is VolmexPerpetualConfigStorageV1 {
+    mapping(address => bool) internal _backstopLiquidityProviderMap;
+}
