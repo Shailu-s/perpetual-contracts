@@ -18,8 +18,8 @@ import { IExchange } from "../interface/IExchange.sol";
 import { IAccountBalance } from "../interface/IAccountBalance.sol";
 import { IPositioningConfig } from "../interface/IPositioningConfig.sol";
 import { IPositioning } from "../interface/IPositioning.sol";
-import { BaseRelayRecipient } from "../gsn/BaseRelayRecipient.sol";
-import { OwnerPausable } from "../base/OwnerPausable.sol";
+import { BaseRelayRecipient } from "../gsn/helpersRelayRecipient.sol";
+import { OwnerPausable } from "../helpers/OwnerPausable.sol";
 import { VaultStorageV1 } from "../storage/VaultStorage.sol";
 import { IVault } from "../interface/IVault.sol";
 

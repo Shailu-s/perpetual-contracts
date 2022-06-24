@@ -146,7 +146,7 @@ interface IOrderBook {
     /// @param trader The trader address
     /// @param baseToken The base token addresses
     /// @param fetchBase True if fetch base token amount, false if fetch quote token amount
-    /// @return tokenAmount The total quote/base token amount
+    /// @return tokenAmount The total quote/helpers token amount
     /// @return totalPendingFee The total pending fees in the orders
     function getTotalTokenAmountInPoolAndPendingFee(
         address trader,
