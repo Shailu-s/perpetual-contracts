@@ -16,8 +16,8 @@ import { IERC20Metadata } from "../interface/IERC20Metadata.sol";
 import { IInsuranceFund } from "../interface/IInsuranceFund.sol";
 import { IExchange } from "../interface/IExchange.sol";
 import { IAccountBalance } from "../interface/IAccountBalance.sol";
-import { IVolmexPerpMarketManagerConfig } from "../interface/IVolmexPerpMarketManagerConfig.sol";
-import { IVolmexPerpMarketManager } from "../interface/IVolmexPerpMarketManager.sol";
+import { IVolmexPerpetualConfig } from "../interface/IVolmexPerpetualConfig.sol";
+import { IVolmexPerpetual } from "../interface/IVolmexPerpetual.sol";
 import { BaseRelayRecipient } from "../gsn/BaseRelayRecipient.sol";
 import { OwnerPausable } from "../base/OwnerPausable.sol";
 import { VaultStorageV1 } from "../storage/VaultStorage.sol";
@@ -51,7 +51,7 @@ contract Vault is IVault, ReentrancyGuardUpgradeable, OwnerPausable, BaseRelayRe
 
     function initialize(
         address insuranceFundArg,
-        address volmexPerpMarketManagerConfigArg,
+        address VolmexPerpetualConfigArg,
         address accountBalanceArg,
         address exchangeArg
     ) external initializer {
@@ -60,8 +60,8 @@ contract Vault is IVault, ReentrancyGuardUpgradeable, OwnerPausable, BaseRelayRe
 
         // invalid settlementToken decimals
         require(decimalsArg <= 18, "V_ISTD");
-        // VolmexPerpMarketManagerConfig address is not contract
-        require(volmexPerpMarketManagerConfigArg.isContract(), "V_CHCNC");
+        // VolmexPerpetualConfig address is not contract
+        require(VolmexPerpetualConfigArg.isContract(), "V_CHCNC");
         // accountBalance address is not contract
         require(accountBalanceArg.isContract(), "V_ABNC");
         // exchange address is not contract
@@ -74,7 +74,7 @@ contract Vault is IVault, ReentrancyGuardUpgradeable, OwnerPausable, BaseRelayRe
         _decimals = decimalsArg;
         _settlementToken = settlementTokenArg;
         _insuranceFund = insuranceFundArg;
-        _volmexPerpMarketManagerConfig = volmexPerpMarketManagerConfigArg;
+        _VolmexPerpetualConfig = VolmexPerpetualConfigArg;
         _accountBalance = accountBalanceArg;
         _exchange = exchangeArg;
     }
@@ -85,10 +85,10 @@ contract Vault is IVault, ReentrancyGuardUpgradeable, OwnerPausable, BaseRelayRe
         _setTrustedForwarder(trustedForwarderArg);
     }
 
-    function setVolmexPerpMarketManager(address volmexPerpMarketManagerArg) external onlyOwner {
+    function setVolmexPerpetual(address VolmexPerpetualArg) external onlyOwner {
         // V_VPMM: VolmexPerpetual is not contract
-        require(volmexPerpMarketManagerArg.isContract(), "V_VPMM");
-        _volmexPerpMarketManager = volmexPerpMarketManagerArg;
+        require(VolmexPerpetualArg.isContract(), "V_VPMM");
+        _VolmexPerpetual = VolmexPerpetualArg;
     }
 
     /// @inheritdoc IVault
@@ -112,7 +112,7 @@ contract Vault is IVault, ReentrancyGuardUpgradeable, OwnerPausable, BaseRelayRe
         require((IERC20Metadata(token).balanceOf(address(this)).sub(balanceBefore)) == amountX10_D, "V_IBA");
 
         uint256 settlementTokenBalanceCap =
-            IVolmexPerpMarketManagerConfig(_volmexPerpMarketManagerConfig).getSettlementTokenBalanceCap();
+            IVolmexPerpetualConfig(_VolmexPerpetualConfig).getSettlementTokenBalanceCap();
         // V_GTSTBC: greater than settlement token balance cap
         require(IERC20Metadata(token).balanceOf(address(this)) <= settlementTokenBalanceCap, "V_GTSTBC");
 
@@ -142,14 +142,14 @@ contract Vault is IVault, ReentrancyGuardUpgradeable, OwnerPausable, BaseRelayRe
 
         // settle all funding payments owedRealizedPnl
         // pending fee can be withdraw but won't be settled
-        IVolmexPerpMarketManager(_volmexPerpMarketManager).settleAllFunding(to);
+        IVolmexPerpetual(_VolmexPerpetual).settleAllFunding(to);
 
         // settle owedRealizedPnl in AccountBalance
         int256 owedRealizedPnlX10_18 = IAccountBalance(_accountBalance).settleOwedRealizedPnl(to);
 
         // by this time there should be no owedRealizedPnl nor pending funding payment in free collateral
         int256 freeCollateralByImRatioX10_D =
-            getFreeCollateralByRatio(to, IVolmexPerpMarketManagerConfig(_volmexPerpMarketManagerConfig).getImRatio());
+            getFreeCollateralByRatio(to, IVolmexPerpetualConfig(_VolmexPerpetualConfig).getImRatio());
         // V_NEFC: not enough freeCollateral
         require(
             freeCollateralByImRatioX10_D.add(owedRealizedPnlX10_18.formatSettlementToken(_decimals)) >=
@@ -196,8 +196,8 @@ contract Vault is IVault, ReentrancyGuardUpgradeable, OwnerPausable, BaseRelayRe
     }
 
     /// @inheritdoc IVault
-    function getVolmexPerpMarketManagerConfig() external view override returns (address) {
-        return _volmexPerpMarketManagerConfig;
+    function getVolmexPerpetualConfig() external view override returns (address) {
+        return _VolmexPerpetualConfig;
     }
 
     /// @inheritdoc IVault
@@ -216,8 +216,8 @@ contract Vault is IVault, ReentrancyGuardUpgradeable, OwnerPausable, BaseRelayRe
     }
 
     /// @inheritdoc IVault
-    function getVolmexPerpMarketManager() external view override returns (address) {
-        return _volmexPerpMarketManager;
+    function getVolmexPerpetual() external view override returns (address) {
+        return _VolmexPerpetual;
     }
 
     /// @inheritdoc IVault
@@ -227,7 +227,7 @@ contract Vault is IVault, ReentrancyGuardUpgradeable, OwnerPausable, BaseRelayRe
                 .max(
                 getFreeCollateralByRatio(
                     trader,
-                    IVolmexPerpMarketManagerConfig(_volmexPerpMarketManagerConfig).getImRatio()
+                    IVolmexPerpetualConfig(_VolmexPerpetualConfig).getImRatio()
                 ),
                 0
             )

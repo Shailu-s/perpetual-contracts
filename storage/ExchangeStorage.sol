@@ -9,7 +9,7 @@ import { Funding } from "../lib/Funding.sol";
 abstract contract ExchangeStorageV1 {
     address internal _orderBook;
     address internal _accountBalance;
-    address internal _volmexPerpMarketManagerConfig;
+    address internal _VolmexPerpetualConfig;
     address internal _markSmaArg;
     address internal _exchangeManager;
     address internal _transferManager;

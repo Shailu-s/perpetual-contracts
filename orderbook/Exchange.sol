@@ -13,11 +13,11 @@ import { Funding } from "../lib/Funding.sol";
 import { PerpMath } from "../lib/PerpMath.sol";
 import { AccountMarket } from "../lib/AccountMarket.sol";
 import { IIndexPrice } from "../interface/IIndexPrice.sol";
-import { VolmexPerpMarketManagerCallee } from "../base/VolmexPerpMarketManagerCallee.sol";
+import { VolmexPerpetualCallee } from "../base/VolmexPerpetualCallee.sol";
 import { IOrderBook } from "../interface/IOrderBook.sol";
 import { IMarketRegistry } from "../interface/IMarketRegistry.sol";
 import { IAccountBalance } from "../interface/IAccountBalance.sol";
-import { IVolmexPerpMarketManagerConfig } from "../interface/IVolmexPerpMarketManagerConfig.sol";
+import { IVolmexPerpetualConfig } from "../interface/IVolmexPerpetualConfig.sol";
 import { ExchangeStorageV1 } from "../storage/ExchangeStorage.sol";
 import { IExchange } from "../interface/IExchange.sol";
 import { OpenOrder } from "../lib/OpenOrder.sol";
@@ -25,7 +25,7 @@ import { IMarkPriceOracle } from "../interface/IMarkPriceOracle.sol";
 import { IExchangeManager } from "../interface/IExchangeManager.sol";
 
 // never inherit any new stateful contract. never change the orders of parent stateful contracts
-contract Exchange is IExchange, BlockContext, VolmexPerpMarketManagerCallee, ExchangeStorageV1 {
+contract Exchange is IExchange, BlockContext, VolmexPerpetualCallee, ExchangeStorageV1 {
     using AddressUpgradeable for address;
     using SafeMathUpgradeable for uint256;
     using SignedSafeMathUpgradeable for int256;
@@ -81,22 +81,22 @@ contract Exchange is IExchange, BlockContext, VolmexPerpMarketManagerCallee, Exc
     function initialize(
         address exchangeManagerArg,
         address orderBookArg,
-        address volmexPerpMarketManagerConfigArg,
+        address VolmexPerpetualConfigArg,
         address markSmaArg,
         address transferManager,
         address quoteToken
     ) external initializer {
-        __VolmexPerpMarketManagerCallee_init();
+        __VolmexPerpetualCallee_init();
         _exchangeManager = exchangeManagerArg;
 
         // E_OBNC: OrderBook is not contract
         require(orderBookArg.isContract(), "E_OBNC");
         // E_VPMMNC: VPMM is not contract
-        require(volmexPerpMarketManagerConfigArg.isContract(), "E_VPMMNC");
+        require(VolmexPerpetualConfigArg.isContract(), "E_VPMMNC");
 
         // update states
         _orderBook = orderBookArg;
-        _volmexPerpMarketManagerConfig = volmexPerpMarketManagerConfigArg;
+        _VolmexPerpetualConfig = VolmexPerpetualConfigArg;
         _markSmaArg = markSmaArg;
         _transferManager = transferManager;
         _quoteToken = quoteToken;
@@ -115,7 +115,7 @@ contract Exchange is IExchange, BlockContext, VolmexPerpMarketManagerCallee, Exc
         override
         returns (SwapResponse memory)
     {
-        _requireOnlyVolmexPerpMarketManager();
+        _requireOnlyVolmexPerpetual();
 
         int256 takerPositionSize =
             IAccountBalance(_accountBalance).getTakerPositionSize(params2.trader, params2.baseToken);
@@ -160,7 +160,7 @@ contract Exchange is IExchange, BlockContext, VolmexPerpMarketManagerCallee, Exc
         override
         returns (int256 fundingPayment, Funding.Growth memory fundingGrowthGlobal)
     {
-        _requireOnlyVolmexPerpMarketManager();
+        _requireOnlyVolmexPerpetual();
 
         uint256 markTwap;
         uint256 indexTwap;
@@ -206,8 +206,8 @@ contract Exchange is IExchange, BlockContext, VolmexPerpMarketManagerCallee, Exc
     }
 
     /// @inheritdoc IExchange
-    function getVolmexPerpMarketManagerConfig() external view override returns (address) {
-        return _volmexPerpMarketManagerConfig;
+    function getVolmexPerpetualConfig() external view override returns (address) {
+        return _VolmexPerpetualConfig;
     }
 
     /// @inheritdoc IExchange
@@ -366,7 +366,7 @@ contract Exchange is IExchange, BlockContext, VolmexPerpMarketManagerCallee, Exc
         uint256 timestamp = _blockTimestamp();
         // shorten twapInterval if prior observations are not enough
         if (_firstTradedTimestampMap[baseToken] != 0) {
-            twapInterval = IVolmexPerpMarketManagerConfig(_volmexPerpMarketManagerConfig).getTwapInterval();
+            twapInterval = IVolmexPerpetualConfig(_VolmexPerpetualConfig).getTwapInterval();
             // overflow inspection:
             // 2 ^ 32 = 4,294,967,296 > 100 years = 60 * 60 * 24 * 365 * 100 = 3,153,600,000
             uint32 deltaTimestamp = timestamp.sub(_firstTradedTimestampMap[baseToken]).toUint32();
@@ -403,7 +403,7 @@ contract Exchange is IExchange, BlockContext, VolmexPerpMarketManagerCallee, Exc
     }
 
     function _getDeltaTwapX96(uint256 markTwapX96, uint256 indexTwapX96) internal view returns (int256 deltaTwapX96) {
-        uint24 maxFundingRate = IVolmexPerpMarketManagerConfig(_volmexPerpMarketManagerConfig).getMaxFundingRate();
+        uint24 maxFundingRate = IVolmexPerpetualConfig(_VolmexPerpetualConfig).getMaxFundingRate();
         uint256 maxDeltaTwapX96 = indexTwapX96.mulRatio(maxFundingRate);
         uint256 absDeltaTwapX96;
         if (markTwapX96 > indexTwapX96) {

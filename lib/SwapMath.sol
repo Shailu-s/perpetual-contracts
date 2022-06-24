@@ -70,22 +70,22 @@ library SwapMath {
             : signedScaledAmountForReplaySwap.neg256();
     }
 
-    /// @param isReplacingUniswapFeeRatio is to replace uniswapFeeRatio or VolmexPerpMarketManagerFeeRatio
-    ///        let x : uniswapFeeRatio, y : VolmexPerpMarketManagerFeeRatio
-    ///        true: replacing uniswapFeeRatio with VolmexPerpMarketManagerFeeRatio: amount * (1 - y) / (1 - x)
-    ///        false: replacing VolmexPerpMarketManagerFeeRatio with uniswapFeeRatio: amount * (1 - x) / (1 - y)
+    /// @param isReplacingUniswapFeeRatio is to replace uniswapFeeRatio or VolmexPerpetualFeeRatio
+    ///        let x : uniswapFeeRatio, y : VolmexPerpetualFeeRatio
+    ///        true: replacing uniswapFeeRatio with VolmexPerpetualFeeRatio: amount * (1 - y) / (1 - x)
+    ///        false: replacing VolmexPerpetualFeeRatio with uniswapFeeRatio: amount * (1 - x) / (1 - y)
     ///        multiplying a fee is applying it as the new standard and dividing a fee is removing its effect
-    /// @dev calculate the amount when feeRatio is switched between uniswapFeeRatio and VolmexPerpMarketManagerFeeRatio
+    /// @dev calculate the amount when feeRatio is switched between uniswapFeeRatio and VolmexPerpetualFeeRatio
     function calcAmountWithFeeRatioReplaced(
         uint256 amount,
         uint24 uniswapFeeRatio,
-        uint24 volmexPerpMarketManagerFeeRatio,
+        uint24 VolmexPerpetualFeeRatio,
         bool isReplacingUniswapFeeRatio
     ) internal pure returns (uint256) {
         (uint24 newFeeRatio, uint24 replacedFeeRatio) =
             isReplacingUniswapFeeRatio
-                ? (volmexPerpMarketManagerFeeRatio, uniswapFeeRatio)
-                : (uniswapFeeRatio, volmexPerpMarketManagerFeeRatio);
+                ? (VolmexPerpetualFeeRatio, uniswapFeeRatio)
+                : (uniswapFeeRatio, VolmexPerpetualFeeRatio);
 
         return
             FullMath.mulDivRoundingUp(

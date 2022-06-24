@@ -106,7 +106,7 @@ interface IExchange {
     /// @return accountBalance `AccountBalance` contract address
     function getAccountBalance() external view returns (address accountBalance);
 
-    /// @notice Get `VolmexPerpMarketManagerConfig` contract address
-    /// @return volmexPerpMarketManager `VolmexPerpMarketManagerConfig` contract address
-    function getVolmexPerpMarketManagerConfig() external view returns (address volmexPerpMarketManager);
+    /// @notice Get `VolmexPerpetualConfig` contract address
+    /// @return VolmexPerpetual `VolmexPerpetualConfig` contract address
+    function getVolmexPerpetualConfig() external view returns (address VolmexPerpetual);
 }

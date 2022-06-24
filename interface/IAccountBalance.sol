@@ -90,9 +90,9 @@ interface IAccountBalance {
         int256 lastTwPremiumGrowthGlobalX96
     ) external;
 
-    /// @notice Get `VolmexPerpMarketManagerConfig` address
-    /// @return volmexPerpMarketManagerConfig The address of VolmexPerpMarketManagerConfig
-    function getVolmexPerpMarketManagerConfig() external view returns (address);
+    /// @notice Get `VolmexPerpetualConfig` address
+    /// @return VolmexPerpetualConfig The address of VolmexPerpetualConfig
+    function getVolmexPerpetualConfig() external view returns (address);
 
     /// @notice Get `OrderBook` address
     /// @return orderBook The address of OrderBook

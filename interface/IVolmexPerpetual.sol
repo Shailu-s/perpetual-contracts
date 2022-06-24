@@ -186,9 +186,9 @@ interface IVolmexPerpetual {
     /// @return quoteToken The quote token address
     function getQuoteToken() external view returns (address quoteToken);
 
-    /// @notice Get VolmexPerpMarketManagerConfig address
-    /// @return volmexPerpMarketManagerConfig VolmexPerpMarketManagerConfig address
-    function getVolmexPerpMarketManagerConfig() external view returns (address volmexPerpMarketManagerConfig);
+    /// @notice Get VolmexPerpetualConfig address
+    /// @return VolmexPerpetualConfig VolmexPerpetualConfig address
+    function getVolmexPerpetualConfig() external view returns (address VolmexPerpetualConfig);
 
     /// @notice Get `Vault` address
     /// @return vault `Vault` address
