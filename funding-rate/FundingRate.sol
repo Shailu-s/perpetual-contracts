@@ -10,18 +10,9 @@ import { SwapMath } from "../lib/SwapMath.sol";
 import { PerpFixedPoint96 } from "../lib/PerpFixedPoint96.sol";
 import { Funding } from "../lib/Funding.sol";
 import { PerpMath } from "../lib/PerpMath.sol";
-import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/Initializable.sol";
-import { PositioningCallee } from "../base/PositioningCallee.sol";
-import { BlockContext } from "../base/BlockContext.sol";
-import { ExchangeStorageV1 } from "../storage/ExchangeStorage.sol";
-import { IExchange } from "../interface/IExchange.sol";
-import { IPositioningConfig } from "../interface/IPositioningConfig.sol";
-import { IIndexPrice } from "../interface/IIndexPrice.sol";
-import { IMarkPriceOracle } from "../interface/IMarkPriceOracle.sol";
 
 // never inherit any new stateful contract. never change the orders of parent stateful contracts
-
-contract FundingRate is BlockContext, PositioningCallee, ExchangeStorageV1{
+contract FundingRate {
     using AddressUpgradeable for address;
     using SafeMathUpgradeable for uint256;
     using SignedSafeMathUpgradeable for int256;
@@ -32,31 +23,11 @@ contract FundingRate is BlockContext, PositioningCallee, ExchangeStorageV1{
     using PerpSafeCast for uint256;
     using PerpSafeCast for int256;
 
-    function initialize(
-        address exchangeManagerArg,
-        address orderBookArg,
-        address PositioningConfigArg,
-        address markSmaArg,
-        address transferManager,
-        address quoteToken
-    ) external initializer {
-        __PositioningCallee_init();
-        _exchangeManager = exchangeManagerArg;
-
-        // E_OBNC: OrderBook is not contract
-        require(orderBookArg.isContract(), "E_OBNC");
-        // E_VPMMNC: VPMM is not contract
-        require(PositioningConfigArg.isContract(), "E_VPMMNC");
-
-        // update states
-        _orderBook = orderBookArg;
-        _PositioningConfig = PositioningConfigArg;
-        _markSmaArg = markSmaArg;
-        _transferManager = transferManager;
-    }
+    function initialize() external initializer {}
 
     function settleFunding(address trader, address baseToken)
         external
+        override
         returns (int256 fundingPayment, Funding.Growth memory fundingGrowthGlobal)
     {
         _requireOnlyPositioning();
@@ -72,10 +43,15 @@ contract FundingRate is BlockContext, PositioningCallee, ExchangeStorageV1{
         if (timestamp != _lastSettledTimestampMap[baseToken]) {
             // update fundingGrowthGlobal and _lastSettledTimestamp
             Funding.Growth storage lastFundingGrowthGlobal = _globalFundingGrowthX96Map[baseToken];
-            (_lastSettledTimestampMap[baseToken], lastFundingGrowthGlobal.twPremiumX96) = (
+            (_lastSettledTimestampMap[baseToken], lastFundingGrowthGlobal.twPremium) = (
                 timestamp,
-                fundingGrowthGlobal.twPremiumX96
+                fundingGrowthGlobal.twPremium
             );
+
+            emit FundingUpdated(baseToken, markTwap, indexTwap);
+
+            // update tick for price limit checks
+            _lastUpdatedTickMap[baseToken] = _getTick(baseToken);
         }
         return (fundingPayment, fundingGrowthGlobal);
     }
@@ -110,17 +86,14 @@ contract FundingRate is BlockContext, PositioningCallee, ExchangeStorageV1{
         uint256 timestamp = _blockTimestamp();
         // shorten twapInterval if prior observations are not enough
         if (_firstTradedTimestampMap[baseToken] != 0) {
-            twapInterval = IPositioningConfig(_PositioningConfig).getTwapInterval();
-            // overflow inspection:
-            // 2 ^ 32 = 4,294,967,296 > 100 years = 60 * 60 * 24 * 365 * 100 = 3,153,600,000
+            twapInterval = IClearingHouseConfig(_clearingHouseConfig).getTwapInterval();
             uint32 deltaTimestamp = timestamp.sub(_firstTradedTimestampMap[baseToken]).toUint32();
-            twapInterval = twapInterval > deltaTimestamp ? deltaTimestamp : twapInterval;
+            twapInterval = twapInterval > deltaTimestamp ? twapInterval : deltaTimestamp;
         }
 
-        uint256 markTwapX96 = IMarkPriceOracle(_markSmaArg).getCumulativePrice(twapInterval);
+        uint256 markTwapX96 = IMarkSMA(_markSmaArg).getCumulativePrice(twapInterval);
         markTwap = markTwapX96.formatX96ToX10_18();
         indexTwap = IIndexPrice(baseToken).getIndexPrice(twapInterval);
-
 
         uint256 lastSettledTimestamp = _lastSettledTimestampMap[baseToken];
         Funding.Growth storage lastFundingGrowthGlobal = _globalFundingGrowthX96Map[baseToken];
@@ -131,14 +104,14 @@ contract FundingRate is BlockContext, PositioningCallee, ExchangeStorageV1{
             // deltaTwPremium = (markTwap - indexTwap) * (now - lastSettledTimestamp)
             int256 deltaTwPremium =
                 _getDeltaTwap(markTwap, indexTwap).mul(timestamp.sub(lastSettledTimestamp).toInt256());
-            fundingGrowthGlobal.twPremiumX96 = lastFundingGrowthGlobal.twPremiumX96.add(deltaTwPremium);
+            fundingGrowthGlobal.twPremium = lastFundingGrowthGlobal.twPremium.add(deltaTwPremium);
         }
 
         return (fundingGrowthGlobal, markTwap, indexTwap);
     }
 
     function _getDeltaTwap(uint256 markTwap, uint256 indexTwap) internal view returns (int256 deltaTwap) {
-        uint24 maxFundingRate =IPositioningConfig(_PositioningConfig).getMaxFundingRate();
+        uint24 maxFundingRate = IClearingHouseConfig(_clearingHouseConfig).getMaxFundingRate();
         uint256 maxDeltaTwap = indexTwap.mulRatio(maxFundingRate);
         uint256 absDeltaTwap;
         if (markTwap > indexTwap) {

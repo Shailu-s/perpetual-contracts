@@ -2,7 +2,7 @@
 pragma solidity 0.7.6;
 pragma abicoder v2;
 
-interface IVolmexPerpetual {
+interface IPositioning {
     /// @param useTakerBalance only accept false now
     struct AddLiquidityParams {
         address baseToken;
@@ -186,9 +186,9 @@ interface IVolmexPerpetual {
     /// @return quoteToken The quote token address
     function getQuoteToken() external view returns (address quoteToken);
 
-    /// @notice Get VolmexPerpetualConfig address
-    /// @return VolmexPerpetualConfig VolmexPerpetualConfig address
-    function getVolmexPerpetualConfig() external view returns (address VolmexPerpetualConfig);
+    /// @notice Get PositioningConfig address
+    /// @return PositioningConfig PositioningConfig address
+    function getPositioningConfig() external view returns (address PositioningConfig);
 
     /// @notice Get `Vault` address
     /// @return vault `Vault` address
