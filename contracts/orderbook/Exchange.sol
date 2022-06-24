@@ -12,17 +12,17 @@ import { PerpFixedPoint96 } from "../lib/PerpFixedPoint96.sol";
 import { Funding } from "../lib/Funding.sol";
 import { PerpMath } from "../lib/PerpMath.sol";
 import { AccountMarket } from "../lib/AccountMarket.sol";
-import { IIndexPrice } from "../interface/IIndexPrice.sol";
+import { IIndexPrice } from "../interfaces/IIndexPrice.sol";
 import { PositioningCallee } from "../helpers/PositioningCallee.sol";
-import { IOrderBook } from "../interface/IOrderBook.sol";
-import { IMarketRegistry } from "../interface/IMarketRegistry.sol";
-import { IAccountBalance } from "../interface/IAccountBalance.sol";
-import { IPositioningConfig } from "../interface/IPositioningConfig.sol";
+import { IOrderBook } from "../interfaces/IOrderBook.sol";
+import { IMarketRegistry } from "../interfaces/IMarketRegistry.sol";
+import { IAccountBalance } from "../interfaces/IAccountBalance.sol";
+import { IPositioningConfig } from "../interfaces/IPositioningConfig.sol";
 import { ExchangeStorageV1 } from "../storage/ExchangeStorage.sol";
-import { IExchange } from "../interface/IExchange.sol";
+import { IExchange } from "../interfaces/IExchange.sol";
 import { OpenOrder } from "../lib/OpenOrder.sol";
-import { IMarkPriceOracle } from "../interface/IMarkPriceOracle.sol";
-import { IExchangeManager } from "../interface/IExchangeManager.sol";
+import { IMarkPriceOracle } from "../interfaces/IMarkPriceOracle.sol";
+import { IExchangeManager } from "../interfaces/IExchangeManager.sol";
 import { FullMath } from "@uniswap/v3-core/contracts/libraries/FullMath.sol";
 
 // never inherit any new stateful contract. never change the orders of parent stateful contracts

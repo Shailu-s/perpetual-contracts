@@ -14,10 +14,10 @@ import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/Initial
 import { PositioningCallee } from "../helpers/PositioningCallee.sol";
 import { BlockContext } from "../helpers/BlockContext.sol";
 import { ExchangeStorageV1 } from "../storage/ExchangeStorage.sol";
-import { IExchange } from "../interface/IExchange.sol";
-import { IPositioningConfig } from "../interface/IPositioningConfig.sol";
-import { IIndexPrice } from "../interface/IIndexPrice.sol";
-import { IMarkPriceOracle } from "../interface/IMarkPriceOracle.sol";
+import { IExchange } from "../interfaces/IExchange.sol";
+import { IPositioningConfig } from "../interfaces/IPositioningConfig.sol";
+import { IIndexPrice } from "../interfaces/IIndexPrice.sol";
+import { IMarkPriceOracle } from "../interfaces/IMarkPriceOracle.sol";
 
 // never inherit any new stateful contract. never change the orders of parent stateful contracts
 

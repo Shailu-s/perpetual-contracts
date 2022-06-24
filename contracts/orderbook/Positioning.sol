@@ -11,20 +11,20 @@ import { PerpMath } from "../lib/PerpMath.sol";
 import { Funding } from "../lib/Funding.sol";
 import { SettlementTokenMath } from "../lib/SettlementTokenMath.sol";
 import { OwnerPausable } from "../helpers/OwnerPausable.sol";
-import { IERC20Metadata } from "../interface/IERC20Metadata.sol";
-import { IVault } from "../interface/IVault.sol";
-import { IExchange } from "../interface/IExchange.sol";
-import { IOrderBook } from "../interface/IOrderBook.sol";
-import { IPositioningConfig } from "../interface/IPositioningConfig.sol";
-import { IAccountBalance } from "../interface/IAccountBalance.sol";
+import { IERC20Metadata } from "../interfaces/IERC20Metadata.sol";
+import { IVault } from "../interfaces/IVault.sol";
+import { IExchange } from "../interfaces/IExchange.sol";
+import { IOrderBook } from "../interfaces/IOrderBook.sol";
+import { IPositioningConfig } from "../interfaces/IPositioningConfig.sol";
+import { IAccountBalance } from "../interfaces/IAccountBalance.sol";
 import { BaseRelayRecipient } from "../gsn/helpersRelayRecipient.sol";
 import { PositioningStorageV1 } from "../storage/PositioningStorage.sol";
 import { BlockContext } from "../helpers/BlockContext.sol";
-import { IPositioning } from "../interface/IPositioning.sol";
+import { IPositioning } from "../interfaces/IPositioning.sol";
 import { AccountMarket } from "../lib/AccountMarket.sol";
 import { OpenOrder } from "../lib/OpenOrder.sol";
-import "../interface/IIndexPrice.sol";
-import "../interface/IBaseToken.sol";
+import "../interfaces/IIndexPrice.sol";
+import "../interfaces/IBaseToken.sol";
 
 // never inherit any new stateful contract. never change the orders of parent stateful contracts
 contract Positioning is

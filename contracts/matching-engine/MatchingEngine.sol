@@ -9,7 +9,7 @@ import "./OrderValidator.sol";
 import "./AssetMatcher.sol";
 
 import "./TransferExecutor.sol";
-import "../interface/ITransferManager.sol";
+import "../interfaces/ITransferManager.sol";
 import "../lib/ExchangeFee.sol";
 
 abstract contract MatchingEngine is

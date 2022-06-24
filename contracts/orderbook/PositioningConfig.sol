@@ -3,7 +3,7 @@ pragma solidity 0.7.6;
 
 import { SafeOwnable } from "../helpers/SafeOwnable.sol";
 import { PositioningConfigStorageV2 } from "../storage/PositioningConfigStorage.sol";
-import { IPositioningConfig } from "../interface/IPositioningConfig.sol";
+import { IPositioningConfig } from "../interfaces/IPositioningConfig.sol";
 
 // never inherit any new stateful contract. never change the orders of parent stateful contracts
 contract PositioningConfig is

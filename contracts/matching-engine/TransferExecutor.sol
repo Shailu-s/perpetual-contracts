@@ -6,9 +6,9 @@ pragma abicoder v2;
 import "@openzeppelin/contracts-upgradeable/proxy/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
-import "../interface/IERC20TransferProxy.sol";
-import "../interface/ITransferExecutor.sol";
-import "../interface/IMintBurn.sol";
+import "../interfaces/IERC20TransferProxy.sol";
+import "../interfaces/ITransferExecutor.sol";
+import "../interfaces/IMintBurn.sol";
 
 abstract contract TransferExecutor is Initializable, OwnableUpgradeable, ITransferExecutor {
     mapping(bytes4 => address) proxies;
