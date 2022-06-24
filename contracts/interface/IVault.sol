@@ -60,9 +60,9 @@ interface IVault {
     /// @return debtAmount The debt amount
     function getTotalDebt() external view returns (uint256 debtAmount);
 
-    /// @notice Get `VolmexPerpetualConfig` contract address
-    /// @return VolmexPerpetualConfig The address of `VolmexPerpetualConfig` contract
-    function getVolmexPerpetualConfig() external view returns (address VolmexPerpetualConfig);
+    /// @notice Get `PositioningConfig` contract address
+    /// @return PositioningConfig The address of `PositioningConfig` contract
+    function getPositioningConfig() external view returns (address PositioningConfig);
 
     /// @notice Get `AccountBalance` contract address
     /// @return accountBalance The address of `AccountBalance` contract
@@ -76,7 +76,7 @@ interface IVault {
     /// @return exchange The address of `Exchange` contract
     function getExchange() external view returns (address);
 
-    /// @notice Get `VolmexPerpetual` contract address
-    /// @return VolmexPerpetual The address of `VolmexPerpetual` contract
-    function getVolmexPerpetual() external view returns (address);
+    /// @notice Get `Positioning` contract address
+    /// @return Positioning The address of `Positioning` contract
+    function getPositioning() external view returns (address);
 }
