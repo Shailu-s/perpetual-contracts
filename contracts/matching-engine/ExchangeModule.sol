@@ -12,7 +12,7 @@ import "./TransferExecutor.sol";
 import "../interface/ITransferManager.sol";
 import "../lib/ExchangeFee.sol";
 
-abstract contract ExchangeV2Core is
+abstract contract ExchangeModule is
     Initializable,
     OwnableUpgradeable,
     AssetMatcher,
