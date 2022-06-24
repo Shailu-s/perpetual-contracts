@@ -67,18 +67,18 @@ interface IOrderBook {
     event ExchangeChanged(address indexed exchange);
 
     /// @notice Add liquidity logic
-    /// @dev Only used by `VolmexPerpMarketManager` contract
+    /// @dev Only used by `VolmexPerpetual` contract
     /// @param params Add liquidity params, detail on `IOrderBook.AddLiquidityParams`
     /// @return response Add liquidity response, detail on `IOrderBook.AddLiquidityResponse`
     function addLiquidity(AddLiquidityParams calldata params) external returns (AddLiquidityResponse memory response);
 
-    /// @notice Remove liquidity logic, only used by `VolmexPerpMarketManager` contract
+    /// @notice Remove liquidity logic, only used by `VolmexPerpetual` contract
     /// @param params Remove liquidity params, detail on `IOrderBook.RemoveLiquidityParams`
     /// @return response Remove liquidity response, detail on `IOrderBook.RemoveLiquidityResponse`
     function removeLiquidity(RemoveLiquidityParams calldata params) external returns (RemoveLiquidityResponse memory);
 
     /// @dev This is the non-view version of `getLiquidityCoefficientInFundingPayment()`,
-    /// only can be called by `VolmexPerpMarketManager` contract
+    /// only can be called by `VolmexPerpetual` contract
     /// @param trader The trader address
     /// @param baseToken The base token address
     /// @param fundingGrowthGlobal The funding growth info, detail on `Funding.Growth`
@@ -90,7 +90,7 @@ interface IOrderBook {
     ) external returns (int256 liquidityCoefficientInFundingPayment);
 
     /// @notice Replay the swap and get the swap result (price impact and swap fee),
-    /// only can be called by `VolmexPerpMarketManager` contract;
+    /// only can be called by `VolmexPerpetual` contract;
     /// @dev `ReplaySwapResponse.insuranceFundFee = fee * insuranceFundFeeRatio`
     /// @param params ReplaySwap params, detail on `IOrderBook.ReplaySwapParams`
     /// @return response The swap result encoded in `ReplaySwapResponse`

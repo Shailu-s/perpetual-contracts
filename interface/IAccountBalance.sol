@@ -14,7 +14,7 @@ interface IAccountBalance {
     event PnlRealized(address indexed trader, int256 amount);
 
     /// @notice Modify trader account balance
-    /// @dev Only used by `VolmexPerpMarketManager` contract
+    /// @dev Only used by `VolmexPerpetual` contract
     /// @param trader The address of the trader
     /// @param baseToken The address of the baseToken
     /// @param base Modified amount of base
@@ -29,7 +29,7 @@ interface IAccountBalance {
     ) external returns (int256, int256);
 
     /// @notice Modify trader owedRealizedPnl
-    /// @dev Only used by `VolmexPerpMarketManager` contract
+    /// @dev Only used by `VolmexPerpetual` contract
     /// @param trader The address of the trader
     /// @param amount Modified amount of owedRealizedPnl
     function modifyOwedRealizedPnl(address trader, int256 amount) external;
@@ -41,7 +41,7 @@ interface IAccountBalance {
     function settleOwedRealizedPnl(address trader) external returns (int256 pnl);
 
     /// @notice Modify trader owedRealizedPnl
-    /// @dev Only used by `VolmexPerpMarketManager` contract
+    /// @dev Only used by `VolmexPerpetual` contract
     /// @param trader The address of the trader
     /// @param baseToken The address of the baseToken
     /// @param amount Settled quote amount
@@ -52,7 +52,7 @@ interface IAccountBalance {
     ) external;
 
     /// @notice Settle account balance and deregister base token
-    /// @dev Only used by `VolmexPerpMarketManager` contract
+    /// @dev Only used by `VolmexPerpetual` contract
     /// @param maker The address of the maker
     /// @param baseToken The address of the baseToken
     /// @param realizedPnl Amount of pnl realized
@@ -68,19 +68,19 @@ interface IAccountBalance {
 
     /// @notice Every time a trader's position value is checked, the base token list of this trader will be traversed;
     /// thus, this list should be kept as short as possible
-    /// @dev Only used by `VolmexPerpMarketManager` contract
+    /// @dev Only used by `VolmexPerpetual` contract
     /// @param trader The address of the trader
     /// @param baseToken The address of the trader's base token
     function registerBaseToken(address trader, address baseToken) external;
 
     /// @notice Deregister baseToken from trader accountInfo
-    /// @dev Only used by `VolmexPerpMarketManager` contract, this function is expensive, due to for loop
+    /// @dev Only used by `VolmexPerpetual` contract, this function is expensive, due to for loop
     /// @param trader The address of the trader
     /// @param baseToken The address of the trader's base token
     function deregisterBaseToken(address trader, address baseToken) external;
 
     /// @notice Update trader Twap premium info
-    /// @dev Only used by `VolmexPerpMarketManager` contract
+    /// @dev Only used by `VolmexPerpetual` contract
     /// @param trader The address of trader
     /// @param baseToken The address of baseToken
     /// @param lastTwPremiumGrowthGlobalX96 The last Twap Premium
@@ -134,7 +134,7 @@ interface IAccountBalance {
     /// @notice Get margin requirement to check whether trader will be able to liquidate
     /// @dev This is different from `Vault._getTotalMarginRequirement()`, which is for freeCollateral calculation
     /// @param trader The address of trader
-    /// @return marginRequirementForLiquidation It is compared with `VolmexPerpMarketManager.getAccountValue`
+    /// @return marginRequirementForLiquidation It is compared with `VolmexPerpetual.getAccountValue`
     function getMarginRequirementForLiquidation(address trader) external view returns (int256);
 
     /// @notice Get owedRealizedPnl, realizedPnl and pending fee

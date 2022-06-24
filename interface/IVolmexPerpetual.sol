@@ -2,7 +2,7 @@
 pragma solidity 0.7.6;
 pragma abicoder v2;
 
-interface IVolmexPerpMarketManager {
+interface IVolmexPerpetual {
     /// @param useTakerBalance only accept false now
     struct AddLiquidityParams {
         address baseToken;

@@ -8,7 +8,7 @@ import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/Initial
  * @title Volmex Oracle Mark SMA
  * @author volmex.finance [security@volmexlabs.com]
  */
-contract MarkSMA is Initializable {
+contract MarkPriceOracle is Initializable {
     using SafeMathUpgradeable for uint256;
 
     struct Observation {

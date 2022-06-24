@@ -37,7 +37,7 @@ abstract contract VolmexPerpMarketManagerCallee is SafeOwnable {
     }
 
     function _requireOnlyVolmexPerpMarketManager() internal view {
-        // only VolmexPerpMarketManager
+        // only VolmexPerpetual
         require(_msgSender() == _volmexPerpMarketManager, "CHD_OCH");
     }
 }

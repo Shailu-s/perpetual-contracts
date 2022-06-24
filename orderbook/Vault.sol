@@ -86,7 +86,7 @@ contract Vault is IVault, ReentrancyGuardUpgradeable, OwnerPausable, BaseRelayRe
     }
 
     function setVolmexPerpMarketManager(address volmexPerpMarketManagerArg) external onlyOwner {
-        // V_VPMM: VolmexPerpMarketManager is not contract
+        // V_VPMM: VolmexPerpetual is not contract
         require(volmexPerpMarketManagerArg.isContract(), "V_VPMM");
         _volmexPerpMarketManager = volmexPerpMarketManagerArg;
     }

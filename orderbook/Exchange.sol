@@ -21,7 +21,7 @@ import { IVolmexPerpMarketManagerConfig } from "../interface/IVolmexPerpMarketMa
 import { ExchangeStorageV1 } from "../storage/ExchangeStorage.sol";
 import { IExchange } from "../interface/IExchange.sol";
 import { OpenOrder } from "../lib/OpenOrder.sol";
-import { IMarkSMA } from "../interface/IMarkSMA.sol";
+import { IMarkPriceOracle } from "../interface/IMarkPriceOracle.sol";
 import { IExchangeManager } from "../interface/IExchangeManager.sol";
 
 // never inherit any new stateful contract. never change the orders of parent stateful contracts
@@ -284,7 +284,7 @@ contract Exchange is IExchange, BlockContext, VolmexPerpMarketManagerCallee, Exc
                 right.trader,
                 IExchangeManager.AssetType({ token: _quoteToken, amount: right.amount, isBase: false })
             );
-        // as we charge fees in VolmexPerpMarketManager,
+        // as we charge fees in VolmexPerpetual,
         // we need to scale up base or quote amounts to get the exact exchanged position size and notional
         int256 exchangedPositionSize;
         int256 exchangedPositionNotional;
@@ -373,7 +373,7 @@ contract Exchange is IExchange, BlockContext, VolmexPerpMarketManagerCallee, Exc
             twapInterval = twapInterval > deltaTimestamp ? deltaTimestamp : twapInterval;
         }
 
-        uint256 markTwapX96 = IMarkSMA(_markSmaArg).getCumulativePrice(twapInterval);
+        uint256 markTwapX96 = IMarkPriceOracle(_markSmaArg).getCumulativePrice(twapInterval);
         markTwap = markTwapX96.formatX96ToX10_18();
         indexTwap = IIndexPrice(baseToken).getIndexPrice(twapInterval);
 

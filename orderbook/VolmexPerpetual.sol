@@ -27,7 +27,7 @@ import "../interface/IIndexPrice.sol";
 import "../interface/IBaseToken.sol";
 
 // never inherit any new stateful contract. never change the orders of parent stateful contracts
-contract VolmexPerpMarketManager is
+contract VolmexPerpetual is
     IVolmexPerpMarketManager,
     BlockContext,
     ReentrancyGuardUpgradeable,
@@ -176,7 +176,7 @@ contract VolmexPerpMarketManager is
         checkDeadline(positionLeft.deadline)
         returns (uint256 base, uint256 quote)
     {
-        require(positionLeft.isMaker, "VolmexPerpMarketManager: Left order should be maker");
+        require(positionLeft.isMaker, "VolmexPerpetual: Left order should be maker");
         // register token if it's the first time
         IAccountBalance(_accountBalance).registerBaseToken(positionLeft.trader, positionLeft.baseToken);
         IAccountBalance(_accountBalance).registerBaseToken(positionRight.trader, positionRight.baseToken);

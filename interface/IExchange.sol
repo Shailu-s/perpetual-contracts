@@ -6,7 +6,7 @@ import { Funding } from "../lib/Funding.sol";
 
 interface IExchange {
     /// @param amount when closing position, amount(uint256) == takerPositionSize(int256),
-    ///        as amount is assigned as takerPositionSize in VolmexPerpMarketManager.closePosition()
+    ///        as amount is assigned as takerPositionSize in VolmexPerpetual.closePosition()
     struct SwapParams {
         address trader;
         address baseToken;
@@ -56,7 +56,7 @@ interface IExchange {
     event AccountBalanceChanged(address accountBalance);
 
     /// @notice The actual swap function
-    /// @dev can only be called from VolmexPerpMarketManager
+    /// @dev can only be called from VolmexPerpetual
     /// @param params1 The parameters of the swap
     /// @param params2 The parameters of the swap
     /// @return swapResponse The result of the swap

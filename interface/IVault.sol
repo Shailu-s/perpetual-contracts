@@ -76,7 +76,7 @@ interface IVault {
     /// @return exchange The address of `Exchange` contract
     function getExchange() external view returns (address);
 
-    /// @notice Get `VolmexPerpMarketManager` contract address
-    /// @return volmexPerpMarketManager The address of `VolmexPerpMarketManager` contract
+    /// @notice Get `VolmexPerpetual` contract address
+    /// @return volmexPerpMarketManager The address of `VolmexPerpetual` contract
     function getVolmexPerpMarketManager() external view returns (address);
 }
