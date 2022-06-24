@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity 0.7.6;
 
-import { Tick } from "../lib/Tick.sol";
 import { Funding } from "../lib/Funding.sol";
 import { OpenOrder } from "../lib/OpenOrder.sol";
 
@@ -16,10 +15,6 @@ abstract contract OrderBookStorageV1 {
 
     // key: openOrderId
     mapping(bytes32 => OpenOrder.Info) internal _openOrderMap;
-
-    // first key: base token, second key: tick index
-    // value: the accumulator of **Tick.GrowthInfo** outside each tick of each pool
-    mapping(address => mapping(int24 => Tick.GrowthInfo)) internal _growthOutsideTickMap;
 
     // key: base token
     // value: the global accumulator of **quote fee transformed from base fee** of each pool

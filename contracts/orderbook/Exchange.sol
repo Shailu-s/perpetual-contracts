@@ -23,6 +23,7 @@ import { IExchange } from "../interface/IExchange.sol";
 import { OpenOrder } from "../lib/OpenOrder.sol";
 import { IMarkPriceOracle } from "../interface/IMarkPriceOracle.sol";
 import { IExchangeManager } from "../interface/IExchangeManager.sol";
+import { FullMath } from "@uniswap/v3-core/contracts/libraries/FullMath.sol";
 
 // never inherit any new stateful contract. never change the orders of parent stateful contracts
 contract Exchange is IExchange, BlockContext, VolmexPerpetualCallee, ExchangeStorageV1 {

@@ -10,9 +10,18 @@ import { SwapMath } from "../lib/SwapMath.sol";
 import { PerpFixedPoint96 } from "../lib/PerpFixedPoint96.sol";
 import { Funding } from "../lib/Funding.sol";
 import { PerpMath } from "../lib/PerpMath.sol";
+import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/Initializable.sol";
+import { VolmexPerpetualCallee } from "../base/VolmexPerpetualCallee.sol";
+import { BlockContext } from "../base/BlockContext.sol";
+import { ExchangeStorageV1 } from "../storage/ExchangeStorage.sol";
+import { IExchange } from "../interface/IExchange.sol";
+import { IVolmexPerpetualConfig } from "../interface/IVolmexPerpetualConfig.sol";
+import { IIndexPrice } from "../interface/IIndexPrice.sol";
+import { IMarkPriceOracle } from "../interface/IMarkPriceOracle.sol";
 
 // never inherit any new stateful contract. never change the orders of parent stateful contracts
-contract FundingRate {
+
+contract FundingRate is BlockContext, VolmexPerpetualCallee, ExchangeStorageV1{
     using AddressUpgradeable for address;
     using SafeMathUpgradeable for uint256;
     using SignedSafeMathUpgradeable for int256;
@@ -23,11 +32,31 @@ contract FundingRate {
     using PerpSafeCast for uint256;
     using PerpSafeCast for int256;
 
-    function initialize() external initializer {}
+    function initialize(
+        address exchangeManagerArg,
+        address orderBookArg,
+        address VolmexPerpetualConfigArg,
+        address markSmaArg,
+        address transferManager,
+        address quoteToken
+    ) external initializer {
+        __VolmexPerpetualCallee_init();
+        _exchangeManager = exchangeManagerArg;
+
+        // E_OBNC: OrderBook is not contract
+        require(orderBookArg.isContract(), "E_OBNC");
+        // E_VPMMNC: VPMM is not contract
+        require(VolmexPerpetualConfigArg.isContract(), "E_VPMMNC");
+
+        // update states
+        _orderBook = orderBookArg;
+        _VolmexPerpetualConfig = VolmexPerpetualConfigArg;
+        _markSmaArg = markSmaArg;
+        _transferManager = transferManager;
+    }
 
     function settleFunding(address trader, address baseToken)
         external
-        override
         returns (int256 fundingPayment, Funding.Growth memory fundingGrowthGlobal)
     {
         _requireOnlyVolmexPerpetual();
@@ -43,15 +72,10 @@ contract FundingRate {
         if (timestamp != _lastSettledTimestampMap[baseToken]) {
             // update fundingGrowthGlobal and _lastSettledTimestamp
             Funding.Growth storage lastFundingGrowthGlobal = _globalFundingGrowthX96Map[baseToken];
-            (_lastSettledTimestampMap[baseToken], lastFundingGrowthGlobal.twPremium) = (
+            (_lastSettledTimestampMap[baseToken], lastFundingGrowthGlobal.twPremiumX96) = (
                 timestamp,
-                fundingGrowthGlobal.twPremium
+                fundingGrowthGlobal.twPremiumX96
             );
-
-            emit FundingUpdated(baseToken, markTwap, indexTwap);
-
-            // update tick for price limit checks
-            _lastUpdatedTickMap[baseToken] = _getTick(baseToken);
         }
         return (fundingPayment, fundingGrowthGlobal);
     }
@@ -86,14 +110,17 @@ contract FundingRate {
         uint256 timestamp = _blockTimestamp();
         // shorten twapInterval if prior observations are not enough
         if (_firstTradedTimestampMap[baseToken] != 0) {
-            twapInterval = IClearingHouseConfig(_clearingHouseConfig).getTwapInterval();
+            twapInterval = IVolmexPerpetualConfig(_VolmexPerpetualConfig).getTwapInterval();
+            // overflow inspection:
+            // 2 ^ 32 = 4,294,967,296 > 100 years = 60 * 60 * 24 * 365 * 100 = 3,153,600,000
             uint32 deltaTimestamp = timestamp.sub(_firstTradedTimestampMap[baseToken]).toUint32();
-            twapInterval = twapInterval > deltaTimestamp ? twapInterval : deltaTimestamp;
+            twapInterval = twapInterval > deltaTimestamp ? deltaTimestamp : twapInterval;
         }
 
-        uint256 markTwapX96 = IMarkSMA(_markSmaArg).getCumulativePrice(twapInterval);
+        uint256 markTwapX96 = IMarkPriceOracle(_markSmaArg).getCumulativePrice(twapInterval);
         markTwap = markTwapX96.formatX96ToX10_18();
         indexTwap = IIndexPrice(baseToken).getIndexPrice(twapInterval);
+
 
         uint256 lastSettledTimestamp = _lastSettledTimestampMap[baseToken];
         Funding.Growth storage lastFundingGrowthGlobal = _globalFundingGrowthX96Map[baseToken];
@@ -104,14 +131,14 @@ contract FundingRate {
             // deltaTwPremium = (markTwap - indexTwap) * (now - lastSettledTimestamp)
             int256 deltaTwPremium =
                 _getDeltaTwap(markTwap, indexTwap).mul(timestamp.sub(lastSettledTimestamp).toInt256());
-            fundingGrowthGlobal.twPremium = lastFundingGrowthGlobal.twPremium.add(deltaTwPremium);
+            fundingGrowthGlobal.twPremiumX96 = lastFundingGrowthGlobal.twPremiumX96.add(deltaTwPremium);
         }
 
         return (fundingGrowthGlobal, markTwap, indexTwap);
     }
 
     function _getDeltaTwap(uint256 markTwap, uint256 indexTwap) internal view returns (int256 deltaTwap) {
-        uint24 maxFundingRate = IClearingHouseConfig(_clearingHouseConfig).getMaxFundingRate();
+        uint24 maxFundingRate =IVolmexPerpetualConfig(_VolmexPerpetualConfig).getMaxFundingRate();
         uint256 maxDeltaTwap = indexTwap.mulRatio(maxFundingRate);
         uint256 absDeltaTwap;
         if (markTwap > indexTwap) {
