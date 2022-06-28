@@ -32,14 +32,11 @@ abstract contract TransferExecutor is Initializable, OwnableUpgradeable, ITransf
         address to,
         address proxy
     ) internal {
-        if (asset.assetType.assetClass == LibAsset.ERC20_ASSET_CLASS) {
-            //not using transfer proxy when transfering from this contract
-            address token = abi.decode(asset.assetType.data, (address));
-            if (from == address(this)) {
-                IERC20Upgradeable(token).transfer(to, asset.value);
-            } else {
-                IERC20TransferProxy(proxy).erc20safeTransferFrom(IERC20Upgradeable(token), from, to, asset.value);
-            }
+        address token = asset.virtualToken;
+        if (from == address(this)) {
+            IERC20Upgradeable(token).transfer(to, asset.value);
+        } else {
+            IERC20TransferProxy(proxy).erc20safeTransferFrom(IERC20Upgradeable(token), from, to, asset.value);
         }
     }
 
@@ -49,7 +46,7 @@ abstract contract TransferExecutor is Initializable, OwnableUpgradeable, ITransf
         address to,
         address proxy
     ) internal override {
-        address token = abi.decode(asset.assetType.data, (address));
+        address token = asset.virtualToken;
         IMintBurn(token).mint(to, asset.value);
         // TODO Add wrapper method for mint and burn, callable by TransferExecutor only
         // TODO Add logic to mint and burn the token, if trader is not new
