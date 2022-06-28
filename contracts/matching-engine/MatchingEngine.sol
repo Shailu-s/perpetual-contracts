@@ -5,12 +5,10 @@ pragma abicoder v2;
 
 import "../libs/LibFill.sol";
 import "../libs/LibOrderData.sol";
+import "../interfaces/ITransferManager.sol";
 import "./OrderValidator.sol";
 import "./AssetMatcher.sol";
-
 import "./TransferExecutor.sol";
-import "../interfaces/ITransferManager.sol";
-import "../libs/ExchangeFee.sol";
 
 abstract contract MatchingEngine is
     Initializable,
@@ -62,7 +60,7 @@ abstract contract MatchingEngine is
         @param orderRight the right order of the match
     */
     function matchAndTransfer(LibOrder.Order memory orderLeft, LibOrder.Order memory orderRight) internal {
-        (LibAsset.AssetType memory makeMatch, LibAsset.AssetType memory takeMatch) = matchAssets(orderLeft, orderRight);
+        (LibAsset.Asset memory makeMatch, LibAsset.Asset memory takeMatch) = matchAssets(orderLeft, orderRight);
 
         LibOrderData.GenericOrderData memory leftOrderData = LibOrderData.parse(orderLeft);
         LibOrderData.GenericOrderData memory rightOrderData = LibOrderData.parse(orderRight);
@@ -73,22 +71,20 @@ abstract contract MatchingEngine is
         (uint256 totalMakeValue, uint256 totalTakeValue) =
             doTransfers(
                 LibDeal.DealSide(
-                    LibAsset.Asset(makeMatch, newFill.leftValue),
+                    LibAsset.Asset(makeMatch.virtualToken, newFill.leftValue),
                     leftOrderData.payouts,
                     leftOrderData.originFees,
-                    proxies[makeMatch.assetClass],
+                    _proxy,
                     orderLeft.maker
                 ),
                 LibDeal.DealSide(
-                    LibAsset.Asset(takeMatch, newFill.rightValue),
+                    LibAsset.Asset(takeMatch.virtualToken, newFill.rightValue),
                     rightOrderData.payouts,
                     rightOrderData.originFees,
-                    proxies[takeMatch.assetClass],
+                    _proxy,
                     orderRight.maker
                 ),
                 getDealData(
-                    makeMatch.assetClass,
-                    takeMatch.assetClass,
                     orderLeft.dataType,
                     orderRight.dataType,
                     leftOrderData,
@@ -131,9 +127,6 @@ abstract contract MatchingEngine is
         if (feeSide == LibFeeSide.FeeSide.LEFT) {
             maxFee = rightOrderData.maxFeesBasePoint;
             require(dataTypeLeft == LibOrderDataV3.V3_BUY && dataTypeRight == LibOrderDataV3.V3_SELL, "wrong V3 type1");
-        } else if (feeSide == LibFeeSide.FeeSide.RIGHT) {
-            maxFee = leftOrderData.maxFeesBasePoint;
-            require(dataTypeRight == LibOrderDataV3.V3_BUY && dataTypeLeft == LibOrderDataV3.V3_SELL, "wrong V3 type2");
         } else {
             return 0;
         }
@@ -143,15 +136,13 @@ abstract contract MatchingEngine is
     }
 
     function getDealData(
-        bytes4 makeMatchAssetClass,
-        bytes4 takeMatchAssetClass,
         bytes4 leftDataType,
         bytes4 rightDataType,
         LibOrderData.GenericOrderData memory leftOrderData,
         LibOrderData.GenericOrderData memory rightOrderData
     ) internal view returns (LibDeal.DealData memory dealData) {
         dealData.protocolFee = getProtocolFeeConditional(leftDataType);
-        dealData.feeSide = LibFeeSide.getFeeSide(makeMatchAssetClass, takeMatchAssetClass);
+        dealData.feeSide = LibFeeSide.getFeeSide();
         dealData.maxFeesBasePoint = getMaxFee(
             leftDataType,
             rightDataType,
@@ -241,13 +232,13 @@ abstract contract MatchingEngine is
 
     function matchAssets(LibOrder.Order memory orderLeft, LibOrder.Order memory orderRight)
         internal
-        view
-        returns (LibAsset.AssetType memory makeMatch, LibAsset.AssetType memory takeMatch)
+        pure
+        returns (LibAsset.Asset memory makeMatch, LibAsset.Asset memory takeMatch)
     {
-        makeMatch = matchAssets(orderLeft.makeAsset.assetType, orderRight.takeAsset.assetType);
-        require(makeMatch.assetClass != 0, "assets don't match");
-        takeMatch = matchAssets(orderLeft.takeAsset.assetType, orderRight.makeAsset.assetType);
-        require(takeMatch.assetClass != 0, "assets don't match");
+        makeMatch = matchAssets(orderLeft.makeAsset, orderRight.takeAsset);
+        require(makeMatch.virtualToken != address(0), "assets don't match");
+        takeMatch = matchAssets(orderLeft.takeAsset, orderRight.makeAsset);
+        require(takeMatch.virtualToken != address(0), "assets don't match");
     }
 
     function validateFull(LibOrder.Order memory order, bytes memory signature) internal view {
