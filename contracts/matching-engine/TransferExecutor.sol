@@ -11,19 +11,19 @@ import "../interfaces/ITransferExecutor.sol";
 import "../interfaces/IMintBurn.sol";
 
 abstract contract TransferExecutor is Initializable, OwnableUpgradeable, ITransferExecutor {
-    mapping(bytes4 => address) proxies;
+    address internal _proxy;
 
-    event ProxyChange(bytes4 indexed assetType, address proxy);
+    event ProxyChange(address proxy);
 
     function __TransferExecutor_init_unchained(address erc20TransferProxy) internal {
-        proxies[LibAsset.ERC20_ASSET_CLASS] = address(erc20TransferProxy);
+        _proxy = erc20TransferProxy;
 
         __Ownable_init();
     }
 
-    function setTransferProxy(bytes4 assetType, address proxy) external onlyOwner {
-        proxies[assetType] = proxy;
-        emit ProxyChange(assetType, proxy);
+    function setTransferProxy(address proxy) external onlyOwner {
+        _proxy = proxy;
+        emit ProxyChange(proxy);
     }
 
     function transferToken(
