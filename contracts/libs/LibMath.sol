@@ -5,7 +5,7 @@ pragma solidity 0.7.6;
 import "@openzeppelin/contracts-upgradeable/math/SafeMathUpgradeable.sol";
 
 library LibMath {
-    using SafeMathUpgradeable for uint;
+    using SafeMathUpgradeable for uint256;
 
     /// @dev Calculates partial value given a numerator and denominator rounded down.
     ///      Reverts if rounding error is >= 0.1%
@@ -64,11 +64,7 @@ library LibMath {
         //        1000 * remainder  <  numerator * target
         // so we have a rounding error iff:
         //        1000 * remainder  >=  numerator * target
-        uint256 remainder = mulmod(
-            target,
-            numerator,
-            denominator
-        );
+        uint256 remainder = mulmod(target, numerator, denominator);
         isError = remainder.mul(1000) >= numerator.mul(target);
     }
 
@@ -105,11 +101,7 @@ library LibMath {
             return false;
         }
         // Compute remainder as before
-        uint256 remainder = mulmod(
-            target,
-            numerator,
-            denominator
-        );
+        uint256 remainder = mulmod(target, numerator, denominator);
         remainder = denominator.sub(remainder) % denominator;
         isError = remainder.mul(1000) >= numerator.mul(target);
         return isError;
