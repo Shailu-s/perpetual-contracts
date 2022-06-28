@@ -2,9 +2,8 @@
 
 pragma solidity 0.7.6;
 
-import "./ExchangeFee.sol";
-
 import "./LibMath.sol";
+import "./LibAsset.sol";
 import "./LibOrderDataV3.sol";
 import "./LibOrderDataV2.sol";
 import "./LibOrderDataV1.sol";
@@ -32,11 +31,6 @@ library LibOrder {
         bytes data;
     }
 
-    struct MatchedAssets {
-        LibAsset.AssetType makeMatch;
-        LibAsset.AssetType takeMatch;
-    }
-
     function calculateRemaining(
         Order memory order,
         uint256 fill,
@@ -57,8 +51,8 @@ library LibOrder {
                 keccak256(
                     abi.encode(
                         order.maker,
-                        LibAsset.hash(order.makeAsset.assetType),
-                        LibAsset.hash(order.takeAsset.assetType),
+                        LibAsset.hash(order.makeAsset),
+                        LibAsset.hash(order.takeAsset),
                         order.salt
                     )
                 );
@@ -68,8 +62,8 @@ library LibOrder {
                 keccak256(
                     abi.encode(
                         order.maker,
-                        LibAsset.hash(order.makeAsset.assetType),
-                        LibAsset.hash(order.takeAsset.assetType),
+                        LibAsset.hash(order.makeAsset),
+                        LibAsset.hash(order.takeAsset),
                         order.salt,
                         order.data
                     )
