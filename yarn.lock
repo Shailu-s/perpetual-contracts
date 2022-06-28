@@ -1766,7 +1766,7 @@
 
 "@uniswap/lib@^4.0.1-alpha":
   version "4.0.1-alpha"
-  resolved "https://registry.npmjs.org/@uniswap/lib/-/lib-4.0.1-alpha.tgz"
+  resolved "https://registry.npmjs.org/@uniswap/libs/-/lib-4.0.1-alpha.tgz"
   integrity sha512-f6UIliwBbRsgVLxIaBANF6w09tYqc6Y/qXdsrbEmXHyFA7ILiKrIwRFXe1yOg8M3cksgVsO9N7yuL2DdCGQKBA==
 
 "@uniswap/v2-core@1.0.1":
