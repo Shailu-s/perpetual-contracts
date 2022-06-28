@@ -28,10 +28,11 @@ library LibOrder {
         bytes data;
     }
 
-    function calculateRemaining(
-        Order memory order,
-        uint256 fill
-    ) internal pure returns (uint256 makeValue, uint256 takeValue) {
+    function calculateRemaining(Order memory order, uint256 fill)
+        internal
+        pure
+        returns (uint256 makeValue, uint256 takeValue)
+    {
         takeValue = order.takeAsset.value.sub(fill);
         makeValue = LibMath.safeGetPartialAmountFloor(order.makeAsset.value, order.takeAsset.value, takeValue);
     }

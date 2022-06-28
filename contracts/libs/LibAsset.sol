@@ -3,8 +3,7 @@ pragma solidity 0.7.6;
 pragma abicoder v2;
 
 library LibAsset {
-    bytes32 constant ASSET_TYPEHASH =
-        keccak256("Asset(address virtualToken,uint256 value)");
+    bytes32 constant ASSET_TYPEHASH = keccak256("Asset(address virtualToken,uint256 value)");
 
     struct Asset {
         address virtualToken;

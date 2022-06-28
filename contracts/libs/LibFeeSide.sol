@@ -5,7 +5,9 @@ pragma abicoder v2;
 import "./LibAsset.sol";
 
 library LibFeeSide {
-    enum FeeSide { LEFT }
+    enum FeeSide {
+        LEFT
+    }
 
     function getFeeSide() internal pure returns (FeeSide) {
         return FeeSide.LEFT;
