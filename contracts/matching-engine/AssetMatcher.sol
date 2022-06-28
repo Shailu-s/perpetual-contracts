@@ -3,20 +3,11 @@
 pragma solidity 0.7.6;
 pragma abicoder v2;
 
-import "../interfaces/IAssetMatcher.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
 abstract contract AssetMatcher is Initializable, OwnableUpgradeable {
     bytes constant EMPTY = "";
-    mapping(bytes4 => address) matchers;
-
-    event MatcherChange(bytes4 indexed assetType, address matcher);
-
-    function setAssetMatcher(bytes4 assetType, address matcher) external onlyOwner {
-        matchers[assetType] = matcher;
-        emit MatcherChange(assetType, matcher);
-    }
 
     function matchAssets(LibAsset.AssetType memory leftAssetType, LibAsset.AssetType memory rightAssetType)
         internal
@@ -43,10 +34,6 @@ abstract contract AssetMatcher is Initializable, OwnableUpgradeable {
                 return simpleMatch(leftAssetType, rightAssetType);
             }
             return LibAsset.AssetType(0, EMPTY);
-        }
-        address matcher = matchers[classLeft];
-        if (matcher != address(0)) {
-            return IAssetMatcher(matcher).matchAssets(leftAssetType, rightAssetType);
         }
         if (classLeft == classRight) {
             return simpleMatch(leftAssetType, rightAssetType);
