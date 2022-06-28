@@ -6,52 +6,52 @@ pragma abicoder v2;
 import "@openzeppelin/contracts-upgradeable/proxy/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
-abstract contract AssetMatcher is Initializable, OwnableUpgradeable {
-    bytes constant EMPTY = "";
+import "../libs/LibAsset.sol";
 
-    function matchAssets(LibAsset.AssetType memory leftAssetType, LibAsset.AssetType memory rightAssetType)
+abstract contract AssetMatcher is Initializable, OwnableUpgradeable {
+    uint256 constant ZERO = 0;
+
+    function matchAssets(LibAsset.Asset memory leftAsset, LibAsset.Asset memory rightAsset)
         internal
-        view
-        returns (LibAsset.AssetType memory)
+        pure
+        returns (LibAsset.Asset memory)
     {
-        LibAsset.AssetType memory result = matchAssetOneSide(leftAssetType, rightAssetType);
-        if (result.assetClass == 0) {
-            return matchAssetOneSide(rightAssetType, leftAssetType);
+        LibAsset.Asset memory result = matchAssetOneSide(leftAsset, rightAsset);
+        if (result.virtualToken == address(0)) {
+            return matchAssetOneSide(rightAsset, leftAsset);
         } else {
             return result;
         }
     }
 
-    function matchAssetOneSide(LibAsset.AssetType memory leftAssetType, LibAsset.AssetType memory rightAssetType)
+    function matchAssetOneSide(LibAsset.Asset memory leftAsset, LibAsset.Asset memory rightAsset)
         private
-        view
-        returns (LibAsset.AssetType memory)
+        pure
+        returns (LibAsset.Asset memory)
     {
-        bytes4 classLeft = leftAssetType.assetClass;
-        bytes4 classRight = rightAssetType.assetClass;
-        if (classLeft == LibAsset.ERC20_ASSET_CLASS) {
-            if (classRight == LibAsset.ERC20_ASSET_CLASS) {
-                return simpleMatch(leftAssetType, rightAssetType);
+        address tokenLeft = leftAsset.virtualToken;
+        address tokenRight = rightAsset.virtualToken;
+        if (tokenLeft != address(0)) {
+            if (tokenRight != address(0)) {
+                return simpleMatch(leftAsset, rightAsset);
             }
-            return LibAsset.AssetType(0, EMPTY);
-        }
-        if (classLeft == classRight) {
-            return simpleMatch(leftAssetType, rightAssetType);
+            return LibAsset.Asset(address(0), ZERO);
         }
         revert("not found IAssetMatcher");
     }
 
-    function simpleMatch(LibAsset.AssetType memory leftAssetType, LibAsset.AssetType memory rightAssetType)
+    function simpleMatch(LibAsset.Asset memory leftAsset, LibAsset.Asset memory rightAsset)
         private
         pure
-        returns (LibAsset.AssetType memory)
+        returns (LibAsset.Asset memory)
     {
-        bytes32 leftHash = keccak256(leftAssetType.data);
-        bytes32 rightHash = keccak256(rightAssetType.data);
+        bytes32 leftHash = keccak256(abi.encodePacked(leftAsset.virtualToken, leftAsset.value));
+        bytes32 rightHash = keccak256(abi.encodePacked(rightAsset.virtualToken, rightAsset.value));
+        // TODO .data consists of token address and amount, then how both the hash will be equal
         if (leftHash == rightHash) {
-            return leftAssetType;
+            return leftAsset;
         }
-        return LibAsset.AssetType(0, EMPTY);
+        return LibAsset.Asset(address(0), ZERO);
     }
 
     uint256[49] private __gap;
