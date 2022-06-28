@@ -3,7 +3,7 @@
 pragma solidity 0.7.6;
 pragma abicoder v2;
 
-import "./ExchangeFee.sol";
+import "./LibPart.sol";
 
 library LibOrderDataV2 {
     bytes4 constant public V2 = bytes4(keccak256("V2"));
