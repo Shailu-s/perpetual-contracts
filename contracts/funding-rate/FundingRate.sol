@@ -83,7 +83,9 @@ contract FundingRate is BlockContext, PositioningCallee, ExchangeStorageV1 {
         int256 markTwap,
         int256 indexTwap
     ) internal view returns (int256 pendingFundingPayment) {
-              // TODO Use settle funding calculation formulae
+        int256 marketFundingRate = ((markTwap.sub(indexTwap)).div(indexTwap)).div(24);
+        int256 PositionSize = IAccountBalance(_accountBalance).getTakerPositionSize(trader, baseToken);
+        pendingFundingPayment = PositionSize.mul(marketFundingRate);
     }
 
     /// @dev this function calculates the up-to-date globalFundingGrowth and twaps and pass them out
