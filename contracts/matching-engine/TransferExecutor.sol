@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-3.0-or-later
+// SPDX-License-Identifier: MIT
 
 pragma solidity 0.7.6;
 pragma abicoder v2;
@@ -47,9 +47,11 @@ abstract contract TransferExecutor is Initializable, OwnableUpgradeable, ITransf
         address proxy
     ) internal override {
         address token = asset.virtualToken;
-        IMintBurn(token).mint(to, asset.value);
-        // TODO Add wrapper method for mint and burn, callable by TransferExecutor only
-        // TODO Add logic to mint and burn the token, if trader is not new
+        if (from == address(this)) {
+            IERC20Upgradeable(token).transfer(to, asset.value);
+        } else {
+            IERC20TransferProxy(proxy).erc20safeTransferFrom(IERC20Upgradeable(token), from, to, asset.value);
+        }
     }
 
     uint256[49] private __gap;
