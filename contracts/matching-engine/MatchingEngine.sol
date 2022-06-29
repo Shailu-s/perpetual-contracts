@@ -167,14 +167,5 @@ abstract contract MatchingEngine is
 
     function getProtocolFee() internal view virtual returns (uint256);
 
-    /**
-        @notice returns protocol Fee for V3 or upper orders, 0 for V2 and earlier ordrs
-        @param leftDataType type of the left order in a match
-        @return protocol fee
-    */
-    function getProtocolFeeConditional(bytes4 leftDataType) internal view returns (uint256) {
-        return getProtocolFee();
-    }
-
     uint256[47] private __gap;
 }
