@@ -33,8 +33,7 @@ library OpenOrder {
         Asset takeAsset;
         uint256 minTakeValue;
         uint256 salt; // needs to be incremental for a given user
-        uint256 start;
-        uint256 end;
+        uint256 deadline;
         bytes data;
     }
 

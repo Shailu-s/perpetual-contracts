@@ -10,7 +10,7 @@ library LibOrder {
 
     bytes32 constant ORDER_TYPEHASH =
         keccak256(
-            "Order(address maker,Asset makeAsset,address taker,Asset takeAsset,uint256 salt,uint256 start,uint256 end,bytes4 dataType,bytes data)Asset(address virtualToken,uint256 value)"
+            "Order(address maker,Asset makeAsset,address taker,Asset takeAsset,uint256 salt,uint256 deadline,bytes4 dataType,bytes data)Asset(address virtualToken,uint256 value)"
         );
 
     uint256 constant ON_CHAIN_ORDER = 0;
@@ -22,8 +22,7 @@ library LibOrder {
         address taker;
         LibAsset.Asset takeAsset;
         uint256 salt;
-        uint256 start;
-        uint256 end;
+        uint256 deadline;
         bytes4 dataType;
         bytes data;
     }
@@ -68,8 +67,7 @@ library LibOrder {
                     order.taker,
                     LibAsset.hash(order.takeAsset),
                     order.salt,
-                    order.start,
-                    order.end,
+                    order.deadline,
                     order.dataType,
                     keccak256(order.data)
                 )
@@ -77,7 +75,6 @@ library LibOrder {
     }
 
     function validate(LibOrder.Order memory order) internal view {
-        require(order.start == 0 || order.start < block.timestamp, "Order start validation failed");
-        require(order.end == 0 || order.end > block.timestamp, "Order end validation failed");
+        require(order.deadline > block.timestamp, "Order deadline validation failed");
     }
 }
