@@ -28,6 +28,8 @@ contract FundingRate is BlockContext, PositioningCallee, ExchangeStorageV1 {
     using PerpSafeCast for uint256;
     using PerpSafeCast for int256;
 
+    event FundingUpdated(address indexed baseToken, uint256 markTwap, uint256 indexTwap);
+
     function initialize(
         address exchangeManagerArg,
         address positioningConfigArg,
@@ -74,6 +76,7 @@ contract FundingRate is BlockContext, PositioningCallee, ExchangeStorageV1 {
                 timestamp,
                 growthTwPremium
             );
+            emit FundingUpdated(baseToken, markTwap, indexTwap);
         }
         return (fundingPayment, growthTwPremium);
     }
