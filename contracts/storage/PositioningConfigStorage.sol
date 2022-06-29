@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-3.0-or-later
+// SPDX-License-Identifier: BUSL - 1.1
 pragma solidity =0.8.12;
 
 /// @notice For future upgrades, do not change PositioningConfigStorageV1. Create a new
