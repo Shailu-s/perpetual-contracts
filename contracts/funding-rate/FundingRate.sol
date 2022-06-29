@@ -48,6 +48,11 @@ contract FundingRate is BlockContext, PositioningCallee, ExchangeStorageV1 {
         _transferManager = transferManager;
     }
 
+    /// @dev this function is used to settle funding f a trader on the basis of given basetoken
+    /// @param trader address of the trader
+    /// @param baseToken address of the baseToken
+    /// @return fundingPayment pnding funding payment on this basetoken
+    /// @return growthTwPremium global funding growth of the basetoken
     function settleFunding(address trader, address baseToken)
         public
         returns (int256 fundingPayment, int256 growthTwPremium)
@@ -88,8 +93,9 @@ contract FundingRate is BlockContext, PositioningCallee, ExchangeStorageV1 {
         pendingFundingPayment = PositionSize.mul(marketFundingRate);
     }
 
-    /// @dev this function calculates the up-to-date globalFundingGrowth and twaps and pass them out
-    /// @return fundingGrowthGlobal the up-to-date globalFundingGrowth
+    /// @dev this function calculates the up-to-date growthTwPremium and twaps and pass them out
+    /// @param baseToken address of the baseToken
+    /// @return growthTwPremium the up-to-date growthTwPremium
     /// @return markTwap only for settleFunding()
     /// @return indexTwap only for settleFunding()
     function _getFundingGrowthGlobalAndTwaps(address baseToken)
