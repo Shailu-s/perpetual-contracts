@@ -14,7 +14,7 @@ import { PositioningCallee } from "../helpers/PositioningCallee.sol";
 import { BlockContext } from "../helpers/BlockContext.sol";
 import { ExchangeStorageV1 } from "../storage/ExchangeStorage.sol";
 import { IPositioningConfig } from "../interfaces/IPositioningConfig.sol";
-import { IIndexPrice } from "../interfaces/IIndexPrice.sol";
+import { IIndexPriceOracle } from "../interfaces/IIndexPriceOracle.sol";
 import { IMarkPriceOracle } from "../interfaces/IMarkPriceOracle.sol";
 import { IAccountBalance } from "../interfaces/IAccountBalance.sol";
 
@@ -110,7 +110,7 @@ contract FundingRate is BlockContext, PositioningCallee, ExchangeStorageV1 {
 
         uint256 markTwapX96 = IMarkPriceOracle(_markPriceOracleArg).getCumulativePrice(twapInterval);
         markTwap = markTwapX96.formatX96ToX10_18();
-        indexTwap = IIndexPrice(baseToken).getIndexPrice(twapInterval);
+        (indexTwap, , ) = IIndexPriceOracle(_indexPriceOracleArg).getIndexTwap(twapInterval);
 
         uint256 lastSettledTimestamp = _lastSettledTimestampMap[baseToken];
         int lastTwPremium = _globalFundingGrowthMap[baseToken];
