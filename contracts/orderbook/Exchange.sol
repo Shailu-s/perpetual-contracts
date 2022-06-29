@@ -9,7 +9,6 @@ import { BlockContext } from "../helpers/BlockContext.sol";
 import { PerpSafeCast } from "../libs/PerpSafeCast.sol";
 import { SwapMath } from "../libs/SwapMath.sol";
 import { PerpFixedPoint96 } from "../libs/PerpFixedPoint96.sol";
-import { Funding } from "../libs/Funding.sol";
 import { PerpMath } from "../libs/PerpMath.sol";
 import { AccountMarket } from "../libs/AccountMarket.sol";
 import { IIndexPrice } from "../interfaces/IIndexPrice.sol";
@@ -83,7 +82,7 @@ contract Exchange is IExchange, BlockContext, PositioningCallee, ExchangeStorage
         address exchangeManagerArg,
         address orderBookArg,
         address PositioningConfigArg,
-        address markSmaArg,
+        address markPriceOracleArg,
         address transferManager,
         address quoteToken
     ) external initializer {
@@ -98,7 +97,7 @@ contract Exchange is IExchange, BlockContext, PositioningCallee, ExchangeStorage
         // update states
         _orderBook = orderBookArg;
         _PositioningConfig = PositioningConfigArg;
-        _markSmaArg = markSmaArg;
+        _markPriceOracleArg = markPriceOracleArg;
         _transferManager = transferManager;
         _quoteToken = quoteToken;
     }
@@ -175,11 +174,6 @@ contract Exchange is IExchange, BlockContext, PositioningCallee, ExchangeStorage
     }
 
     /// @inheritdoc IExchange
-    function getMaxTickCrossedWithinBlock(address baseToken) external view override returns (uint24) {
-        return _maxTickCrossedWithinBlockMap[baseToken];
-    }
-
-    /// @inheritdoc IExchange
     function getPnlToBeRealized(RealizePnlParams memory params) external view override returns (int256) {
         AccountMarket.Info memory info =
             IAccountBalance(_accountBalance).getAccountInfo(params.trader, params.baseToken);
@@ -203,6 +197,7 @@ contract Exchange is IExchange, BlockContext, PositioningCallee, ExchangeStorage
                 )
                 : 0;
     }
+
     //
     // INTERNAL NON-VIEW
     //
@@ -241,7 +236,7 @@ contract Exchange is IExchange, BlockContext, PositioningCallee, ExchangeStorage
                 insuranceFundFee: 0
             });
     }
-    
+
     function _getPnlToBeRealized(InternalRealizePnlParams memory params) internal pure returns (int256) {
         // closedRatio is based on the position size
         uint256 closedRatio = FullMath.mulDiv(params.base.abs(), _FULLY_CLOSED_RATIO, params.takerPositionSize.abs());
