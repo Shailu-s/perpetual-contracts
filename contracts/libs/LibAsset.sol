@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: BUSL - 1.1
-pragma solidity 0.7.6;
-pragma abicoder v2;
+pragma solidity =0.8.12;
 
 library LibAsset {
     bytes32 constant ASSET_TYPEHASH = keccak256("Asset(address virtualToken,uint256 value)");

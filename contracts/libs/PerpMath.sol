@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-pragma solidity 0.7.6;
-pragma abicoder v2;
+pragma solidity =0.8.12;
 
 import { FixedPoint96 } from "@uniswap/v3-core/contracts/libraries/FixedPoint96.sol";
 import { FullMath } from "@uniswap/v3-core/contracts/libraries/FullMath.sol";

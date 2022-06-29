@@ -3,7 +3,7 @@
 // for adding `payable` property at the return value of _msgSender()
 // SPDX-License-Identifier: MIT
 // solhint-disable no-inline-assembly
-pragma solidity 0.7.6;
+pragma solidity =0.8.12;
 
 import "./IRelayRecipient.sol";
 
