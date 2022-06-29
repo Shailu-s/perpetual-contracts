@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: BUSL - 1.1
 // OpenZeppelin Contracts v4.4.1 (utils/introspection/ERC165Storage.sol)
 
 pragma solidity ^0.7.6;
