@@ -139,4 +139,11 @@ contract FundingRate is BlockContext, PositioningCallee, ExchangeStorageV1 {
             deltaTwap = absDeltaTwap > maxDeltaTwap ? maxDeltaTwap.neg256() : absDeltaTwap.neg256();
         }
     }
+
+    ///@dev this function calculates pending funding payment of a trader respective to basetoken
+    function getPendingFundingPayment(address trader, address baseToken) public view returns (int256) {
+        (, uint256 markTwap, uint256 indexTwap) = _getFundingGrowthGlobalAndTwaps(baseToken);
+
+        return _getFundingPayment(trader, baseToken, markTwap.toInt256(), indexTwap.toInt256());
+    }
 }
