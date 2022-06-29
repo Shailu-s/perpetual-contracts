@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: BUSL-1.1
-pragma solidity 0.7.6;
+pragma solidity =0.8.12;
 
 import { SafeMathUpgradeable } from "@openzeppelin/contracts-upgradeable/math/SafeMathUpgradeable.sol";
 import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/Initializable.sol";

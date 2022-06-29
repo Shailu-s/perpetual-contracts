@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-pragma solidity 0.7.6;
+pragma solidity =0.8.12;
 
 /// @notice For future upgrades, do not change VaultStorageV1. Create a new
 /// contract which implements VaultStorageV1 and following the naming convention
