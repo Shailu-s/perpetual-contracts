@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity 0.7.6;
 
-import { Funding } from "../libs/Funding.sol";
 import { OpenOrder } from "../libs/OpenOrder.sol";
 
 /// @notice For future upgrades, do not change OrderBookStorageV1. Create a new
