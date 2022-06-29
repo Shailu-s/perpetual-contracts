@@ -263,38 +263,38 @@ contract Positioning is
     // INTERNAL NON-VIEW
     //
 
-    /// @dev Calculate how much profit/loss we should settled,
-    /// only used when removing liquidity. The profit/loss is calculated by using
-    /// the removed base/quote amount and existing taker's base/quote amount.
-    function _settleBalanceAndRealizePnl(
-        address maker,
-        address baseToken,
-        IOrderBook.RemoveLiquidityResponse memory response
-    ) internal returns (int256) {
-        int256 pnlToBeRealized;
-        if (response.takerBase != 0) {
-            pnlToBeRealized = IExchange(_exchange).getPnlToBeRealized(
-                IExchange.RealizePnlParams({
-                    trader: maker,
-                    baseToken: baseToken,
-                    base: response.takerBase,
-                    quote: response.takerQuote
-                })
-            );
-        }
+    // /// @dev Calculate how much profit/loss we should settled,
+    // /// only used when removing liquidity. The profit/loss is calculated by using
+    // /// the removed base/quote amount and existing taker's base/quote amount.
+    // function _settleBalanceAndRealizePnl(
+    //     address maker,
+    //     address baseToken,
+    //     IOrderBook.RemoveLiquidityResponse memory response
+    // ) internal returns (int256) {
+    //     int256 pnlToBeRealized;
+    //     if (response.takerBase != 0) {
+    //         pnlToBeRealized = IExchange(_exchange).getPnlToBeRealized(
+    //             IExchange.RealizePnlParams({
+    //                 trader: maker,
+    //                 baseToken: baseToken,
+    //                 base: response.takerBase,
+    //                 quote: response.takerQuote
+    //             })
+    //         );
+    //     }
 
-        // pnlToBeRealized is realized here
-        IAccountBalance(_accountBalance).settleBalanceAndDeregister(
-            maker,
-            baseToken,
-            response.takerBase,
-            response.takerQuote,
-            pnlToBeRealized,
-            response.fee.toInt256()
-        );
+    //     // pnlToBeRealized is realized here
+    //     IAccountBalance(_accountBalance).settleBalanceAndDeregister(
+    //         maker,
+    //         baseToken,
+    //         response.takerBase,
+    //         response.takerQuote,
+    //         pnlToBeRealized,
+    //         response.fee.toInt256()
+    //     );
 
-        return pnlToBeRealized;
-    }
+    //     return pnlToBeRealized;
+    // }
 
     /// @dev explainer diagram for the relationship between exchangedPositionNotional, fee and openNotional:
     ///      https://www.figma.com/file/xuue5qGH4RalX7uAbbzgP3/swap-accounting-and-events
@@ -372,25 +372,20 @@ contract Positioning is
     }
 
     /// @dev Settle trader's funding payment to his/her realized pnl.
-    /// TODO Create separate for settlement  
     function _settleFunding(address trader, address baseToken)
         internal
-        returns (Funding.Growth memory fundingGrowthGlobal)
+        returns (int256 growthTwPremium)
     {
         int256 fundingPayment;
-        (fundingPayment, fundingGrowthGlobal) = settleFunding(trader, baseToken);
+        (fundingPayment, growthTwPremium) = settleFunding(trader, baseToken);
 
         if (fundingPayment != 0) {
             IAccountBalance(_accountBalance).modifyOwedRealizedPnl(trader, fundingPayment.neg256());
             emit FundingPaymentSettled(trader, baseToken, fundingPayment);
         }
 
-        IAccountBalance(_accountBalance).updateTwPremiumGrowthGlobal(
-            trader,
-            baseToken,
-            fundingGrowthGlobal.twPremiumX96
-        );
-        return fundingGrowthGlobal;
+        IAccountBalance(_accountBalance).updateTwPremiumGrowthGlobal(trader, baseToken, growthTwPremium);
+        return growthTwPremium;
     }
 
     //
