@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL - 1.1
 pragma solidity =0.8.12;
 
-import { PausableUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
+import { PausableUpgradeable } from "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
 import { SafeOwnable } from "./SafeOwnable.sol";
 
 abstract contract OwnerPausable is SafeOwnable, PausableUpgradeable {
@@ -22,7 +22,7 @@ abstract contract OwnerPausable is SafeOwnable, PausableUpgradeable {
         _unpause();
     }
 
-    function _msgSender() internal view virtual override returns (address payable) {
+    function _msgSender() internal view virtual override returns (address) {
         return super._msgSender();
     }
 

@@ -5,7 +5,7 @@ import { PerpMath } from "./PerpMath.sol";
 import { OpenOrder } from "./OpenOrder.sol";
 import { PerpSafeCast } from "./PerpSafeCast.sol";
 import { PerpFixedPoint96 } from "./PerpFixedPoint96.sol";
-import { SignedSafeMathUpgradeable } from "@openzeppelin/contracts-upgradeable/math/SignedSafeMathUpgradeable.sol";
+import { SignedSafeMathUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/math/SignedSafeMathUpgradeable.sol";
 
 library Funding {
     using PerpSafeCast for uint256;
