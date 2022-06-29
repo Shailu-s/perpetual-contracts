@@ -45,7 +45,7 @@ contract PositioningConfig is
         _liquidationPenaltyRatio = 0.025e6; // initial penalty ratio, 2.5% in decimal 6
         _partialCloseRatio = 0.25e6; // partial close ratio, 25% in decimal 6
         _maxFundingRate = 0.1e6; // max funding rate, 10% in decimal 6
-        _twapInterval = 15 minutes;
+        _twapInterval = 60 minutes;
         _settlementTokenBalanceCap = 0;
     }
 
