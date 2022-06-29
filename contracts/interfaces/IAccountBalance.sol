@@ -83,11 +83,11 @@ interface IAccountBalance {
     /// @dev Only used by `Positioning` contract
     /// @param trader The address of trader
     /// @param baseToken The address of baseToken
-    /// @param lastTwPremiumGrowthGlobalX96 The last Twap Premium
+    /// @param lastTwPremiumGrowthGlobal The last Twap Premium
     function updateTwPremiumGrowthGlobal(
         address trader,
         address baseToken,
-        int256 lastTwPremiumGrowthGlobalX96
+        int256 lastTwPremiumGrowthGlobal
     ) external;
 
     /// @notice Get `PositioningConfig` address
