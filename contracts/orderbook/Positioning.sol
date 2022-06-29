@@ -8,7 +8,6 @@ import { SignedSafeMathUpgradeable } from "@openzeppelin/contracts-upgradeable/m
 import { ReentrancyGuardUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
 import { PerpSafeCast } from "../libs/PerpSafeCast.sol";
 import { PerpMath } from "../libs/PerpMath.sol";
-import { Funding } from "../libs/Funding.sol";
 import { SettlementTokenMath } from "../libs/SettlementTokenMath.sol";
 import { OwnerPausable } from "../helpers/OwnerPausable.sol";
 import { IERC20Metadata } from "../interfaces/IERC20Metadata.sol";
@@ -25,6 +24,8 @@ import { AccountMarket } from "../libs/AccountMarket.sol";
 import { OpenOrder } from "../libs/OpenOrder.sol";
 import "../interfaces/IIndexPrice.sol";
 import "../interfaces/IBaseToken.sol";
+import { FundingRate } from "../funding-rate/FundingRate.sol";
+import { ContextUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol";
 
 // never inherit any new stateful contract. never change the orders of parent stateful contracts
 contract Positioning is
@@ -33,7 +34,8 @@ contract Positioning is
     ReentrancyGuardUpgradeable,
     OwnerPausable,
     BaseRelayRecipient,
-    PositioningStorageV1
+    PositioningStorageV1,
+    FundingRate
 {
     using AddressUpgradeable for address;
     using SafeMathUpgradeable for uint256;
@@ -246,7 +248,7 @@ contract Positioning is
 
     /// @inheritdoc IPositioning
     function getAccountValue(address trader) public view override returns (int256) {
-        int256 fundingPayment = IExchange(_exchange).getAllPendingFundingPayment(trader);
+        int256 fundingPayment = getAllPendingFundingPayment(trader);
         (int256 owedRealizedPnl, int256 unrealizedPnl, uint256 pendingFee) =
             IAccountBalance(_accountBalance).getPnlAndPendingFee(trader);
         // solhint-disable-next-line var-name-mixedcase
@@ -342,9 +344,8 @@ contract Positioning is
             // CH_BD: trader has bad debt after reducing/closing position
             require(
                 (params1.isLiquidation &&
-                    IPositioningConfig(_PositioningConfig).isBackstopLiquidityProvider(
-                        _msgSender()
-                    )) || getAccountValue(params1.trader) >= 0,
+                    IPositioningConfig(_PositioningConfig).isBackstopLiquidityProvider(_msgSender())) ||
+                    getAccountValue(params1.trader) >= 0,
                 "CH_BD"
             );
         }
@@ -377,7 +378,7 @@ contract Positioning is
         returns (Funding.Growth memory fundingGrowthGlobal)
     {
         int256 fundingPayment;
-        (fundingPayment, fundingGrowthGlobal) = IExchange(_exchange).settleFunding(trader, baseToken);
+        (fundingPayment, fundingGrowthGlobal) = settleFunding(trader, baseToken);
 
         if (fundingPayment != 0) {
             IAccountBalance(_accountBalance).modifyOwedRealizedPnl(trader, fundingPayment.neg256());
@@ -397,12 +398,22 @@ contract Positioning is
     //
 
     /// @inheritdoc BaseRelayRecipient
-    function _msgSender() internal view override(BaseRelayRecipient, OwnerPausable) returns (address payable) {
+    function _msgSender()
+        internal
+        view
+        override(BaseRelayRecipient, OwnerPausable, ContextUpgradeable)
+        returns (address payable)
+    {
         return super._msgSender();
     }
 
     /// @inheritdoc BaseRelayRecipient
-    function _msgData() internal view override(BaseRelayRecipient, OwnerPausable) returns (bytes memory) {
+    function _msgData()
+        internal
+        view
+        override(BaseRelayRecipient, OwnerPausable, ContextUpgradeable)
+        returns (bytes memory)
+    {
         return super._msgData();
     }
 
@@ -413,10 +424,7 @@ contract Positioning is
     function _requireEnoughFreeCollateral(address trader) internal view {
         // CH_NEFCI: not enough free collateral by imRatio
         require(
-            _getFreeCollateralByRatio(
-                trader,
-                IPositioningConfig(_PositioningConfig).getImRatio()
-            ) >= 0,
+            _getFreeCollateralByRatio(trader, IPositioningConfig(_PositioningConfig).getImRatio()) >= 0,
             "CH_NEFCI"
         );
     }
@@ -428,9 +436,7 @@ contract Positioning is
     {
         return
             isPartialClose
-                ? oppositeAmountBound.mulRatio(
-                    IPositioningConfig(_PositioningConfig).getPartialCloseRatio()
-                )
+                ? oppositeAmountBound.mulRatio(IPositioningConfig(_PositioningConfig).getPartialCloseRatio())
                 : oppositeAmountBound;
     }
 
