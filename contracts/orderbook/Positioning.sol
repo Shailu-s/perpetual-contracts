@@ -164,6 +164,17 @@ contract Positioning is
         }
     }
 
+        ///@dev this function calculates total pending funding payment of a trader
+    function getAllPendingFundingPayment(address trader) public view override returns (int256 pendingFundingPayment) {
+        address[] memory baseTokens = IAccountBalance(_accountBalance).getBaseTokens(trader);
+        uint256 baseTokenLength = baseTokens.length;
+
+        for (uint256 i = 0; i < baseTokenLength; i++) {
+            pendingFundingPayment = pendingFundingPayment.add(getPendingFundingPayment(trader, baseTokens[i]));
+        }
+        return pendingFundingPayment;
+    }
+
     /// @inheritdoc IPositioning
     function openPosition(
         PositionParams memory positionLeft,
