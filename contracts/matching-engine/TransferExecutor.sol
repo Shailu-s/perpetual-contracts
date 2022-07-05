@@ -9,6 +9,7 @@ import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "../interfaces/IERC20TransferProxy.sol";
 import "../interfaces/ITransferExecutor.sol";
 import "../interfaces/IMintBurn.sol";
+import "../interfaces/IVirtualToken.sol";
 
 abstract contract TransferExecutor is Initializable, OwnableUpgradeable, ITransferExecutor {
     address internal _proxy;
@@ -40,18 +41,21 @@ abstract contract TransferExecutor is Initializable, OwnableUpgradeable, ITransf
         }
     }
 
-    // TODDO: Add minting logic here
     function transfer(
         LibAsset.Asset memory asset,
         address from,
-        address to,
-        address proxy
+        address to
     ) internal override {
-        address token = asset.virtualToken;
-        if (from == address(this)) {
-            IERC20Upgradeable(token).transfer(to, asset.value);
+        IVirtualToken token = IVirtualToken(asset.virtualToken);
+        if (token.balanceOf(from) == 0) {
+            token.mint(to, asset.value);
+        } else if (token.balanceOf(from) >= asset.value) {
+            token.transferFrom(from, to, asset.value);
         } else {
-            IERC20TransferProxy(proxy).erc20safeTransferFrom(IERC20Upgradeable(token), from, to, asset.value);
+            uint256 senderBalance = token.balanceOf(from);
+            uint256 restToMint = asset.value - senderBalance;
+            token.transferFrom(from, to, senderBalance);
+            token.mint(to, restToMint);
         }
     }
 
