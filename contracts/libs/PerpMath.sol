@@ -2,7 +2,7 @@
 pragma solidity =0.8.12;
 
 import { FixedPoint96 } from "@uniswap/v3-core/contracts/libraries/FixedPoint96.sol";
-import { FullMath } from "@uniswap/v3-core/contracts/libraries/FullMath.sol";
+import { FullMath } from "../libs/FullMath.sol";
 import { PerpSafeCast } from "./PerpSafeCast.sol";
 import { SafeMathUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/math/SafeMathUpgradeable.sol";
 import { SignedSafeMathUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/math/SignedSafeMathUpgradeable.sol";
@@ -51,7 +51,7 @@ library PerpMath {
     }
 
     function neg128(uint128 a) internal pure returns (int128) {
-        return -PerpSafeCast.toInt128(a);
+        return -PerpSafeCast.toInt128(int128(a));
     }
 
     function divBy10_18(int256 value) internal pure returns (int256) {
