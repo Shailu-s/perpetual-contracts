@@ -22,7 +22,7 @@ import { IExchange } from "../interfaces/IExchange.sol";
 import { OpenOrder } from "../libs/OpenOrder.sol";
 import { IMarkPriceOracle } from "../interfaces/IMarkPriceOracle.sol";
 import { IExchangeManager } from "../interfaces/IExchangeManager.sol";
-import { FullMath } from "@uniswap/v3-core/contracts/libraries/FullMath.sol";
+import { FullMath } from "../libs/FullMath.sol";
 
 // never inherit any new stateful contract. never change the orders of parent stateful contracts
 contract Exchange is IExchange, BlockContext, PositioningCallee, ExchangeStorageV1 {
@@ -223,7 +223,7 @@ contract Exchange is IExchange, BlockContext, PositioningCallee, ExchangeStorage
         int256 takerOpenNotional = info.takerOpenNotional;
         int256 takerPositionSize = info.takerPositionSize;
         // when takerPositionSize < 0, it's a short position; when base < 0, isBaseToQuote(shorting)
-        bool isReducingPosition = takerPositionSize == 0 ? false : takerPositionSize < 0 != params.base < 0;
+        bool isReducingPosition = takerPositionSize == int256(0) ? false : takerPositionSize < 0 != params.base < 0;
 
         return
             isReducingPosition
@@ -237,7 +237,7 @@ contract Exchange is IExchange, BlockContext, PositioningCallee, ExchangeStorage
                         quote: params.quote
                     })
                 )
-                : 0;
+                : int256(0);
     }
 
     /// @inheritdoc IExchange
@@ -344,8 +344,8 @@ contract Exchange is IExchange, BlockContext, PositioningCallee, ExchangeStorage
         uint24 maxDeltaTick = _maxTickCrossedWithinBlockMap[baseToken];
         int24 lastUpdatedTick = _lastUpdatedTickMap[baseToken];
         // no overflow/underflow issue because there are range limits for tick and maxDeltaTick
-        int24 upperTickBound = lastUpdatedTick.add(maxDeltaTick).toInt24();
-        int24 lowerTickBound = lastUpdatedTick.sub(maxDeltaTick).toInt24();
+        int24 upperTickBound = lastUpdatedTick.add(int24(maxDeltaTick)).toInt24();
+        int24 lowerTickBound = lastUpdatedTick.sub(int24(maxDeltaTick)).toInt24();
         return (tick < lowerTickBound || tick > upperTickBound);
     }
 
