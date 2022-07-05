@@ -225,7 +225,7 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
             // we can't calculate totalQuoteDebtValue until we have totalQuoteBalance
             totalQuoteBalance = totalQuoteBalance.add(getQuote(trader, baseToken));
         }
-        int256 totalQuoteDebtValue = totalQuoteBalance >= 0 ? 0 : totalQuoteBalance;
+        int256 totalQuoteDebtValue = totalQuoteBalance >= int256(0) ? int256(0) : totalQuoteBalance;
 
         // both values are negative due to the above condition checks
         return totalQuoteDebtValue.add(totalBaseDebtValue).abs();
@@ -288,7 +288,7 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
     /// @inheritdoc IAccountBalance
     function getTakerPositionSize(address trader, address baseToken) public view override returns (int256) {
         int256 positionSize = _accountMarketMap[trader][baseToken].takerPositionSize;
-        return positionSize.abs() < _DUST ? 0 : positionSize;
+        return positionSize.abs() < _DUST ? int256(0) : positionSize;
     }
 
     /// @inheritdoc IAccountBalance
@@ -305,7 +305,7 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
 
         int256 takerPositionSize = _accountMarketMap[trader][baseToken].takerPositionSize;
         int256 totalPositionSize = makerBaseBalance.add(takerPositionSize);
-        return totalPositionSize.abs() < _DUST ? 0 : totalPositionSize;
+        return totalPositionSize.abs() < _DUST ? int256(0) : totalPositionSize;
     }
 
     /// @inheritdoc IAccountBalance
