@@ -65,8 +65,8 @@ abstract contract RaribleTransferManager is OwnableUpgradeable, ITransferManager
         totalLeftValue = left.asset.value;
         totalRightValue = right.asset.value;
 
-        totalLeftValue = doTransfersWithFees(left, dealData.protocolFee, dealData.maxFeesBasePoint);
-        totalRightValue = doTransfersWithFees(right, dealData.protocolFee, dealData.maxFeesBasePoint);
+        totalLeftValue = doTransfersWithFees(left, right, dealData.protocolFee, dealData.maxFeesBasePoint);
+        totalRightValue = doTransfersWithFees(right, left, dealData.protocolFee, dealData.maxFeesBasePoint);
     }
 
     /**
@@ -78,20 +78,23 @@ abstract contract RaribleTransferManager is OwnableUpgradeable, ITransferManager
     */
     function doTransfersWithFees(
         LibDeal.DealSide memory calculateSide,
+        LibDeal.DealSide memory anotherSide,
         uint256 _protocolFee,
         uint256 maxFeesBasePoint
     ) internal returns (uint256 totalAmount) {
-        totalAmount = calculateTotalAmount(
-            calculateSide.asset.value,
-            _protocolFee,
-            maxFeesBasePoint
-        );
+        totalAmount = calculateTotalAmount(calculateSide.asset.value, _protocolFee, maxFeesBasePoint);
         uint256 rest = transferProtocolFee(
             totalAmount,
             calculateSide.asset.value,
             calculateSide.from,
             _protocolFee,
             calculateSide.asset,
+            calculateSide.proxy
+        );
+        transfer(
+            LibAsset.Asset(calculateSide.asset.virtualToken, rest),
+            calculateSide.from,
+            anotherSide.from,
             calculateSide.proxy
         );
     }
