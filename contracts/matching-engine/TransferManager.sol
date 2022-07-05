@@ -88,14 +88,12 @@ abstract contract RaribleTransferManager is OwnableUpgradeable, ITransferManager
             calculateSide.asset.value,
             calculateSide.from,
             _protocolFee,
-            calculateSide.asset,
-            calculateSide.proxy
+            calculateSide.asset
         );
         transfer(
             LibAsset.Asset(calculateSide.asset.virtualToken, rest),
             calculateSide.from,
-            anotherSide.from,
-            calculateSide.proxy
+            anotherSide.from
         );
     }
 
@@ -104,13 +102,12 @@ abstract contract RaribleTransferManager is OwnableUpgradeable, ITransferManager
         uint256 amount,
         address from,
         uint256 _protocolFee,
-        LibAsset.Asset memory matchCalculate,
-        address proxy
+        LibAsset.Asset memory matchCalculate
     ) internal returns (uint256) {
         (uint256 rest, uint256 fee) = subFeeInBp(totalAmount, amount, _protocolFee);
         if (fee > 0) {
             address tokenAddress = matchCalculate.virtualToken;
-            transfer(LibAsset.Asset(matchCalculate.virtualToken, fee), from, getFeeReceiver(tokenAddress), proxy);
+            transfer(LibAsset.Asset(matchCalculate.virtualToken, fee), from, getFeeReceiver(tokenAddress));
         }
         return rest;
     }

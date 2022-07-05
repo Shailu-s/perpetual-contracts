@@ -9,7 +9,6 @@ abstract contract ITransferExecutor {
     function transfer(
         LibAsset.Asset memory asset,
         address from,
-        address to,
-        address proxy
+        address to
     ) internal virtual;
 }
