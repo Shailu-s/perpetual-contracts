@@ -3,6 +3,7 @@ pragma solidity 0.7.6;
 
 import { ERC20Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
 import { OwnableUpgradeable } from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+
 import { IVirtualToken } from "../interfaces/IVirtualToken.sol";
 
 contract VirtualToken is IVirtualToken, OwnableUpgradeable, ERC20Upgradeable {
@@ -19,16 +20,24 @@ contract VirtualToken is IVirtualToken, OwnableUpgradeable, ERC20Upgradeable {
         __ERC20_init(nameArg, symbolArg);
     }
 
-    function mintMaximumTo(address recipient) external onlyOwner {
+    function mint(address recipient, uint256 amount) external override onlyOwner {
+        _mint(recipient, amount);
+    }
+
+    function burn(address recipient, uint256 amount) external override onlyOwner {
+        _burn(recipient, amount);
+    }
+
+    function mintMaximumTo(address recipient) external override onlyOwner {
         _mint(recipient, type(uint256).max);
     }
 
-    function addWhitelist(address account) external onlyOwner {
+    function addWhitelist(address account) external override onlyOwner {
         _whitelistMap[account] = true;
         emit WhitelistAdded(account);
     }
 
-    function removeWhitelist(address account) external onlyOwner {
+    function removeWhitelist(address account) external override onlyOwner {
         // VT_BNZ: balance is not zero
         require(balanceOf(account) == 0, "VT_BNZ");
         delete _whitelistMap[account];
