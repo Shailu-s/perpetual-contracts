@@ -31,14 +31,11 @@ contract FundingRate is BlockContext, PositioningCallee, ExchangeStorageV1 {
     event FundingUpdated(address indexed baseToken, uint256 markTwap, uint256 indexTwap);
 
     function initialize(
-        address exchangeManagerArg,
         address positioningConfigArg,
         address markPriceOracleArg,
-        address transferManager,
         address indexPriceOracleArg
     ) external initializer {
-        // __PositioningCallee_init();
-        _exchangeManager = exchangeManagerArg;
+        __PositioningCallee_init();
 
         // E_PCANC: PCA is not contract
         require(positioningConfigArg.isContract(), "E_VPMMNC");
@@ -47,7 +44,6 @@ contract FundingRate is BlockContext, PositioningCallee, ExchangeStorageV1 {
         _PositioningConfig = positioningConfigArg;
         _markPriceOracleArg = markPriceOracleArg;
         _indexPriceOracleArg = indexPriceOracleArg;
-        _transferManager = transferManager;
     }
 
     /// @dev this function is used to settle funding f a trader on the basis of given basetoken
