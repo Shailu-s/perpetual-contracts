@@ -17,7 +17,7 @@ abstract contract OrderValidator is Initializable, ContextUpgradeable, EIP712Upg
     bytes4 constant internal MAGICVALUE = 0x1626ba7e;
 
     function __OrderValidator_init_unchained() internal initializer {
-        __EIP712_init_unchained("Exchange", "2");
+        __EIP712_init_unchained("VolmexPerp", "1");
     }
 
     function validate(LibOrder.Order memory order, bytes memory signature) internal view {
