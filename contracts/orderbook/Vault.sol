@@ -35,6 +35,8 @@ contract Vault is IVault, ReentrancyGuardUpgradeable, OwnerPausable, BaseRelayRe
     using PerpMath for uint256;
     using AddressUpgradeable for address;
 
+    event LowBalance(address to, uint256 amount);
+
     //
     // MODIFIER
     //
@@ -111,8 +113,7 @@ contract Vault is IVault, ReentrancyGuardUpgradeable, OwnerPausable, BaseRelayRe
         // V_BAI: inconsistent balance amount, to prevent from deflationary tokens
         require((IERC20Metadata(token).balanceOf(address(this)).sub(balanceBefore)) == amountX10_D, "V_IBA");
 
-        uint256 settlementTokenBalanceCap =
-            IPositioningConfig(_PositioningConfig).getSettlementTokenBalanceCap();
+        uint256 settlementTokenBalanceCap = IPositioningConfig(_PositioningConfig).getSettlementTokenBalanceCap();
         // V_GTSTBC: greater than settlement token balance cap
         require(IERC20Metadata(token).balanceOf(address(this)) <= settlementTokenBalanceCap, "V_GTSTBC");
 
@@ -159,10 +160,13 @@ contract Vault is IVault, ReentrancyGuardUpgradeable, OwnerPausable, BaseRelayRe
 
         // borrow settlement token from insurance fund if the token balance in Vault is not enough
         uint256 vaultBalanceX10_D = IERC20Metadata(token).balanceOf(address(this));
+        uint256 remainingAmountX10_D = 0;
         if (vaultBalanceX10_D < amountX10_D) {
-            uint256 borrowedAmountX10_D = amountX10_D - vaultBalanceX10_D;
-            IInsuranceFund(_insuranceFund).borrow(borrowedAmountX10_D);
-            _totalDebt += borrowedAmountX10_D;
+            // uint256 borrowedAmountX10_D = amountX10_D - vaultBalanceX10_D;
+            // IInsuranceFund(_insuranceFund).borrow(borrowedAmountX10_D);
+            // _totalDebt += borrowedAmountX10_D;
+            remainingAmountX10_D = amountX10_D.sub(vaultBalanceX10_D);
+            emit LowBalance(to, remainingAmountX10_D);
         }
 
         // settle withdrawn amount and owedRealizedPnl to collateral
@@ -224,13 +228,7 @@ contract Vault is IVault, ReentrancyGuardUpgradeable, OwnerPausable, BaseRelayRe
     function getFreeCollateral(address trader) external view override returns (uint256) {
         return
             PerpMath
-                .max(
-                getFreeCollateralByRatio(
-                    trader,
-                    IPositioningConfig(_PositioningConfig).getImRatio()
-                ),
-                0
-            )
+                .max(getFreeCollateralByRatio(trader, IPositioningConfig(_PositioningConfig).getImRatio()), 0)
                 .toUint256();
     }
 
