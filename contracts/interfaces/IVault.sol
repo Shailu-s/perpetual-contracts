@@ -26,6 +26,18 @@ interface IVault {
     /// @param amountX10_D The amount of the token to withdraw in decimals D (D = _decimals)
     function withdraw(address token, uint256 amountX10_D) external;
 
+    /// @notice transfer fund to vault in case of low balance
+    /// @dev once multi-collateral is implemented, the token is not limited to settlementToken
+    /// @param token The address of the token vault need funding
+    /// @param amountX10_D The amount of the token to withdraw in decimals D (D = _decimals)
+    function transferFundToVault(address token, uint256 amountX10_D) external;
+
+    /// @notice function to repay debt taken during low balance period
+    /// @dev once multi-collateral is implemented, the token is not limited to settlementToken
+    /// @param token The address of the token
+    /// @param amountX10_D The amount of the token to withdraw in decimals D (D = _decimals)
+    function repayDebtToOwner(address token, uint256 amountX10_D) external;
+
     /// @notice Get the balance in vault of specified account
     /// @return balance The balance amount
     function getBalance(address account) external view returns (int256 balance);
