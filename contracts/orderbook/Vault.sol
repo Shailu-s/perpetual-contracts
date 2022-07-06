@@ -168,16 +168,17 @@ contract Vault is IVault, ReentrancyGuardUpgradeable, OwnerPausable, BaseRelayRe
             remainingAmountX10_D = amountX10_D.sub(vaultBalanceX10_D);
             emit LowBalance(to, remainingAmountX10_D);
         }
+        uint256 amountToTransferX10_D = amountX10_D.sub(remainingAmountX10_D);
 
         // settle withdrawn amount and owedRealizedPnl to collateral
         _modifyBalance(
             to,
             token,
-            (amountX10_D.toInt256().sub(owedRealizedPnlX10_18.formatSettlementToken(_decimals))).neg256()
+            (amountToTransferX10_D.toInt256().sub(owedRealizedPnlX10_18.formatSettlementToken(_decimals))).neg256()
         );
-        SafeERC20Upgradeable.safeTransfer(IERC20Upgradeable(token), to, amountX10_D);
+        SafeERC20Upgradeable.safeTransfer(IERC20Upgradeable(token), to, amountToTransferX10_D);
 
-        emit Withdrawn(token, to, amountX10_D);
+        emit Withdrawn(token, to, amountToTransferX10_D);
     }
 
     //
