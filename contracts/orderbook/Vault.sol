@@ -35,7 +35,8 @@ contract Vault is IVault, ReentrancyGuardUpgradeable, OwnerPausable, BaseRelayRe
     using PerpMath for uint256;
     using AddressUpgradeable for address;
 
-    event LowBalance(address to, uint256 amount);
+    event LowBalance(uint256 amount);
+    event BorrowFund(address from, uint256 amount);
 
     //
     // MODIFIER
@@ -166,7 +167,7 @@ contract Vault is IVault, ReentrancyGuardUpgradeable, OwnerPausable, BaseRelayRe
             // IInsuranceFund(_insuranceFund).borrow(borrowedAmountX10_D);
             // _totalDebt += borrowedAmountX10_D;
             remainingAmountX10_D = amountX10_D.sub(vaultBalanceX10_D);
-            emit LowBalance(to, remainingAmountX10_D);
+            emit LowBalance(remainingAmountX10_D);
         }
         uint256 amountToTransferX10_D = amountX10_D.sub(remainingAmountX10_D);
 
@@ -191,6 +192,7 @@ contract Vault is IVault, ReentrancyGuardUpgradeable, OwnerPausable, BaseRelayRe
         address from = _msgSender();
         SafeERC20Upgradeable.safeTransferFrom(IERC20Upgradeable(token), from, address(this), amountX10_D);
         _totalDebt += amountX10_D;
+        emit BorrowFund(from, amountX10_D);
     }
 
     //
