@@ -181,6 +181,17 @@ contract Vault is IVault, ReentrancyGuardUpgradeable, OwnerPausable, BaseRelayRe
         emit Withdrawn(token, to, amountToTransferX10_D);
     }
 
+    function transferFundToVault(address token, uint256 amountX10_D)
+        external
+        whenNotPaused
+        nonReentrant
+        onlySettlementToken(token)
+        onlyOwner
+    {
+        address from = _msgSender();
+        SafeERC20Upgradeable.safeTransferFrom(IERC20Upgradeable(token), from, address(this), amountX10_D);
+    }
+
     //
     // EXTERNAL VIEW
     //
