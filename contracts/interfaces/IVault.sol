@@ -38,6 +38,10 @@ interface IVault {
     /// @param amountX10_D The amount of the token to withdraw in decimals D (D = _decimals)
     function repayDebtToOwner(address token, uint256 amountX10_D) external;
 
+    /// @notice Set new settlement token
+    /// @param newTokenArg The address of `Positioning` contract
+    function setSettlementToken(address newTokenArg) external;
+
     /// @notice Get the balance in vault of specified account
     /// @return balance The balance amount
     function getBalance(address account) external view returns (int256 balance);
@@ -87,4 +91,5 @@ interface IVault {
     /// @notice Get `Positioning` contract address
     /// @return Positioning The address of `Positioning` contract
     function getPositioning() external view returns (address);
+
 }

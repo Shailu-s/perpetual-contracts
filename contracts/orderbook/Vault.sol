@@ -157,7 +157,7 @@ contract Vault is IVault, ReentrancyGuardUpgradeable, OwnerPausable, BaseRelayRe
             "V_NEFC"
         );
 
-        // send available funds to trader if vault balance is not enough amnd emit LowBalance event
+        // send available funds to trader if vault balance is not enough and emit LowBalance event
         uint256 vaultBalanceX10_D = IERC20Metadata(token).balanceOf(address(this));
         uint256 remainingAmountX10_D = 0;
         if (vaultBalanceX10_D < amountX10_D) {
@@ -177,6 +177,7 @@ contract Vault is IVault, ReentrancyGuardUpgradeable, OwnerPausable, BaseRelayRe
         emit Withdrawn(token, to, amountToTransferX10_D);
     }
 
+    /// @inheritdoc IVault
     function transferFundToVault(address token, uint256 amountX10_D)
         external
         override
@@ -191,6 +192,7 @@ contract Vault is IVault, ReentrancyGuardUpgradeable, OwnerPausable, BaseRelayRe
         emit BorrowFund(from, amountX10_D);
     }
 
+    /// @inheritdoc IVault
     function repayDebtToOwner(address token, uint256 amountX10_D)
         external
         override
@@ -205,6 +207,11 @@ contract Vault is IVault, ReentrancyGuardUpgradeable, OwnerPausable, BaseRelayRe
         SafeERC20Upgradeable.safeTransfer(IERC20Upgradeable(token), to, amountX10_D);
         _totalDebt -= amountX10_D;
         emit DebtRepayed(to, amountX10_D);
+    }
+
+    /// @inheritdoc IVault
+    function setSettlementToken(address newTokenArg) external override onlyOwner {
+        _settlementToken = newTokenArg;
     }
 
     //
