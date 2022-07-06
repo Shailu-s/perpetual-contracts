@@ -80,10 +80,6 @@ interface IVault {
     /// @return accountBalance The address of `AccountBalance` contract
     function getAccountBalance() external view returns (address accountBalance);
 
-    /// @notice Get `InsuranceFund` contract address
-    /// @return insuranceFund The address of `InsuranceFund` contract
-    function getInsuranceFund() external view returns (address);
-
     /// @notice Get `Exchange` contract address
     /// @return exchange The address of `Exchange` contract
     function getExchange() external view returns (address);
