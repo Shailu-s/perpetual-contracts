@@ -190,6 +190,7 @@ contract Vault is IVault, ReentrancyGuardUpgradeable, OwnerPausable, BaseRelayRe
     {
         address from = _msgSender();
         SafeERC20Upgradeable.safeTransferFrom(IERC20Upgradeable(token), from, address(this), amountX10_D);
+        _totalDebt += amountX10_D;
     }
 
     //
