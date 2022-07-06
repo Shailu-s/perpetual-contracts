@@ -15,7 +15,6 @@ abstract contract VaultStorageV1 {
 
     address internal _PositioningConfig;
     address internal _accountBalance;
-    address internal _insuranceFund;
     address internal _exchange;
     address internal _Positioning;
     uint256 internal _totalDebt;

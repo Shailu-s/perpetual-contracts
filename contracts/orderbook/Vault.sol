@@ -13,7 +13,6 @@ import { PerpSafeCast } from "../libs/PerpSafeCast.sol";
 import { SettlementTokenMath } from "../libs/SettlementTokenMath.sol";
 import { PerpMath } from "../libs/PerpMath.sol";
 import { IERC20Metadata } from "../interfaces/IERC20Metadata.sol";
-import { IInsuranceFund } from "../interfaces/IInsuranceFund.sol";
 import { IExchange } from "../interfaces/IExchange.sol";
 import { IAccountBalance } from "../interfaces/IAccountBalance.sol";
 import { IPositioningConfig } from "../interfaces/IPositioningConfig.sol";
@@ -54,13 +53,12 @@ contract Vault is IVault, ReentrancyGuardUpgradeable, OwnerPausable, BaseRelayRe
     //
 
     function initialize(
-        address insuranceFundArg,
         address PositioningConfigArg,
         address accountBalanceArg,
-        address exchangeArg
+        address exchangeArg,
+        address tokenArg
     ) external initializer {
-        address settlementTokenArg = IInsuranceFund(insuranceFundArg).getToken();
-        uint8 decimalsArg = IERC20Metadata(settlementTokenArg).decimals();
+        uint8 decimalsArg = IERC20Metadata(tokenArg).decimals();
 
         // invalid settlementToken decimals
         require(decimalsArg <= 18, "V_ISTD");
@@ -76,8 +74,7 @@ contract Vault is IVault, ReentrancyGuardUpgradeable, OwnerPausable, BaseRelayRe
 
         // update states
         _decimals = decimalsArg;
-        _settlementToken = settlementTokenArg;
-        _insuranceFund = insuranceFundArg;
+        _settlementToken = tokenArg;
         _PositioningConfig = PositioningConfigArg;
         _accountBalance = accountBalanceArg;
         _exchange = exchangeArg;
@@ -160,13 +157,10 @@ contract Vault is IVault, ReentrancyGuardUpgradeable, OwnerPausable, BaseRelayRe
             "V_NEFC"
         );
 
-        // borrow settlement token from insurance fund if the token balance in Vault is not enough
+        // send available funds to trader if vault balance is not enough amnd emit LowBalance event
         uint256 vaultBalanceX10_D = IERC20Metadata(token).balanceOf(address(this));
         uint256 remainingAmountX10_D = 0;
         if (vaultBalanceX10_D < amountX10_D) {
-            // uint256 borrowedAmountX10_D = amountX10_D - vaultBalanceX10_D;
-            // IInsuranceFund(_insuranceFund).borrow(borrowedAmountX10_D);
-            // _totalDebt += borrowedAmountX10_D;
             remainingAmountX10_D = amountX10_D.sub(vaultBalanceX10_D);
             emit LowBalance(remainingAmountX10_D);
         }
@@ -185,6 +179,7 @@ contract Vault is IVault, ReentrancyGuardUpgradeable, OwnerPausable, BaseRelayRe
 
     function transferFundToVault(address token, uint256 amountX10_D)
         external
+        override
         whenNotPaused
         nonReentrant
         onlySettlementToken(token)
@@ -198,6 +193,7 @@ contract Vault is IVault, ReentrancyGuardUpgradeable, OwnerPausable, BaseRelayRe
 
     function repayDebtToOwner(address token, uint256 amountX10_D)
         external
+        override
         whenNotPaused
         nonReentrant
         onlySettlementToken(token)
@@ -238,11 +234,6 @@ contract Vault is IVault, ReentrancyGuardUpgradeable, OwnerPausable, BaseRelayRe
     /// @inheritdoc IVault
     function getAccountBalance() external view override returns (address) {
         return _accountBalance;
-    }
-
-    /// @inheritdoc IVault
-    function getInsuranceFund() external view override returns (address) {
-        return _insuranceFund;
     }
 
     /// @inheritdoc IVault
