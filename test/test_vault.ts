@@ -58,4 +58,32 @@ describe("Vault tests", function () {
         // update sender's balance
         expect(await vault.getBalance(alice.address)).to.eq(parseUnits("100", await USDC.decimals()))
     })
+
+    it("force error,amount more than allowance", async () => {
+        const [owner, alice] = await ethers.getSigners()
+
+        const amount = parseUnits("100", await USDC.decimals())
+
+        await expect(vault.connect(owner).deposit(USDC.address, amount))
+            .to.be.revertedWith("ERC20: transfer amount exceeds allowance")
+    })
+
+    it("force error, greater than settlement token balance cap", async () => {
+        const [owner, alice] = await ethers.getSigners()
+
+        const amount = parseUnits("100", await USDC.decimals())
+
+        await expect(vault.connect(alice).deposit(USDC.address, amount))
+            .to.be.revertedWith("V_GTSTBC")
+    })
+
+    it("force error, inconsistent vault balance with deflationary token", async () => {
+        const [owner, alice] = await ethers.getSigners()
+
+        USDC.setTransferFeeRatio(50)
+        await expect(
+            vault.connect(alice).deposit(USDC.address, parseUnits("100", await USDC.decimals())),
+        ).to.be.revertedWith("V_IBA")
+        USDC.setTransferFeeRatio(0)
+    })
 })
