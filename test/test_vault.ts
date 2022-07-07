@@ -38,4 +38,24 @@ describe("Vault tests", function () {
 
     })
     // @SAMPLE - deposit
+    it("Positive Test for deposit function", async () => {
+        const [owner, alice] = await ethers.getSigners()
+
+        const amount = parseUnits("100", await USDC.decimals())
+        await positioningConfig.setSettlementTokenBalanceCap(amount)
+
+        // check event has been sent
+        await expect(vault.connect(alice).deposit(USDC.address, amount))
+            .to.emit(vault, "Deposited")
+            .withArgs(USDC.address, alice.address, amount)
+
+        // reduce alice balance
+        expect(await USDC.balanceOf(alice.address)).to.eq(parseUnits("900", await USDC.decimals()))
+
+        // increase vault balance
+        expect(await USDC.balanceOf(vault.address)).to.eq(parseUnits("100", await USDC.decimals()))
+
+        // update sender's balance
+        expect(await vault.getBalance(alice.address)).to.eq(parseUnits("100", await USDC.decimals()))
+    })
 })
