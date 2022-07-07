@@ -35,7 +35,6 @@ describe("Vault tests", function () {
         await USDC.connect(alice).approve(vault.address, amount)
 
         await USDC.mint(admin.address, amount)
-
     })
     // @SAMPLE - deposit
     it("Positive Test for deposit function", async () => {
@@ -64,8 +63,9 @@ describe("Vault tests", function () {
 
         const amount = parseUnits("100", await USDC.decimals())
 
-        await expect(vault.connect(owner).deposit(USDC.address, amount))
-            .to.be.revertedWith("ERC20: transfer amount exceeds allowance")
+        await expect(vault.connect(owner).deposit(USDC.address, amount)).to.be.revertedWith(
+            "ERC20: transfer amount exceeds allowance",
+        )
     })
 
     it("force error, greater than settlement token balance cap", async () => {
@@ -73,8 +73,7 @@ describe("Vault tests", function () {
 
         const amount = parseUnits("100", await USDC.decimals())
 
-        await expect(vault.connect(alice).deposit(USDC.address, amount))
-            .to.be.revertedWith("V_GTSTBC")
+        await expect(vault.connect(alice).deposit(USDC.address, amount)).to.be.revertedWith("V_GTSTBC")
     })
 
     it("force error, inconsistent vault balance with deflationary token", async () => {
@@ -87,36 +86,59 @@ describe("Vault tests", function () {
         USDC.setTransferFeeRatio(0)
     })
 
-    describe("Test for transfer funds to vault", function(){
-
+    describe("Test for transfer funds to vault", function () {
         it("Positive Test for transferFundToVault", async () => {
             const [owner, alice] = await ethers.getSigners()
-    
+
             const amount = parseUnits("100", await USDC.decimals())
             await USDC.connect(owner).approve(vault.address, amount)
-    
+
             // check event has been sent
             await expect(vault.connect(owner).transferFundToVault(USDC.address, amount))
                 .to.emit(vault, "BorrowFund")
                 .withArgs(owner.address, amount)
-    
+
             // reduce owner balance
             expect(await USDC.balanceOf(owner.address)).to.eq(parseUnits("900", await USDC.decimals()))
-    
+
             // // // increase vault balance
             expect(await USDC.balanceOf(vault.address)).to.eq(parseUnits("100", await USDC.decimals()))
         })
 
         it("Force error, not called by owner", async () => {
             const [owner, alice] = await ethers.getSigners()
-    
+
             const amount = parseUnits("100", await USDC.decimals())
             await USDC.connect(owner).approve(vault.address, amount)
-    
+
             // check event has been sent
-            await expect(vault.connect(alice).transferFundToVault(USDC.address, amount))
-                .to.be.revertedWith("SO_CNO")
+            await expect(vault.connect(alice).transferFundToVault(USDC.address, amount)).to.be.revertedWith("SO_CNO")
         })
     })
 
+    describe("Test for getters", function () {
+        it("Tests for getPositioningConfig", async function () {
+            expect(await vault.getPositioningConfig()).to.be.equal(positioningConfig.address)
+        })
+
+        it("Tests for getSettlementToken", async function () {
+            expect(await vault.getSettlementToken()).to.be.equal(USDC.address)
+        })
+
+        it("Tests for getAccountBalance", async function () {
+            expect(await vault.getAccountBalance()).to.be.equal(accountBalance.address)
+        })
+    })
+
+    describe("Test for setters", function () {
+        it("Tests for setSettlementToken", async function () {
+            const tokenFactory = await ethers.getContractFactory("TestERC20")
+            const newUSDC = await tokenFactory.deploy()
+            const NewUSDC = await newUSDC.deployed()
+            await NewUSDC.__TestERC20_init("TestUSDC", "USDC", 6)
+
+            await vault.setSettlementToken(NewUSDC.address)
+            expect(await vault.getSettlementToken()).to.be.equal(NewUSDC.address)
+        })
+    })
 })
