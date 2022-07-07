@@ -19,21 +19,49 @@ abstract contract MatchingEngine is
 {
     using SafeMathUpgradeable for uint256;
 
-    uint256 private constant UINT256_MAX = 2**256 - 1;
+    uint256 private constant _UINT256_MAX = 2**256 - 1;
 
     //state of the orders
     mapping(bytes32 => uint256) public fills;
 
     //events
-    event Cancel(bytes32 hash);
+    event Canceled(
+        bytes32 indexed hash,
+        address maker,
+        LibAsset.Asset makeAsset,
+        LibAsset.Asset takeAsset
+    );
+    event CanceledAll(address indexed maker, uint256 minSalt);
     event Match(uint256 newLeftFill, uint256 newRightFill);
 
-    function cancel(LibOrder.Order memory order) external {
+    function cancelOrder(LibOrder.Order memory order) public {
         require(_msgSender() == order.maker, "not a maker");
         require(order.salt != 0, "0 salt can't be used");
+        require(
+            order.salt >= makerMinSalt[_msgSender()],
+            "order salt lower"
+        );
         bytes32 orderKeyHash = LibOrder.hashKey(order);
-        fills[orderKeyHash] = UINT256_MAX;
-        emit Cancel(orderKeyHash);
+        fills[orderKeyHash] = _UINT256_MAX;
+        emit Canceled(
+            orderKeyHash,
+            order.maker,
+            order.makeAsset,
+            order.takeAsset
+        );
+    }
+
+    function cancelOrdersInBatch(LibOrder.Order[] memory orders) external {
+        for (uint256 index = 0; index < orders.length; index++) {
+            cancelOrder(orders[index]);
+        }
+    }
+
+    function cancelAllOrders(uint256 minSalt) external {
+        require(minSalt > makerMinSalt[_msgSender()], "salt too low");
+        makerMinSalt[_msgSender()] = minSalt;
+
+        emit CanceledAll(_msgSender(), minSalt);
     }
 
     function matchOrders(
