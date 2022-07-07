@@ -12,4 +12,5 @@ abstract contract BaseTokenStorageV1 {
     // --------- ^^^^^^^^^ ---------
 
     address internal _priceFeed;
+    address internal _markPriceFeed;
 }
