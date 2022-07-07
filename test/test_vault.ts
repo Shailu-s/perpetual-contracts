@@ -86,4 +86,37 @@ describe("Vault tests", function () {
         ).to.be.revertedWith("V_IBA")
         USDC.setTransferFeeRatio(0)
     })
+
+    describe("Test for transfer funds to vault", function(){
+
+        it("Positive Test for transferFundToVault", async () => {
+            const [owner, alice] = await ethers.getSigners()
+    
+            const amount = parseUnits("100", await USDC.decimals())
+            await USDC.connect(owner).approve(vault.address, amount)
+    
+            // check event has been sent
+            await expect(vault.connect(owner).transferFundToVault(USDC.address, amount))
+                .to.emit(vault, "BorrowFund")
+                .withArgs(owner.address, amount)
+    
+            // reduce owner balance
+            expect(await USDC.balanceOf(owner.address)).to.eq(parseUnits("900", await USDC.decimals()))
+    
+            // // // increase vault balance
+            expect(await USDC.balanceOf(vault.address)).to.eq(parseUnits("100", await USDC.decimals()))
+        })
+
+        it("Force error, not called by owner", async () => {
+            const [owner, alice] = await ethers.getSigners()
+    
+            const amount = parseUnits("100", await USDC.decimals())
+            await USDC.connect(owner).approve(vault.address, amount)
+    
+            // check event has been sent
+            await expect(vault.connect(alice).transferFundToVault(USDC.address, amount))
+                .to.be.revertedWith("SO_CNO")
+        })
+    })
+
 })
