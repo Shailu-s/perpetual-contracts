@@ -93,7 +93,7 @@ describe("Vault tests", function () {
             const amount = parseUnits("100", await USDC.decimals())
             await USDC.connect(owner).approve(vault.address, amount)
 
-            // check event has been sent
+            // send fund to vault
             await expect(vault.connect(owner).transferFundToVault(USDC.address, amount))
                 .to.emit(vault, "BorrowFund")
                 .withArgs(owner.address, amount)
@@ -106,7 +106,6 @@ describe("Vault tests", function () {
 
             // Debt increases on vault
             expect(await vault.getTotalDebt()).to.eq(parseUnits("100", await USDC.decimals()))
-
         })
 
         it("Force error, not called by owner", async () => {
@@ -115,8 +114,53 @@ describe("Vault tests", function () {
             const amount = parseUnits("100", await USDC.decimals())
             await USDC.connect(owner).approve(vault.address, amount)
 
-            // check event has been sent
+            // caller not owner
             await expect(vault.connect(alice).transferFundToVault(USDC.address, amount)).to.be.revertedWith("SO_CNO")
+        })
+    })
+
+    describe("Test for debt repayment", function () {
+        it("Positive Test for debt repayment", async () => {
+            const [owner, alice] = await ethers.getSigners()
+
+            const amount = parseUnits("100", await USDC.decimals())
+            await USDC.connect(owner).approve(vault.address, amount)
+
+            // send fund to vault
+            await expect(vault.connect(owner).transferFundToVault(USDC.address, amount))
+                .to.emit(vault, "BorrowFund")
+                .withArgs(owner.address, amount)
+
+            // Debt increases on vault
+            expect(await vault.getTotalDebt()).to.eq(parseUnits("100", await USDC.decimals()))
+
+            // Repay debt
+            await expect(vault.connect(owner).repayDebtToOwner(USDC.address, amount))
+                .to.emit(vault, "DebtRepayed")
+                .withArgs(owner.address, amount)
+
+            // Debt decreases on vault
+            expect(await vault.getTotalDebt()).to.eq(parseUnits("0", await USDC.decimals()))
+        })
+
+        it("Force error, not called by owner", async () => {
+            const [owner, alice] = await ethers.getSigners()
+
+            const amount = parseUnits("100", await USDC.decimals())
+            await USDC.connect(owner).approve(vault.address, amount)
+
+            // caller not owner
+            await expect(vault.connect(alice).repayDebtToOwner(USDC.address, amount)).to.be.revertedWith("SO_CNO")
+        })
+
+        it("Force error, amount is more that debt", async () => {
+            const [owner, alice] = await ethers.getSigners()
+
+            const amount = parseUnits("100", await USDC.decimals())
+            await USDC.connect(owner).approve(vault.address, amount)
+
+            // amount is more that debt
+            await expect(vault.connect(owner).repayDebtToOwner(USDC.address, amount)).to.be.revertedWith("V_AIMTD")
         })
     })
 
