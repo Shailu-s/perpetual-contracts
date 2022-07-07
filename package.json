@@ -2,7 +2,6 @@
   "name": "volmex-perpetuals",
   "version": "1.0.15",
   "description": "Volmex Perpetual core contracts",
-  "license": "BUSL - 1.1",
   "author": {
     "name": "Volmex Finance",
     "email": "security@volmexlabs.com",
