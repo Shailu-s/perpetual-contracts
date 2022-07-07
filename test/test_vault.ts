@@ -101,8 +101,12 @@ describe("Vault tests", function () {
             // reduce owner balance
             expect(await USDC.balanceOf(owner.address)).to.eq(parseUnits("900", await USDC.decimals()))
 
-            // // // increase vault balance
+            // increase vault balance
             expect(await USDC.balanceOf(vault.address)).to.eq(parseUnits("100", await USDC.decimals()))
+
+            // Debt increases on vault
+            expect(await vault.getTotalDebt()).to.eq(parseUnits("100", await USDC.decimals()))
+
         })
 
         it("Force error, not called by owner", async () => {
