@@ -20,7 +20,6 @@ import { OpenOrder } from "../libs/OpenOrder.sol";
 import { IVirtualToken } from "../interfaces/IVirtualToken.sol";
 import "../libs/LibAsset.sol";
 import "../interfaces/IIndexPrice.sol";
-import "../interfaces/IBaseToken.sol";
 import { FundingRate } from "../funding-rate/FundingRate.sol";
 import { ContextUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol";
 import "../libs/LibOrder.sol";
