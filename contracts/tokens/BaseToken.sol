@@ -4,7 +4,6 @@ pragma solidity 0.7.6;
 import { SafeMathUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/math/SafeMathUpgradeable.sol";
 import { IPriceFeed } from "@perp/perp-oracle-contract/contracts/interface/IPriceFeed.sol";
 import { IIndexPrice } from "../interfaces/IIndexPrice.sol";
-import { IIndexPrice } from "../interfaces/IMarkPriceOracle.sol";
 import { VirtualToken } from "./VirtualToken.sol";
 import { BaseTokenStorage } from "../storage/BaseTokenStorage.sol";
 import { IBaseToken } from "../interfaces/IBaseToken.sol";
@@ -21,8 +20,7 @@ contract BaseToken is IBaseToken, IIndexPrice, VirtualToken, BaseTokenStorageV1 
     function initialize(
         string memory nameArg,
         string memory symbolArg,
-        address priceFeedArg,
-        address markPriceFeedArg
+        address priceFeedArg
     ) external initializer {
         __VirtualToken_init(nameArg, symbolArg);
 
@@ -32,7 +30,6 @@ contract BaseToken is IBaseToken, IIndexPrice, VirtualToken, BaseTokenStorageV1 
         require(priceFeedDecimals <= decimals(), "BT_IPFD");
 
         _priceFeed = priceFeedArg;
-        _markPriceFeed = markPriceFeedArg;
         _priceFeedDecimals = priceFeedDecimals;
     }
 
@@ -59,19 +56,9 @@ contract BaseToken is IBaseToken, IIndexPrice, VirtualToken, BaseTokenStorageV1 
         return _formatDecimals(IPriceFeed(_priceFeed).latestAnswer());
     }
 
-    /// @inheritdoc IMarkPriceOracle
-    function getMarkPrice(uint256 interval) external view override returns (uint256) {
-        return _formatDecimals(IMarkPriceOracle(_markPriceFeed).getCumulativePrice(interval));
-    }
-
     /// @inheritdoc IBaseToken
     function getPriceFeed() external view override returns (address) {
         return _priceFeed;
-    }
-
-    /// @inheritdoc IBaseToken
-    function getMarkPriceFeed() external view override returns (address) {
-        return _markPriceFeed;
     }
 
     //
