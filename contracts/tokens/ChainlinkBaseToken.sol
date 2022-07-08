@@ -3,13 +3,11 @@ pragma solidity 0.7.6;
 
 import { SafeMathUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/math/SafeMathUpgradeable.sol";
 import { IPriceFeed } from "@perp/perp-oracle-contract/contracts/interface/IPriceFeed.sol";
-import { IIndexPrice } from "../interfaces/IIndexPrice.sol";
 import { VirtualToken } from "./VirtualToken.sol";
-import { BaseTokenStorage } from "../storage/BaseTokenStorage.sol";
-import { IBaseToken } from "../interfaces/IBaseToken.sol";
+import { ParentToken } from "./base/ParentToken.sol";
 
 // never inherit any new stateful contract. never change the orders of parent stateful contracts
-contract BaseToken is IBaseToken, IIndexPrice, VirtualToken, BaseTokenStorageV1 {
+contract ChainlinkBaseToken is ParentToken {
     using SafeMathUpgradeable for uint256;
     using SafeMathUpgradeable for uint8;
 
@@ -34,9 +32,8 @@ contract BaseToken is IBaseToken, IIndexPrice, VirtualToken, BaseTokenStorageV1 
     }
 
     /// @dev This function is only used for emergency shutdown, to set priceFeed to an emergencyPriceFeed
-    function setPriceFeed(address priceFeedArg) external onlyOwner {
+    function setPriceFeed(address priceFeedArg) external override onlyOwner {
         // ChainlinkPriceFeed uses 8 decimals
-        // BandPriceFeed uses 18 decimals
         uint8 priceFeedDecimals = IPriceFeed(priceFeedArg).decimals();
         // BT_IPFD: Invalid price feed decimals
         require(priceFeedDecimals <= decimals(), "BT_IPFD");
@@ -53,19 +50,12 @@ contract BaseToken is IBaseToken, IIndexPrice, VirtualToken, BaseTokenStorageV1 
 
     /// @inheritdoc IIndexPrice
     function getIndexPrice(uint256 interval) external view override returns (uint256) {
-        return _formatDecimals(IPriceFeed(_priceFeed).latestAnswer());
+        (, uint256 answer, , , ) = IPriceFeed(_priceFeed).latestRoundData(interval);
+        return _formatDecimals(answer);
     }
 
-    /// @inheritdoc IBaseToken
+    /// @inheritdoc IVolmexBaseToken
     function getPriceFeed() external view override returns (address) {
         return _priceFeed;
-    }
-
-    //
-    // INTERNAL VIEW
-    //
-
-    function _formatDecimals(uint256 _price) internal view returns (uint256) {
-        return _price.mul(10**(decimals().sub(_priceFeedDecimals)));
     }
 }
