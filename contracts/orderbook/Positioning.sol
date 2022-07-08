@@ -24,7 +24,7 @@ import { IPositioning } from "../interfaces/IPositioning.sol";
 import { AccountMarket } from "../libs/AccountMarket.sol";
 import { OpenOrder } from "../libs/OpenOrder.sol";
 import "../interfaces/IIndexPrice.sol";
-import "../interfaces/IBaseToken.sol";
+import "../interfaces/IVolmexBaseToken.sol";
 
 // never inherit any new stateful contract. never change the orders of parent stateful contracts
 contract Positioning is
