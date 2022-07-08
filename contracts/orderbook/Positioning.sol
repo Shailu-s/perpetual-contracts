@@ -26,6 +26,7 @@ import "../interfaces/IIndexPrice.sol";
 import "../interfaces/IVolmexBaseToken.sol";
 import { FundingRate } from "../funding-rate/FundingRate.sol";
 import { ContextUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol";
+import "../interfaces/IVolmexBaseToken.sol";
 
 // never inherit any new stateful contract. never change the orders of parent stateful contracts
 contract Positioning is
