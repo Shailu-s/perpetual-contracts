@@ -27,7 +27,7 @@ abstract contract PositioningCallee is SafeOwnable {
         __SafeOwnable_init();
     }
 
-    function setPositioningCallee(address PositioningArg) external onlyOwner {
+    function setPositioning(address PositioningArg) external onlyOwner {
         _Positioning = PositioningArg;
         emit PositioningCalleeChanged(PositioningArg);
     }
