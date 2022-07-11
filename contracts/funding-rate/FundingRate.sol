@@ -12,13 +12,14 @@ import { PerpMath } from "../libs/PerpMath.sol";
 import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/Initializable.sol";
 import { PositioningCallee } from "../helpers/PositioningCallee.sol";
 import { BlockContext } from "../helpers/BlockContext.sol";
-import { ExchangeStorageV1 } from "../storage/ExchangeStorage.sol";
+import { FundingRateStorage } from "../storage/FundingRateStorage.sol";
 import { IPositioningConfig } from "../interfaces/IPositioningConfig.sol";
 import { IIndexPriceOracle } from "../interfaces/IIndexPriceOracle.sol";
 import { IMarkPriceOracle } from "../interfaces/IMarkPriceOracle.sol";
+import { IFundingRate } from "../interfaces/IFundingRate.sol";
 import { IAccountBalance } from "../interfaces/IAccountBalance.sol";
 
-contract FundingRate is BlockContext, PositioningCallee, ExchangeStorageV1 {
+contract FundingRate is IFundingRate, BlockContext, PositioningCallee, FundingRateStorage {
     using AddressUpgradeable for address;
     using SafeMathUpgradeable for uint256;
     using SignedSafeMathUpgradeable for int256;
@@ -27,8 +28,6 @@ contract FundingRate is BlockContext, PositioningCallee, ExchangeStorageV1 {
     using PerpMath for int256;
     using PerpSafeCast for uint256;
     using PerpSafeCast for int256;
-
-    event FundingUpdated(address indexed baseToken, uint256 markTwap, uint256 indexTwap);
 
     function initialize(
         address positioningConfigArg,
@@ -46,13 +45,11 @@ contract FundingRate is BlockContext, PositioningCallee, ExchangeStorageV1 {
         _indexPriceOracleArg = indexPriceOracleArg;
     }
 
-    /// @dev this function is used to settle funding f a trader on the basis of given basetoken
-    /// @param trader address of the trader
-    /// @param baseToken address of the baseToken
-    /// @return fundingPayment pnding funding payment on this basetoken
-    /// @return growthTwPremium global funding growth of the basetoken
+    /// @inheritdoc IFundingRate
     function settleFunding(address trader, address baseToken)
         public
+        virtual
+        override
         returns (int256 fundingPayment, int256 growthTwPremium)
     {
         _requireOnlyPositioning();
@@ -68,10 +65,7 @@ contract FundingRate is BlockContext, PositioningCallee, ExchangeStorageV1 {
         if (timestamp != _lastSettledTimestampMap[baseToken]) {
             // update growthTwPremium and _lastSettledTimestamp
             int256 lastGrowthTwPremium = _globalFundingGrowthMap[baseToken];
-            (_lastSettledTimestampMap[baseToken], lastGrowthTwPremium) = (
-                timestamp,
-                growthTwPremium
-            );
+            (_lastSettledTimestampMap[baseToken], lastGrowthTwPremium) = (timestamp, growthTwPremium);
             emit FundingUpdated(baseToken, markTwap, indexTwap);
         }
         return (fundingPayment, growthTwPremium);
@@ -86,7 +80,7 @@ contract FundingRate is BlockContext, PositioningCallee, ExchangeStorageV1 {
         address baseToken,
         int256 markTwap,
         int256 indexTwap
-    ) internal view returns (int256 pendingFundingPayment) {
+    ) internal virtual view returns (int256 pendingFundingPayment) {
         int256 marketFundingRate = ((markTwap.sub(indexTwap)).div(indexTwap)).div(24);
         int256 PositionSize = IAccountBalance(_accountBalance).getTakerPositionSize(trader, baseToken);
         pendingFundingPayment = PositionSize.mul(marketFundingRate);
@@ -99,6 +93,7 @@ contract FundingRate is BlockContext, PositioningCallee, ExchangeStorageV1 {
     /// @return indexTwap only for settleFunding()
     function _getFundingGrowthGlobalAndTwaps(address baseToken)
         internal
+        virtual
         view
         returns (
             int256 growthTwPremium,
@@ -120,7 +115,7 @@ contract FundingRate is BlockContext, PositioningCallee, ExchangeStorageV1 {
         (indexTwap, , ) = IIndexPriceOracle(_indexPriceOracleArg).getIndexTwap(twapInterval);
 
         uint256 lastSettledTimestamp = _lastSettledTimestampMap[baseToken];
-        int lastTwPremium = _globalFundingGrowthMap[baseToken];
+        int256 lastTwPremium = _globalFundingGrowthMap[baseToken];
         if (timestamp == lastSettledTimestamp || lastSettledTimestamp == 0) {
             // if this is the latest updated timestamp, values in _globalFundingGrowthX96Map are up-to-date already
             growthTwPremium = lastTwPremium;
@@ -134,7 +129,7 @@ contract FundingRate is BlockContext, PositioningCallee, ExchangeStorageV1 {
         return (growthTwPremium, markTwap, indexTwap);
     }
 
-    function _getDeltaTwap(uint256 markTwap, uint256 indexTwap) internal view returns (int256 deltaTwap) {
+    function _getDeltaTwap(uint256 markTwap, uint256 indexTwap) internal view virtual returns (int256 deltaTwap) {
         uint24 maxFundingRate = IPositioningConfig(_PositioningConfig).getMaxFundingRate();
         uint256 maxDeltaTwap = indexTwap.mulRatio(maxFundingRate);
         uint256 absDeltaTwap;
@@ -147,8 +142,8 @@ contract FundingRate is BlockContext, PositioningCallee, ExchangeStorageV1 {
         }
     }
 
-    ///@dev this function calculates pending funding payment of a trader respective to basetoken
-    function getPendingFundingPayment(address trader, address baseToken) public view returns (int256) {
+    /// @inheritdoc IFundingRate
+    function getPendingFundingPayment(address trader, address baseToken) public view virtual override returns (int256) {
         (, uint256 markTwap, uint256 indexTwap) = _getFundingGrowthGlobalAndTwaps(baseToken);
 
         return _getFundingPayment(trader, baseToken, markTwap.toInt256(), indexTwap.toInt256());
