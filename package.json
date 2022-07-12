@@ -100,5 +100,8 @@
       "prettier --write",
       "solhint"
     ]
+  },
+  "dependencies": {
+    "eth-sig-util": "3.0.1"
   }
 }
