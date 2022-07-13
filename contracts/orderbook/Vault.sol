@@ -122,6 +122,7 @@ contract Vault is IVault, ReentrancyGuardUpgradeable, OwnerPausable, BaseRelayRe
     /// @inheritdoc IVault
     function withdraw(address token, uint256 amountX10_D)
         external
+        virtual
         override
         whenNotPaused
         nonReentrant
@@ -271,7 +272,7 @@ contract Vault is IVault, ReentrancyGuardUpgradeable, OwnerPausable, BaseRelayRe
     }
 
     /// @inheritdoc IVault
-    function getFreeCollateralByRatio(address trader, uint24 ratio) public view override returns (int256) {
+    function getFreeCollateralByRatio(address trader, uint24 ratio) public view virtual override returns (int256) {
         // conservative config: freeCollateral = min(collateral, accountValue) - margin requirement ratio
         int256 fundingPaymentX10_18 = IExchange(_exchange).getAllPendingFundingPayment(trader);
         (int256 owedRealizedPnlX10_18, int256 unrealizedPnlX10_18, uint256 pendingFeeX10_18) =
