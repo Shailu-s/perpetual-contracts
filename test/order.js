@@ -4,16 +4,14 @@ function Asset(virtualToken, value) {
   return { virtualToken, value }
 }
 
-function Order(maker, makeAsset, taker, takeAsset, salt, deadline, dataType, data) {
+function Order(maker, makeAsset, taker, takeAsset, salt, deadline) {
   return {
     maker,
     makeAsset,
     taker,
     takeAsset,
     salt,
-    deadline,
-    dataType,
-    data,
+    deadline
   }
 }
 
@@ -28,14 +26,12 @@ const Types = {
     { name: "taker", type: "address" },
     { name: "takeAsset", type: "Asset" },
     { name: "salt", type: "uint256" },
-    { name: "deadline", type: "uint256" },
-    { name: "dataType", type: "bytes4" },
-    { name: "data", type: "bytes" },
+    { name: "deadline", type: "uint256" }
   ],
 }
 
 async function sign(order, account, verifyingContract) {
-  const chainId = Number(await web3.eth.getChainId())
+  const chainId = Number(await web3.eth.getChainId());
   const data = EIP712.createTypeData(
     {
       name: "V_PERP",

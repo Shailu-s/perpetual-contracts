@@ -10,11 +10,10 @@ library LibOrder {
 
     bytes32 constant ORDER_TYPEHASH =
         keccak256(
-            "Order(address maker,Asset makeAsset,address taker,Asset takeAsset,uint256 salt,uint256 deadline,bytes4 dataType,bytes data)Asset(address virtualToken,uint256 value)"
+            "Order(address maker,Asset makeAsset,address taker,Asset takeAsset,uint256 salt,uint256 deadline)Asset(address virtualToken,uint256 value)"
         );
 
     uint256 constant ON_CHAIN_ORDER = 0;
-    bytes4 constant DEFAULT_ORDER_TYPE = 0xffffffff;
 
     struct Order {
         address maker;
@@ -23,8 +22,6 @@ library LibOrder {
         LibAsset.Asset takeAsset;
         uint256 salt;
         uint256 deadline;
-        bytes4 dataType;
-        bytes data;
     }
 
     function calculateRemaining(Order memory order, uint256 fill)
@@ -37,24 +34,15 @@ library LibOrder {
     }
 
     function hashKey(Order memory order) internal pure returns (bytes32) {
-        if (order.dataType == DEFAULT_ORDER_TYPE) {
-            return
-                keccak256(
-                    abi.encode(order.maker, LibAsset.hash(order.makeAsset), LibAsset.hash(order.takeAsset), order.salt)
-                );
-        } else {
-            //order.data is in hash for V2, V3 and all new order
-            return
-                keccak256(
-                    abi.encode(
-                        order.maker,
-                        LibAsset.hash(order.makeAsset),
-                        LibAsset.hash(order.takeAsset),
-                        order.salt,
-                        order.data
-                    )
-                );
-        }
+        return
+            keccak256(
+                abi.encode(
+                    order.maker,
+                    LibAsset.hash(order.makeAsset),
+                    LibAsset.hash(order.takeAsset),
+                    order.salt
+                )
+            );
     }
 
     function hash(Order memory order) internal pure returns (bytes32) {
@@ -67,9 +55,7 @@ library LibOrder {
                     order.taker,
                     LibAsset.hash(order.takeAsset),
                     order.salt,
-                    order.deadline,
-                    order.dataType,
-                    keccak256(order.data)
+                    order.deadline
                 )
             );
     }

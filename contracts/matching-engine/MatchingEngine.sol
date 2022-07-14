@@ -93,7 +93,7 @@ abstract contract MatchingEngine is
         doTransfers(
             LibDeal.DealSide(LibAsset.Asset(makeMatch.virtualToken, newFill.leftValue), _proxy, orderLeft.maker),
             LibDeal.DealSide(LibAsset.Asset(takeMatch.virtualToken, newFill.rightValue), _proxy, orderRight.maker),
-            getDealData(orderLeft.dataType, orderRight.dataType)
+            getDealData()
         );
 
         emit Match(newFill.rightValue, newFill.leftValue);
@@ -118,7 +118,7 @@ abstract contract MatchingEngine is
         return maxFee;
     }
 
-    function getDealData(bytes4 leftDataType, bytes4 rightDataType)
+    function getDealData()
         internal
         view
         returns (LibDeal.DealData memory dealData)
