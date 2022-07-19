@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-pragma solidity 0.7.6;
+pragma solidity =0.8.12;
 
 import { ERC20Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
 import { OwnableUpgradeable } from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
@@ -20,7 +20,7 @@ contract VirtualToken is IVirtualToken, OwnableUpgradeable, ERC20Upgradeable {
         __ERC20_init(nameArg, symbolArg);
     }
 
-    function mint(address recipient, uint256 amount) external override onlyOwner {
+    function mint(address recipient, uint256 amount) external override {
         _mint(recipient, amount);
     }
 
