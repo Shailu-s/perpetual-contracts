@@ -1,4 +1,5 @@
 const ethSigUtil = require('eth-sig-util');
+require("@nomiclabs/hardhat-web3");
 
 const EIP712Domain = [
   {
