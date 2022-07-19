@@ -19,7 +19,7 @@ abstract contract OrderValidator is Initializable, ContextUpgradeable, EIP712Upg
     mapping(address => uint256) public makerMinSalt;
 
     function __OrderValidator_init_unchained() internal initializer {
-        __EIP712_init_unchained("VolmexPerp", "1");
+        __EIP712_init_unchained("V_PERP", "1");
     }
 
     function validate(LibOrder.Order memory order, bytes memory signature) internal view {
