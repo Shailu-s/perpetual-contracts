@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity 0.7.6;
+pragma solidity =0.8.12;
 pragma abicoder v2;
 
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
@@ -8,7 +8,7 @@ import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "../libs/BpLibrary.sol";
 import "../interfaces/ITransferManager.sol";
 
-abstract contract RaribleTransferManager is OwnableUpgradeable, ITransferManager {
+abstract contract TransferManager is OwnableUpgradeable, ITransferManager {
     using BpLibrary for uint256;
     using SafeMathUpgradeable for uint256;
 
@@ -20,7 +20,7 @@ abstract contract RaribleTransferManager is OwnableUpgradeable, ITransferManager
     /// @dev event that's emitted when protocolFee changes
     event ProtocolFeeChanged(uint256 oldValue, uint256 newValue);
 
-    function __RaribleTransferManager_init_unchained(uint256 newProtocolFee, address newDefaultFeeReceiver)
+    function __TransferManager_init_unchained(uint256 newProtocolFee, address newDefaultFeeReceiver)
         internal
         initializer
     {
@@ -49,6 +49,10 @@ abstract contract RaribleTransferManager is OwnableUpgradeable, ITransferManager
         return defaultFeeReceiver;
     }
 
+    function getProtocolFee() internal virtual view returns (uint256) {
+        return protocolFee;
+    }
+
     /**
         @notice executes transfers for 2 matched orders
         @param left DealSide from the left order (see LibDeal.sol)
@@ -61,7 +65,7 @@ abstract contract RaribleTransferManager is OwnableUpgradeable, ITransferManager
         LibDeal.DealSide memory left,
         LibDeal.DealSide memory right,
         LibDeal.DealData memory dealData
-    ) internal override returns (uint256 totalLeftValue, uint256 totalRightValue) {
+    ) internal virtual override returns (uint256 totalLeftValue, uint256 totalRightValue) {
         totalLeftValue = left.asset.value;
         totalRightValue = right.asset.value;
 
