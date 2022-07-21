@@ -121,7 +121,7 @@ contract Vault is IVault, ReentrancyGuardUpgradeable, OwnerPausable, BaseRelayRe
     }
 
     /// @inheritdoc IVault
-    function withdraw(address token, uint256 amountX10_D)
+    function withdraw(address token, uint256 amountX10_D, address to)
         external
         virtual
         override
@@ -140,8 +140,6 @@ contract Vault is IVault, ReentrancyGuardUpgradeable, OwnerPausable, BaseRelayRe
         // 3. call Vault.withdraw(token, amount)
         // 4. settle pnl to trader balance in Vault
         // 5. transfer the amount to trader
-
-        address to = _msgSender();
 
         // settle all funding payments owedRealizedPnl
         // pending fee can be withdraw but won't be settled
