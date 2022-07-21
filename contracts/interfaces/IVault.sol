@@ -24,7 +24,7 @@ interface IVault {
     /// @dev once multi-collateral is implemented, the token is not limited to settlementToken
     /// @param token The address of the token sender is going to withdraw
     /// @param amountX10_D The amount of the token to withdraw in decimals D (D = _decimals)
-    function withdraw(address token, uint256 amountX10_D) external;
+    function withdraw(address token, uint256 amountX10_D, address to) external;
 
     /// @notice transfer fund to vault in case of low balance
     /// @dev once multi-collateral is implemented, the token is not limited to settlementToken
