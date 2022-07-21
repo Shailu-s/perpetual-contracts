@@ -6,7 +6,7 @@ pragma abicoder v2;
 import "./MatchingEngineCore.sol";
 import "./TransferManager.sol";
 
-contract MatchingEngine is MatchingEngineCore {
+contract MatchingEngine is MatchingEngineCore, TransferManager {
     function __MatchingEngine_init(
         address erc20TransferProxy,
         uint256 newProtocolFee,

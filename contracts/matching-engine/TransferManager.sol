@@ -49,7 +49,7 @@ abstract contract TransferManager is OwnableUpgradeable, ITransferManager {
         return defaultFeeReceiver;
     }
 
-    function getProtocolFee() internal virtual view returns (uint256) {
+    function getProtocolFee() internal override virtual view returns (uint256) {
         return protocolFee;
     }
 

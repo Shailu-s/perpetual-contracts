@@ -2,7 +2,7 @@
 
 pragma solidity =0.8.12;
 
-import "./TransferManager.sol";
+import "../interfaces/ITransferManager.sol";
 import "../libs/LibFill.sol";
 import "./OrderValidator.sol";
 import "./AssetMatcher.sol";
@@ -14,7 +14,7 @@ abstract contract MatchingEngineCore is
     AssetMatcher,
     TransferExecutor,
     OrderValidator,
-    TransferManager
+    ITransferManager
 {
     using SafeMathUpgradeable for uint256;
 
@@ -31,7 +31,7 @@ abstract contract MatchingEngineCore is
         LibAsset.Asset takeAsset
     );
     event CanceledAll(address indexed maker, uint256 minSalt);
-    event Match(uint256 newLeftFill, uint256 newRightFill);
+    event Matched(uint256 newLeftFill, uint256 newRightFill);
 
     function cancelOrder(LibOrder.Order memory order) public {
         require(_msgSender() == order.maker, "not a maker");
@@ -51,32 +51,25 @@ abstract contract MatchingEngineCore is
     }
 
     function cancelOrdersInBatch(LibOrder.Order[] memory orders) external {
-        _cancelOrdersInBatch(orders);
-    }
-
-    function _cancelOrdersInBatch(LibOrder.Order[] memory orders) internal {
         for (uint256 index = 0; index < orders.length; index++) {
             cancelOrder(orders[index]);
         }
     }
 
     function cancelAllOrders(uint256 minSalt) external {
-        _cancelAllOrders(minSalt);
-    }
-
-    function _cancelAllOrders(uint256 minSalt) internal {
         require(minSalt > makerMinSalt[_msgSender()], "salt too low");
         makerMinSalt[_msgSender()] = minSalt;
 
         emit CanceledAll(_msgSender(), minSalt);
     }
 
+    // TODO: matchOrdersInBatch create - refer marketplace-solidity repo
     function matchOrders(
         LibOrder.Order memory orderLeft,
         bytes memory signatureLeft,
         LibOrder.Order memory orderRight,
         bytes memory signatureRight
-    ) public payable {
+    ) public {
         validateFull(orderLeft, signatureLeft);
         validateFull(orderRight, signatureRight);
         if (orderLeft.taker != address(0)) {
@@ -104,7 +97,7 @@ abstract contract MatchingEngineCore is
             getDealData()
         );
 
-        emit Match(newFill.rightValue, newFill.leftValue);
+        emit Matched(newFill.rightValue, newFill.leftValue);
     }
 
     /**
