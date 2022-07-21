@@ -12,4 +12,6 @@ abstract contract ITransferManager is ITransferExecutor {
         LibDeal.DealSide memory right,
         LibDeal.DealData memory dealData
     ) internal virtual returns (uint totalMakeValue, uint totalTakeValue);
+
+    function getProtocolFee() internal virtual view returns (uint256);
 }
