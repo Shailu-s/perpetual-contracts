@@ -38,6 +38,7 @@ contract Vault is IVault, ReentrancyGuardUpgradeable, OwnerPausable, BaseRelayRe
     event BorrowFund(address from, uint256 amount);
     event DebtRepayed(address to, uint256 amount);
 
+    address internal _vaultController;
     //
     // MODIFIER
     //
@@ -100,6 +101,7 @@ contract Vault is IVault, ReentrancyGuardUpgradeable, OwnerPausable, BaseRelayRe
         nonReentrant
         onlySettlementToken(token)
     {
+        _requireOnlyVaultController();
         // input requirement checks:
         //   token: here
         //   amountX10_D: here
@@ -333,5 +335,10 @@ contract Vault is IVault, ReentrancyGuardUpgradeable, OwnerPausable, BaseRelayRe
     /// @inheritdoc BaseRelayRecipient
     function _msgData() internal view override(BaseRelayRecipient, OwnerPausable) returns (bytes memory) {
         return super._msgData();
+    }
+
+    function _requireOnlyVaultController() internal view {
+        // only VaultController
+        require(_msgSender() == _vaultController, "V_OVC");
     }
 }
