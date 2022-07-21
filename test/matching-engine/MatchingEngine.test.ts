@@ -90,6 +90,25 @@ describe('MatchingEngine', function () {
       ).to.emit(matchingEngine, "Canceled");
     });
 
+    it("Should cancel order successfully", async () => {
+      const [owner, account1] = await ethers.getSigners();
+
+      const order1 = order.Order(
+        owner.address, 
+        asset, 
+        account1.address, 
+        asset, 
+        1, 
+        10
+      );
+
+      await matchingEngine.setMakerMinSalt(100);
+
+      await expect(
+        matchingEngine.cancelOrder(order1)
+      ).to.be.revertedWith("order salt lower");
+    });
+
     it("will fail to cancel order if maker is not owner", async () => {
       const [owner, account1] = await ethers.getSigners();
 
@@ -438,6 +457,44 @@ describe('MatchingEngine', function () {
           )
         ).to.be.revertedWith("V_PERP: zero address");
       });
+
+      it("should fail to match orders & revert as order is cancelled", async () => {
+        const [owner, account1, account2] = await ethers.getSigners();
+
+        await virtualToken.mint(account1.address, 1000000000000000);
+        await virtualToken.mint(account2.address, 1000000000000000);
+        await virtualToken.addWhitelist(account1.address);
+        await virtualToken.addWhitelist(account2.address);
+        await virtualToken.connect(account1).approve(matchingEngine.address, 1000000000000000);
+        await virtualToken.connect(account2).approve(matchingEngine.address, 1000000000000000);
+
+        const orderLeft = order.Order(
+          account1.address, 
+          order.Asset(virtualToken.address, "20"), 
+          account2.address, 
+          order.Asset(virtualToken.address, "20"), 
+          1, 
+          87654321987654, 
+        );
+
+        const orderRight = order.Order(
+          account2.address,
+          order.Asset(virtualToken.address, "20"), 
+          account1.address, 
+          order.Asset(virtualToken.address, "20"), 
+          1, 
+          87654321987654, 
+        );
+
+        let signatureLeft = await getSignature(orderLeft, account1.address);
+        let signatureRight = await getSignature(orderRight, account2.address);
+        
+        await matchingEngine.connect(account1).setMakerMinSalt(100);
+
+        await expect(
+          matchingEngine.matchOrders(orderLeft, signatureLeft, orderRight, signatureRight)
+          ).to.be.revertedWith("Order canceled");
+      });
     });
 
     describe('Success:', function() {
@@ -474,7 +531,7 @@ describe('MatchingEngine', function () {
 
         await expect(
           matchingEngine.matchOrders(orderLeft, signatureLeft, orderRight, signatureRight)
-        ).to.emit(matchingEngine, "Match");
+        ).to.emit(matchingEngine, "Matched");
       });
 
       it("should match orders & emit event when maker address is 0", async () => {
@@ -510,7 +567,7 @@ describe('MatchingEngine', function () {
 
         await expect(
           matchingEngine.connect(account1).matchOrders(orderLeft, signatureLeft, orderRight, signatureRight)
-        ).to.emit(matchingEngine, "Match");
+        ).to.emit(matchingEngine, "Matched");
       });
 
       it("should match orders & emit event when taker address is 0", async () => {
@@ -546,7 +603,7 @@ describe('MatchingEngine', function () {
 
         await expect(
           matchingEngine.connect(account1).matchOrders(orderLeft, signatureLeft, orderRight, signatureRight)
-        ).to.emit(matchingEngine, "Match");
+        ).to.emit(matchingEngine, "Matched");
       });
 
       it("should match orders & emit event when Virtual token balance of order maker is less than the amount to be transferred", async () => {
@@ -583,7 +640,7 @@ describe('MatchingEngine', function () {
 
         await expect(
           matchingEngine.connect(account1).matchOrders(orderLeft, signatureLeft, orderRight, signatureRight)
-        ).to.emit(matchingEngine, "Match");
+        ).to.emit(matchingEngine, "Matched");
       });
 
       it("should match orders & emit event when Virtual token balance of order maker is 0", async () => {
@@ -617,7 +674,7 @@ describe('MatchingEngine', function () {
 
         await expect(
           matchingEngine.connect(account1).matchOrders(orderLeft, signatureLeft, orderRight, signatureRight)
-        ).to.emit(matchingEngine, "Match");
+        ).to.emit(matchingEngine, "Matched");
       });
 
       it("should match orders & emit event when orderRight salt is 0", async () => {
@@ -651,7 +708,7 @@ describe('MatchingEngine', function () {
 
         await expect(
           matchingEngine.connect(account2).matchOrders(orderLeft, signatureLeft, orderRight, signatureRight)
-        ).to.emit(matchingEngine, "Match");
+        ).to.emit(matchingEngine, "Matched");
       });
 
       it("should match orders & order maker is contract", async () => {
@@ -688,7 +745,7 @@ describe('MatchingEngine', function () {
 
         await expect(
           matchingEngine.matchOrders(orderLeft, signatureLeft, orderRight, signatureRight)
-        ).to.emit(matchingEngine, "Match");
+        ).to.emit(matchingEngine, "Matched");
       });
     });
   });
