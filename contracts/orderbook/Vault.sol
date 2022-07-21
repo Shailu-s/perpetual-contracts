@@ -129,6 +129,7 @@ contract Vault is IVault, ReentrancyGuardUpgradeable, OwnerPausable, BaseRelayRe
         nonReentrant
         onlySettlementToken(token)
     {
+        _requireOnlyVaultController();
         // input requirement checks:
         //   token: here
         //   amountX10_D: here
