@@ -6,5 +6,5 @@ abstract contract VaultControllerStorage {
     
     // key: token of vault
     mapping(address => address) internal _vaultAddress;
-    address internal _accountBalance;
+    address internal _positioning;
 }
