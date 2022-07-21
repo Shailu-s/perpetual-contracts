@@ -4,13 +4,11 @@ pragma solidity 0.7.6;
 /// @notice For future upgrades, do not change ExchangeStorageV1. Create a new
 /// contract which implements ExchangeStorageV1 and following the naming convention
 /// ExchangeStorageVX.
-abstract contract ExchangeStorageV1 {
+abstract contract FundingRateStorage {
     address internal _orderBook;
     address internal _accountBalance;
     address internal _PositioningConfig;
     address internal _markPriceOracleArg;
-    address internal _exchangeManager;
-    address internal _transferManager;
     address internal _indexPriceOracleArg;
 
     mapping(address => uint256) internal _firstTradedTimestampMap;
