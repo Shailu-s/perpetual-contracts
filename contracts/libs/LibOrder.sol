@@ -13,8 +13,6 @@ library LibOrder {
             "Order(address maker,Asset makeAsset,address taker,Asset takeAsset,uint256 salt,uint256 deadline)Asset(address virtualToken,uint256 value)"
         );
 
-    uint256 constant ON_CHAIN_ORDER = 0;
-
     struct Order {
         address maker;
         LibAsset.Asset makeAsset;

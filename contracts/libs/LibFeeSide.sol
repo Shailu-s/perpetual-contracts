@@ -4,6 +4,7 @@ pragma solidity =0.8.12;
 import "./LibAsset.sol";
 
 library LibFeeSide {
+    // TODO: Remove or not
     enum FeeSide {
         LEFT
     }
