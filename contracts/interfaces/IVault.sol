@@ -18,7 +18,7 @@ interface IVault {
     /// @dev once multi-collateral is implemented, the token is not limited to settlementToken
     /// @param token The address of the token to deposit
     /// @param amountX10_D The amount of the token to deposit in decimals D (D = _decimals)
-    function deposit(address token, uint256 amountX10_D) external;
+    function deposit(address token, uint256 amountX10_D, address from) external;
 
     /// @notice Withdraw collateral from vault
     /// @dev once multi-collateral is implemented, the token is not limited to settlementToken
