@@ -93,7 +93,7 @@ contract Vault is IVault, ReentrancyGuardUpgradeable, OwnerPausable, BaseRelayRe
     }
 
     /// @inheritdoc IVault
-    function deposit(address token, uint256 amountX10_D)
+    function deposit(address token, uint256 amountX10_D, address from)
         external
         override
         whenNotPaused
@@ -103,7 +103,6 @@ contract Vault is IVault, ReentrancyGuardUpgradeable, OwnerPausable, BaseRelayRe
         // input requirement checks:
         //   token: here
         //   amountX10_D: here
-        address from = _msgSender();
         _modifyBalance(from, token, amountX10_D.toInt256());
 
         // check for deflationary tokens by assuring balances before and after transferring to be the same
