@@ -46,4 +46,8 @@ contract MatchingEngineTest is MatchingEngine
     ) public virtual returns (uint totalMakeValue, uint totalTakeValue) {
         return doTransfers(left, right, dealData);
     }
+
+    function setMakerMinSalt(uint256 _val) external {
+        makerMinSalt[_msgSender()] = _val;
+    }
 }
