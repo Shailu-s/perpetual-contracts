@@ -10,6 +10,7 @@ abstract contract VaultControllerStorage {
     mapping(address => address[]) internal _tradersVaultMap;
     address internal _positioning;
     address internal _accountBalance;
+    address internal _vaultImplementation;
     uint8 internal _decimals;
 
 }

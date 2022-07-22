@@ -57,7 +57,7 @@ contract Vault is IVault, ReentrancyGuardUpgradeable, OwnerPausable, BaseRelayRe
         address PositioningConfigArg,
         address accountBalanceArg,
         address tokenArg
-    ) external initializer {
+    ) external override initializer {
         uint8 decimalsArg = IERC20Metadata(tokenArg).decimals();
 
         // invalid settlementToken decimals
