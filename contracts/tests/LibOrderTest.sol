@@ -14,7 +14,7 @@ contract LibOrderTest {
         LibOrder.Order calldata order,
         uint256 fill,
         bool isMakeFill
-    ) external pure returns (uint256 makeAmount, uint256 takeAmount) {
+    ) external pure returns (uint256 amount) {
         return LibOrder.calculateRemaining(order, fill);
     }
 
