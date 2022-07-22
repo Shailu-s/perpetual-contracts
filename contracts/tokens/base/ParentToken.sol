@@ -23,27 +23,13 @@ abstract contract ParentToken is IVolmexBaseToken, IIndexPrice, VirtualToken, Ba
         address priceFeedArg
     ) external override initializer {
         __VirtualToken_init(nameArg, symbolArg);
-
-        uint8 priceFeedDecimals = IPriceFeed(priceFeedArg).decimals();
-
-        // invalid price feed decimals
-        require(priceFeedDecimals <= decimals(), "BT_IPFD");
-
         _priceFeed = priceFeedArg;
-        _priceFeedDecimals = priceFeedDecimals;
     }
 
     /// @dev This function is only used for emergency shutdown, to set priceFeed to an emergencyPriceFeed
     function setPriceFeed(address priceFeedArg) external override {
-        // ChainlinkPriceFeed uses 8 decimals
-        // BandPriceFeed uses 18 decimals
-        uint8 priceFeedDecimals = IPriceFeed(priceFeedArg).decimals();
-        // BT_IPFD: Invalid price feed decimals
-        require(priceFeedDecimals <= decimals(), "BT_IPFD");
 
         _priceFeed = priceFeedArg;
-        _priceFeedDecimals = priceFeedDecimals;
-
         emit PriceFeedChanged(_priceFeed);
     }
 
@@ -57,13 +43,5 @@ abstract contract ParentToken is IVolmexBaseToken, IIndexPrice, VirtualToken, Ba
     /// @inheritdoc IVolmexBaseToken
     function getPriceFeed() external view override returns (address) {
         return _priceFeed;
-    }
-
-    //
-    // INTERNAL VIEW
-    //
-
-    function _formatDecimals(uint256 _price) internal view returns (uint256) {
-        return _price.mul(10**(decimals().sub(_priceFeedDecimals)));
     }
 }
