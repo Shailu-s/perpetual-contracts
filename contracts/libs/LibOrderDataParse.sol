@@ -12,7 +12,7 @@ library LibOrderDataParse {
         returns (LibOrderData.Data memory dataOrder)
     {
         if (dataOrder.payouts.length == 0) {
-            dataOrder.payouts = payoutSet(order.maker);
+            dataOrder.payouts = payoutSet(order.trader);
         }
     }
 
