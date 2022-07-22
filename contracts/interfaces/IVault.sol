@@ -84,10 +84,6 @@ interface IVault {
     /// @return accountBalance The address of `AccountBalance` contract
     function getAccountBalance() external view returns (address accountBalance);
 
-    /// @notice Get `Exchange` contract address
-    /// @return exchange The address of `Exchange` contract
-    function getExchange() external view returns (address);
-
     /// @notice Get `Positioning` contract address
     /// @return Positioning The address of `Positioning` contract
     function getPositioning() external view returns (address);
