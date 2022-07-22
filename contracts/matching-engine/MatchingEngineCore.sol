@@ -26,15 +26,16 @@ abstract contract MatchingEngineCore is
     //events
     event Canceled(
         bytes32 indexed hash,
-        address maker,
-        LibAsset.Asset makeAsset,
-        LibAsset.Asset takeAsset
+        address trader,
+        address baseToken,
+        uint256 amount,
+        uint256 salt
     );
-    event CanceledAll(address indexed maker, uint256 minSalt);
+    event CanceledAll(address indexed trader, uint256 minSalt);
     event Matched(uint256 newLeftFill, uint256 newRightFill);
 
     function cancelOrder(LibOrder.Order memory order) public {
-        require(_msgSender() == order.maker, "not a maker");
+        require(_msgSender() == order.trader, "not a maker");
         require(order.salt != 0, "0 salt can't be used");
         require(
             order.salt >= makerMinSalt[_msgSender()],
@@ -44,9 +45,10 @@ abstract contract MatchingEngineCore is
         fills[orderKeyHash] = _UINT256_MAX;
         emit Canceled(
             orderKeyHash,
-            order.maker,
-            order.makeAsset,
-            order.takeAsset
+            order.trader,
+            order.baseToken,
+            order.amount,
+            order.salt
         );
     }
 
@@ -72,11 +74,11 @@ abstract contract MatchingEngineCore is
     ) public {
         validateFull(orderLeft, signatureLeft);
         validateFull(orderRight, signatureRight);
-        if (orderLeft.taker != address(0)) {
-            require(orderRight.maker == orderLeft.taker, "leftOrder.taker verification failed");
+        if (orderLeft.trader != address(0)) {
+            require(orderRight.trader != orderLeft.trader, "leftOrder.taker verification failed");
         }
-        if (orderRight.taker != address(0)) {
-            require(orderRight.taker == orderLeft.maker, "rightOrder.taker verification failed");
+        if (orderRight.trader != address(0)) {
+            require(orderRight.trader != orderLeft.trader, "rightOrder.taker verification failed");
         }
         matchAndTransfer(orderLeft, orderRight);
     }
@@ -92,8 +94,8 @@ abstract contract MatchingEngineCore is
         LibFill.FillResult memory newFill = getFillSetNew(orderLeft, orderRight);
 
         doTransfers(
-            LibDeal.DealSide(LibAsset.Asset(makeMatch.virtualToken, newFill.leftValue), _proxy, orderLeft.maker),
-            LibDeal.DealSide(LibAsset.Asset(takeMatch.virtualToken, newFill.rightValue), _proxy, orderRight.maker),
+            LibDeal.DealSide(LibAsset.Asset(makeMatch.virtualToken, newFill.leftValue), _proxy, orderLeft.trader),
+            LibDeal.DealSide(LibAsset.Asset(takeMatch.virtualToken, newFill.rightValue), _proxy, orderRight.trader),
             getDealData()
         );
 
@@ -186,9 +188,9 @@ abstract contract MatchingEngineCore is
         pure
         returns (LibAsset.Asset memory makeMatch, LibAsset.Asset memory takeMatch)
     {
-        makeMatch = matchAssets(orderLeft.makeAsset, orderRight.takeAsset);
+        makeMatch = matchAssets(LibAsset.Asset(orderLeft.baseToken, orderLeft.amount), LibAsset.Asset(orderRight.baseToken, orderRight.amount));
         require(makeMatch.virtualToken != address(0), "assets don't match");
-        takeMatch = matchAssets(orderLeft.takeAsset, orderRight.makeAsset);
+        takeMatch = matchAssets(LibAsset.Asset(orderRight.baseToken, orderRight.amount), LibAsset.Asset(orderLeft.baseToken, orderLeft.amount));
         require(takeMatch.virtualToken != address(0), "assets don't match");
     }
 
