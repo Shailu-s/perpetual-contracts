@@ -14,6 +14,9 @@ interface IVault {
     /// @param amount The amount of token that was withdrawn
     event Withdrawn(address indexed collateralToken, address indexed trader, uint256 amount);
 
+
+    function initialize(address PositioningConfigArg, address accountBalanceArg, address tokenArg) external;
+
     /// @notice Deposit collateral into vault
     /// @dev once multi-collateral is implemented, the token is not limited to settlementToken
     /// @param token The address of the token to deposit
