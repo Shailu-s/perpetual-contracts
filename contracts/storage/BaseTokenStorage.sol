@@ -5,11 +5,5 @@ pragma solidity 0.7.6;
 /// contract which implements BaseTokenStorageV1 and following the naming convention
 /// BaseTokenStorageVX.
 abstract contract BaseTokenStorageV1 {
-    // --------- IMMUTABLE ---------
-
-    uint8 internal _priceFeedDecimals;
-
-    // --------- ^^^^^^^^^ ---------
-
     address internal _priceFeed;
 }
