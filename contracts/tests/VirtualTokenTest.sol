@@ -1,0 +1,21 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+pragma solidity 0.7.6;
+
+import "../tokens/VirtualToken.sol";
+
+contract VirtualTokenTest is VirtualToken {
+  function initialize(
+    string memory nameArg,
+    string memory symbolArg
+  ) external initializer {
+    __VirtualToken_init(nameArg, symbolArg);
+  }
+
+  function beforeTokenTransfer(
+        address from,
+        address to,
+        uint256 amount
+    ) external {
+      _beforeTokenTransfer(from, to, amount);
+  }
+}
