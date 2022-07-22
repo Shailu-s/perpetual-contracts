@@ -56,7 +56,6 @@ contract Vault is IVault, ReentrancyGuardUpgradeable, OwnerPausable, BaseRelayRe
     function initialize(
         address PositioningConfigArg,
         address accountBalanceArg,
-        address exchangeArg,
         address tokenArg
     ) external initializer {
         uint8 decimalsArg = IERC20Metadata(tokenArg).decimals();
@@ -67,8 +66,6 @@ contract Vault is IVault, ReentrancyGuardUpgradeable, OwnerPausable, BaseRelayRe
         require(PositioningConfigArg.isContract(), "V_CHCNC");
         // accountBalance address is not contract
         require(accountBalanceArg.isContract(), "V_ABNC");
-        // exchange address is not contract
-        require(exchangeArg.isContract(), "V_ENC");
 
         __ReentrancyGuard_init();
         __OwnerPausable_init();
@@ -78,7 +75,6 @@ contract Vault is IVault, ReentrancyGuardUpgradeable, OwnerPausable, BaseRelayRe
         _settlementToken = tokenArg;
         _PositioningConfig = PositioningConfigArg;
         _accountBalance = accountBalanceArg;
-        _exchange = exchangeArg;
     }
 
     function setTrustedForwarder(address trustedForwarderArg) external onlyOwner {
@@ -242,11 +238,6 @@ contract Vault is IVault, ReentrancyGuardUpgradeable, OwnerPausable, BaseRelayRe
     /// @inheritdoc IVault
     function getAccountBalance() external view override returns (address) {
         return _accountBalance;
-    }
-
-    /// @inheritdoc IVault
-    function getExchange() external view override returns (address) {
-        return _exchange;
     }
 
     /// @inheritdoc IVault
