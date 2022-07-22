@@ -24,33 +24,33 @@ abstract contract OrderValidator is Initializable, ContextUpgradeable, EIP712Upg
 
     function validate(LibOrder.Order memory order, bytes memory signature) internal view {
         if (order.salt == 0) {
-            if (order.maker != address(0)) {
-                require(_msgSender() == order.maker, "maker is not tx sender");
+            if (order.trader != address(0)) {
+                require(_msgSender() == order.trader, "maker is not tx sender");
             } else {
-                order.maker = _msgSender();
+                order.trader = _msgSender();
             }
         } else {
             require(
-                (order.salt >= makerMinSalt[order.maker]),
+                (order.salt >= makerMinSalt[order.trader]),
                 "Order canceled"
             );
-            if (_msgSender() != order.maker) {
+            if (_msgSender() != order.trader) {
                 bytes32 hash = LibOrder.hash(order);
                 address signer;
                 if (signature.length == 65) {
                     signer = _hashTypedDataV4(hash).recover(signature);
                 }
-                if  (signer != order.maker) {
-                    if (order.maker.isContract()) {
+                if  (signer != order.trader) {
+                    if (order.trader.isContract()) {
                         require(
-                            IERC1271(order.maker).isValidSignature(_hashTypedDataV4(hash), signature) == MAGICVALUE,
+                            IERC1271(order.trader).isValidSignature(_hashTypedDataV4(hash), signature) == MAGICVALUE,
                             "contract order signature verification error"
                         );
                     } else {
                         revert("order signature verification error");
                     }
                 } else {
-                    require (order.maker != address(0), "no maker");
+                    require (order.trader != address(0), "no trader");
                 }
             }
         }
