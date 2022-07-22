@@ -32,15 +32,14 @@ library LibFill {
         uint256 leftOrderFill,
         uint256 rightOrderFill
     ) internal pure returns (FillResult memory) {
-        (uint256 leftMakeValue, uint256 leftTakeValue) = LibOrder.calculateRemaining(leftOrder, leftOrderFill);
-        (uint256 rightMakeValue, uint256 rightTakeValue) = LibOrder.calculateRemaining(rightOrder, rightOrderFill);
+        (uint256 leftValue) = LibOrder.calculateRemaining(leftOrder, leftOrderFill);
+        (uint256 rightValue) = LibOrder.calculateRemaining(rightOrder, rightOrderFill);
 
-        //We have 3 cases here:
-        if (rightTakeValue > leftMakeValue) {
-            //1nd: left order should be fully filled
-            return fillLeft(leftMakeValue, leftTakeValue, rightOrder.makeAsset.value, rightOrder.takeAsset.value);
-        } //2st: right order should be fully filled or 3d: both should be fully filled if required values are the same
-        return fillRight(leftOrder.makeAsset.value, leftOrder.takeAsset.value, rightMakeValue, rightTakeValue);
+        if (rightValue > leftValue) {
+            return fillLeft(leftOrder.amount, leftValue, rightOrder.amount, rightValue);
+        }
+
+        return fillRight(rightOrder.amount, rightValue, leftOrder.amount, leftValue);
     }
 
     function fillRight(
