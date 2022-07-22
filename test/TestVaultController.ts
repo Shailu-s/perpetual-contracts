@@ -9,6 +9,7 @@ describe("Vault Controller tests", function () {
     let accountBalance: AccountBalance
     let vault: Vault
     let vaultController: VaultController
+
     beforeEach(async function () {
         const [admin, alice] = await ethers.getSigners()
 
@@ -31,12 +32,10 @@ describe("Vault Controller tests", function () {
         vault = await vault1.deployed()
         await vault.initialize(positioningConfig.address, accountBalance.address, USDC.address)
 
-
         const vaultControllerFactory = await ethers.getContractFactory("VaultController")
         const vaultController1 = await vaultControllerFactory.deploy()
         vaultController = await vaultController1.deployed()
-        await vaultController.initialize(positioningConfig.address,accountBalance.address, vault.address)
-
+        await vaultController.initialize(positioningConfig.address, accountBalance.address, vault.address)
 
         const amount = parseUnits("1000", await USDC.decimals())
         await USDC.mint(alice.address, amount)
@@ -46,25 +45,5 @@ describe("Vault Controller tests", function () {
     })
 
     it("Positive Test for deposit function", async () => {
-        const [owner, alice] = await ethers.getSigners()
-
-        await vaultController.deployVault(USDC.address)
-        const amount = parseUnits("100", await USDC.decimals())
-        await positioningConfig.setSettlementTokenBalanceCap(amount)
-
-        // check event has been sent
-        await expect(vaultController.connect(alice).deposit(USDC.address, amount))
-            .to.emit(vault, "Deposited")
-            .withArgs(USDC.address, alice.address, amount)
-
-        // reduce alice balance
-        expect(await USDC.balanceOf(alice.address)).to.eq(parseUnits("900", await USDC.decimals()))
-
-        // increase vault balance
-        expect(await USDC.balanceOf(vault.address)).to.eq(parseUnits("100", await USDC.decimals()))
-
-        // update sender's balance
-        expect(await vault.getBalance(alice.address)).to.eq(parseUnits("100", await USDC.decimals()))
     })
-
 })
