@@ -15,6 +15,6 @@ contract ChainlinkBaseToken is ParentToken {
     //
     function getIndexPrice(uint256 interval) external view override returns (uint256) {
         (, int256 answer, , , ) = IChainlinkIndexPriceOracle(_priceFeed).latestRoundData(interval);
-        return _formatDecimals(uint256(answer)); // TODO: explicit conversion from int256 to uint256
+        return uint256(answer);
     }
 }

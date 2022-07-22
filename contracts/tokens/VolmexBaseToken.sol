@@ -15,6 +15,6 @@ contract VolmexBaseToken is ParentToken {
     //
     function getIndexPrice(uint256 interval) external view override returns (uint256) {
         (uint256 answer, ) = IIndexPriceOracle(_priceFeed).latestRoundData(interval);
-        return _formatDecimals(answer);
+        return answer;
     }
 }
