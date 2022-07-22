@@ -15,6 +15,9 @@ import { PerpSafeCast } from "../libs/PerpSafeCast.sol";
 import { PerpMath } from "../libs/PerpMath.sol";
 import { SettlementTokenMath } from "../libs/SettlementTokenMath.sol";
 import { TestERC20 } from "../test/TestERC20.sol";
+import { IVault } from "../interfaces/IVault.sol";
+import { Vault } from "./Vault.sol";
+import "@openzeppelin/contracts/proxy/Clones.sol";
 
 contract VaultController is ReentrancyGuardUpgradeable, BaseRelayRecipient, OwnerPausable, VaultControllerStorage {
     using AddressUpgradeable for address;
@@ -29,25 +32,54 @@ contract VaultController is ReentrancyGuardUpgradeable, BaseRelayRecipient, Owne
     using PerpMath for int256;
     using SettlementTokenMath for uint256;
     using SettlementTokenMath for int256;
+    bool public isZkSync;
 
-    function initialize(address positioningArg, address accountBalanceArg) external initializer {
+    function initialize(
+        address positioningArg,
+        address accountBalanceArg,
+        address _vaultImplementation
+    ) external initializer {
         __ReentrancyGuard_init();
         __OwnerPausable_init();
 
         _positioning = positioningArg;
         _accountBalance = accountBalanceArg;
+        _vaultImplementation = _vaultImplementation;
+
+        // Get networkId & check for ZkSync
+        uint256 networkId;
+        assembly {
+            networkId := chainid()
+        }
+
+        // TODO: Update ZkSync networkId (currently using 280)
+        isZkSync = (networkId == 280) ? true : false;
     }
 
-    // function setVault(address _vault, address _token) public {
-    //     _vaultAddress[_token] = _vault;
-    // }
+    function deployVault(address _token) external returns (address) {
+        IVault vault;
+        if (isZkSync) {
+            vault = new Vault();
+
+            vault.initialize(_positioning, _accountBalance, _token);
+        } else {
+            bytes32 salt = keccak256(abi.encodePacked(_token));
+
+            vault = Vault(Clones.cloneDeterministic(_vaultImplementation, salt));
+            vault.initialize(_positioning, _accountBalance, _token);
+        }
+        _vaultAddress[_token] = address(vault);
+        return address(vault);
+    }
 
     function getVault(address _token) public view returns (address vault) {
         vault = _vaultAddress[_token];
     }
 
-    function deposit(address token, uint256 amountX10_D) external {
+    function deposit(address token, uint256 amountX10_D) external whenNotPaused nonReentrant {
         address _vault = getVault(token);
+        // vault of token is not available
+        require(_vault != address(0),"VC_VOTNA");
         address from = _msgSender();
         IVault(_vault).deposit(token, amountX10_D, from);
         address[] storage _vaultList = _tradersVaultMap[from];
@@ -56,13 +88,15 @@ contract VaultController is ReentrancyGuardUpgradeable, BaseRelayRecipient, Owne
         }
     }
 
-    function withdraw(address token, uint256 amountX10_D) external {
+    function withdraw(address token, uint256 amountX10_D) external whenNotPaused nonReentrant {
         address _vault = getVault(token);
+        // vault of token is not available
+        require(_vault != address(0),"VC_VOTNA");
         address to = _msgSender();
         IVault(_vault).withdraw(token, amountX10_D, to);
     }
 
-    function getAccountValue(address trader) public view returns (int256) {
+    function getAccountValue(address trader) public whenNotPaused nonReentrant returns (int256) {
         int256 fundingPayment = IPositioning(_positioning).getAllPendingFundingPayment(trader);
         (int256 owedRealizedPnl, int256 unrealizedPnl, uint256 pendingFee) =
             IAccountBalance(_accountBalance).getPnlAndPendingFee(trader);
