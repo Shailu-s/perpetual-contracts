@@ -10,36 +10,31 @@ library LibOrder {
 
     bytes32 constant ORDER_TYPEHASH =
         keccak256(
-            "Order(address maker,Asset makeAsset,address taker,Asset takeAsset,uint256 salt,uint256 deadline)Asset(address virtualToken,uint256 value)"
+            "Order(address trader,uint256 deadline,bool isShort,bool isMaker,address baseToken,uint256 amount,uint256 salt)"
         );
 
     struct Order {
-        address maker;
-        LibAsset.Asset makeAsset;
-        address taker;
-        LibAsset.Asset takeAsset;
+        address trader;
+        uint64 deadline;
+        bool isShort;
+        bool isMaker;
+        address baseToken;
+        uint256 amount;
         uint256 salt;
-        uint256 deadline;
     }
 
     function calculateRemaining(Order memory order, uint256 fill)
         internal
         pure
-        returns (uint256 makeValue, uint256 takeValue)
+        returns (uint256 value)
     {
-        takeValue = order.takeAsset.value.sub(fill);
-        makeValue = LibMath.safeGetPartialAmountFloor(order.makeAsset.value, order.takeAsset.value, takeValue);
+        value = order.amount.sub(fill);
     }
 
     function hashKey(Order memory order) internal pure returns (bytes32) {
         return
             keccak256(
-                abi.encode(
-                    order.maker,
-                    LibAsset.hash(order.makeAsset),
-                    LibAsset.hash(order.takeAsset),
-                    order.salt
-                )
+                abi.encode(order.trader, LibAsset.hash(LibAsset.Asset(order.baseToken, order.amount)), order.salt)
             );
     }
 
@@ -48,12 +43,13 @@ library LibOrder {
             keccak256(
                 abi.encode(
                     ORDER_TYPEHASH,
-                    order.maker,
-                    LibAsset.hash(order.makeAsset),
-                    order.taker,
-                    LibAsset.hash(order.takeAsset),
-                    order.salt,
-                    order.deadline
+                    order.trader,
+                    order.deadline,
+                    order.isShort,
+                    order.isMaker,
+                    order.baseToken,
+                    order.amount,
+                    order.salt
                 )
             );
     }
