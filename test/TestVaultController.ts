@@ -84,6 +84,16 @@ describe("Vault Controller tests", function () {
         expect(await USDCVaultContract.getBalance(alice.address)).to.eq(parseUnits("100", await USDC.decimals()))
     })
 
+    it("Negative Test for deposit function", async () => {
+        const [owner, alice] = await ethers.getSigners()
+
+        const amount = parseUnits("100", await USDC.decimals())
+        
+        // test fail for no vault from this token
+        await expect(vaultController.connect(alice).deposit(USDC.address, amount))
+            .to.be.revertedWith("VC_VOTNA")
+    })
+
     it("Positive Test for multiple token deposit", async () => {
         const [owner, alice] = await ethers.getSigners()
 
