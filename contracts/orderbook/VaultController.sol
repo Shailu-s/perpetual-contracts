@@ -37,14 +37,14 @@ contract VaultController is ReentrancyGuardUpgradeable, BaseRelayRecipient, Owne
     function initialize(
         address positioningArg,
         address accountBalanceArg,
-        address _vaultImplementation
+        address vaultImplementationArg
     ) external initializer {
         __ReentrancyGuard_init();
         __OwnerPausable_init();
 
         _positioning = positioningArg;
         _accountBalance = accountBalanceArg;
-        _vaultImplementation = _vaultImplementation;
+        _vaultImplementation = vaultImplementationArg;
 
         // Get networkId & check for ZkSync
         uint256 networkId;
@@ -61,12 +61,12 @@ contract VaultController is ReentrancyGuardUpgradeable, BaseRelayRecipient, Owne
         if (isZkSync) {
             vault = new Vault();
 
-            vault.initialize(_positioning, _accountBalance, _token);
+            vault.initialize(_positioning, _accountBalance, _token,  address(this));
         } else {
-            bytes32 salt = keccak256(abi.encodePacked(_token));
+            bytes32 salt = keccak256(abi.encodePacked(_positioning, _token));
 
             vault = Vault(Clones.cloneDeterministic(_vaultImplementation, salt));
-            vault.initialize(_positioning, _accountBalance, _token);
+            vault.initialize(_positioning, _accountBalance, _token, address(this));
         }
         _vaultAddress[_token] = address(vault);
         return address(vault);
@@ -81,11 +81,11 @@ contract VaultController is ReentrancyGuardUpgradeable, BaseRelayRecipient, Owne
         // vault of token is not available
         require(_vault != address(0),"VC_VOTNA");
         address from = _msgSender();
-        IVault(_vault).deposit(token, amountX10_D, from);
         address[] storage _vaultList = _tradersVaultMap[from];
         if (IVault(_vault).getBalance(from) == 0) {
             _vaultList.push(_vault);
         }
+        IVault(_vault).deposit(token, amountX10_D, from);
     }
 
     function withdraw(address token, uint256 amountX10_D) external whenNotPaused nonReentrant {
