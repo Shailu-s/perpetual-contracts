@@ -3,7 +3,7 @@ import { expect } from "chai"
 import { ethers } from "hardhat"
 import { AccountBalance, PositioningConfig, TestERC20, Vault, VaultController } from "../typechain"
 
-describe("Vault Controller tests", function () {
+describe("Vault Controller deposit tests", function () {
     let USDC: TestERC20
     let positioningConfig: PositioningConfig
     let accountBalance: AccountBalance
