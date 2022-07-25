@@ -78,12 +78,6 @@ contract Vault is IVault, ReentrancyGuardUpgradeable, OwnerPausable, BaseRelayRe
         _vaultController = vaultControllerArg;
     }
 
-    function setTrustedForwarder(address trustedForwarderArg) external onlyOwner {
-        // V_TFNC: TrustedForwarder address is not contract
-        require(trustedForwarderArg.isContract(), "V_TFNC");
-        _setTrustedForwarder(trustedForwarderArg);
-    }
-
     function setPositioning(address PositioningArg) external onlyOwner {
         // V_VPMM: Positioning is not contract
         require(PositioningArg.isContract(), "V_VPMM");
