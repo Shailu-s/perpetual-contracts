@@ -38,7 +38,6 @@ contract Vault is IVault, ReentrancyGuardUpgradeable, OwnerPausable, BaseRelayRe
     event BorrowFund(address from, uint256 amount);
     event DebtRepayed(address to, uint256 amount);
 
-    address internal _vaultController;
     //
     // MODIFIER
     //
@@ -56,7 +55,8 @@ contract Vault is IVault, ReentrancyGuardUpgradeable, OwnerPausable, BaseRelayRe
     function initialize(
         address PositioningConfigArg,
         address accountBalanceArg,
-        address tokenArg
+        address tokenArg,
+        address vaultControllerArg
     ) external override initializer {
         uint8 decimalsArg = IERC20Metadata(tokenArg).decimals();
 
@@ -75,6 +75,7 @@ contract Vault is IVault, ReentrancyGuardUpgradeable, OwnerPausable, BaseRelayRe
         _settlementToken = tokenArg;
         _PositioningConfig = PositioningConfigArg;
         _accountBalance = accountBalanceArg;
+        _vaultController = vaultControllerArg;
     }
 
     function setTrustedForwarder(address trustedForwarderArg) external onlyOwner {
@@ -89,8 +90,12 @@ contract Vault is IVault, ReentrancyGuardUpgradeable, OwnerPausable, BaseRelayRe
         _Positioning = PositioningArg;
     }
 
+    function setVaultController(address vaultControllerArg) external onlyOwner {
+        _vaultController = vaultControllerArg;
+    }
+
     /// @inheritdoc IVault
-    function deposit(address token, uint256 amountX10_D, address from)
+       function deposit(address token, uint256 amountX10_D, address from)
         external
         override
         whenNotPaused
@@ -117,14 +122,11 @@ contract Vault is IVault, ReentrancyGuardUpgradeable, OwnerPausable, BaseRelayRe
     }
 
     /// @inheritdoc IVault
-    function withdraw(address token, uint256 amountX10_D, address to)
-        external
-        virtual
-        override
-        whenNotPaused
-        nonReentrant
-        onlySettlementToken(token)
-    {
+    function withdraw(
+        address token,
+        uint256 amountX10_D,
+        address to
+    ) external virtual override whenNotPaused nonReentrant onlySettlementToken(token) {
         _requireOnlyVaultController();
         // input requirement checks:
         //   token: here
@@ -243,6 +245,10 @@ contract Vault is IVault, ReentrancyGuardUpgradeable, OwnerPausable, BaseRelayRe
     /// @inheritdoc IVault
     function getPositioning() external view override returns (address) {
         return _Positioning;
+    }
+
+    function getVaultController() external view returns (address) {
+        return _vaultController;  
     }
 
     /// @inheritdoc IVault
