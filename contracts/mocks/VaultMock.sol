@@ -48,7 +48,7 @@ contract VaultMock is Vault{
         fakePendingFeeX10_18 = value;
     }
 
-    function withdraw(address token, uint256 amountX10_D)
+    function withdraw(address token, uint256 amountX10_D, address to)
         external
         override
         whenNotPaused
@@ -65,9 +65,6 @@ contract VaultMock is Vault{
         // 3. call Vault.withdraw(token, amount)
         // 4. settle pnl to trader balance in Vault
         // 5. transfer the amount to trader
-
-        address to = _msgSender();
-
         // settle all funding payments owedRealizedPnl
         // pending fee can be withdraw but won't be settled
         // IPositioning(_Positioning).settleAllFunding(to);
