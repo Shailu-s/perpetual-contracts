@@ -1,13 +1,16 @@
 import { parseUnits } from "ethers/lib/utils"
 import { expect } from "chai"
 import { ethers } from "hardhat"
-import { AccountBalance, PositioningConfig, TestERC20, Vault } from "../typechain"
+import { AccountBalance, PositioningConfig, TestERC20, Vault, VaultController, Vault__factory } from "../typechain"
 
 describe("Vault tests", function () {
     let USDC: TestERC20
     let positioningConfig: PositioningConfig
     let accountBalance: AccountBalance
     let vault: Vault
+    let vaultController: VaultController
+    let vaultFactory;
+    
     beforeEach(async function () {
         const [admin, alice] = await ethers.getSigners()
 
@@ -25,10 +28,15 @@ describe("Vault tests", function () {
         const accountBalance1 = await accountBalanceFactory.deploy()
         accountBalance = await accountBalance1.deployed()
 
-        const vaultFactory = await ethers.getContractFactory("Vault")
+        vaultFactory = await ethers.getContractFactory("Vault")
         const vault1 = await vaultFactory.deploy()
         vault = await vault1.deployed()
         await vault.initialize(positioningConfig.address, accountBalance.address, USDC.address, USDC.address)
+
+        const vaultControllerFactory = await ethers.getContractFactory("VaultController")
+        const vaultController1 = await vaultControllerFactory.deploy()
+        vaultController = await vaultController1.deployed()
+        await vaultController.initialize(positioningConfig.address, accountBalance.address, vault.address)
 
         const amount = parseUnits("1000", await USDC.decimals())
         await USDC.mint(alice.address, amount)
@@ -40,30 +48,40 @@ describe("Vault tests", function () {
     it("Positive Test for deposit function", async () => {
         const [owner, alice] = await ethers.getSigners()
 
+        await vaultController.deployVault(USDC.address)
         const amount = parseUnits("100", await USDC.decimals())
+
         await positioningConfig.setSettlementTokenBalanceCap(amount)
 
+        const USDCVaultAddress = await vaultController.getVault(USDC.address)
+
+        const USDCVaultContract = await vaultFactory.attach(USDCVaultAddress);
+        await USDC.connect(alice).approve(USDCVaultAddress, amount)
+
         // check event has been sent
-        await expect(vault.connect(alice).deposit(USDC.address, amount))
-            .to.emit(vault, "Deposited")
+        await expect(vaultController.connect(alice).deposit(USDC.address, amount))
+            .to.emit(USDCVaultContract, "Deposited")
             .withArgs(USDC.address, alice.address, amount)
 
-        // reduce alice balance
+        // // reduce alice balance
         expect(await USDC.balanceOf(alice.address)).to.eq(parseUnits("900", await USDC.decimals()))
 
-        // increase vault balance
-        expect(await USDC.balanceOf(vault.address)).to.eq(parseUnits("100", await USDC.decimals()))
+        // // increase vault balance
+        expect(await USDC.balanceOf(USDCVaultAddress)).to.eq(parseUnits("100", await USDC.decimals()))
 
-        // update sender's balance
-        expect(await vault.getBalance(alice.address)).to.eq(parseUnits("100", await USDC.decimals()))
+        // // update sender's balance
+        expect(await USDCVaultContract.getBalance(alice.address)).to.eq(parseUnits("100", await USDC.decimals()))
     })
 
     it("force error,amount more than allowance", async () => {
         const [owner, alice] = await ethers.getSigners()
 
+        await vaultController.deployVault(USDC.address)
         const amount = parseUnits("100", await USDC.decimals())
 
-        await expect(vault.connect(owner).deposit(USDC.address, amount)).to.be.revertedWith(
+        await positioningConfig.setSettlementTokenBalanceCap(amount)
+
+        await expect(vaultController.connect(owner).deposit(USDC.address, amount)).to.be.revertedWith(
             "ERC20: transfer amount exceeds allowance",
         )
     })
@@ -71,17 +89,29 @@ describe("Vault tests", function () {
     it("force error, greater than settlement token balance cap", async () => {
         const [owner, alice] = await ethers.getSigners()
 
+        await vaultController.deployVault(USDC.address)
         const amount = parseUnits("100", await USDC.decimals())
 
-        await expect(vault.connect(alice).deposit(USDC.address, amount)).to.be.revertedWith("V_GTSTBC")
+        const USDCVaultAddress = await vaultController.getVault(USDC.address)
+        const USDCVaultContract = await vaultFactory.attach(USDCVaultAddress);
+
+        await USDC.connect(alice).approve(USDCVaultAddress, amount)
+        await expect(vaultController.connect(alice).deposit(USDC.address, amount)).to.be.revertedWith("V_GTSTBC")
     })
 
     it("force error, inconsistent vault balance with deflationary token", async () => {
         const [owner, alice] = await ethers.getSigners()
+        await vaultController.deployVault(USDC.address)
+        const amount = parseUnits("100", await USDC.decimals())
+
+        const USDCVaultAddress = await vaultController.getVault(USDC.address)
+        const USDCVaultContract = await vaultFactory.attach(USDCVaultAddress);
+        
+        await USDC.connect(alice).approve(USDCVaultAddress, amount)
 
         USDC.setTransferFeeRatio(50)
         await expect(
-            vault.connect(alice).deposit(USDC.address, parseUnits("100", await USDC.decimals())),
+            vaultController.connect(alice).deposit(USDC.address,amount),
         ).to.be.revertedWith("V_IBA")
         USDC.setTransferFeeRatio(0)
     })
@@ -116,6 +146,13 @@ describe("Vault tests", function () {
 
             // caller not owner
             await expect(vault.connect(alice).transferFundToVault(USDC.address, amount)).to.be.revertedWith("SO_CNO")
+        })
+
+        it("Check for set position address", async () => {
+            const [owner, alice] = await ethers.getSigners()
+    
+            await vault.connect(owner).setPositioning(positioningConfig.address)
+            expect( await vault.connect(owner).getPositioning()).to.be.equal(positioningConfig.address)
         })
     })
 
