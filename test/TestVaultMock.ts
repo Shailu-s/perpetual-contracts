@@ -1,14 +1,18 @@
 import { parseUnits } from "ethers/lib/utils"
 import { expect } from "chai"
 import { ethers } from "hardhat"
-import { AccountBalance, PositioningConfig, TestERC20, Vault, VaultMock } from "../typechain"
+import { AccountBalance, PositioningConfig, TestERC20, Vault, VaultController, VaultMock } from "../typechain"
 
-describe("Vault tests", function () {
+describe("Vault tests for withdrawals", function () {
     let USDC: TestERC20
     let positioningConfig: PositioningConfig
     let accountBalance: AccountBalance
     let vault: Vault
     let vaultMock: VaultMock
+    let vaultController: VaultController
+    let vaultFactory
+    let USDCVaultContract
+
     beforeEach(async function () {
         const [admin, alice] = await ethers.getSigners()
 
@@ -26,7 +30,7 @@ describe("Vault tests", function () {
         const accountBalance1 = await accountBalanceFactory.deploy()
         accountBalance = await accountBalance1.deployed()
 
-        const vaultFactory = await ethers.getContractFactory("Vault")
+        vaultFactory = await ethers.getContractFactory("Vault")
         const vault1 = await vaultFactory.deploy()
         vault = await vault1.deployed()
         await vault.initialize(positioningConfig.address, accountBalance.address, USDC.address, USDC.address)
@@ -35,6 +39,11 @@ describe("Vault tests", function () {
         const vaultMock1 = await vaultMockFactory.deploy()
         vaultMock = await vaultMock1.deployed()
         await vaultMock.initialize(positioningConfig.address, accountBalance.address, USDC.address, USDC.address)
+        
+        const vaultControllerFactory = await ethers.getContractFactory("VaultController")
+        const vaultController1 = await vaultControllerFactory.deploy()
+        vaultController = await vaultController1.deployed()
+        await vaultController.initialize(positioningConfig.address, accountBalance.address, vaultMock.address)
 
         const amount = parseUnits("1000", await USDC.decimals())
         await USDC.mint(alice.address, amount)
@@ -51,31 +60,28 @@ describe("Vault tests", function () {
         beforeEach(async function () {
             const [owner, alice] = await ethers.getSigners()
 
+            await vaultController.deployVault(USDC.address)
             const amount = parseUnits("100", await USDC.decimals())
+    
             await positioningConfig.setSettlementTokenBalanceCap(amount)
-            const amount2 = parseUnits("200", await USDC.decimals())
-
+    
+            const USDCVaultAddress = await vaultController.getVault(USDC.address)
+    
+            USDCVaultContract = await vaultFactory.attach(USDCVaultAddress);
+            await USDC.connect(alice).approve(USDCVaultAddress, amount)
+    
             // check event has been sent
-            await expect(vaultMock.connect(alice).deposit(USDC.address, amount))
-                .to.emit(vaultMock, "Deposited")
+            await expect(vaultController.connect(alice).deposit(USDC.address, amount))
+                .to.emit(USDCVaultContract, "Deposited")
                 .withArgs(USDC.address, alice.address, amount)
-
-            // reduce alice balance
-            expect(await USDC.balanceOf(alice.address)).to.eq(parseUnits("900", await USDC.decimals()))
-
-            // increase vault balance
-            expect(await USDC.balanceOf(vaultMock.address)).to.eq(parseUnits("100", await USDC.decimals()))
-
-            // update sender's balance
-            expect(await vaultMock.getBalance(alice.address)).to.eq(parseUnits("100", await USDC.decimals()))
         })
 
         it("Tests for success withdrawal", async function () {
             const [owner, alice] = await ethers.getSigners()
             const amount = parseUnits("100", await USDC.decimals())
 
-            await expect(vaultMock.connect(alice).withdraw(USDC.address, amount))
-                .to.emit(vaultMock, "Withdrawn")
+            await expect(vaultController.connect(alice).withdraw(USDC.address, amount))
+                .to.emit(USDCVaultContract, "Withdrawn")
                 .withArgs(USDC.address, alice.address, amount)
 
             expect(await vaultMock.getBalance(alice.address)).to.eq(parseUnits("0", await USDC.decimals()))
@@ -85,7 +91,7 @@ describe("Vault tests", function () {
             const [owner, alice] = await ethers.getSigners()
             const amount = parseUnits("200", await USDC.decimals())
 
-            await expect(vaultMock.connect(alice).withdraw(USDC.address, amount))
+            await expect(vaultController.connect(alice).withdraw(USDC.address, amount))
                 .to.be.revertedWith("V_NEFC")
 
         })
