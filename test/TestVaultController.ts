@@ -83,4 +83,52 @@ describe("Vault Controller tests", function () {
         // // update sender's balance
         expect(await USDCVaultContract.getBalance(alice.address)).to.eq(parseUnits("100", await USDC.decimals()))
     })
+
+    it("Positive Test for multiple token deposit", async () => {
+        const [owner, alice] = await ethers.getSigners()
+
+        await vaultController.deployVault(USDC.address)
+        await vaultController.deployVault(DAI.address)
+        const amount = parseUnits("100", await USDC.decimals())
+        const DAIAmount = parseUnits("100", await DAI.decimals())
+
+        await positioningConfig.setSettlementTokenBalanceCap(amount)
+        await positioningConfig.setSettlementTokenBalanceCap(DAIAmount)
+
+        const USDCVaultAddress = await vaultController.getVault(USDC.address)
+        const DAIVaultAddress = await vaultController.getVault(DAI.address)
+
+        const USDCVaultContract = await vaultFactory.attach(USDCVaultAddress);
+        const DAIVaultContract = await vaultFactory.attach(DAIVaultAddress);
+        await USDC.connect(alice).approve(USDCVaultAddress, amount)
+        await DAI.connect(alice).approve(DAIVaultAddress, DAIAmount)
+
+        // check event has been sent
+        await expect(vaultController.connect(alice).deposit(USDC.address, amount))
+            .to.emit(USDCVaultContract, "Deposited")
+            .withArgs(USDC.address, alice.address, amount)
+
+        await expect(vaultController.connect(alice).deposit(DAI.address, DAIAmount))
+            .to.emit(DAIVaultContract, "Deposited")
+            .withArgs(DAI.address, alice.address, DAIAmount)
+
+        // // reduce alice balance
+        expect(await USDC.balanceOf(alice.address)).to.eq(parseUnits("900", await USDC.decimals()))
+
+        // // increase vault balance
+        expect(await USDC.balanceOf(USDCVaultAddress)).to.eq(parseUnits("100", await USDC.decimals()))
+
+        // // update sender's balance
+        expect(await USDCVaultContract.getBalance(alice.address)).to.eq(parseUnits("100", await USDC.decimals()))
+        
+
+        // // reduce alice balance
+        expect(await DAI.balanceOf(alice.address)).to.eq(parseUnits("900", await DAI.decimals()))
+
+        // // increase vault balance
+        expect(await DAI.balanceOf(DAIVaultAddress)).to.eq(parseUnits("100", await DAI.decimals()))
+
+         // // update sender's balance
+         expect(await DAIVaultContract.getBalance(alice.address)).to.eq(parseUnits("100", await DAI.decimals()))
+    })
 })
