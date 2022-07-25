@@ -71,4 +71,13 @@ describe("Vault Controller tests for withdrawal", function () {
 
         expect(await USDCVaultContract.getBalance(alice.address)).to.eq(0)
     })
+
+    it("Positive Test for withdrawal of token", async () => {
+        const [owner, alice] = await ethers.getSigners()
+
+        const amount = parseUnits("100", await USDC.decimals())
+
+        await expect(vaultController.connect(alice).withdraw(USDC.address, amount))
+        .to.be.revertedWith("VC_VOTNA")
+    })
 })
