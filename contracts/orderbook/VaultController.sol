@@ -96,7 +96,7 @@ contract VaultController is ReentrancyGuardUpgradeable, BaseRelayRecipient, Owne
         IVault(_vault).withdraw(token, amountX10_D, to);
     }
 
-    function getAccountValue(address trader) public whenNotPaused nonReentrant returns (int256) {
+    function getAccountValue(address trader) public virtual whenNotPaused nonReentrant returns (int256) {
         int256 fundingPayment = IPositioning(_positioning).getAllPendingFundingPayment(trader);
         (int256 owedRealizedPnl, int256 unrealizedPnl, uint256 pendingFee) =
             IAccountBalance(_accountBalance).getPnlAndPendingFee(trader);
