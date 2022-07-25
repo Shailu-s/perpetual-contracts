@@ -9,7 +9,9 @@ describe("Vault Controller tests", function () {
     let accountBalance: AccountBalance
     let vault: Vault
     let vaultController: VaultController
-
+    let vaultFactory;
+    let DAI;
+    
     beforeEach(async function () {
         const [admin, alice] = await ethers.getSigners()
 
@@ -17,6 +19,11 @@ describe("Vault Controller tests", function () {
         const USDC1 = await tokenFactory.deploy()
         USDC = await USDC1.deployed()
         await USDC.__TestERC20_init("TestUSDC", "USDC", 6)
+
+        const tokenFactory2 = await ethers.getContractFactory("TestERC20")
+        const Dai = await tokenFactory2.deploy()
+        DAI = await Dai.deployed()
+        await DAI.__TestERC20_init("TestDai", "DAI", 10)
 
         const positioningConfigFactory = await ethers.getContractFactory("PositioningConfig")
         const positioningConfig1 = await positioningConfigFactory.deploy()
@@ -27,10 +34,10 @@ describe("Vault Controller tests", function () {
         const accountBalance1 = await accountBalanceFactory.deploy()
         accountBalance = await accountBalance1.deployed()
 
-        const vaultFactory = await ethers.getContractFactory("Vault")
+        vaultFactory = await ethers.getContractFactory("Vault")
         const vault1 = await vaultFactory.deploy()
         vault = await vault1.deployed()
-        await vault.initialize(positioningConfig.address, accountBalance.address, USDC.address)
+        await vault.initialize(positioningConfig.address, accountBalance.address, USDC.address, USDC.address)
 
         const vaultControllerFactory = await ethers.getContractFactory("VaultController")
         const vaultController1 = await vaultControllerFactory.deploy()
@@ -39,11 +46,41 @@ describe("Vault Controller tests", function () {
 
         const amount = parseUnits("1000", await USDC.decimals())
         await USDC.mint(alice.address, amount)
-        await USDC.connect(alice).approve(vault.address, amount)
 
-        await USDC.mint(admin.address, amount)
+        await USDC.connect(alice).approve(vaultController.address, amount)
+
+        const DAIAmount = parseUnits("1000", await DAI.decimals())
+        await DAI.mint(alice.address, DAIAmount)
+
+        await DAI.connect(alice).approve(vaultController.address, DAIAmount)
+        await USDC.mint(admin.address, DAIAmount)
     })
 
     it("Positive Test for deposit function", async () => {
+        const [owner, alice] = await ethers.getSigners()
+
+        await vaultController.deployVault(USDC.address)
+        const amount = parseUnits("100", await USDC.decimals())
+
+        await positioningConfig.setSettlementTokenBalanceCap(amount)
+
+        const USDCVaultAddress = await vaultController.getVault(USDC.address)
+
+        const USDCVaultContract = await vaultFactory.attach(USDCVaultAddress);
+        await USDC.connect(alice).approve(USDCVaultAddress, amount)
+
+        // check event has been sent
+        await expect(vaultController.connect(alice).deposit(USDC.address, amount))
+            .to.emit(USDCVaultContract, "Deposited")
+            .withArgs(USDC.address, alice.address, amount)
+
+        // // reduce alice balance
+        expect(await USDC.balanceOf(alice.address)).to.eq(parseUnits("900", await USDC.decimals()))
+
+        // // increase vault balance
+        expect(await USDC.balanceOf(USDCVaultAddress)).to.eq(parseUnits("100", await USDC.decimals()))
+
+        // // update sender's balance
+        expect(await USDCVaultContract.getBalance(alice.address)).to.eq(parseUnits("100", await USDC.decimals()))
     })
 })
