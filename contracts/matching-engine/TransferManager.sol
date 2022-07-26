@@ -66,8 +66,8 @@ abstract contract TransferManager is OwnableUpgradeable, ITransferManager {
         LibDeal.DealSide memory right,
         LibDeal.DealData memory dealData
     ) internal virtual override returns (uint256 totalLeftValue, uint256 totalRightValue) {
-        totalLeftValue = left.asset.value;
-        totalRightValue = right.asset.value;
+        totalLeftValue = left.amount;
+        totalRightValue = right.amount;
 
         totalLeftValue = doTransfersWithFees(left, right, dealData.protocolFee, dealData.maxFeesBasePoint);
         totalRightValue = doTransfersWithFees(right, left, dealData.protocolFee, dealData.maxFeesBasePoint);
@@ -86,16 +86,17 @@ abstract contract TransferManager is OwnableUpgradeable, ITransferManager {
         uint256 _protocolFee,
         uint256 maxFeesBasePoint
     ) internal returns (uint256 totalAmount) {
-        totalAmount = calculateTotalAmount(calculateSide.asset.value, _protocolFee, maxFeesBasePoint);
+        totalAmount = calculateTotalAmount(calculateSide.amount, _protocolFee, maxFeesBasePoint);
         uint256 rest = transferProtocolFee(
             totalAmount,
-            calculateSide.asset.value,
+            calculateSide.amount,
             calculateSide.from,
             _protocolFee,
-            calculateSide.asset
+            calculateSide.baseToken
         );
         transfer(
-            LibAsset.Asset(calculateSide.asset.virtualToken, rest),
+            calculateSide.baseToken,
+            rest,
             calculateSide.from,
             anotherSide.from
         );
@@ -106,12 +107,11 @@ abstract contract TransferManager is OwnableUpgradeable, ITransferManager {
         uint256 amount,
         address from,
         uint256 _protocolFee,
-        LibAsset.Asset memory matchCalculate
+        address matchCalculateToken
     ) internal returns (uint256) {
         (uint256 rest, uint256 fee) = subFeeInBp(totalAmount, amount, _protocolFee);
         if (fee > 0) {
-            address tokenAddress = matchCalculate.virtualToken;
-            transfer(LibAsset.Asset(matchCalculate.virtualToken, fee), from, getFeeReceiver(tokenAddress));
+            transfer(matchCalculateToken, fee, from, getFeeReceiver(matchCalculateToken));
         }
         return rest;
     }
