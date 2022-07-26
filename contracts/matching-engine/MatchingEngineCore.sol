@@ -65,7 +65,6 @@ abstract contract MatchingEngineCore is
         emit CanceledAll(_msgSender(), minSalt);
     }
 
-    // TODO: matchOrdersInBatch create - refer marketplace-solidity repo
     function matchOrders(
         LibOrder.Order memory orderLeft,
         bytes memory signatureLeft,
@@ -89,13 +88,13 @@ abstract contract MatchingEngineCore is
         @param orderRight the right order of the match
     */
     function matchAndTransfer(LibOrder.Order memory orderLeft, LibOrder.Order memory orderRight) internal {
-        (address makeMatch, address takeMatch) = matchAssets(orderLeft, orderRight);
+        (address matchToken) = matchAssets(orderLeft, orderRight);
 
         LibFill.FillResult memory newFill = getFillSetNew(orderLeft, orderRight);
 
         doTransfers(
-            LibDeal.DealSide(makeMatch, newFill.leftValue, _proxy, orderLeft.trader),
-            LibDeal.DealSide(takeMatch, newFill.rightValue, _proxy, orderRight.trader),
+            LibDeal.DealSide(matchToken, newFill.leftValue, _proxy, orderLeft.trader),
+            LibDeal.DealSide(matchToken, newFill.rightValue, _proxy, orderRight.trader),
             getDealData()
         );
 
@@ -186,12 +185,10 @@ abstract contract MatchingEngineCore is
     function matchAssets(LibOrder.Order memory orderLeft, LibOrder.Order memory orderRight)
         internal
         pure
-        returns (address makeMatch, address takeMatch)
+        returns (address matchToken)
     {
-        makeMatch = matchAssets(orderLeft.baseToken, orderRight.baseToken);
-        require(makeMatch != address(0), "MatchingEngineCore: make assets don't match");
-        takeMatch = matchAssets(orderRight.baseToken, orderLeft.baseToken);
-        require(takeMatch != address(0), "MatchingEngineCore: take assets don't match");
+        matchToken = matchAssets(orderLeft.baseToken, orderRight.baseToken);
+        require(matchToken != address(0), "MatchingEngineCore: make assets don't match");
     }
 
     function validateFull(LibOrder.Order memory order, bytes memory signature) internal view {
