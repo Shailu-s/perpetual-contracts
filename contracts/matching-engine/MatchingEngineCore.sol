@@ -89,13 +89,13 @@ abstract contract MatchingEngineCore is
         @param orderRight the right order of the match
     */
     function matchAndTransfer(LibOrder.Order memory orderLeft, LibOrder.Order memory orderRight) internal {
-        (LibAsset.Asset memory makeMatch, LibAsset.Asset memory takeMatch) = matchAssets(orderLeft, orderRight);
+        (address makeMatch, address takeMatch) = matchAssets(orderLeft, orderRight);
 
         LibFill.FillResult memory newFill = getFillSetNew(orderLeft, orderRight);
 
         doTransfers(
-            LibDeal.DealSide(LibAsset.Asset(makeMatch.virtualToken, newFill.leftValue), _proxy, orderLeft.trader),
-            LibDeal.DealSide(LibAsset.Asset(takeMatch.virtualToken, newFill.rightValue), _proxy, orderRight.trader),
+            LibDeal.DealSide(makeMatch, newFill.leftValue, _proxy, orderLeft.trader),
+            LibDeal.DealSide(takeMatch, newFill.rightValue, _proxy, orderRight.trader),
             getDealData()
         );
 
@@ -186,12 +186,12 @@ abstract contract MatchingEngineCore is
     function matchAssets(LibOrder.Order memory orderLeft, LibOrder.Order memory orderRight)
         internal
         pure
-        returns (LibAsset.Asset memory makeMatch, LibAsset.Asset memory takeMatch)
+        returns (address makeMatch, address takeMatch)
     {
-        makeMatch = matchAssets(LibAsset.Asset(orderLeft.baseToken, orderLeft.amount), LibAsset.Asset(orderRight.baseToken, orderRight.amount));
-        require(makeMatch.virtualToken != address(0), "assets don't match");
-        takeMatch = matchAssets(LibAsset.Asset(orderRight.baseToken, orderRight.amount), LibAsset.Asset(orderLeft.baseToken, orderLeft.amount));
-        require(takeMatch.virtualToken != address(0), "assets don't match");
+        makeMatch = matchAssets(orderLeft.baseToken, orderRight.baseToken);
+        require(makeMatch != address(0), "MatchingEngineCore: make assets don't match");
+        takeMatch = matchAssets(orderRight.baseToken, orderLeft.baseToken);
+        require(takeMatch != address(0), "MatchingEngineCore: take assets don't match");
     }
 
     function validateFull(LibOrder.Order memory order, bytes memory signature) internal view {
