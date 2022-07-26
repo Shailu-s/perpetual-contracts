@@ -3,7 +3,6 @@
 pragma solidity =0.8.12;
 
 import "./LibMath.sol";
-import "./LibAsset.sol";
 
 library LibOrder {
     using SafeMathUpgradeable for uint256;
@@ -34,7 +33,7 @@ library LibOrder {
     function hashKey(Order memory order) internal pure returns (bytes32) {
         return
             keccak256(
-                abi.encode(order.trader, LibAsset.hash(LibAsset.Asset(order.baseToken, order.amount)), order.salt)
+                abi.encode(order.trader, order.baseToken, order.amount, order.salt)
             );
     }
 
