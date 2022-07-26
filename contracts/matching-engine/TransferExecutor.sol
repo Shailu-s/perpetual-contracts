@@ -27,32 +27,33 @@ abstract contract TransferExecutor is Initializable, OwnableUpgradeable, ITransf
     }
 
     function transferToken(
-        LibAsset.Asset memory asset,
+        address baseToken,
+        uint256 amount,
         address from,
         address to,
         address proxy
     ) internal {
-        address token = asset.virtualToken;
         if (from == address(this)) {
-            IERC20Upgradeable(token).transfer(to, asset.value);
+            IERC20Upgradeable(baseToken).transfer(to, amount);
         } else {
-            IERC20TransferProxy(proxy).erc20safeTransferFrom(IERC20Upgradeable(token), from, to, asset.value);
+            IERC20TransferProxy(proxy).erc20safeTransferFrom(IERC20Upgradeable(baseToken), from, to, amount);
         }
     }
 
     function transfer(
-        LibAsset.Asset memory asset,
+        address baseToken,
+        uint256 amount,
         address from,
         address to
     ) internal override {
-        IVirtualToken token = IVirtualToken(asset.virtualToken);
+        IVirtualToken token = IVirtualToken(baseToken);
         if (token.balanceOf(from) == 0) {
-            token.mint(to, asset.value);
-        } else if (token.balanceOf(from) >= asset.value) {
-            token.transferFrom(from, to, asset.value);
+            token.mint(to, amount);
+        } else if (token.balanceOf(from) >= amount) {
+            token.transferFrom(from, to, amount);
         } else {
             uint256 senderBalance = token.balanceOf(from);
-            uint256 restToMint = asset.value - senderBalance;
+            uint256 restToMint = amount - senderBalance;
             token.transferFrom(from, to, senderBalance);
             token.mint(to, restToMint);
         }

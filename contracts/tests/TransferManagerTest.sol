@@ -51,13 +51,15 @@ contract TransferManagerTest is
     }
 
     function transferTokenTest(
-        LibAsset.Asset memory asset,
+        address baseToken,
+        uint256 amount,
         address from,
         address to,
         address proxy
     ) external {
         transferToken(
-            asset,
+            baseToken,
+            amount,
             from,
             to,
             proxy
