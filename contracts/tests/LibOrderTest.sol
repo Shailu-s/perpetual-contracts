@@ -3,7 +3,7 @@
 pragma solidity ^0.8.12;
 pragma abicoder v2;
 
-import "contracts/libs/LibOrder.sol";
+import "../libs/LibOrder.sol";
 
 contract LibOrderTest {
     function validate(LibOrder.Order calldata order) external view {
@@ -12,35 +12,27 @@ contract LibOrderTest {
 
     function calculateRemaining(
         LibOrder.Order calldata order,
-        uint256 fill,
-        bool isMakeFill
+        uint256 fill
     ) external pure returns (uint256 amount) {
         return LibOrder.calculateRemaining(order, fill);
     }
 
-    function hashKey(LibOrder.Order calldata order)
-        external
-        pure
-        returns (bytes32)
-    {
+    function hashKey(LibOrder.Order calldata order) external pure returns (bytes32) {
         return LibOrder.hashKey(order);
     }
 
-    function hash(
-        address maker,
-        LibAsset.Asset memory makeAsset,
-        LibAsset.Asset memory takeAsset,
-        uint256 salt,
-        bytes memory data
-    ) public pure returns (bytes32) {
+    function hash(LibOrder.Order memory order) external pure returns (bytes32) {
         return
             keccak256(
                 abi.encode(
-                    maker,
-                    LibAsset.hash(makeAsset),
-                    LibAsset.hash(takeAsset),
-                    salt,
-                    data
+                    LibOrder.ORDER_TYPEHASH,
+                    order.trader,
+                    order.deadline,
+                    order.isShort,
+                    order.isMaker,
+                    order.baseToken,
+                    order.amount,
+                    order.salt
                 )
             );
     }
