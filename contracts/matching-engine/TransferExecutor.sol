@@ -26,20 +26,6 @@ abstract contract TransferExecutor is Initializable, OwnableUpgradeable, ITransf
         emit ProxyChange(proxy);
     }
 
-    function transferToken(
-        address baseToken,
-        uint256 amount,
-        address from,
-        address to,
-        address proxy
-    ) internal {
-        if (from == address(this)) {
-            IERC20Upgradeable(baseToken).transfer(to, amount);
-        } else {
-            IERC20TransferProxy(proxy).erc20safeTransferFrom(IERC20Upgradeable(baseToken), from, to, amount);
-        }
-    }
-
     function transfer(
         address baseToken,
         uint256 amount,
