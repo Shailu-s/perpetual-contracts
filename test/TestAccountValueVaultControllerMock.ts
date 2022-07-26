@@ -81,7 +81,7 @@ describe("Vault Controller Mock tests for account value", function () {
 
         // // update sender's balance
         expect(await USDCVaultContract.getBalance(alice.address)).to.eq(parseUnits("100", await USDC.decimals()))
-        expect(await (await vaultContractMock.getAccountValue(alice.address)).value.toNumber()).to.be.equal(0)
+        expect(await (await vaultContractMock.getAccountValue(alice.address)).value.toNumber()).to.be.equal(100000000000000000000)
     })
 
     it("Positive Test for multiple token deposit", async () => {
@@ -122,5 +122,6 @@ describe("Vault Controller Mock tests for account value", function () {
         expect(await USDCVaultContract.getBalance(alice.address)).to.eq(parseUnits("100", await USDC.decimals()))
 
         expect(await DAI.balanceOf(DAIVaultAddress)).to.eq(parseUnits("100", await DAI.decimals()))
+        expect(await (await vaultContractMock.getAccountValue(alice.address)).value.toNumber()).to.be.equal(200000000000000000000)
     })
 })
