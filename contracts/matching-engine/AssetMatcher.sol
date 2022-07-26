@@ -5,52 +5,48 @@ pragma solidity =0.8.12;
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
-import "../libs/LibAsset.sol";
-
 abstract contract AssetMatcher is Initializable, OwnableUpgradeable {
     uint256 constant ZERO = 0;
 
-    function matchAssets(LibAsset.Asset memory leftAsset, LibAsset.Asset memory rightAsset)
+    function matchAssets(address leftBaseToken, address rightBaseToken)
         internal
         pure
-        returns (LibAsset.Asset memory)
+        returns (address baseToken)
     {
-        LibAsset.Asset memory result = matchAssetOneSide(leftAsset, rightAsset);
-        if (result.virtualToken == address(0)) {
-            return matchAssetOneSide(rightAsset, leftAsset);
+        address result = matchAssetOneSide(leftBaseToken, rightBaseToken);
+        if (result == address(0)) {
+            return matchAssetOneSide(rightBaseToken, leftBaseToken);
         } else {
             return result;
         }
     }
 
-    function matchAssetOneSide(LibAsset.Asset memory leftAsset, LibAsset.Asset memory rightAsset)
+    function matchAssetOneSide(address leftBaseToken, address rightBaseToken)
         private
         pure
-        returns (LibAsset.Asset memory)
+        returns (address baseToken)
     {
-        address tokenLeft = leftAsset.virtualToken;
-        address tokenRight = rightAsset.virtualToken;
-        if (tokenLeft != address(0)) {
-            if (tokenRight != address(0)) {
-                return simpleMatch(leftAsset, rightAsset);
+        if (leftBaseToken != address(0)) {
+            if (rightBaseToken != address(0)) {
+                return simpleMatch(leftBaseToken, rightBaseToken);
             }
-            return LibAsset.Asset(address(0), ZERO);
+            return address(0);
         }
-        revert("not found IAssetMatcher");
+        revert("AssetMatcher: not found");
     }
 
-    function simpleMatch(LibAsset.Asset memory leftAsset, LibAsset.Asset memory rightAsset)
+    function simpleMatch(address leftBaseToken, address rightBaseToken)
         private
         pure
-        returns (LibAsset.Asset memory)
+        returns (address baseToken)
     {
-        bytes32 leftHash = keccak256(abi.encodePacked(leftAsset.virtualToken, leftAsset.value));
-        bytes32 rightHash = keccak256(abi.encodePacked(rightAsset.virtualToken, rightAsset.value));
-        // TODO .data consists of token address and amount, then how both the hash will be equal
+        bytes32 leftHash = keccak256(abi.encodePacked(leftBaseToken));
+        bytes32 rightHash = keccak256(abi.encodePacked(rightBaseToken));
+
         if (leftHash == rightHash) {
-            return leftAsset;
+            return leftBaseToken;
         }
-        return LibAsset.Asset(address(0), ZERO);
+        return address(0);
     }
 
     uint256[49] private __gap;

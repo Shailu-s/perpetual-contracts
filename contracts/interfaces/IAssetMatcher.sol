@@ -2,11 +2,9 @@
 
 pragma solidity =0.8.12;
 
-import "../libs/LibAsset.sol";
-
 interface IAssetMatcher {
-    function matchAssets(LibAsset.Asset memory leftAsset, LibAsset.Asset memory rightAsset)
+    function matchAssets(address leftBaseToken, address rightBaseToken)
         external
         pure
-        returns (LibAsset.Asset memory);
+        returns (address baseToken);
 }

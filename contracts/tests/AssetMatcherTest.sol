@@ -11,9 +11,9 @@ contract AssetMatcherTest is Initializable, OwnableUpgradeable, AssetMatcher {
     }
 
     function matchAssetsTest(
-        LibAsset.Asset calldata leftAsset,
-        LibAsset.Asset calldata rightAsset
-    ) external pure returns (LibAsset.Asset memory) {
-        return matchAssets(leftAsset, rightAsset);
+        address leftBaseToken,
+        address rightBaseToken
+    ) external pure returns (address baseToken) {
+        return matchAssets(leftBaseToken, rightBaseToken);
     }
 }
