@@ -108,7 +108,7 @@ abstract contract MatchingEngineCore is
         @return max fee amount in base points
     */
     function getMaxFee(LibFeeSide.FeeSide feeSide, uint256 _protocolFee) internal pure returns (uint256) {
-        uint256 matchFees = getSumFees(_protocolFee);
+        uint256 matchFees = _protocolFee;
         uint256 maxFee;
         
         // TODO: This condition is always true since LibFeeSide.getFeeSide() always returns LibFeeSide.FeeSide.LEFT
@@ -131,18 +131,6 @@ abstract contract MatchingEngineCore is
         // TODO: Update code since LibFeeSide.getFeeSide() always returns LibFeeSide.FeeSide.LEFT
         dealData.feeSide = LibFeeSide.getFeeSide();
         dealData.maxFeesBasePoint = getMaxFee(dealData.feeSide, dealData.protocolFee);
-    }
-
-    /**
-        @notice calculates amount of fees for the match
-        @param _protocolFee protocolFee of the match
-        @return sum of all fees for the match (protcolFee + leftOrder.originFees + rightOrder.originFees)
-     */
-    function getSumFees(uint256 _protocolFee) internal pure returns (uint256) {
-        //start from protocol fee
-        uint256 result = _protocolFee;
-
-        return result;
     }
 
     /**
