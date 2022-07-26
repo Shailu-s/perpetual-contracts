@@ -1,6 +1,6 @@
 import { parseUnits } from "ethers/lib/utils"
 import { expect } from "chai"
-import { ethers,upgrades } from "hardhat"
+import { ethers, upgrades } from "hardhat"
 import { AccountBalance, PositioningConfig, TestERC20, Vault, VaultController } from "../typechain"
 
 describe("Vault Controller deposit tests", function () {
@@ -8,10 +8,10 @@ describe("Vault Controller deposit tests", function () {
     let positioningConfig: PositioningConfig
     let accountBalance: AccountBalance
     let vault: Vault
-    let vaultController;
-    let vaultFactory;
-    let DAI;
-    
+    let vaultController
+    let vaultFactory
+    let DAI
+
     beforeEach(async function () {
         const [admin, alice] = await ethers.getSigners()
 
@@ -40,7 +40,11 @@ describe("Vault Controller deposit tests", function () {
         await vault.initialize(positioningConfig.address, accountBalance.address, USDC.address, USDC.address)
 
         const vaultControllerFactory = await ethers.getContractFactory("VaultController")
-        vaultController = await upgrades.deployProxy(vaultControllerFactory,[positioningConfig.address, accountBalance.address, vault.address])
+        vaultController = await upgrades.deployProxy(vaultControllerFactory, [
+            positioningConfig.address,
+            accountBalance.address,
+            vault.address,
+        ])
         await vaultController.deployed()
 
         const amount = parseUnits("1000", await USDC.decimals())
@@ -65,7 +69,7 @@ describe("Vault Controller deposit tests", function () {
 
         const USDCVaultAddress = await vaultController.getVault(USDC.address)
 
-        const USDCVaultContract = await vaultFactory.attach(USDCVaultAddress);
+        const USDCVaultContract = await vaultFactory.attach(USDCVaultAddress)
         await USDC.connect(alice).approve(USDCVaultAddress, amount)
 
         // check event has been sent
@@ -87,22 +91,19 @@ describe("Vault Controller deposit tests", function () {
         const [owner, alice] = await ethers.getSigners()
 
         const amount = parseUnits("100", await USDC.decimals())
-        
+
         // test fail for no vault from this token
-        await expect(vaultController.connect(alice).deposit(USDC.address, amount))
-            .to.be.revertedWith("VC_VOTNA")
+        await expect(vaultController.connect(alice).deposit(USDC.address, amount)).to.be.revertedWith("VC_VOTNA")
     })
 
     it("Test for deployment of vault via factory", async () => {
         const [owner, alice] = await ethers.getSigners()
 
-        const amount = parseUnits("100", await USDC.decimals())
-
-        const ab = await vaultController.connect(alice).deployVault(USDC.address)
+        await vaultController.connect(alice).deployVault(USDC.address)
 
         const USDCVaultAddress = await vaultController.getVault(USDC.address)
 
-        expect (USDCVaultAddress).to.not.equal("")
+        expect(USDCVaultAddress).to.not.equal("")
     })
 
     it("Positive Test for multiple token deposit", async () => {
@@ -119,8 +120,8 @@ describe("Vault Controller deposit tests", function () {
         const USDCVaultAddress = await vaultController.getVault(USDC.address)
         const DAIVaultAddress = await vaultController.getVault(DAI.address)
 
-        const USDCVaultContract = await vaultFactory.attach(USDCVaultAddress);
-        const DAIVaultContract = await vaultFactory.attach(DAIVaultAddress);
+        const USDCVaultContract = await vaultFactory.attach(USDCVaultAddress)
+        const DAIVaultContract = await vaultFactory.attach(DAIVaultAddress)
         await USDC.connect(alice).approve(USDCVaultAddress, amount)
         await DAI.connect(alice).approve(DAIVaultAddress, DAIAmount)
 
@@ -141,7 +142,6 @@ describe("Vault Controller deposit tests", function () {
 
         // // update sender's balance
         expect(await USDCVaultContract.getBalance(alice.address)).to.eq(parseUnits("100", await USDC.decimals()))
-        
 
         // // reduce alice balance
         expect(await DAI.balanceOf(alice.address)).to.eq(parseUnits("900", await DAI.decimals()))
@@ -149,7 +149,7 @@ describe("Vault Controller deposit tests", function () {
         // // increase vault balance
         expect(await DAI.balanceOf(DAIVaultAddress)).to.eq(parseUnits("100", await DAI.decimals()))
 
-         // // update sender's balance
-         expect(await DAIVaultContract.getBalance(alice.address)).to.eq(parseUnits("100", await DAI.decimals()))
+        // // update sender's balance
+        expect(await DAIVaultContract.getBalance(alice.address)).to.eq(parseUnits("100", await DAI.decimals()))
     })
 })
