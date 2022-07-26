@@ -1,6 +1,6 @@
 import { parseUnits } from "ethers/lib/utils"
 import { expect } from "chai"
-import { ethers } from "hardhat"
+import { ethers, upgrades } from "hardhat"
 import { AccountBalance, PositioningConfig, TestERC20, Vault, VaultController, Vault__factory } from "../typechain"
 
 describe("Vault tests", function () {
@@ -153,6 +153,21 @@ describe("Vault tests", function () {
     
             await vault.connect(owner).setPositioning(positioningConfig.address)
             expect( await vault.connect(owner).getPositioning()).to.be.equal(positioningConfig.address)
+        })
+
+        it("Check for set vault controller", async () => {
+            const [owner, alice] = await ethers.getSigners()
+
+            const vaultControllerFactory = await ethers.getContractFactory("VaultController")
+            const newVaultController = await upgrades.deployProxy(vaultControllerFactory, [
+                positioningConfig.address,
+                accountBalance.address,
+                vault.address,
+            ])
+            await newVaultController.deployed()
+
+            await vault.connect(owner).setVaultController(newVaultController.address)
+            expect( await vault.connect(owner).getVaultController()).to.be.equal(newVaultController.address)
         })
     })
 
