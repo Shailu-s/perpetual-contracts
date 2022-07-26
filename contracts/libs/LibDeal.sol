@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: BUSL - 1.1
 pragma solidity =0.8.12;
 
-import "./LibAsset.sol";
 import "./LibFeeSide.sol";
 
 library LibDeal {
     struct DealSide {
-        LibAsset.Asset asset;
+        address baseToken;
+        uint256 amount;
         address proxy;
         address from;
     }
