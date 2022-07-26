@@ -35,11 +35,11 @@ abstract contract MatchingEngineCore is
     event Matched(uint256 newLeftFill, uint256 newRightFill);
 
     function cancelOrder(LibOrder.Order memory order) public {
-        require(_msgSender() == order.trader, "not a maker");
-        require(order.salt != 0, "0 salt can't be used");
+        require(_msgSender() == order.trader, "MatchingEngineCore: not a maker");
+        require(order.salt != 0, "MatchingEngineCore: 0 salt can't be used");
         require(
             order.salt >= makerMinSalt[_msgSender()],
-            "order salt lower"
+            "MatchingEngineCore: order salt lower"
         );
         bytes32 orderKeyHash = LibOrder.hashKey(order);
         fills[orderKeyHash] = _UINT256_MAX;
@@ -59,7 +59,7 @@ abstract contract MatchingEngineCore is
     }
 
     function cancelAllOrders(uint256 minSalt) external {
-        require(minSalt > makerMinSalt[_msgSender()], "salt too low");
+        require(minSalt > makerMinSalt[_msgSender()], "MatchingEngineCore: salt too low");
         makerMinSalt[_msgSender()] = minSalt;
 
         emit CanceledAll(_msgSender(), minSalt);
@@ -74,10 +74,10 @@ abstract contract MatchingEngineCore is
         validateFull(orderLeft, signatureLeft);
         validateFull(orderRight, signatureRight);
         if (orderLeft.trader != address(0)) {
-            require(orderRight.trader != orderLeft.trader, "leftOrder.taker verification failed");
+            require(orderRight.trader != orderLeft.trader, "MatchingEngineCore: leftOrder.taker verification failed");
         }
         if (orderRight.trader != address(0)) {
-            require(orderRight.trader != orderLeft.trader, "rightOrder.taker verification failed");
+            require(orderRight.trader != orderLeft.trader, "MatchingEngineCore: rightOrder.taker verification failed");
         }
         matchAndTransfer(orderLeft, orderRight);
     }
@@ -150,7 +150,7 @@ abstract contract MatchingEngineCore is
         
         LibFill.FillResult memory newFill = LibFill.fillOrder(orderLeft, orderRight, leftOrderFill, rightOrderFill);
 
-        require(newFill.rightValue > 0 && newFill.leftValue > 0, "nothing to fill");
+        require(newFill.rightValue > 0 && newFill.leftValue > 0, "MatchingEngineCore: nothing to fill");
 
         if (orderLeft.salt != 0) {
             fills[leftOrderKeyHash] = leftOrderFill.add(newFill.leftValue);
