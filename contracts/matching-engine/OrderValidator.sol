@@ -24,8 +24,8 @@ abstract contract OrderValidator is Initializable, ContextUpgradeable, EIP712Upg
 
     function validate(LibOrder.Order memory order, bytes memory signature) internal view {
         if (order.salt == 0) {
-            if (order.trader != address(0) && !order.isMaker) {
-                require(_msgSender() == order.trader, "OrderValidator: taker is not tx sender");
+            if (order.trader != address(0)) {
+                require(_msgSender() == order.trader, "OrderValidator: maker is not tx sender");
             } else {
                 order.trader = _msgSender();
             }
