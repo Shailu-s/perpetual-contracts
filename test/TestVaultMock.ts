@@ -12,6 +12,7 @@ describe("Vault tests for withdrawals", function () {
     let vaultController: VaultController
     let vaultFactory
     let USDCVaultContract
+    let positioning
 
     beforeEach(async function () {
         const [admin, alice] = await ethers.getSigners()
@@ -30,6 +31,10 @@ describe("Vault tests for withdrawals", function () {
         const accountBalance1 = await accountBalanceFactory.deploy()
         accountBalance = await accountBalance1.deployed()
 
+        const positioningFactory = await ethers.getContractFactory("Positioning")
+        const positioning1 = await positioningFactory.deploy()
+        positioning = await positioning1.deployed()
+
         vaultFactory = await ethers.getContractFactory("Vault")
         const vault1 = await vaultFactory.deploy()
         vault = await vault1.deployed()
@@ -43,7 +48,7 @@ describe("Vault tests for withdrawals", function () {
         const vaultControllerFactory = await ethers.getContractFactory("VaultController")
         const vaultController1 = await vaultControllerFactory.deploy()
         vaultController = await vaultController1.deployed()
-        await vaultController.initialize(positioningConfig.address, accountBalance.address, vaultMock.address)
+        await vaultController.initialize(positioning.address, positioningConfig.address, accountBalance.address, vaultMock.address)
 
         const amount = parseUnits("1000", await USDC.decimals())
         await USDC.mint(alice.address, amount)

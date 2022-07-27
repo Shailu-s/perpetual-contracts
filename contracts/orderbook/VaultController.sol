@@ -36,6 +36,7 @@ contract VaultController is ReentrancyGuardUpgradeable, BaseRelayRecipient, Owne
 
     function initialize(
         address positioningArg,
+        address positioningConfig,
         address accountBalanceArg,
         address vaultImplementationArg
     ) external initializer {
@@ -43,6 +44,7 @@ contract VaultController is ReentrancyGuardUpgradeable, BaseRelayRecipient, Owne
         __OwnerPausable_init();
 
         _positioning = positioningArg;
+        _positioningConfig = positioningConfig;
         _accountBalance = accountBalanceArg;
         _vaultImplementation = vaultImplementationArg;
 
@@ -61,12 +63,12 @@ contract VaultController is ReentrancyGuardUpgradeable, BaseRelayRecipient, Owne
         if (isZkSync) {
             vault = new Vault();
 
-            vault.initialize(_positioning, _accountBalance, _token, address(this));
+            vault.initialize(_positioningConfig, _accountBalance, _token, address(this));
         } else {
             bytes32 salt = keccak256(abi.encodePacked(_token));
 
             vault = Vault(Clones.cloneDeterministic(_vaultImplementation, salt));
-            vault.initialize(_positioning, _accountBalance, _token, address(this));
+            vault.initialize(_positioningConfig, _accountBalance, _token, address(this));
         }
         _vaultAddress[_token] = address(vault);
         return address(vault);

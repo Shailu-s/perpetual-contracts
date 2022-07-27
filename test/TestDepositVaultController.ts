@@ -11,6 +11,7 @@ describe("Vault Controller deposit tests", function () {
     let vaultController
     let vaultFactory
     let DAI
+    let positioning
 
     beforeEach(async function () {
         const [admin, alice] = await ethers.getSigners()
@@ -34,6 +35,11 @@ describe("Vault Controller deposit tests", function () {
         const accountBalance1 = await accountBalanceFactory.deploy()
         accountBalance = await accountBalance1.deployed()
 
+        
+        const positioningFactory = await ethers.getContractFactory("Positioning")
+        const positioning1 = await positioningFactory.deploy()
+        positioning = await positioning1.deployed()
+
         vaultFactory = await ethers.getContractFactory("Vault")
         const vault1 = await vaultFactory.deploy()
         vault = await vault1.deployed()
@@ -41,6 +47,7 @@ describe("Vault Controller deposit tests", function () {
 
         const vaultControllerFactory = await ethers.getContractFactory("VaultController")
         vaultController = await upgrades.deployProxy(vaultControllerFactory, [
+            positioning.address,
             positioningConfig.address,
             accountBalance.address,
             vault.address,
@@ -99,7 +106,7 @@ describe("Vault Controller deposit tests", function () {
     it("Test for deployment of vault via factory", async () => {
         const [owner, alice] = await ethers.getSigners()
 
-        await vaultController.connect(alice).deployVault(USDC.address)
+        await vaultController.connect(owner).deployVault(USDC.address)
 
         const USDCVaultAddress = await vaultController.getVault(USDC.address)
 
