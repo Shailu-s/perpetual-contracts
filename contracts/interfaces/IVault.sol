@@ -14,20 +14,32 @@ interface IVault {
     /// @param amount The amount of token that was withdrawn
     event Withdrawn(address indexed collateralToken, address indexed trader, uint256 amount);
 
-
-    function initialize(address PositioningConfigArg, address accountBalanceArg, address tokenArg, address vaultControllerArg) external;
+    function initialize(
+        address PositioningConfigArg,
+        address accountBalanceArg,
+        address tokenArg,
+        address vaultControllerArg
+    ) external;
 
     /// @notice Deposit collateral into vault
     /// @dev once multi-collateral is implemented, the token is not limited to settlementToken
     /// @param token The address of the token to deposit
     /// @param amountX10_D The amount of the token to deposit in decimals D (D = _decimals)
-    function deposit(address token, uint256 amountX10_D, address from) external;
+    function deposit(
+        address token,
+        uint256 amountX10_D,
+        address from
+    ) external;
 
     /// @notice Withdraw collateral from vault
     /// @dev once multi-collateral is implemented, the token is not limited to settlementToken
     /// @param token The address of the token sender is going to withdraw
     /// @param amountX10_D The amount of the token to withdraw in decimals D (D = _decimals)
-    function withdraw(address token, uint256 amountX10_D, address to) external;
+    function withdraw(
+        address token,
+        uint256 amountX10_D,
+        address to
+    ) external;
 
     /// @notice transfer fund to vault in case of low balance
     /// @dev once multi-collateral is implemented, the token is not limited to settlementToken
@@ -90,5 +102,4 @@ interface IVault {
     /// @notice Get `Positioning` contract address
     /// @return Positioning The address of `Positioning` contract
     function getPositioning() external view returns (address);
-
 }

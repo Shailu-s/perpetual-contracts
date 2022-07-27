@@ -164,8 +164,14 @@ contract Positioning is
         }
     }
 
-        ///@dev this function calculates total pending funding payment of a trader
-    function getAllPendingFundingPayment(address trader) public view override returns (int256 pendingFundingPayment) {
+    ///@dev this function calculates total pending funding payment of a trader
+    function getAllPendingFundingPayment(address trader)
+        public
+        view
+        virtual
+        override
+        returns (int256 pendingFundingPayment)
+    {
         address[] memory baseTokens = IAccountBalance(_accountBalance).getBaseTokens(trader);
         uint256 baseTokenLength = baseTokens.length;
 
@@ -270,42 +276,6 @@ contract Positioning is
         return balanceX10_18.add(owedRealizedPnl.sub(fundingPayment)).add(unrealizedPnl).add(pendingFee.toInt256());
     }
 
-    //
-    // INTERNAL NON-VIEW
-    //
-
-    // /// @dev Calculate how much profit/loss we should settled,
-    // /// only used when removing liquidity. The profit/loss is calculated by using
-    // /// the removed base/quote amount and existing taker's base/quote amount.
-    // function _settleBalanceAndRealizePnl(
-    //     address maker,
-    //     address baseToken,
-    //     IOrderBook.RemoveLiquidityResponse memory response
-    // ) internal returns (int256) {
-    //     int256 pnlToBeRealized;
-    //     if (response.takerBase != 0) {
-    //         pnlToBeRealized = IExchange(_exchange).getPnlToBeRealized(
-    //             IExchange.RealizePnlParams({
-    //                 trader: maker,
-    //                 baseToken: baseToken,
-    //                 base: response.takerBase,
-    //                 quote: response.takerQuote
-    //             })
-    //         );
-    //     }
-
-    //     // pnlToBeRealized is realized here
-    //     IAccountBalance(_accountBalance).settleBalanceAndDeregister(
-    //         maker,
-    //         baseToken,
-    //         response.takerBase,
-    //         response.takerQuote,
-    //         pnlToBeRealized,
-    //         response.fee.toInt256()
-    //     );
-
-    //     return pnlToBeRealized;
-    // }
 
     /// @dev explainer diagram for the relationship between exchangedPositionNotional, fee and openNotional:
     ///      https://www.figma.com/file/xuue5qGH4RalX7uAbbzgP3/swap-accounting-and-events
@@ -383,10 +353,7 @@ contract Positioning is
     }
 
     /// @dev Settle trader's funding payment to his/her realized pnl.
-    function _settleFunding(address trader, address baseToken)
-        internal
-        returns (int256 growthTwPremium)
-    {
+    function _settleFunding(address trader, address baseToken) internal returns (int256 growthTwPremium) {
         int256 fundingPayment;
         (fundingPayment, growthTwPremium) = settleFunding(trader, baseToken);
 
