@@ -13,7 +13,7 @@ contract ERC20TransferProxyTest is IERC20TransferProxy {
     ) external override {
         require(
             token.transferFrom(from, to, value),
-            "NFT_IO: failure while transferring"
+            "V_PERP_M: failure while transferring"
         );
     }
 }

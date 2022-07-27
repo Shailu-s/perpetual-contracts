@@ -32,7 +32,7 @@ abstract contract AssetMatcher is Initializable, OwnableUpgradeable {
             }
             return address(0);
         }
-        revert("AssetMatcher: not found");
+        revert("V_PERP_M: not found");
     }
 
     function simpleMatch(address leftBaseToken, address rightBaseToken)

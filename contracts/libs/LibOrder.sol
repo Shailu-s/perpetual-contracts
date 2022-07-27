@@ -52,6 +52,6 @@ library LibOrder {
     }
 
     function validate(LibOrder.Order memory order) internal view {
-        require(order.deadline > block.timestamp, "Order deadline validation failed");
+        require(order.deadline > block.timestamp, "V_PERP_M: Order deadline validation failed");
     }
 }

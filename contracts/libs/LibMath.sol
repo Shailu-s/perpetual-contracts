@@ -86,7 +86,7 @@ library LibMath {
         uint256 target
     ) internal pure returns (bool isError) {
         if (denominator == 0) {
-            revert("division by zero");
+            revert("V_PERP_M: division by zero");
         }
 
         // See the comments in `isRoundingError`.

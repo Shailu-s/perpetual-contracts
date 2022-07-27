@@ -25,14 +25,14 @@ abstract contract OrderValidator is Initializable, ContextUpgradeable, EIP712Upg
     function validate(LibOrder.Order memory order, bytes memory signature) internal view {
         if (order.salt == 0) {
             if (order.trader != address(0)) {
-                require(_msgSender() == order.trader, "OrderValidator: maker is not tx sender");
+                require(_msgSender() == order.trader, "V_PERP_M: maker is not tx sender");
             } else {
                 order.trader = _msgSender();
             }
         } else {
             require(
                 (order.salt >= makerMinSalt[order.trader]),
-                "OrderValidator: Order canceled"
+                "V_PERP_M: Order canceled"
             );
             if (_msgSender() != order.trader) {
                 bytes32 hash = LibOrder.hash(order);
@@ -44,13 +44,13 @@ abstract contract OrderValidator is Initializable, ContextUpgradeable, EIP712Upg
                     if (order.trader.isContract()) {
                         require(
                             IERC1271(order.trader).isValidSignature(_hashTypedDataV4(hash), signature) == MAGICVALUE,
-                            "OrderValidator: contract order signature verification error"
+                            "V_PERP_M: contract order signature verification error"
                         );
                     } else {
-                        revert("OrderValidator: order signature verification error");
+                        revert("V_PERP_M: order signature verification error");
                     }
                 } else {
-                    require (order.trader != address(0), "OrderValidator: no trader");
+                    require (order.trader != address(0), "V_PERP_M: no trader");
                 }
             }
         }

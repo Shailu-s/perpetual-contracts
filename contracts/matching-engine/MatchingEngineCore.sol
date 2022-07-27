@@ -37,11 +37,11 @@ abstract contract MatchingEngineCore is
     event Matched(uint256 newLeftFill, uint256 newRightFill);
 
     function cancelOrder(LibOrder.Order memory order) public {
-        require(_msgSender() == order.trader, "MatchingEngineCore: not a maker");
-        require(order.salt != 0, "MatchingEngineCore: 0 salt can't be used");
+        require(_msgSender() == order.trader, "V_PERP_M: not a maker");
+        require(order.salt != 0, "V_PERP_M: 0 salt can't be used");
         require(
             order.salt >= makerMinSalt[_msgSender()],
-            "MatchingEngineCore: order salt lower"
+            "V_PERP_M: order salt lower"
         );
         bytes32 orderKeyHash = LibOrder.hashKey(order);
         fills[orderKeyHash] = _UINT256_MAX;
@@ -61,7 +61,7 @@ abstract contract MatchingEngineCore is
     }
 
     function cancelAllOrders(uint256 minSalt) external {
-        require(minSalt > makerMinSalt[_msgSender()], "MatchingEngineCore: salt too low");
+        require(minSalt > makerMinSalt[_msgSender()], "V_PERP_M: salt too low");
         makerMinSalt[_msgSender()] = minSalt;
 
         emit CanceledAll(_msgSender(), minSalt);
@@ -76,10 +76,10 @@ abstract contract MatchingEngineCore is
         validateFull(orderLeft, signatureLeft);
         validateFull(orderRight, signatureRight);
         if (orderLeft.trader != address(0)) {
-            require(orderRight.trader != orderLeft.trader, "MatchingEngineCore: leftOrder.taker verification failed");
+            require(orderRight.trader != orderLeft.trader, "V_PERP_M: leftOrder.taker verification failed");
         }
         if (orderRight.trader != address(0)) {
-            require(orderRight.trader != orderLeft.trader, "MatchingEngineCore: rightOrder.taker verification failed");
+            require(orderRight.trader != orderLeft.trader, "V_PERP_M: rightOrder.taker verification failed");
         }
         matchAndTransfer(orderLeft, orderRight);
     }
@@ -152,7 +152,7 @@ abstract contract MatchingEngineCore is
         
         LibFill.FillResult memory newFill = LibFill.fillOrder(orderLeft, orderRight, leftOrderFill, rightOrderFill);
 
-        require(newFill.rightValue > 0 && newFill.leftValue > 0, "MatchingEngineCore: nothing to fill");
+        require(newFill.rightValue > 0 && newFill.leftValue > 0, "V_PERP_M: nothing to fill");
 
         if (orderLeft.salt != 0) {
             fills[leftOrderKeyHash] = leftOrderFill + newFill.leftValue;
@@ -178,7 +178,7 @@ abstract contract MatchingEngineCore is
         returns (address matchToken)
     {
         matchToken = matchAssets(orderLeft.baseToken, orderRight.baseToken);
-        require(matchToken != address(0), "MatchingEngineCore: make assets don't match");
+        require(matchToken != address(0), "V_PERP_M: make assets don't match");
     }
 
     function validateFull(LibOrder.Order memory order, bytes memory signature) internal view {

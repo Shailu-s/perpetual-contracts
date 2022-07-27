@@ -13,7 +13,7 @@ contract MatchingEngine is MatchingEngineCore, TransferManager {
         address newDefaultFeeReceiver,
         address owner
     ) public initializer {
-        require(newDefaultFeeReceiver != address(0), "V_PERP: zero address");
+        require(newDefaultFeeReceiver != address(0), "V_PERP_M: zero address");
 
         __Context_init_unchained();
         __Ownable_init_unchained();
