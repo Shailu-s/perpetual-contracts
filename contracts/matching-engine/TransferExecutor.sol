@@ -13,7 +13,7 @@ import "../interfaces/IVirtualToken.sol";
 abstract contract TransferExecutor is Initializable, OwnableUpgradeable, ITransferExecutor {
     address internal _proxy;
 
-    event ProxyChange(address proxy);
+    event ProxyChanged(address proxy);
 
     function __TransferExecutor_init_unchained(address erc20TransferProxy) internal {
         _proxy = erc20TransferProxy;
@@ -23,7 +23,7 @@ abstract contract TransferExecutor is Initializable, OwnableUpgradeable, ITransf
 
     function setTransferProxy(address proxy) external onlyOwner {
         _proxy = proxy;
-        emit ProxyChange(proxy);
+        emit ProxyChanged(proxy);
     }
 
     function transfer(
