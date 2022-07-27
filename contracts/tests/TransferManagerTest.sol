@@ -50,22 +50,6 @@ contract TransferManagerTest is
         return abi.encode(data);
     }
 
-    function transferTokenTest(
-        address baseToken,
-        uint256 amount,
-        address from,
-        address to,
-        address proxy
-    ) external {
-        transferToken(
-            baseToken,
-            amount,
-            from,
-            to,
-            proxy
-        );
-    }
-
     function getFeeReceiverTest(address token) external view returns (address) {
         return getFeeReceiver(token);
     }
