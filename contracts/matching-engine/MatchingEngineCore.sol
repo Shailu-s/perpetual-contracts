@@ -20,8 +20,6 @@ abstract contract MatchingEngineCore is
     OrderValidator,
     ITransferManager
 {
-    using SafeMathUpgradeable for uint256;
-
     uint256 private constant _UINT256_MAX = 2**256 - 1;
 
     //state of the orders
@@ -157,11 +155,11 @@ abstract contract MatchingEngineCore is
         require(newFill.rightValue > 0 && newFill.leftValue > 0, "MatchingEngineCore: nothing to fill");
 
         if (orderLeft.salt != 0) {
-            fills[leftOrderKeyHash] = leftOrderFill.add(newFill.leftValue);
+            fills[leftOrderKeyHash] = leftOrderFill + newFill.leftValue;
         }
 
         if (orderRight.salt != 0) {
-            fills[rightOrderKeyHash] = rightOrderFill.add(newFill.rightValue);
+            fills[rightOrderKeyHash] = rightOrderFill + newFill.rightValue;
         }
         return newFill;
     }

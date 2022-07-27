@@ -7,8 +7,6 @@ import "../matching-engine/MatchingEngine.sol";
 
 contract MatchingEngineTest is MatchingEngine
 {
-    using SafeMathUpgradeable for uint256;
-
     uint256 private constant _UINT256_MAX = 2**256 - 1;
 
     function __MatchingEngineTest_init(
