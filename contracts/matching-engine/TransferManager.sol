@@ -12,6 +12,8 @@ abstract contract TransferManager is OwnableUpgradeable, ITransferManager {
     using BpLibrary for uint256;
     using SafeMathUpgradeable for uint256;
 
+    uint256 private constant _BASE = 10000;
+
     uint256 public protocolFee;
 
     address public defaultFeeReceiver;
@@ -140,7 +142,8 @@ abstract contract TransferManager is OwnableUpgradeable, ITransferManager {
         uint256 total,
         uint256 feeInBp
     ) internal pure returns (uint256 newValue, uint256 realFee) {
-        return subFee(value, total.bp(feeInBp));
+        uint256 basePointAmount = total.mul(feeInBp).div(_BASE);
+        return subFee(value, basePointAmount);
     }
 
     function subFee(uint256 value, uint256 fee) internal pure returns (uint256 newValue, uint256 realFee) {
