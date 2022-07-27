@@ -5,9 +5,6 @@ import { PausableUpgradeable } from "@openzeppelin/contracts-upgradeable/securit
 import { SafeOwnable } from "./SafeOwnable.sol";
 
 abstract contract OwnerPausable is SafeOwnable, PausableUpgradeable {
-    // __gap is reserved storage
-    uint256[50] private __gap;
-
     // solhint-disable-next-line func-order
     function __OwnerPausable_init() internal initializer {
         __SafeOwnable_init();
@@ -29,4 +26,6 @@ abstract contract OwnerPausable is SafeOwnable, PausableUpgradeable {
     function _msgData() internal view virtual override returns (bytes memory) {
         return super._msgData();
     }
+
+    uint256[50] private __gap;
 }

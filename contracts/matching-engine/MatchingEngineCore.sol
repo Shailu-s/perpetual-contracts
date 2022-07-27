@@ -188,5 +188,5 @@ abstract contract MatchingEngineCore is
         validate(order, signature);
     }
 
-    uint256[47] private __gap;
+    uint256[50] private __gap;
 }

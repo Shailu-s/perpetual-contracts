@@ -49,5 +49,5 @@ abstract contract AssetMatcher is Initializable, OwnableUpgradeable {
         return address(0);
     }
 
-    uint256[49] private __gap;
+    uint256[50] private __gap;
 }

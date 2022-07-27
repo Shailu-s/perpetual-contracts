@@ -9,9 +9,6 @@ abstract contract PositioningCallee is SafeOwnable {
     //
     address internal _Positioning;
 
-    // __gap is reserved storage
-    uint256[50] private __gap;
-
     //
     // EVENT
     //
@@ -39,4 +36,6 @@ abstract contract PositioningCallee is SafeOwnable {
         // only Positioning
         require(_msgSender() == _Positioning, "CHD_OCH");
     }
+
+    uint256[50] private __gap;
 }

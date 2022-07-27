@@ -153,5 +153,5 @@ abstract contract TransferManager is OwnableUpgradeable, ITransferManager {
         }
     }
 
-    uint256[46] private __gap;
+    uint256[50] private __gap;
 }
