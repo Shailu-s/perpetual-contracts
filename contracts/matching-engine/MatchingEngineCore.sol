@@ -73,15 +73,15 @@ abstract contract MatchingEngineCore is
         LibOrder.Order memory orderRight,
         bytes memory signatureRight
     ) public whenNotPaused {
-        validateFull(orderLeft, signatureLeft);
-        validateFull(orderRight, signatureRight);
+        _validateFull(orderLeft, signatureLeft);
+        _validateFull(orderRight, signatureRight);
         if (orderLeft.trader != address(0)) {
             require(orderRight.trader != orderLeft.trader, "V_PERP_M: leftOrder.taker verification failed");
         }
         if (orderRight.trader != address(0)) {
             require(orderRight.trader != orderLeft.trader, "V_PERP_M: rightOrder.taker verification failed");
         }
-        matchAndTransfer(orderLeft, orderRight);
+        _matchAndTransfer(orderLeft, orderRight);
     }
 
     /**
@@ -89,15 +89,15 @@ abstract contract MatchingEngineCore is
         @param orderLeft the left order of the match
         @param orderRight the right order of the match
     */
-    function matchAndTransfer(LibOrder.Order memory orderLeft, LibOrder.Order memory orderRight) internal {
-        (address matchToken) = matchAssets(orderLeft, orderRight);
+    function _matchAndTransfer(LibOrder.Order memory orderLeft, LibOrder.Order memory orderRight) internal {
+        (address matchToken) = _matchAssets(orderLeft, orderRight);
 
-        LibFill.FillResult memory newFill = getFillSetNew(orderLeft, orderRight);
+        LibFill.FillResult memory newFill = _getFillSetNew(orderLeft, orderRight);
 
-        doTransfers(
+        _doTransfers(
             LibDeal.DealSide(matchToken, newFill.leftValue, _proxy, orderLeft.trader),
             LibDeal.DealSide(matchToken, newFill.rightValue, _proxy, orderRight.trader),
-            getDealData()
+            _getDealData()
         );
 
         emit Matched(newFill.rightValue, newFill.leftValue);
@@ -109,7 +109,7 @@ abstract contract MatchingEngineCore is
         @param _protocolFee protocol fee of the match
         @return max fee amount in base points
     */
-    function getMaxFee(LibFeeSide.FeeSide feeSide, uint256 _protocolFee) internal pure returns (uint256) {
+    function _getMaxFee(LibFeeSide.FeeSide feeSide, uint256 _protocolFee) internal pure returns (uint256) {
         uint256 matchFees = _protocolFee;
         uint256 maxFee;
         
@@ -124,15 +124,15 @@ abstract contract MatchingEngineCore is
         return maxFee;
     }
 
-    function getDealData()
+    function _getDealData()
         internal
         view
         returns (LibDeal.DealData memory dealData)
     {
-        dealData.protocolFee = getProtocolFee();
+        dealData.protocolFee = _getProtocolFee();
         // TODO: Update code since LibFeeSide.getFeeSide() always returns LibFeeSide.FeeSide.LEFT
         dealData.feeSide = LibFeeSide.getFeeSide();
-        dealData.maxFeesBasePoint = getMaxFee(dealData.feeSide, dealData.protocolFee);
+        dealData.maxFeesBasePoint = _getMaxFee(dealData.feeSide, dealData.protocolFee);
     }
 
     /**
@@ -141,14 +141,14 @@ abstract contract MatchingEngineCore is
         @param orderRight right order of the match
         @return returns change in orders' fills by the match 
     */
-    function getFillSetNew(LibOrder.Order memory orderLeft, LibOrder.Order memory orderRight)
+    function _getFillSetNew(LibOrder.Order memory orderLeft, LibOrder.Order memory orderRight)
         internal
         returns (LibFill.FillResult memory)
     {
         bytes32 leftOrderKeyHash = LibOrder.hashKey(orderLeft);
         bytes32 rightOrderKeyHash = LibOrder.hashKey(orderRight);
-        uint256 leftOrderFill = getOrderFill(orderLeft.salt, leftOrderKeyHash);
-        uint256 rightOrderFill = getOrderFill(orderRight.salt, rightOrderKeyHash);
+        uint256 leftOrderFill = _getOrderFill(orderLeft.salt, leftOrderKeyHash);
+        uint256 rightOrderFill = _getOrderFill(orderRight.salt, rightOrderKeyHash);
         
         LibFill.FillResult memory newFill = LibFill.fillOrder(orderLeft, orderRight, leftOrderFill, rightOrderFill);
 
@@ -164,7 +164,7 @@ abstract contract MatchingEngineCore is
         return newFill;
     }
 
-    function getOrderFill(uint256 salt, bytes32 hash) internal view returns (uint256 fill) {
+    function _getOrderFill(uint256 salt, bytes32 hash) internal view returns (uint256 fill) {
         if (salt == 0) {
             fill = 0;
         } else {
@@ -172,18 +172,18 @@ abstract contract MatchingEngineCore is
         }
     }
 
-    function matchAssets(LibOrder.Order memory orderLeft, LibOrder.Order memory orderRight)
+    function _matchAssets(LibOrder.Order memory orderLeft, LibOrder.Order memory orderRight)
         internal
         pure
         returns (address matchToken)
     {
-        matchToken = matchAssets(orderLeft.baseToken, orderRight.baseToken);
+        matchToken = _matchAssets(orderLeft.baseToken, orderRight.baseToken);
         require(matchToken != address(0), "V_PERP_M: make assets don't match");
     }
 
-    function validateFull(LibOrder.Order memory order, bytes memory signature) internal view {
+    function _validateFull(LibOrder.Order memory order, bytes memory signature) internal view {
         LibOrder.validate(order);
-        validate(order, signature);
+        _validate(order, signature);
     }
 
     uint256[50] private __gap;

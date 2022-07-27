@@ -22,7 +22,7 @@ abstract contract OrderValidator is Initializable, ContextUpgradeable, EIP712Upg
         __EIP712_init_unchained("V_PERP", "1");
     }
 
-    function validate(LibOrder.Order memory order, bytes memory signature) internal view {
+    function _validate(LibOrder.Order memory order, bytes memory signature) internal view {
         if (order.salt == 0) {
             if (order.trader != address(0)) {
                 require(_msgSender() == order.trader, "V_PERP_M: maker is not tx sender");

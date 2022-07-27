@@ -15,7 +15,7 @@ contract MatchingEngineTest is MatchingEngine
         address newDefaultFeeReceiver,
         address owner
     ) external initializer {
-        __MatchingEngine_init(
+        initialize(
             erc20TransferProxy,
             newProtocolFee,
             newDefaultFeeReceiver,
@@ -34,7 +34,7 @@ contract MatchingEngineTest is MatchingEngine
     }
 
     function getProtocolFeeTest() public view virtual returns (uint256) {
-        return getProtocolFee();
+        return _getProtocolFee();
     }
 
     function doTransfersTest(
@@ -42,7 +42,7 @@ contract MatchingEngineTest is MatchingEngine
         LibDeal.DealSide memory right,
         LibDeal.DealData memory dealData
     ) public virtual returns (uint totalMakeValue, uint totalTakeValue) {
-        return doTransfers(left, right, dealData);
+        return _doTransfers(left, right, dealData);
     }
 
     function setMakerMinSalt(uint256 _val) external {

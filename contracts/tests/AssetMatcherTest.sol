@@ -14,6 +14,6 @@ contract AssetMatcherTest is Initializable, OwnableUpgradeable, AssetMatcher {
         address leftBaseToken,
         address rightBaseToken
     ) external pure returns (address baseToken) {
-        return matchAssets(leftBaseToken, rightBaseToken);
+        return _matchAssets(leftBaseToken, rightBaseToken);
     }
 }

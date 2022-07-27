@@ -22,7 +22,7 @@ contract TransferManagerTest is
         LibDeal.DealSide memory right,
         LibDeal.DealData memory dealData
     ) external payable {
-        doTransfers(
+        _doTransfers(
             left,
             right,
             dealData
@@ -51,6 +51,6 @@ contract TransferManagerTest is
     }
 
     function getFeeReceiverTest() external view returns (address) {
-        return getFeeReceiver();
+        return _getFeeReceiver();
     }
 }

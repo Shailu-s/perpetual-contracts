@@ -3,7 +3,7 @@
 pragma solidity =0.8.12;
 
 interface IAssetMatcher {
-    function matchAssets(address leftBaseToken, address rightBaseToken)
+    function _matchAssets(address leftBaseToken, address rightBaseToken)
         external
         pure
         returns (address baseToken);

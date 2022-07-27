@@ -7,11 +7,11 @@ import "./ITransferExecutor.sol";
 
 abstract contract ITransferManager is ITransferExecutor {
 
-    function doTransfers(
+    function _doTransfers(
         LibDeal.DealSide memory left,
         LibDeal.DealSide memory right,
         LibDeal.DealData memory dealData
     ) internal virtual returns (uint totalMakeValue, uint totalTakeValue);
 
-    function getProtocolFee() internal virtual view returns (uint256);
+    function _getProtocolFee() internal virtual view returns (uint256);
 }

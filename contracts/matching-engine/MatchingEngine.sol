@@ -7,7 +7,7 @@ import "./MatchingEngineCore.sol";
 import "./TransferManager.sol";
 
 contract MatchingEngine is MatchingEngineCore, TransferManager {
-    function __MatchingEngine_init(
+    function initialize(
         address erc20TransferProxy,
         uint256 newProtocolFee,
         address newDefaultFeeReceiver,

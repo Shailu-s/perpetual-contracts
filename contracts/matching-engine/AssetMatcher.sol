@@ -8,34 +8,34 @@ import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 abstract contract AssetMatcher is Initializable, OwnableUpgradeable {
     uint256 constant ZERO = 0;
 
-    function matchAssets(address leftBaseToken, address rightBaseToken)
+    function _matchAssets(address leftBaseToken, address rightBaseToken)
         internal
         pure
         returns (address baseToken)
     {
-        address result = matchAssetOneSide(leftBaseToken, rightBaseToken);
+        address result = _matchAssetOneSide(leftBaseToken, rightBaseToken);
         if (result == address(0)) {
-            return matchAssetOneSide(rightBaseToken, leftBaseToken);
+            return _matchAssetOneSide(rightBaseToken, leftBaseToken);
         } else {
             return result;
         }
     }
 
-    function matchAssetOneSide(address leftBaseToken, address rightBaseToken)
+    function _matchAssetOneSide(address leftBaseToken, address rightBaseToken)
         private
         pure
         returns (address baseToken)
     {
         if (leftBaseToken != address(0)) {
             if (rightBaseToken != address(0)) {
-                return simpleMatch(leftBaseToken, rightBaseToken);
+                return _simpleMatch(leftBaseToken, rightBaseToken);
             }
             return address(0);
         }
         revert("V_PERP_M: not found");
     }
 
-    function simpleMatch(address leftBaseToken, address rightBaseToken)
+    function _simpleMatch(address leftBaseToken, address rightBaseToken)
         private
         pure
         returns (address baseToken)

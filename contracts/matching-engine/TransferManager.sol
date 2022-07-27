@@ -34,11 +34,11 @@ abstract contract TransferManager is OwnableUpgradeable, ITransferManager {
         defaultFeeReceiver = newDefaultFeeReceiver;
     }
 
-    function getFeeReceiver() internal view returns (address) {
+    function _getFeeReceiver() internal view returns (address) {
         return defaultFeeReceiver;
     }
 
-    function getProtocolFee() internal override virtual view returns (uint256) {
+    function _getProtocolFee() internal override virtual view returns (uint256) {
         return protocolFee;
     }
 
@@ -50,7 +50,7 @@ abstract contract TransferManager is OwnableUpgradeable, ITransferManager {
         @return totalLeftValue - total amount for the left order
         @return totalRightValue - total amout for the right order
     */
-    function doTransfers(
+    function _doTransfers(
         LibDeal.DealSide memory left,
         LibDeal.DealSide memory right,
         LibDeal.DealData memory dealData
@@ -58,8 +58,8 @@ abstract contract TransferManager is OwnableUpgradeable, ITransferManager {
         totalLeftValue = left.amount;
         totalRightValue = right.amount;
 
-        totalLeftValue = doTransfersWithFees(left, right, dealData.protocolFee, dealData.maxFeesBasePoint);
-        totalRightValue = doTransfersWithFees(right, left, dealData.protocolFee, dealData.maxFeesBasePoint);
+        totalLeftValue = _doTransfersWithFees(left, right, dealData.protocolFee, dealData.maxFeesBasePoint);
+        totalRightValue = _doTransfersWithFees(right, left, dealData.protocolFee, dealData.maxFeesBasePoint);
     }
 
     /**
@@ -69,21 +69,21 @@ abstract contract TransferManager is OwnableUpgradeable, ITransferManager {
         @param maxFeesBasePoint max fee for the sell-order (used and is > 0 for V3 orders only)
         @return totalAmount of fee-side asset
     */
-    function doTransfersWithFees(
+    function _doTransfersWithFees(
         LibDeal.DealSide memory calculateSide,
         LibDeal.DealSide memory anotherSide,
         uint256 _protocolFee,
         uint256 maxFeesBasePoint
     ) internal returns (uint256 totalAmount) {
-        totalAmount = calculateTotalAmount(calculateSide.amount, _protocolFee, maxFeesBasePoint);
-        uint256 rest = transferProtocolFee(
+        totalAmount = _calculateTotalAmount(calculateSide.amount, _protocolFee, maxFeesBasePoint);
+        uint256 rest = _transferProtocolFee(
             totalAmount,
             calculateSide.amount,
             calculateSide.from,
             _protocolFee,
             calculateSide.baseToken
         );
-        transfer(
+        _transfer(
             calculateSide.baseToken,
             rest,
             calculateSide.from,
@@ -91,16 +91,16 @@ abstract contract TransferManager is OwnableUpgradeable, ITransferManager {
         );
     }
 
-    function transferProtocolFee(
+    function _transferProtocolFee(
         uint256 totalAmount,
         uint256 amount,
         address from,
         uint256 _protocolFee,
         address matchCalculateToken
     ) internal returns (uint256) {
-        (uint256 rest, uint256 fee) = subFeeInBp(totalAmount, amount, _protocolFee);
+        (uint256 rest, uint256 fee) = _subFeeInBp(totalAmount, amount, _protocolFee);
         if (fee > 0) {
-            transfer(matchCalculateToken, fee, from, getFeeReceiver());
+            _transfer(matchCalculateToken, fee, from, _getFeeReceiver());
         }
         return rest;
     }
@@ -112,7 +112,7 @@ abstract contract TransferManager is OwnableUpgradeable, ITransferManager {
         @param maxFeesBasePoint max fee for the sell-order (used and is > 0 for V3 orders only)
         @return total amount of fee-side asset
     */
-    function calculateTotalAmount(
+    function _calculateTotalAmount(
         uint256 amount,
         uint256 feeOnTopBp,
         uint256 maxFeesBasePoint
@@ -125,16 +125,16 @@ abstract contract TransferManager is OwnableUpgradeable, ITransferManager {
         return total;
     }
 
-    function subFeeInBp(
+    function _subFeeInBp(
         uint256 value,
         uint256 total,
         uint256 feeInBp
     ) internal pure returns (uint256 newValue, uint256 realFee) {
         uint256 basePointAmount = (total * feeInBp) / _BASE;
-        return subFee(value, basePointAmount);
+        return _subFee(value, basePointAmount);
     }
 
-    function subFee(uint256 value, uint256 fee) internal pure returns (uint256 newValue, uint256 realFee) {
+    function _subFee(uint256 value, uint256 fee) internal pure returns (uint256 newValue, uint256 realFee) {
         if (value > fee) {
             newValue = value - fee;
             realFee = fee;

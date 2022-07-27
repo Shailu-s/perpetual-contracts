@@ -26,7 +26,7 @@ abstract contract TransferExecutor is Initializable, OwnableUpgradeable, ITransf
         emit ProxyChanged(proxy);
     }
 
-    function transfer(
+    function _transfer(
         address baseToken,
         uint256 amount,
         address from,
