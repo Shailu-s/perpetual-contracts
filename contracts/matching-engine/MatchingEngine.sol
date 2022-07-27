@@ -20,7 +20,7 @@ contract MatchingEngine is MatchingEngineCore, TransferManager {
         __TransferExecutor_init_unchained(erc20TransferProxy);
         __TransferManager_init_unchained(newProtocolFee, newDefaultFeeReceiver);
         __OrderValidator_init_unchained();
-        // __Pausable_init_unchained(); TODO: Remove
+        __Pausable_init_unchained();
 
         _transferOwnership(owner);
     }

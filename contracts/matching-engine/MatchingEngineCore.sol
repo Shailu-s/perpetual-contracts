@@ -2,15 +2,19 @@
 
 pragma solidity =0.8.12;
 
+import { PausableUpgradeable } from "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
+
 import "../interfaces/ITransferManager.sol";
 import "../libs/LibFill.sol";
 import "./OrderValidator.sol";
 import "./AssetMatcher.sol";
 import "./TransferExecutor.sol";
+import "../helpers/OwnerPausable.sol";
 
 abstract contract MatchingEngineCore is
     Initializable,
     OwnableUpgradeable,
+    PausableUpgradeable,
     AssetMatcher,
     TransferExecutor,
     OrderValidator,
@@ -70,7 +74,7 @@ abstract contract MatchingEngineCore is
         bytes memory signatureLeft,
         LibOrder.Order memory orderRight,
         bytes memory signatureRight
-    ) public {
+    ) public whenNotPaused {
         validateFull(orderLeft, signatureLeft);
         validateFull(orderRight, signatureRight);
         if (orderLeft.trader != address(0)) {
