@@ -56,14 +56,14 @@ contract VaultController is ReentrancyGuardUpgradeable, BaseRelayRecipient, Owne
         isZkSync = (networkId == 280) ? true : false;
     }
 
-    function deployVault(address _token) external returns (address) {
+    function deployVault(address _token) external onlyOwner returns (address) {
         IVault vault;
         if (isZkSync) {
             vault = new Vault();
 
-            vault.initialize(_positioning, _accountBalance, _token,  address(this));
+            vault.initialize(_positioning, _accountBalance, _token, address(this));
         } else {
-            bytes32 salt = keccak256(abi.encodePacked(_positioning, _token));
+            bytes32 salt = keccak256(abi.encodePacked(_token));
 
             vault = Vault(Clones.cloneDeterministic(_vaultImplementation, salt));
             vault.initialize(_positioning, _accountBalance, _token, address(this));
@@ -79,7 +79,7 @@ contract VaultController is ReentrancyGuardUpgradeable, BaseRelayRecipient, Owne
     function deposit(address token, uint256 amountX10_D) external whenNotPaused nonReentrant {
         address _vault = getVault(token);
         // vault of token is not available
-        require(_vault != address(0),"VC_VOTNA");
+        require(_vault != address(0), "VC_VOTNA");
         address from = _msgSender();
         address[] storage _vaultList = _tradersVaultMap[from];
         if (IVault(_vault).getBalance(from) == 0) {
@@ -91,12 +91,13 @@ contract VaultController is ReentrancyGuardUpgradeable, BaseRelayRecipient, Owne
     function withdraw(address token, uint256 amountX10_D) external whenNotPaused nonReentrant {
         address _vault = getVault(token);
         // vault of token is not available
-        require(_vault != address(0),"VC_VOTNA");
+        require(_vault != address(0), "VC_VOTNA");
         address to = _msgSender();
         IVault(_vault).withdraw(token, amountX10_D, to);
     }
 
-    function getAccountValue(address trader) public virtual whenNotPaused nonReentrant returns (int256) {
+    function getAccountValue(address trader) external virtual whenNotPaused nonReentrant returns (int256) {
+        _requireOnlyPositioning();
         int256 fundingPayment = IPositioning(_positioning).getAllPendingFundingPayment(trader);
         (int256 owedRealizedPnl, int256 unrealizedPnl, uint256 pendingFee) =
             IAccountBalance(_accountBalance).getPnlAndPendingFee(trader);
@@ -106,15 +107,22 @@ contract VaultController is ReentrancyGuardUpgradeable, BaseRelayRecipient, Owne
         int256 balanceX10_18 = 0;
 
         for (uint256 i; i < vaultLen; i++) {
-            balanceX10_18 = balanceX10_18.add(
-                SettlementTokenMath.parseSettlementToken(
-                    IVault(_vaultList[i]).getBalance(trader),
-                    IVault(_vaultList[i]).decimals()
-                )
-            );
+            if (_vaultList[i] != address(0)) {
+                balanceX10_18 = balanceX10_18.add(
+                    SettlementTokenMath.parseSettlementToken(
+                        IVault(_vaultList[i]).getBalance(trader),
+                        IVault(_vaultList[i]).decimals()
+                    )
+                );
+            }
         }
         // accountValue = collateralValue + owedRealizedPnl - fundingPayment + unrealizedPnl + pendingMakerFee
         return balanceX10_18.add(owedRealizedPnl.sub(fundingPayment)).add(unrealizedPnl).add(pendingFee.toInt256());
+    }
+
+    function _requireOnlyPositioning() internal view {
+        // only Positioning
+        require(_msgSender() == _positioning, "CHD_OCH");
     }
 
     /// @inheritdoc BaseRelayRecipient
