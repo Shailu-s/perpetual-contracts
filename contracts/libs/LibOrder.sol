@@ -5,8 +5,6 @@ pragma solidity =0.8.12;
 import "./LibMath.sol";
 
 library LibOrder {
-    using SafeMathUpgradeable for uint256;
-
     bytes32 constant ORDER_TYPEHASH =
         keccak256(
             "Order(address trader,uint256 deadline,bool isShort,bool isMaker,address baseToken,uint256 amount,uint256 salt)"
@@ -27,7 +25,7 @@ library LibOrder {
         pure
         returns (uint256 value)
     {
-        value = order.amount.sub(fill);
+        value = order.amount - fill;
     }
 
     function hashKey(Order memory order) internal pure returns (bytes32) {

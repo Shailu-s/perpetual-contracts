@@ -2,13 +2,11 @@
 
 pragma solidity =0.8.12;
 
-import "./LibOrder.sol";
-import "@openzeppelin/contracts-upgradeable/utils/math/SafeMathUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/math/MathUpgradeable.sol";
 
-library LibFill {
-    using SafeMathUpgradeable for uint256;
+import "./LibOrder.sol";
 
+library LibFill {
     struct FillResult {
         uint256 leftValue;
         uint256 rightValue;
