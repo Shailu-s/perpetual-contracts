@@ -50,7 +50,7 @@ contract TransferManagerTest is
         return abi.encode(data);
     }
 
-    function getFeeReceiverTest(address token) external view returns (address) {
-        return getFeeReceiver(token);
+    function getFeeReceiverTest() external view returns (address) {
+        return getFeeReceiver();
     }
 }

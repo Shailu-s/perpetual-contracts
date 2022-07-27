@@ -13,7 +13,6 @@ abstract contract TransferManager is OwnableUpgradeable, ITransferManager {
     uint256 public protocolFee;
 
     address public defaultFeeReceiver;
-    mapping(address => address) public feeReceivers;
 
     /// @dev event that's emitted when protocolFee changes
     event ProtocolFeeChanged(uint256 oldValue, uint256 newValue);
@@ -35,15 +34,7 @@ abstract contract TransferManager is OwnableUpgradeable, ITransferManager {
         defaultFeeReceiver = newDefaultFeeReceiver;
     }
 
-    function setFeeReceiver(address token, address wallet) external onlyOwner {
-        feeReceivers[token] = wallet;
-    }
-
-    function getFeeReceiver(address token) internal view returns (address) {
-        address wallet = feeReceivers[token];
-        if (wallet != address(0)) {
-            return wallet;
-        }
+    function getFeeReceiver() internal view returns (address) {
         return defaultFeeReceiver;
     }
 
@@ -109,7 +100,7 @@ abstract contract TransferManager is OwnableUpgradeable, ITransferManager {
     ) internal returns (uint256) {
         (uint256 rest, uint256 fee) = subFeeInBp(totalAmount, amount, _protocolFee);
         if (fee > 0) {
-            transfer(matchCalculateToken, fee, from, getFeeReceiver(matchCalculateToken));
+            transfer(matchCalculateToken, fee, from, getFeeReceiver());
         }
         return rest;
     }
