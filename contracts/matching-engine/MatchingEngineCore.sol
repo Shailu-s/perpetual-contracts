@@ -90,13 +90,16 @@ abstract contract MatchingEngineCore is
         @param orderRight the right order of the match
     */
     function _matchAndTransfer(LibOrder.Order memory orderLeft, LibOrder.Order memory orderRight) internal {
-        (address matchToken) = _matchAssets(orderLeft, orderRight);
+        _matchAssets(orderLeft, orderRight);
 
         LibFill.FillResult memory newFill = _getFillSetNew(orderLeft, orderRight);
 
+        address makeToken = orderLeft.isShort ? orderLeft.baseAsset.virtualToken : orderLeft.quoteAsset.virtualToken;
+        address takeToken = orderRight.isShort ? orderRight.baseAsset.virtualToken : orderRight.quoteAsset.virtualToken;
+
         _doTransfers(
-            LibDeal.DealSide(matchToken, newFill.leftValue, _proxy, orderLeft.trader),
-            LibDeal.DealSide(matchToken, newFill.rightValue, _proxy, orderRight.trader),
+            LibDeal.DealSide(LibAsset.Asset(makeToken, newFill.leftValue), _proxy, orderLeft.trader),
+            LibDeal.DealSide(LibAsset.Asset(takeToken, newFill.rightValue), _proxy, orderRight.trader),
             _getDealData()
         );
 

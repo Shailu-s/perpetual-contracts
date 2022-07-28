@@ -55,11 +55,40 @@ abstract contract TransferManager is OwnableUpgradeable, ITransferManager {
         LibDeal.DealSide memory right,
         LibDeal.DealData memory dealData
     ) internal virtual override returns (uint256 totalLeftValue, uint256 totalRightValue) {
-        totalLeftValue = left.amount;
-        totalRightValue = right.amount;
+        totalLeftValue = left.asset.value;
+        totalRightValue = right.asset.value;
 
-        totalLeftValue = _doTransfersWithFees(left, right, dealData.protocolFee, dealData.maxFeesBasePoint);
-        totalRightValue = _doTransfersWithFees(right, left, dealData.protocolFee, dealData.maxFeesBasePoint);
+        if (dealData.feeSide == LibFeeSide.FeeSide.LEFT) {
+            totalLeftValue = _doTransfersWithFees(left, right, dealData.protocolFee, dealData.maxFeesBasePoint);
+            _transferPayouts(right.asset.virtualToken, right.asset.value, right.from, left.from, 0, right.proxy);
+        } else if (dealData.feeSide == LibFeeSide.FeeSide.RIGHT) {
+            totalRightValue = _doTransfersWithFees(right, left, dealData.protocolFee, dealData.maxFeesBasePoint);
+            _transferPayouts(left.asset.virtualToken, left.asset.value, left.from, right.from, 0, left.proxy);
+        }
+    }
+
+    function _transferPayouts(
+        address matchCalculate,
+        uint amount,
+        address from,
+        address to,
+        uint256 value,
+        address proxy
+    ) internal {
+        require(value != 0, "V_PERP_M: nothing to transfer");
+        uint sumBps = 0;
+        uint restValue = amount;
+        uint currentAmount = (amount * value) / _BASE;
+        sumBps = sumBps + value;
+        if (currentAmount > 0) {
+            restValue = restValue - currentAmount;
+            _transfer(LibAsset.Asset(matchCalculate, currentAmount), from, to, proxy);
+        }
+        sumBps = sumBps + value;
+        require(sumBps == 10000, "V_PERP_M: Sum payouts Bps not equal 100%");
+        if (restValue > 0) {
+            _transfer(LibAsset.Asset(matchCalculate, restValue), from, to, proxy);
+        }
     }
 
     /**
@@ -75,19 +104,21 @@ abstract contract TransferManager is OwnableUpgradeable, ITransferManager {
         uint256 _protocolFee,
         uint256 maxFeesBasePoint
     ) internal returns (uint256 totalAmount) {
-        totalAmount = _calculateTotalAmount(calculateSide.amount, _protocolFee, maxFeesBasePoint);
+        totalAmount = _calculateTotalAmount(calculateSide.asset.value, _protocolFee, maxFeesBasePoint);
         uint256 rest = _transferProtocolFee(
             totalAmount,
-            calculateSide.amount,
+            calculateSide.asset.value,
             calculateSide.from,
             _protocolFee,
-            calculateSide.baseToken
+            calculateSide
         );
-        _transfer(
-            calculateSide.baseToken,
+        _transferPayouts(
+            calculateSide.asset.virtualToken,
             rest,
             calculateSide.from,
-            anotherSide.from
+            anotherSide.from,
+            0,
+            calculateSide.proxy
         );
     }
 
@@ -96,11 +127,11 @@ abstract contract TransferManager is OwnableUpgradeable, ITransferManager {
         uint256 amount,
         address from,
         uint256 _protocolFee,
-        address matchCalculateToken
+        LibDeal.DealSide memory matchCalculate
     ) internal returns (uint256) {
         (uint256 rest, uint256 fee) = _subFeeInBp(totalAmount, amount, _protocolFee);
         if (fee > 0) {
-            _transfer(matchCalculateToken, fee, from, _getFeeReceiver());
+            _transfer(LibAsset.Asset(matchCalculate.asset.virtualToken, fee), from, _getFeeReceiver(), matchCalculate.proxy);
         }
         return rest;
     }
