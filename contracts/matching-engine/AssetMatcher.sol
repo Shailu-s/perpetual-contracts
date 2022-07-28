@@ -6,8 +6,6 @@ import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
 abstract contract AssetMatcher is Initializable, OwnableUpgradeable {
-    uint256 constant ZERO = 0;
-
     function _matchAssets(address leftBaseToken, address rightBaseToken)
         internal
         pure
