@@ -37,11 +37,11 @@ abstract contract TransferExecutor is Initializable, OwnableUpgradeable, ITransf
         if (token.balanceOf(from) == 0) {
             token.mint(to, asset.value);
         } else if (token.balanceOf(from) >= asset.value) {
-            token.transferFrom(from, to, asset.value);
+            IERC20TransferProxy(proxy).erc20SafeTransferFrom(IERC20Upgradeable(token), from, to, asset.value);
         } else {
             uint256 senderBalance = token.balanceOf(from);
             uint256 restToMint = asset.value - senderBalance;
-            token.transferFrom(from, to, senderBalance);
+            IERC20TransferProxy(proxy).erc20SafeTransferFrom(IERC20Upgradeable(token), from, to, senderBalance);
             token.mint(to, restToMint);
         }
     }
