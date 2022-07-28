@@ -2,11 +2,13 @@
 
 pragma solidity =0.8.12;
 
+import "../libs/LibAsset.sol";
+
 abstract contract ITransferExecutor {
     function _transfer(
-        address baseToken,
-        uint256 amount,
+        LibAsset.Asset memory asset,
         address from,
-        address to
+        address to,
+        address proxy
     ) internal virtual;
 }

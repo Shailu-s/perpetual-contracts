@@ -9,6 +9,7 @@ import "../interfaces/IERC20TransferProxy.sol";
 import "../interfaces/ITransferExecutor.sol";
 import "../interfaces/IMintBurn.sol";
 import "../interfaces/IVirtualToken.sol";
+import "../libs/LibAsset.sol";
 
 abstract contract TransferExecutor is Initializable, OwnableUpgradeable, ITransferExecutor {
     address internal _proxy;
@@ -27,19 +28,19 @@ abstract contract TransferExecutor is Initializable, OwnableUpgradeable, ITransf
     }
 
     function _transfer(
-        address baseToken,
-        uint256 amount,
+        LibAsset.Asset memory asset,
         address from,
-        address to
+        address to,
+        address proxy
     ) internal override {
-        IVirtualToken token = IVirtualToken(baseToken);
+        IVirtualToken token = IVirtualToken(asset.virtualToken);
         if (token.balanceOf(from) == 0) {
-            token.mint(to, amount);
-        } else if (token.balanceOf(from) >= amount) {
-            token.transferFrom(from, to, amount);
+            token.mint(to, asset.value);
+        } else if (token.balanceOf(from) >= asset.value) {
+            token.transferFrom(from, to, asset.value);
         } else {
             uint256 senderBalance = token.balanceOf(from);
-            uint256 restToMint = amount - senderBalance;
+            uint256 restToMint = asset.value - senderBalance;
             token.transferFrom(from, to, senderBalance);
             token.mint(to, restToMint);
         }
