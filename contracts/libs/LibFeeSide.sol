@@ -4,7 +4,8 @@ pragma solidity =0.8.12;
 library LibFeeSide {
     // TODO: Remove or not
     enum FeeSide {
-        LEFT
+        LEFT,
+        RIGHT
     }
 
     function getFeeSide() internal pure returns (FeeSide) {

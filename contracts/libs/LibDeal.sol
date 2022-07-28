@@ -2,11 +2,11 @@
 pragma solidity =0.8.12;
 
 import "./LibFeeSide.sol";
+import "./LibAsset.sol";
 
 library LibDeal {
     struct DealSide {
-        address baseToken;
-        uint256 amount;
+        LibAsset.Asset asset;
         address proxy;
         address from;
     }
