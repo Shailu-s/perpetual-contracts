@@ -94,7 +94,62 @@ describe("Vault Controller deposit tests", function () {
         expect(await USDCVaultContract.getBalance(alice.address)).to.eq(parseUnits("100", await USDC.decimals()))
     })
 
+    it("Positive Test for deposit ether function", async () => {
+        const [owner, alice] = await ethers.getSigners()
+
+        await vaultController.deployVault(USDC.address)
+        const amount = parseUnits("100", await USDC.decimals())
+
+        await positioningConfig.setSettlementTokenBalanceCap(amount)
+
+        const USDCVaultAddress = await vaultController.getVault(USDC.address)
+
+        const USDCVaultContract = await vaultFactory.attach(USDCVaultAddress)
+        await USDC.connect(alice).approve(USDCVaultAddress, amount)
+
+        // check event has been sent
+        await expect(vaultController.connect(alice).depositEther(USDC.address, {value:amount}))
+            .to.emit(USDCVaultContract, "Deposited")
+            .withArgs(USDC.address, alice.address, amount)
+
+        // // reduce alice balance
+        expect(await USDC.balanceOf(alice.address)).to.eq(parseUnits("900", await USDC.decimals()))
+
+        // // increase vault balance
+        expect(await USDC.balanceOf(USDCVaultAddress)).to.eq(parseUnits("100", await USDC.decimals()))
+
+        // // update sender's balance
+        expect(await USDCVaultContract.getBalance(alice.address)).to.eq(parseUnits("100", await USDC.decimals()))
+    })
+
+    it("Negative Test for deposit ether function", async () => {
+        const [owner, alice] = await ethers.getSigners()
+
+        await vaultController.deployVault(USDC.address)
+        const amount = parseUnits("0", await USDC.decimals())
+
+        await positioningConfig.setSettlementTokenBalanceCap(amount)
+
+        const USDCVaultAddress = await vaultController.getVault(USDC.address)
+
+        const USDCVaultContract = await vaultFactory.attach(USDCVaultAddress)
+        await USDC.connect(alice).approve(USDCVaultAddress, amount)
+
+        // check event has been sent
+        await expect(vaultController.connect(alice).depositEther(USDC.address, {value:amount}))
+            .to.be.revertedWith("V_ZA")
+    })
+
     it("Negative Test for deposit function", async () => {
+        const [owner, alice] = await ethers.getSigners()
+
+        const amount = parseUnits("100", await USDC.decimals())
+
+        // test fail for no vault from this token
+        await expect(vaultController.connect(alice).depositEther(USDC.address, {value:amount})).to.be.revertedWith("VC_VOTNA")
+    })
+
+    it("Negative Test for deposit ether function", async () => {
         const [owner, alice] = await ethers.getSigners()
 
         const amount = parseUnits("100", await USDC.decimals())

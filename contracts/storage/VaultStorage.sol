@@ -18,6 +18,7 @@ abstract contract VaultStorageV1 {
     address internal _exchange;
     address internal _Positioning;
     uint256 internal _totalDebt;
+    address internal _WETH9;
     address public _vaultController;
 
     // key: trader, token address

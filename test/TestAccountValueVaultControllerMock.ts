@@ -54,7 +54,7 @@ describe("Vault Controller Mock tests for account value", function () {
         vaultContract = await vaultContract1.deployed()
         await vaultContract.initialize(positioningMock.address,positioningConfig.address, accountBalanceMock.address, vault.address)
 
-        const amount0 = parseUnits("0", await DAI.decimals())
+        const amount0 = parseUnits("10", await DAI.decimals())
 
         await positioningMock.mock_setFundingPaymentX10_18(amount0)
         await accountBalanceMock.mock_setOwedRealisedPnlX10_18(amount0)
@@ -73,7 +73,7 @@ describe("Vault Controller Mock tests for account value", function () {
         await USDC.mint(admin.address, DAIAmount)
     })
 
-    it.only("Positive Test for single token getAccountValue", async () => {
+    it("Positive Test for single token getAccountValue", async () => {
         const [owner, alice] = await ethers.getSigners()
 
         await vaultContract.deployVault(USDC.address)
@@ -94,6 +94,6 @@ describe("Vault Controller Mock tests for account value", function () {
 
         // // update sender's balance
         expect(await USDCVaultContract.getBalance(alice.address)).to.eq(parseUnits("100", await USDC.decimals()))
-        expect(await (await vaultContract.getAccountValue(alice.address)).value.toNumber()).to.be.equal(100000000000000000000)
+        expect((await vaultContract.getAccountValue(alice.address)).toString()).to.be.equal("120000000000000000000")
     })
 })
