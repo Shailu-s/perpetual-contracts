@@ -31,6 +31,8 @@ interface IVault {
         address from
     ) external;
 
+    function depositEther(address token, address from) external payable;
+    
     /// @notice Withdraw collateral from vault
     /// @dev once multi-collateral is implemented, the token is not limited to settlementToken
     /// @param token The address of the token sender is going to withdraw

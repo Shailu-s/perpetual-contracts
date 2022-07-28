@@ -78,7 +78,20 @@ contract VaultController is ReentrancyGuardUpgradeable, BaseRelayRecipient, Owne
         vault = _vaultAddress[_token];
     }
 
-    function deposit(address token, uint256 amountX10_D) external whenNotPaused nonReentrant {
+    function depositEther(address token) external payable whenNotPaused nonReentrant {
+        address _vault = getVault(token);
+        // vault of token is not available
+        require(_vault != address(0), "VC_VOTNA");
+        address from = _msgSender();
+        uint256 amount = msg.value;
+        address[] storage _vaultList = _tradersVaultMap[from];
+        if (IVault(_vault).getBalance(from) == 0) {
+            _vaultList.push(_vault);
+        }
+        IVault(_vault).depositEther{ value: amount }(token, from);
+    }
+
+    function deposit(address token, uint256 amount) external whenNotPaused nonReentrant {
         address _vault = getVault(token);
         // vault of token is not available
         require(_vault != address(0), "VC_VOTNA");
@@ -87,19 +100,19 @@ contract VaultController is ReentrancyGuardUpgradeable, BaseRelayRecipient, Owne
         if (IVault(_vault).getBalance(from) == 0) {
             _vaultList.push(_vault);
         }
-        IVault(_vault).deposit(token, amountX10_D, from);
+        IVault(_vault).deposit(token, amount, from);
     }
 
-    function withdraw(address token, uint256 amountX10_D) external whenNotPaused nonReentrant {
+    function withdraw(address token, uint256 amount) external whenNotPaused nonReentrant {
         address _vault = getVault(token);
         // vault of token is not available
         require(_vault != address(0), "VC_VOTNA");
         address to = _msgSender();
-        IVault(_vault).withdraw(token, amountX10_D, to);
+        IVault(_vault).withdraw(token, amount, to);
     }
 
-    function getAccountValue(address trader) external virtual whenNotPaused nonReentrant returns (int256) {
-        _requireOnlyPositioning();
+    function getAccountValue(address trader) external view virtual whenNotPaused returns (int256) {
+        // _requireOnlyPositioning();
         int256 fundingPayment = IPositioning(_positioning).getAllPendingFundingPayment(trader);
         (int256 owedRealizedPnl, int256 unrealizedPnl, uint256 pendingFee) =
             IAccountBalance(_accountBalance).getPnlAndPendingFee(trader);
