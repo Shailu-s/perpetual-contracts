@@ -30,14 +30,14 @@ library LibFill {
         uint256 leftOrderFill,
         uint256 rightOrderFill
     ) internal pure returns (FillResult memory) {
-        (uint256 leftValue) = LibOrder.calculateRemaining(leftOrder, leftOrderFill);
-        (uint256 rightValue) = LibOrder.calculateRemaining(rightOrder, rightOrderFill);
+        (uint256 leftBaseValue, uint256 leftQuoteValue) = LibOrder.calculateRemaining(leftOrder, leftOrderFill);
+        (uint256 rightBaseValue, uint256 rightQuoteValue) = LibOrder.calculateRemaining(rightOrder, rightOrderFill);
 
-        if (rightValue > leftValue) {
-            return fillLeft(leftOrder.amount, leftValue, rightOrder.amount, rightValue);
+        if (rightQuoteValue > leftBaseValue) {
+            return fillLeft(leftBaseValue, leftQuoteValue, rightOrder.baseAsset.value, rightOrder.quoteAsset.value);
         }
 
-        return fillRight(rightOrder.amount, rightValue, leftOrder.amount, leftValue);
+        return fillRight(leftOrder.baseAsset.value, leftOrder.quoteAsset.value, rightBaseValue, rightQuoteValue);
     }
 
     function fillRight(

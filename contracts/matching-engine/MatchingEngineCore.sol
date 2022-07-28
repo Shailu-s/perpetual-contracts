@@ -48,8 +48,8 @@ abstract contract MatchingEngineCore is
         emit Canceled(
             orderKeyHash,
             order.trader,
-            order.baseToken,
-            order.amount,
+            order.isShort ? order.baseAsset.virtualToken : order.quoteAsset.virtualToken,
+            order.isShort ? order.baseAsset.value : order.quoteAsset.value,
             order.salt
         );
     }
@@ -177,7 +177,7 @@ abstract contract MatchingEngineCore is
         pure
         returns (address matchToken)
     {
-        matchToken = _matchAssets(orderLeft.baseToken, orderRight.baseToken);
+        matchToken = _matchAssets(orderLeft.baseAsset.virtualToken, orderRight.baseAsset.virtualToken);
         require(matchToken != address(0), "V_PERP_M: make assets don't match");
     }
 

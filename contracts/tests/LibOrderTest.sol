@@ -13,7 +13,7 @@ contract LibOrderTest {
     function calculateRemaining(
         LibOrder.Order calldata order,
         uint256 fill
-    ) external pure returns (uint256 amount) {
+    ) external pure returns (uint256 baseValue, uint256 quoteValue) {
         return LibOrder.calculateRemaining(order, fill);
     }
 
@@ -30,8 +30,8 @@ contract LibOrderTest {
                     order.deadline,
                     order.isShort,
                     order.isMaker,
-                    order.baseToken,
-                    order.amount,
+                    order.baseAsset,
+                    order.quoteAsset,
                     order.salt
                 )
             );
