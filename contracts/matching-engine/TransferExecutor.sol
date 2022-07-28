@@ -33,6 +33,7 @@ abstract contract TransferExecutor is Initializable, OwnableUpgradeable, ITransf
         address to,
         address proxy
     ) internal override {
+        // TODO: At the time of perp integration, @Aditya needs to update the logic here of minting the vTokens
         IVirtualToken token = IVirtualToken(asset.virtualToken);
         if (token.balanceOf(from) == 0) {
             token.mint(to, asset.value);
