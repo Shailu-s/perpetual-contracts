@@ -88,7 +88,7 @@ contract VaultController is ReentrancyGuardUpgradeable, BaseRelayRecipient, Owne
         if (IVault(_vault).getBalance(from) == 0) {
             _vaultList.push(_vault);
         }
-        IVault(_vault).depositEther{ value: amount }(token, from);
+        IVault(_vault).depositEther{ value: amount }( from);
     }
 
     function deposit(address token, uint256 amount) external whenNotPaused nonReentrant {

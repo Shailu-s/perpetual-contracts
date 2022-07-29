@@ -21,6 +21,7 @@ import { BaseRelayRecipient } from "../gsn/BaseRelayRecipient.sol";
 import { OwnerPausable } from "../helpers/OwnerPausable.sol";
 import { VaultStorageV1 } from "../storage/VaultStorage.sol";
 import { IVault } from "../interfaces/IVault.sol";
+import { IWETH9 } from "../interfaces/external/IWETH9.sol";
 
 // never inherit any new stateful contract. never change the orders of parent stateful contracts
 contract Vault is IVault, ReentrancyGuardUpgradeable, OwnerPausable, BaseRelayRecipient, VaultStorageV1 {
@@ -88,17 +89,23 @@ contract Vault is IVault, ReentrancyGuardUpgradeable, OwnerPausable, BaseRelayRe
         _vaultController = vaultControllerArg;
     }
     
-    function depositEther(address token, address from) external payable override whenNotPaused nonReentrant {
+    function depositEther( address from) external payable override whenNotPaused nonReentrant {
         _requireOnlyVaultController();
         uint256 amount = msg.value;
-        _depositEther(token, from, amount);
+        _depositEther(from);
     }
     
-    /// @param from deposit ETH to this address
-    function _depositEther(address token, address from, uint256 amount) internal {
+    /// @param to deposit ETH to this address
+    function _depositEther(address to) internal {
+        uint256 amount = msg.value;
         // V_ZA: Zero amount
         require(amount > 0, "V_ZA");
-        _deposit(token, amount, from);
+
+        // SLOAD for gas saving
+        address WETH9 = _WETH9;
+        // wrap ETH into WETH
+        IWETH9(WETH9).deposit{ value: amount }();
+        _deposit(WETH9, amount, to);
     }
 
     /// @inheritdoc IVault
