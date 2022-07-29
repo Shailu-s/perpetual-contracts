@@ -93,6 +93,9 @@ contract MarkPriceOracle is Initializable {
         uint256 initialTimestamp = block.timestamp - _twInterval;
         for (index = observations.length - 1; observations[index].timestamp >= initialTimestamp; index--) {
             priceCumulative += observations[index].priceCumulative;
+            if (index == 0) {
+                break;
+            }
         }
         priceCumulative = priceCumulative.div(observations.length.sub(index));
     }
