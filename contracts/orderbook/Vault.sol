@@ -88,6 +88,14 @@ contract Vault is IVault, ReentrancyGuardUpgradeable, OwnerPausable, BaseRelayRe
     function setVaultController(address vaultControllerArg) external onlyOwner {
         _vaultController = vaultControllerArg;
     }
+
+    function setWETH9(address WETH9Arg) external onlyOwner {
+        // V_WNC: WETH9 is not contract
+        require(WETH9Arg.isContract(), "V_WNC");
+
+        _WETH9 = WETH9Arg;
+        emit WETH9Changed(WETH9Arg);
+    }
     
     function depositEther( address from) external payable override whenNotPaused nonReentrant {
         _requireOnlyVaultController();
