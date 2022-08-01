@@ -30,8 +30,8 @@ contract LibOrderTest {
                     order.deadline,
                     order.isShort,
                     order.isMaker,
-                    order.baseAsset,
-                    order.quoteAsset,
+                    order.makeAsset,
+                    order.takeAsset,
                     order.salt
                 )
             );

@@ -34,10 +34,10 @@ library LibFill {
         (uint256 rightBaseValue, uint256 rightQuoteValue) = LibOrder.calculateRemaining(rightOrder, rightOrderFill);
 
         if (rightQuoteValue > leftBaseValue) {
-            return fillLeft(leftBaseValue, leftQuoteValue, rightOrder.baseAsset.value, rightOrder.quoteAsset.value);
+            return fillLeft(leftBaseValue, leftQuoteValue, rightOrder.makeAsset.value, rightOrder.takeAsset.value);
         }
 
-        return fillRight(leftOrder.baseAsset.value, leftOrder.quoteAsset.value, rightBaseValue, rightQuoteValue);
+        return fillRight(leftOrder.makeAsset.value, leftOrder.takeAsset.value, rightBaseValue, rightQuoteValue);
     }
 
     function fillRight(

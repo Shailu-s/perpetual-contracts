@@ -48,8 +48,8 @@ abstract contract MatchingEngineCore is
         emit Canceled(
             orderKeyHash,
             order.trader,
-            order.isShort ? order.baseAsset.virtualToken : order.quoteAsset.virtualToken,
-            order.isShort ? order.baseAsset.value : order.quoteAsset.value,
+            order.isShort ? order.makeAsset.virtualToken : order.takeAsset.virtualToken,
+            order.isShort ? order.makeAsset.value : order.takeAsset.value,
             order.salt
         );
     }
@@ -94,8 +94,8 @@ abstract contract MatchingEngineCore is
 
         LibFill.FillResult memory newFill = _getFillSetNew(orderLeft, orderRight);
 
-        address makeToken = orderLeft.isShort ? orderLeft.baseAsset.virtualToken : orderLeft.quoteAsset.virtualToken;
-        address takeToken = orderRight.isShort ? orderRight.baseAsset.virtualToken : orderRight.quoteAsset.virtualToken;
+        address makeToken = orderLeft.isShort ? orderLeft.makeAsset.virtualToken : orderLeft.takeAsset.virtualToken;
+        address takeToken = orderRight.isShort ? orderRight.makeAsset.virtualToken : orderRight.takeAsset.virtualToken;
 
         _doTransfers(
             LibDeal.DealSide(LibAsset.Asset(makeToken, newFill.leftValue), _proxy, orderLeft.trader),
@@ -180,7 +180,7 @@ abstract contract MatchingEngineCore is
         pure
         returns (address matchToken)
     {
-        matchToken = _matchAssets(orderLeft.baseAsset.virtualToken, orderRight.baseAsset.virtualToken);
+        matchToken = _matchAssets(orderLeft.makeAsset.virtualToken, orderRight.makeAsset.virtualToken);
         require(matchToken != address(0), "V_PERP_M: make assets don't match");
     }
 
