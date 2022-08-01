@@ -4,14 +4,15 @@ function Asset(virtualToken, value) {
   return { virtualToken, value }
 }
 
-function Order(maker, makeAsset, taker, takeAsset, salt, deadline) {
+function Order(trader, deadline, isShort, isMaker, makeAsset, takeAsset, salt) {
   return {
-    maker,
+    trader,
+    deadline,
+    isShort,
+    isMaker,
     makeAsset,
-    taker,
     takeAsset,
-    salt,
-    deadline
+    salt
   }
 }
 
@@ -21,12 +22,13 @@ const Types = {
     { name: "value", type: "uint256" },
   ],
   Order: [
-    { name: "maker", type: "address" },
+    { name: "trader", type: "address" },
+    { name: "deadline", type: "uint256" },
+    { name: "isShort", type: "bool" },
+    { name: "isMaker", type: "bool" },
     { name: "makeAsset", type: "Asset" },
-    { name: "taker", type: "address" },
     { name: "takeAsset", type: "Asset" },
     { name: "salt", type: "uint256" },
-    { name: "deadline", type: "uint256" }
   ],
 }
 
