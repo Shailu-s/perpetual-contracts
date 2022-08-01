@@ -108,14 +108,12 @@ contract Positioning is
     // solhint-disable-next-line func-order
     function initialize(
         address PositioningConfigArg,
-        address vaultArg,
         address quoteTokenArg,
         address exchangeArg,
         address accountBalanceArg,
         address insuranceFundArg
     ) public initializer {
-        // CH_VANC: Vault address is not contract
-        require(vaultArg.isContract(), "CH_VANC");
+
         // CH_QANC: QuoteToken address is not contract
         require(quoteTokenArg.isContract(), "CH_QANC");
         // CH_QDN18: QuoteToken decimals is not 18
@@ -137,13 +135,17 @@ contract Positioning is
         __OwnerPausable_init();
 
         _PositioningConfig = PositioningConfigArg;
-        _vault = vaultArg;
         _quoteToken = quoteTokenArg;
         _exchange = exchangeArg;
         _orderBook = orderBookArg;
         _accountBalance = accountBalanceArg;
         _insuranceFund = insuranceFundArg;
+    }
 
+    function setVault(address vaultArg) external onlyOwner{
+        // CH_VANC: Vault address is not contract
+        require(vaultArg.isContract(), "CH_VANC");
+        _vault = vaultArg;
         _settlementTokenDecimals = IVault(_vault).decimals();
     }
 
