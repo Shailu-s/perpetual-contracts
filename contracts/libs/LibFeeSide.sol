@@ -5,10 +5,10 @@ import "./LibOrder.sol";
 import "../interfaces/IVirtualToken.sol";
 
 library LibFeeSide {
-    // TODO: Remove or not
     enum FeeSide {
         LEFT,
-        RIGHT
+        RIGHT,
+        NONE
     }
 
     function getFeeSide(LibOrder.Order memory orderLeft, LibOrder.Order memory orderRight) internal view returns (FeeSide) {
@@ -18,5 +18,6 @@ library LibFeeSide {
         if (!IVirtualToken(orderRight.makeAsset.virtualToken).isBase()) {
             return FeeSide.LEFT;
         }
+        return FeeSide.NONE;
     }
 }

@@ -15,6 +15,5 @@ interface IERC1271 {
     function isValidSignature(bytes32 _hash, bytes calldata _signature)
         external
         view
-        virtual
         returns (bytes4 magicValue);
 }
