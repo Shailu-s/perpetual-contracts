@@ -26,7 +26,7 @@ describe('AssetMatcher', function () {
     );
     virtualToken = await upgrades.deployProxy(
       VirtualToken,
-      ["Virtual Ethereum", "VETH"],
+      ["Virtual Ethereum", "VETH", true],
       {
         initializer: "__VirtualToken_init"
       }

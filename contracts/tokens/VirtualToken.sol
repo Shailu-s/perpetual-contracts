@@ -8,14 +8,13 @@ import { IVirtualToken } from "../interfaces/IVirtualToken.sol";
 
 contract VirtualToken is IVirtualToken, OwnableUpgradeable, ERC20Upgradeable {
     mapping(address => bool) internal _whitelistMap;
-
-    // __gap is reserved storage
-    uint256[50] private __gap;
+    bool public isBase;
 
     event WhitelistAdded(address account);
     event WhitelistRemoved(address account);
 
-    function __VirtualToken_init(string memory nameArg, string memory symbolArg) public initializer {
+    function __VirtualToken_init(string memory nameArg, string memory symbolArg, bool isBaseArg) public initializer {
+        isBase = isBaseArg;
         __Ownable_init();
         __ERC20_init(nameArg, symbolArg);
     }
@@ -63,4 +62,6 @@ contract VirtualToken is IVirtualToken, OwnableUpgradeable, ERC20Upgradeable {
             require(_whitelistMap[from], "VT_NW");
         }
     }
+
+    uint256[50] private __gap;
 }
