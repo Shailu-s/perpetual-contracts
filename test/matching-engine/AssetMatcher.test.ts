@@ -1,85 +1,71 @@
-import { expect } from "chai";
-import { Signer } from "ethers";
-import { ethers, upgrades } from "hardhat";
-const order = require('../order');
+import { expect } from "chai"
+import { Signer } from "ethers"
+import { ethers, upgrades } from "hardhat"
+const order = require("../order")
 
-describe('AssetMatcher', function () {
-  let AssetMatcher;
-  let assetMatcher;
-  let VirtualToken;
-  let virtualToken;
-  let leftAsset;
-  let rightAsset;
+describe("AssetMatcher", function () {
+    let AssetMatcher
+    let assetMatcher
+    let VirtualToken
+    let virtualToken
+    let leftBaseToken: string
+    let rightBaseToken: string
 
-  this.beforeAll(async () => {
-    AssetMatcher = await ethers.getContractFactory("AssetMatcherTest");
-    VirtualToken = await ethers.getContractFactory("VirtualToken");
-  });
+    this.beforeAll(async () => {
+        AssetMatcher = await ethers.getContractFactory("AssetMatcherTest")
+        VirtualToken = await ethers.getContractFactory("VirtualToken")
+    })
 
-  beforeEach(async () => {
-    assetMatcher = await upgrades.deployProxy(
-      AssetMatcher,
-      [],
-      {
-        initializer: "__AssetMatcherTest_init"
-      }
-    );
-    virtualToken = await upgrades.deployProxy(
-      VirtualToken,
-      ["Virtual Ethereum", "VETH", true],
-      {
-        initializer: "__VirtualToken_init"
-      }
-    );
-    leftAsset = order.Asset(virtualToken.address, "10");
-    rightAsset = order.Asset(virtualToken.address, "20");
-  });
+    beforeEach(async () => {
+        assetMatcher = await upgrades.deployProxy(AssetMatcher, [], {
+            initializer: "__AssetMatcherTest_init",
+        })
+        virtualToken = await upgrades.deployProxy(VirtualToken, ["Virtual Ethereum", "VETH", true], {
+            initializer: "__VirtualToken_init",
+        })
+        leftBaseToken = virtualToken.address
+        rightBaseToken = virtualToken.address
+    })
 
-  describe('Deployment:', function() {
-    it ("AssetMatcher deployed confirm", async () => {
-      let receipt = await assetMatcher.deployed();
-      expect(receipt.confirmations).not.equal(0);
+    describe("Deployment:", function () {
+        it("AssetMatcher deployed confirm", async () => {
+            let receipt = await assetMatcher.deployed()
+            expect(receipt.confirmations).not.equal(0)
 
-      receipt = await virtualToken.deployed();
-      expect(receipt.confirmations).not.equal(0);
-    });
-  });
+            receipt = await virtualToken.deployed()
+            expect(receipt.confirmations).not.equal(0)
+        })
+    })
 
-  describe('Match asset:', function() {
-    describe('Success:', function() {
-      it ("Should call match asset", async () => {
-        const tx = await assetMatcher.matchAssetsTest(
-          leftAsset,
-          leftAsset,
-        );
-      });
+    describe("Match asset:", function () {
+        describe("Success:", function () {
+            it("Should call match asset", async () => {
+                const tx = await assetMatcher.matchAssetsTest(leftBaseToken, rightBaseToken)
+            })
 
-      it("Should call match asset with different left & right order values", async () => {
-        const tx = await assetMatcher.matchAssetsTest(
-          leftAsset,
-          rightAsset,
-        );
-      });
-    });
+            it("Should call match asset with different left & right order values", async () => {
+                const tx = await assetMatcher.matchAssetsTest(leftBaseToken, rightBaseToken)
+            })
+        })
 
-    describe('Failure:', function() {
-      it("Should fail to call match asset as left token address is 0", async () => {
-        await expect(
-          assetMatcher.matchAssetsTest(
-            order.Asset('0x0000000000000000000000000000000000000000', "10"), 
-            leftAsset,
-          )
-        ).to.be.revertedWith("not found IAssetMatcher");
-      });
-    
-      it("Should fail to call match asset as right token address is 0", async () => {
-        await expect(
-          assetMatcher.matchAssetsTest(
-            leftAsset, 
-            order.Asset('0x0000000000000000000000000000000000000000', "10"),
-          )
-        ).to.be.revertedWith("not found IAssetMatcher");
-      });
-    });
-  });
-});
+        describe("Failure:", function () {
+            it("Should fail to call match asset as left token address is 0", async () => {
+                await expect(
+                    assetMatcher.matchAssetsTest(
+                        "0x0000000000000000000000000000000000000000",
+                        rightBaseToken,
+                    ),
+                ).to.be.revertedWith("V_PERP_M: not found")
+            })
+
+            it("Should fail to call match asset as right token address is 0", async () => {
+                await expect(
+                    assetMatcher.matchAssetsTest(
+                        leftBaseToken,
+                        "0x0000000000000000000000000000000000000000",
+                    ),
+                ).to.be.revertedWith("V_PERP_M: not found")
+            })
+        })
+    })
+})
