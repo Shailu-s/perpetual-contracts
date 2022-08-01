@@ -11,7 +11,7 @@ library LibFeeSide {
         RIGHT
     }
 
-    function getFeeSide(LibOrder.Order memory orderLeft, LibOrder.Order memory orderRight) internal pure returns (FeeSide) {
+    function getFeeSide(LibOrder.Order memory orderLeft, LibOrder.Order memory orderRight) internal view returns (FeeSide) {
         if (!IVirtualToken(orderLeft.makeAsset.virtualToken).isBase()) {
             return FeeSide.LEFT;
         }
