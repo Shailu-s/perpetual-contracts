@@ -9,8 +9,6 @@ import "contracts/matching-engine/OrderValidator.sol";
 import "contracts/libs/LibFill.sol";
 import "contracts/libs/LibOrder.sol";
 import "contracts/libs/LibAsset.sol";
-import "contracts/libs/LibOrderData.sol";
-import "contracts/libs/LibOrderDataParse.sol";
 
 contract TransferManagerTest is
     TransferManager,
@@ -40,14 +38,6 @@ contract TransferManagerTest is
             newCommunityWallet
         );
         __OrderValidator_init_unchained();
-    }
-
-    function encode(LibOrderData.Data memory data)
-        external
-        pure
-        returns (bytes memory)
-    {
-        return abi.encode(data);
     }
 
     function getFeeReceiverTest() external view returns (address) {
