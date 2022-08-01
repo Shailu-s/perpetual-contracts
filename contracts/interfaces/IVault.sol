@@ -14,15 +14,12 @@ interface IVault {
     /// @param amount The amount of token that was withdrawn
     event Withdrawn(address indexed collateralToken, address indexed trader, uint256 amount);
 
-    /// @notice Emitted when WETH9 is changed
-    /// @param WETH9 The address of WETH9
-    event WETH9Changed(address indexed WETH9);
-
     function initialize(
         address PositioningConfigArg,
         address accountBalanceArg,
         address tokenArg,
-        address vaultControllerArg
+        address vaultControllerArg,
+        bool isEthVaultArg
     ) external;
 
     /// @notice Deposit collateral into vault
@@ -33,10 +30,7 @@ interface IVault {
         address token,
         uint256 amountX10_D,
         address from
-    ) external;
-
-    /// @notice Deposit ETH as collateral into vault
-    function depositEther(address from) external payable;
+    ) external payable;
 
     /// @notice Withdraw collateral from vault
     /// @dev once multi-collateral is implemented, the token is not limited to settlementToken
@@ -45,8 +39,8 @@ interface IVault {
     function withdraw(
         address token,
         uint256 amountX10_D,
-        address to
-    ) external;
+        address payable to
+    ) external ;
 
     /// @notice transfer fund to vault in case of low balance
     /// @dev once multi-collateral is implemented, the token is not limited to settlementToken

@@ -32,7 +32,7 @@ describe("Vault tests", function () {
         vaultFactory = await ethers.getContractFactory("Vault")
         const vault1 = await vaultFactory.deploy()
         vault = await vault1.deployed()
-        await vault.initialize(positioningConfig.address, accountBalance.address, USDC.address, USDC.address)
+        await vault.initialize(positioningConfig.address, accountBalance.address, USDC.address, USDC.address, false)
 
         const positioningFactory = await ethers.getContractFactory("Positioning")
         const positioning1 = await positioningFactory.deploy()
@@ -53,7 +53,7 @@ describe("Vault tests", function () {
     it("Positive Test for deposit function", async () => {
         const [owner, alice] = await ethers.getSigners()
 
-        await vaultController.deployVault(USDC.address)
+        await vaultController.deployVault(USDC.address, false)
         const amount = parseUnits("100", await USDC.decimals())
 
         await positioningConfig.setSettlementTokenBalanceCap(amount)
@@ -81,7 +81,7 @@ describe("Vault tests", function () {
     it("force error,amount more than allowance", async () => {
         const [owner, alice] = await ethers.getSigners()
 
-        await vaultController.deployVault(USDC.address)
+        await vaultController.deployVault(USDC.address, false)
         const amount = parseUnits("100", await USDC.decimals())
 
         await positioningConfig.setSettlementTokenBalanceCap(amount)
@@ -94,7 +94,7 @@ describe("Vault tests", function () {
     it("force error, greater than settlement token balance cap", async () => {
         const [owner, alice] = await ethers.getSigners()
 
-        await vaultController.deployVault(USDC.address)
+        await vaultController.deployVault(USDC.address, false)
         const amount = parseUnits("100", await USDC.decimals())
 
         const USDCVaultAddress = await vaultController.getVault(USDC.address)
@@ -106,7 +106,7 @@ describe("Vault tests", function () {
 
     it("force error, inconsistent vault balance with deflationary token", async () => {
         const [owner, alice] = await ethers.getSigners()
-        await vaultController.deployVault(USDC.address)
+        await vaultController.deployVault(USDC.address, false)
         const amount = parseUnits("100", await USDC.decimals())
 
         const USDCVaultAddress = await vaultController.getVault(USDC.address)

@@ -58,17 +58,17 @@ contract VaultController is ReentrancyGuardUpgradeable, BaseRelayRecipient, Owne
         isZkSync = (networkId == 280) ? true : false;
     }
 
-    function deployVault(address _token) external onlyOwner returns (address) {
+    function deployVault(address _token,bool isEthVault) external onlyOwner returns (address) {
         IVault vault;
         if (isZkSync) {
             vault = new Vault();
 
-            vault.initialize(_positioningConfig, _accountBalance, _token, address(this));
+            vault.initialize(_positioningConfig, _accountBalance, _token, address(this),isEthVault);
         } else {
             bytes32 salt = keccak256(abi.encodePacked(_token));
 
             vault = Vault(Clones.cloneDeterministic(_vaultImplementation, salt));
-            vault.initialize(_positioningConfig, _accountBalance, _token, address(this));
+            vault.initialize(_positioningConfig, _accountBalance, _token, address(this),isEthVault);
         }
         _vaultAddress[_token] = address(vault);
         return address(vault);
@@ -78,20 +78,7 @@ contract VaultController is ReentrancyGuardUpgradeable, BaseRelayRecipient, Owne
         vault = _vaultAddress[_token];
     }
 
-    function depositEther(address token) external payable whenNotPaused nonReentrant {
-        address _vault = getVault(token);
-        // vault of token is not available
-        require(_vault != address(0), "VC_VOTNA");
-        address from = _msgSender();
-        uint256 amount = msg.value;
-        address[] storage _vaultList = _tradersVaultMap[from];
-        if (IVault(_vault).getBalance(from) == 0) {
-            _vaultList.push(_vault);
-        }
-        IVault(_vault).depositEther{ value: amount }( from);
-    }
-
-    function deposit(address token, uint256 amount) external whenNotPaused nonReentrant {
+    function deposit(address token, uint256 amount) external payable whenNotPaused nonReentrant {
         address _vault = getVault(token);
         // vault of token is not available
         require(_vault != address(0), "VC_VOTNA");
@@ -100,14 +87,14 @@ contract VaultController is ReentrancyGuardUpgradeable, BaseRelayRecipient, Owne
         if (IVault(_vault).getBalance(from) == 0) {
             _vaultList.push(_vault);
         }
-        IVault(_vault).deposit(token, amount, from);
+        IVault(_vault).deposit{value: msg.value}(token, amount, from);
     }
 
     function withdraw(address token, uint256 amount) external whenNotPaused nonReentrant {
         address _vault = getVault(token);
         // vault of token is not available
         require(_vault != address(0), "VC_VOTNA");
-        address to = _msgSender();
+        address payable to = _msgSender();
         IVault(_vault).withdraw(token, amount, to);
     }
 

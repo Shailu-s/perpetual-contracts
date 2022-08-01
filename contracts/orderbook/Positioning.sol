@@ -156,7 +156,7 @@ contract Positioning is
     }
 
     /// @inheritdoc IPositioning
-    function settleAllFunding(address trader) external override {
+    function settleAllFunding(address trader) external virtual override {
         address[] memory baseTokens = IAccountBalance(_accountBalance).getBaseTokens(trader);
         uint256 baseTokenLength = baseTokens.length;
         for (uint256 i = 0; i < baseTokenLength; i++) {

@@ -47,7 +47,7 @@ describe("Vault Controller Mock tests for account value", function () {
         vaultFactory = await ethers.getContractFactory("Vault")
         const vault1 = await vaultFactory.deploy()
         vault = await vault1.deployed()
-        await vault.initialize(positioningConfig.address, accountBalance.address, USDC.address, USDC.address)
+        await vault.initialize(positioningConfig.address, accountBalance.address, USDC.address, USDC.address, false)
 
         const vaultContractFactory = await ethers.getContractFactory("VaultController")
         const vaultContract1 = await vaultContractFactory.deploy()
@@ -76,7 +76,7 @@ describe("Vault Controller Mock tests for account value", function () {
     it("Positive Test for single token getAccountValue", async () => {
         const [owner, alice] = await ethers.getSigners()
 
-        await vaultContract.deployVault(USDC.address)
+        await vaultContract.deployVault(USDC.address, false)
         const amount = parseUnits("100", await USDC.decimals())
 
         await positioningConfig.setSettlementTokenBalanceCap(amount)
