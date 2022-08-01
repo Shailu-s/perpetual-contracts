@@ -117,12 +117,12 @@ abstract contract MatchingEngineCore is
         uint256 maxFee;
         
         // TODO: This condition is always true since LibFeeSide.getFeeSide() always returns LibFeeSide.FeeSide.LEFT
-        // if (feeSide == LibFeeSide.FeeSide.LEFT) {
-        maxFee = 1000;
-        // } else {
-        //     return 0;
-        // }
-        // require(maxFee > 0 && maxFee >= matchFees && maxFee <= 1000, "wrong maxFee");
+        if (feeSide == LibFeeSide.FeeSide.LEFT) {
+            maxFee = 1000;
+        } else {
+            return 0;
+        }
+        require(maxFee > 0 && maxFee >= matchFees && maxFee <= 1000, "V_PERP_M: wrong maxFee");
 
         return maxFee;
     }
