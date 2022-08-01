@@ -38,12 +38,12 @@ describe("Vault tests for withdrawals", function () {
         vaultFactory = await ethers.getContractFactory("Vault")
         const vault1 = await vaultFactory.deploy()
         vault = await vault1.deployed()
-        await vault.initialize(positioningConfig.address, accountBalance.address, USDC.address, USDC.address)
+        await vault.initialize(positioningConfig.address, accountBalance.address, USDC.address, USDC.address, false)
 
         const vaultMockFactory = await ethers.getContractFactory("VaultMock")
         const vaultMock1 = await vaultMockFactory.deploy()
         vaultMock = await vaultMock1.deployed()
-        await vaultMock.initialize(positioningConfig.address, accountBalance.address, USDC.address, USDC.address)
+        await vaultMock.initialize(positioningConfig.address, accountBalance.address, USDC.address, USDC.address, false)
         
         const vaultControllerFactory = await ethers.getContractFactory("VaultController")
         const vaultController1 = await vaultControllerFactory.deploy()
@@ -65,7 +65,7 @@ describe("Vault tests for withdrawals", function () {
         beforeEach(async function () {
             const [owner, alice] = await ethers.getSigners()
 
-            await vaultController.deployVault(USDC.address)
+            await vaultController.deployVault(USDC.address, false)
             const amount = parseUnits("100", await USDC.decimals())
     
             await positioningConfig.setSettlementTokenBalanceCap(amount)

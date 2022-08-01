@@ -43,7 +43,7 @@ describe("Vault Controller deposit tests", function () {
         vaultFactory = await ethers.getContractFactory("Vault")
         const vault1 = await vaultFactory.deploy()
         vault = await vault1.deployed()
-        await vault.initialize(positioningConfig.address, accountBalance.address, USDC.address, USDC.address)
+        await vault.initialize(positioningConfig.address, accountBalance.address, USDC.address, USDC.address, true)
 
         const vaultControllerFactory = await ethers.getContractFactory("VaultController")
         vaultController = await upgrades.deployProxy(vaultControllerFactory, [
@@ -69,7 +69,7 @@ describe("Vault Controller deposit tests", function () {
     it("Positive Test for deposit function", async () => {
         const [owner, alice] = await ethers.getSigners()
 
-        await vaultController.deployVault(USDC.address)
+        await vaultController.deployVault(USDC.address,false)
         const amount = parseUnits("100", await USDC.decimals())
 
         await positioningConfig.setSettlementTokenBalanceCap(amount)
@@ -96,60 +96,26 @@ describe("Vault Controller deposit tests", function () {
 
     it("Positive Test for deposit ether function", async () => {
         const [owner, alice] = await ethers.getSigners()
+        const address0 = "0x0000000000000000000000000000000000000000"
+        await vaultController.deployVault(address0,true)
 
-        await vaultController.deployVault(USDC.address)
-        const amount = parseUnits("100", await USDC.decimals())
-
+        const amount = ethers.utils.parseEther("1.0")
         await positioningConfig.setSettlementTokenBalanceCap(amount)
 
-        const USDCVaultAddress = await vaultController.getVault(USDC.address)
+        const EthVaultAddress = await vaultController.getVault(address0)
 
-        const USDCVaultContract = await vaultFactory.attach(USDCVaultAddress)
-        await USDC.connect(alice).approve(USDCVaultAddress, amount)
-
-        // check event has been sent
-        await expect(vaultController.connect(alice).depositEther(USDC.address, {value:amount}))
-            .to.emit(USDCVaultContract, "Deposited")
-            .withArgs(USDC.address, alice.address, amount)
-
-        // // reduce alice balance
-        expect(await USDC.balanceOf(alice.address)).to.eq(parseUnits("900", await USDC.decimals()))
-
-        // // increase vault balance
-        expect(await USDC.balanceOf(USDCVaultAddress)).to.eq(parseUnits("100", await USDC.decimals()))
-
-        // // update sender's balance
-        expect(await USDCVaultContract.getBalance(alice.address)).to.eq(parseUnits("100", await USDC.decimals()))
-    })
-
-    it("Negative Test for deposit ether function", async () => {
-        const [owner, alice] = await ethers.getSigners()
-
-        await vaultController.deployVault(USDC.address)
-        const amount = parseUnits("0", await USDC.decimals())
-
-        await positioningConfig.setSettlementTokenBalanceCap(amount)
-
-        const USDCVaultAddress = await vaultController.getVault(USDC.address)
-
-        const USDCVaultContract = await vaultFactory.attach(USDCVaultAddress)
-        await USDC.connect(alice).approve(USDCVaultAddress, amount)
+        const EthVaultContract = await vaultFactory.attach(EthVaultAddress)
 
         // check event has been sent
-        await expect(vaultController.connect(alice).depositEther(USDC.address, {value:amount}))
-            .to.be.revertedWith("V_ZA")
+        await expect(vaultController.connect(alice).deposit(address0,amount,{value:amount}))
+            .to.emit(EthVaultContract, "Deposited")
+            .withArgs(address0, alice.address, amount)
+        
+        // updated balance of vault contract
+        expect(await ethers.provider.getBalance(EthVaultContract.address)).to.eq(amount)
     })
 
     it("Negative Test for deposit function", async () => {
-        const [owner, alice] = await ethers.getSigners()
-
-        const amount = parseUnits("100", await USDC.decimals())
-
-        // test fail for no vault from this token
-        await expect(vaultController.connect(alice).depositEther(USDC.address, {value:amount})).to.be.revertedWith("VC_VOTNA")
-    })
-
-    it("Negative Test for deposit ether function", async () => {
         const [owner, alice] = await ethers.getSigners()
 
         const amount = parseUnits("100", await USDC.decimals())
@@ -161,7 +127,7 @@ describe("Vault Controller deposit tests", function () {
     it("Test for deployment of vault via factory", async () => {
         const [owner, alice] = await ethers.getSigners()
 
-        await vaultController.connect(owner).deployVault(USDC.address)
+        await vaultController.connect(owner).deployVault(USDC.address,false)
 
         const USDCVaultAddress = await vaultController.getVault(USDC.address)
 
@@ -171,8 +137,8 @@ describe("Vault Controller deposit tests", function () {
     it("Positive Test for multiple token deposit", async () => {
         const [owner, alice] = await ethers.getSigners()
 
-        await vaultController.deployVault(USDC.address)
-        await vaultController.deployVault(DAI.address)
+        await vaultController.deployVault(USDC.address, false)
+        await vaultController.deployVault(DAI.address, false)
         const amount = parseUnits("100", await USDC.decimals())
         const DAIAmount = parseUnits("100", await DAI.decimals())
 

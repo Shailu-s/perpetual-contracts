@@ -20,6 +20,7 @@ abstract contract VaultStorageV1 {
     uint256 internal _totalDebt;
     address internal _WETH9;
     address public _vaultController;
+    bool public _isEthVault;
 
     // key: trader, token address
     mapping(address => mapping(address => int256)) internal _balance;
