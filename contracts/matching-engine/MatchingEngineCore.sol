@@ -100,7 +100,7 @@ abstract contract MatchingEngineCore is
         _doTransfers(
             LibDeal.DealSide(LibAsset.Asset(makeToken, newFill.leftValue), _proxy, orderLeft.trader),
             LibDeal.DealSide(LibAsset.Asset(takeToken, newFill.rightValue), _proxy, orderRight.trader),
-            _getDealData()
+            _getDealData(orderLeft, orderRight)
         );
 
         emit Matched(newFill.rightValue, newFill.leftValue);
@@ -127,14 +127,14 @@ abstract contract MatchingEngineCore is
         return maxFee;
     }
 
-    function _getDealData()
+    function _getDealData(LibOrder.Order memory orderLeft, LibOrder.Order memory orderRight)
         internal
         view
         returns (LibDeal.DealData memory dealData)
     {
         dealData.protocolFee = _getProtocolFee();
         // TODO: Update code since LibFeeSide.getFeeSide() always returns LibFeeSide.FeeSide.LEFT
-        dealData.feeSide = LibFeeSide.getFeeSide();
+        dealData.feeSide = LibFeeSide.getFeeSide(orderLeft, orderRight);
         dealData.maxFeesBasePoint = _getMaxFee(dealData.feeSide, dealData.protocolFee);
     }
 
