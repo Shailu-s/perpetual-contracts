@@ -123,8 +123,8 @@ describe("MatchingEngine", function () {
     })
   })
 
-  describe.only("Match orders:", function () {
-    describe("Failure:", function () {
+  describe("Match orders:", function () {
+    describe.only("Failure:", function () {
       it("should fail to match orders as deadline has expired", async () => {
         const [owner, account1, account2] = await ethers.getSigners()
 
@@ -153,7 +153,7 @@ describe("MatchingEngine", function () {
 
         await expect(
           matchingEngine.matchOrdersTest(orderLeft, signatureLeft, orderRight, signatureRight),
-        ).to.be.revertedWith("Order deadline validation failed")
+        ).to.be.revertedWith("V_PERP_M: Order deadline validation failed")
       })
 
       it("should fail to match orders as maker is not transaction sender", async () => {
@@ -161,20 +161,22 @@ describe("MatchingEngine", function () {
 
         const orderLeft = order.Order(
           account1.address,
+          87654321987654,
+          true,
+          true,
           order.Asset(virtualToken.address, "20"),
-          account2.address,
           order.Asset(virtualToken.address, "20"),
           0,
-          87654321987654,
         )
 
         const orderRight = order.Order(
           account2.address,
-          order.Asset(virtualToken.address, "20"),
-          account1.address,
-          order.Asset(virtualToken.address, "20"),
-          0,
           87654321987654,
+          false,
+          false,
+          order.Asset(virtualToken.address, "20"),
+          order.Asset(virtualToken.address, "20"),
+          0
         )
 
         let signatureLeft = await getSignature(orderLeft, account1.address)
@@ -182,7 +184,7 @@ describe("MatchingEngine", function () {
 
         await expect(
           matchingEngine.matchOrdersTest(orderLeft, signatureLeft, orderRight, signatureRight),
-        ).to.be.revertedWith("maker is not tx sender")
+        ).to.be.revertedWith("V_PERP_M: maker is not tx sender")
       })
 
       it("should fail to match orders as signer is not order maker & order maker is not a contract", async () => {
@@ -211,7 +213,7 @@ describe("MatchingEngine", function () {
 
         await expect(
           matchingEngine.matchOrdersTest(orderLeft, signatureLeft, orderRight, signatureRight),
-        ).to.be.revertedWith("order signature verification error")
+        ).to.be.revertedWith("V_PERP_M: order signature verification error")
       })
 
       it("should fail to match orders as leftOrder taker is not equal to rightOrder maker", async () => {
@@ -240,7 +242,7 @@ describe("MatchingEngine", function () {
 
         await expect(
           matchingEngine.connect(account1).matchOrdersTest(orderLeft, signatureLeft, orderRight, signatureRight),
-        ).to.be.revertedWith("leftOrder.taker verification failed")
+        ).to.be.revertedWith("V_PERP_M: leftOrder.taker verification failed")
       })
 
       it("should fail to match orders as rightOrder taker is not equal to leftOrder maker", async () => {
@@ -269,7 +271,7 @@ describe("MatchingEngine", function () {
 
         await expect(
           matchingEngine.matchOrdersTest(orderLeft, signatureLeft, orderRight, signatureRight),
-        ).to.be.revertedWith("rightOrder.taker verification failed")
+        ).to.be.revertedWith("V_PERP_M: rightOrder.taker verification failed")
       })
 
       it("should fail to match orders as order maker is contract but signature cannot be verified", async () => {
@@ -306,7 +308,7 @@ describe("MatchingEngine", function () {
 
         await expect(
           matchingEngine.connect(account2).matchOrders(orderLeft, signatureLeft, orderRight, signatureRight),
-        ).to.be.revertedWith("contract order signature verification error")
+        ).to.be.revertedWith("V_PERP_M: contract order signature verification error")
       })
 
       it("should fail to match orders as left order assets don't match", async () => {
@@ -340,7 +342,7 @@ describe("MatchingEngine", function () {
 
         await expect(
           matchingEngine.matchOrders(orderLeft, signatureLeft, orderRight, signatureRight),
-        ).to.be.revertedWith("assets don't match")
+        ).to.be.revertedWith("V_PERP_M: assets don't match")
       })
 
       it("should fail to match orders as right order assets don't match", async () => {
@@ -374,7 +376,7 @@ describe("MatchingEngine", function () {
 
         await expect(
           matchingEngine.matchOrders(orderLeft, signatureLeft, orderRight, signatureRight),
-        ).to.be.revertedWith("assets don't match")
+        ).to.be.revertedWith("V_PERP_M: assets don't match")
       })
 
       it("should fail to match orders & revert when default fee receiver is address(0)", async () => {
@@ -426,7 +428,7 @@ describe("MatchingEngine", function () {
 
         await expect(
           matchingEngine.matchOrders(orderLeft, signatureLeft, orderRight, signatureRight),
-        ).to.be.revertedWith("Order canceled")
+        ).to.be.revertedWith("V_PERP_M: Order canceled")
       })
     })
 
