@@ -29,7 +29,6 @@ contract LibOrderTest {
                     order.trader,
                     order.deadline,
                     order.isShort,
-                    order.isMaker,
                     order.makeAsset,
                     order.takeAsset,
                     order.salt
