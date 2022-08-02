@@ -26,23 +26,14 @@ abstract contract MatchingEngineCore is
     mapping(bytes32 => uint256) public fills;
 
     //events
-    event Canceled(
-        bytes32 indexed hash,
-        address trader,
-        address baseToken,
-        uint256 amount,
-        uint256 salt
-    );
+    event Canceled(bytes32 indexed hash, address trader, address baseToken, uint256 amount, uint256 salt);
     event CanceledAll(address indexed trader, uint256 minSalt);
     event Matched(uint256 newLeftFill, uint256 newRightFill);
 
     function cancelOrder(LibOrder.Order memory order) public {
         require(_msgSender() == order.trader, "V_PERP_M: not a maker");
         require(order.salt != 0, "V_PERP_M: 0 salt can't be used");
-        require(
-            order.salt >= makerMinSalt[_msgSender()],
-            "V_PERP_M: order salt lower"
-        );
+        require(order.salt >= makerMinSalt[_msgSender()], "V_PERP_M: order salt lower");
         bytes32 orderKeyHash = LibOrder.hashKey(order);
         fills[orderKeyHash] = _UINT256_MAX;
         emit Canceled(
@@ -72,16 +63,27 @@ abstract contract MatchingEngineCore is
         bytes memory signatureLeft,
         LibOrder.Order memory orderRight,
         bytes memory signatureRight
-    ) public whenNotPaused {
+    )
+        public
+        whenNotPaused
+        returns (
+            address,
+            address,
+            LibFill.FillResult memory,
+            LibDeal.DealData memory
+        )
+    {
         _validateFull(orderLeft, signatureLeft);
         _validateFull(orderRight, signatureRight);
-        if (orderLeft.trader != address(0)) {
-            require(orderRight.trader != orderLeft.trader, "V_PERP_M: leftOrder.taker verification failed");
+        if (orderLeft.trader != address(0) && orderRight.trader != address(0)) {
+            require(orderRight.trader != orderLeft.trader, "V_PERP_M: order verification failed");
         }
-        if (orderRight.trader != address(0)) {
-            require(orderRight.trader != orderLeft.trader, "V_PERP_M: rightOrder.taker verification failed");
-        }
-        _matchAndTransfer(orderLeft, orderRight);
+        (LibFill.FillResult memory newFill, LibDeal.DealData memory dealData) = _matchAndTransfer(
+            orderLeft,
+            orderRight
+        );
+
+        return (orderLeft.makeAsset.virtualToken, orderRight.makeAsset.virtualToken, newFill, dealData);
     }
 
     /**
@@ -89,21 +91,25 @@ abstract contract MatchingEngineCore is
         @param orderLeft the left order of the match
         @param orderRight the right order of the match
     */
-    function _matchAndTransfer(LibOrder.Order memory orderLeft, LibOrder.Order memory orderRight) internal {
+    function _matchAndTransfer(LibOrder.Order memory orderLeft, LibOrder.Order memory orderRight)
+        internal
+        returns (LibFill.FillResult memory newFill, LibDeal.DealData memory dealData)
+    {
         _matchAssets(orderLeft, orderRight);
 
-        LibFill.FillResult memory newFill = _getFillSetNew(orderLeft, orderRight);
+        newFill = _getFillSetNew(orderLeft, orderRight);
 
         address makeToken = orderLeft.isShort ? orderLeft.makeAsset.virtualToken : orderLeft.takeAsset.virtualToken;
         address takeToken = orderRight.isShort ? orderRight.makeAsset.virtualToken : orderRight.takeAsset.virtualToken;
 
+        dealData = _getDealData(orderLeft, orderRight);
         _doTransfers(
             LibDeal.DealSide(LibAsset.Asset(makeToken, newFill.leftValue), _proxy, orderLeft.trader),
             LibDeal.DealSide(LibAsset.Asset(takeToken, newFill.rightValue), _proxy, orderRight.trader),
-            _getDealData(orderLeft, orderRight)
+            dealData
         );
 
-        emit Matched(newFill.rightValue, newFill.leftValue);
+        emit Matched(newFill.leftValue, newFill.rightValue);
     }
 
     /**
@@ -115,7 +121,7 @@ abstract contract MatchingEngineCore is
     function _getMaxFee(LibFeeSide.FeeSide feeSide, uint256 _protocolFee) internal pure returns (uint256) {
         uint256 matchFees = _protocolFee;
         uint256 maxFee;
-        
+
         // TODO: This condition is always true since LibFeeSide.getFeeSide() always returns LibFeeSide.FeeSide.LEFT
         if (feeSide == LibFeeSide.FeeSide.LEFT) {
             maxFee = 1000;
@@ -152,7 +158,7 @@ abstract contract MatchingEngineCore is
         bytes32 rightOrderKeyHash = LibOrder.hashKey(orderRight);
         uint256 leftOrderFill = _getOrderFill(orderLeft.salt, leftOrderKeyHash);
         uint256 rightOrderFill = _getOrderFill(orderRight.salt, rightOrderKeyHash);
-        
+
         LibFill.FillResult memory newFill = LibFill.fillOrder(orderLeft, orderRight, leftOrderFill, rightOrderFill);
 
         require(newFill.rightValue > 0 && newFill.leftValue > 0, "V_PERP_M: nothing to fill");
@@ -180,8 +186,10 @@ abstract contract MatchingEngineCore is
         pure
         returns (address matchToken)
     {
-        matchToken = _matchAssets(orderLeft.makeAsset.virtualToken, orderRight.makeAsset.virtualToken);
-        require(matchToken != address(0), "V_PERP_M: make assets don't match");
+        matchToken = _matchAssets(orderLeft.makeAsset.virtualToken, orderRight.takeAsset.virtualToken);
+        require(matchToken != address(0), "V_PERP_M: left make assets don't match");
+        matchToken = _matchAssets(orderLeft.takeAsset.virtualToken, orderRight.makeAsset.virtualToken);
+        require(matchToken != address(0), "V_PERP_M: left take assets don't match");
     }
 
     function _validateFull(LibOrder.Order memory order, bytes memory signature) internal view {

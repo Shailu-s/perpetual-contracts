@@ -34,17 +34,6 @@ abstract contract TransferExecutor is Initializable, OwnableUpgradeable, ITransf
         address proxy
     ) internal override {
         // TODO: At the time of perp integration, @Aditya needs to update the logic here of minting the vTokens
-        IVirtualToken token = IVirtualToken(asset.virtualToken);
-        if (token.balanceOf(from) == 0) {
-            token.mint(to, asset.value);
-        } else if (token.balanceOf(from) >= asset.value) {
-            IERC20TransferProxy(proxy).erc20SafeTransferFrom(IERC20Upgradeable(token), from, to, asset.value);
-        } else {
-            uint256 senderBalance = token.balanceOf(from);
-            uint256 restToMint = asset.value - senderBalance;
-            IERC20TransferProxy(proxy).erc20SafeTransferFrom(IERC20Upgradeable(token), from, to, senderBalance);
-            token.mint(to, restToMint);
-        }
     }
 
     uint256[50] private __gap;

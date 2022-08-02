@@ -8,14 +8,13 @@ import "./LibAsset.sol";
 library LibOrder {
     bytes32 constant ORDER_TYPEHASH =
         keccak256(
-            "Order(address trader,uint256 deadline,bool isShort,bool isMaker,Asset makeAsset, Asset takeAsset,uint256 salt)Asset(address virtualToken,uint256 value)"
+            "Order(address trader,uint256 deadline,bool isShort,Asset makeAsset, Asset takeAsset,uint256 salt)Asset(address virtualToken,uint256 value)"
         );
 
     struct Order {
         address trader;
         uint64 deadline;
         bool isShort;
-        bool isMaker;
         LibAsset.Asset makeAsset;
         LibAsset.Asset takeAsset;
         uint256 salt;
@@ -26,13 +25,8 @@ library LibOrder {
         pure
         returns (uint256 baseValue, uint256 quoteValue)
     {
-        if (order.isMaker) {
-            baseValue = order.makeAsset.value - fill;
-            quoteValue = LibMath.safeGetPartialAmountFloor(order.makeAsset.value, order.takeAsset.value, baseValue);
-        } else {
-            quoteValue = order.takeAsset.value - fill;
-            baseValue = LibMath.safeGetPartialAmountFloor(order.makeAsset.value, order.takeAsset.value, quoteValue);
-        }
+        baseValue = order.makeAsset.value - fill;
+        quoteValue = LibMath.safeGetPartialAmountFloor(order.makeAsset.value, order.takeAsset.value, baseValue);
     }
 
     function hashKey(Order memory order) internal pure returns (bytes32) {
@@ -50,7 +44,6 @@ library LibOrder {
                     order.trader,
                     order.deadline,
                     order.isShort,
-                    order.isMaker,
                     order.makeAsset,
                     order.takeAsset,
                     order.salt
