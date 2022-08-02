@@ -75,11 +75,8 @@ abstract contract MatchingEngineCore is
     ) public whenNotPaused {
         _validateFull(orderLeft, signatureLeft);
         _validateFull(orderRight, signatureRight);
-        if (orderLeft.trader != address(0)) {
-            require(orderRight.trader != orderLeft.trader, "V_PERP_M: leftOrder.taker verification failed");
-        }
-        if (orderRight.trader != address(0)) {
-            require(orderRight.trader != orderLeft.trader, "V_PERP_M: rightOrder.taker verification failed");
+        if (orderLeft.trader != address(0) && orderRight.trader != address(0)) {
+            require(orderRight.trader != orderLeft.trader, "V_PERP_M: order verification failed");
         }
         _matchAndTransfer(orderLeft, orderRight);
     }
@@ -180,8 +177,10 @@ abstract contract MatchingEngineCore is
         pure
         returns (address matchToken)
     {
-        matchToken = _matchAssets(orderLeft.makeAsset.virtualToken, orderRight.makeAsset.virtualToken);
-        require(matchToken != address(0), "V_PERP_M: make assets don't match");
+        matchToken = _matchAssets(orderLeft.makeAsset.virtualToken, orderRight.takeAsset.virtualToken);
+        require(matchToken != address(0), "V_PERP_M: left make assets don't match");
+        matchToken = _matchAssets(orderLeft.takeAsset.virtualToken, orderRight.makeAsset.virtualToken);
+        require(matchToken != address(0), "V_PERP_M: left take assets don't match");
     }
 
     function _validateFull(LibOrder.Order memory order, bytes memory signature) internal view {
