@@ -5,6 +5,7 @@ import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/Initial
 import "@openzeppelin/contracts/proxy/Clones.sol";
 import "../VolmexBaseToken.sol";
 import "../../interfaces/IVolmexBaseToken.sol";
+import "../../../contracts/orderbook/VaultController.sol";
 
 /**
  * @title Factory Contract
@@ -14,12 +15,21 @@ contract Factory is Initializable {
 
   // Volatility token implementation contract for factory
   address public tokenImplementation;
+  
+  // Vault Controller implementation contract for factory
+  address public vaultControllerImplementation;
 
   // To store the address of volatility.
   mapping(uint256 => address) public tokenByIndex;
+  
+  // Mapping to store VaultControllers by index
+  mapping(uint256 => address) public vaultControllersByIndex;
 
   // Used to store the address and name of volatility at a particular _index (incremental state of 1)
   uint256 public indexCount;
+
+  // Used to store the address and name of VaultController at a particular _index (incremental state of 1)
+  uint256 public vaultControllerIndexCount;
 
   // Used to store a boolean value if blockchain is ZkSync
   bool public isZkSync;
@@ -27,8 +37,12 @@ contract Factory is Initializable {
   /**
   	* @notice Get the address of tokenImplementation contracts instance.
   	*/
-  function initialize(address _tokenImplementation) external initializer {
+  function initialize(
+    address _tokenImplementation,
+    address _vaultControllerImplementation
+  ) external initializer {
     tokenImplementation = _tokenImplementation;
+    vaultControllerImplementation = _vaultControllerImplementation;
 
     // Get networkId & check for ZkSync
     uint256 networkId;
@@ -75,5 +89,39 @@ contract Factory is Initializable {
     tokenByIndex[indexCount] = address(volmexBaseToken);
     indexCount++;
     return address(volmexBaseToken);
+  }
+
+  function cloneVaultController(
+    address _positioningArg,
+    address _positioningConfig,
+    address _accountBalanceArg,
+    address _vaultImplementationArg
+  ) external returns (address) {
+    VaultController vaultController;
+
+    if (isZkSync) {
+      vaultController = new VaultController();
+      vaultController.initialize(_positioningArg, _positioningConfig, _accountBalanceArg, _vaultImplementationArg);
+    }
+    else {
+      bytes32 salt = keccak256(
+        abi.encodePacked(
+          vaultControllerIndexCount, 
+          _positioningArg,
+          _positioningConfig,
+          _accountBalanceArg,
+          _vaultImplementationArg
+        )
+      );
+      
+      vaultController = VaultController(
+        Clones.cloneDeterministic(vaultControllerImplementation, salt)
+      );
+
+      vaultController.initialize(_positioningArg, _positioningConfig, _accountBalanceArg, _vaultImplementationArg);
+    }
+    vaultControllersByIndex[vaultControllerIndexCount] = address(vaultController);
+    vaultControllerIndexCount++;
+    return address(vaultController);
   }
 }
