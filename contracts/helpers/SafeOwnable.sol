@@ -1,14 +1,11 @@
-// SPDX-License-Identifier: GPL-3.0-or-later
-pragma solidity 0.7.6;
+// SPDX-License-Identifier: BUSL - 1.1
+pragma solidity =0.8.12;
 
 import { ContextUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol";
 
 abstract contract SafeOwnable is ContextUpgradeable {
     address private _owner;
     address private _candidate;
-
-    // __gap is reserved storage
-    uint256[50] private __gap;
 
     event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
 
@@ -90,4 +87,6 @@ abstract contract SafeOwnable is ContextUpgradeable {
     function candidate() external view returns (address) {
         return _candidate;
     }
+
+    uint256[50] private __gap;
 }

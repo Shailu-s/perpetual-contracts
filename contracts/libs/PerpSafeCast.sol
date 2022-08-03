@@ -1,5 +1,5 @@
-// SPDX-License-Identifier: MIT
-pragma solidity 0.7.6;
+// SPDX-License-Identifier: BUSL - 1.1
+pragma solidity =0.8.12;
 
 /**
  * @dev copy from "@openzeppelin/contracts-upgradeable/utils/SafeCastUpgradeable.sol"
@@ -183,23 +183,6 @@ library PerpSafeCast {
     function toInt256(uint256 value) internal pure returns (int256) {
         require(value <= uint256(type(int256).max), "SafeCast: value doesn't fit in an int256");
         return int256(value);
-    }
-
-    /**
-     * @dev Returns the downcasted uint24 from int256, reverting on
-     * overflow (when the input is greater than largest uint24).
-     *
-     * Counterpart to Solidity's `uint24` operator.
-     *
-     * Requirements:
-     *
-     * - input must be greater than or equal to 0 and into 24 bit.
-     */
-    function toUint24(int256 value) internal pure returns (uint24 returnValue) {
-        require(
-            ((returnValue = uint24(value)) == value),
-            "SafeCast: value must be positive or value doesn't fit in an 24 bits"
-        );
     }
 
     /**

@@ -1,5 +1,5 @@
-// SPDX-License-Identifier: MIT
-pragma solidity 0.7.6;
+// SPDX-License-Identifier: BUSL - 1.1
+pragma solidity =0.8.12;
 
 /**
  * a contract must implement this interface in order to support relayed transaction.
@@ -20,7 +20,7 @@ abstract contract IRelayRecipient {
      * otherwise, return `msg.sender`
      * should be used in the contract anywhere instead of msg.sender
      */
-    function _msgSender() internal view virtual returns (address payable);
+    function _msgSender() internal view virtual returns (address);
 
     /**
      * return the msg.data of this call.

@@ -1,6 +1,5 @@
-// SPDX-License-Identifier: GPL-3.0-or-later
-pragma solidity 0.7.6;
-pragma abicoder v2;
+// SPDX-License-Identifier: BUSL - 1.1
+pragma solidity =0.8.12;
 
 import { SafeOwnable } from "./SafeOwnable.sol";
 
@@ -9,9 +8,6 @@ abstract contract PositioningCallee is SafeOwnable {
     // STATE
     //
     address internal _Positioning;
-
-    // __gap is reserved storage
-    uint256[50] private __gap;
 
     //
     // EVENT
@@ -40,4 +36,6 @@ abstract contract PositioningCallee is SafeOwnable {
         // only Positioning
         require(_msgSender() == _Positioning, "CHD_OCH");
     }
+
+    uint256[50] private __gap;
 }

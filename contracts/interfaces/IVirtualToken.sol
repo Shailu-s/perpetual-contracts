@@ -1,6 +1,17 @@
-// SPDX-License-Identifier: GPL-3.0-or-later
-pragma solidity 0.7.6;
+// SPDX-License-Identifier: BUSL - 1.1
+pragma solidity =0.8.12;
 
-interface IVirtualToken {
+import { IERC20Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
+
+interface IVirtualToken is IERC20Upgradeable {
+    // Getters
     function isInWhitelist(address account) external view returns (bool);
+    function isBase() external view returns (bool); // TODO add this in base and quote token as well
+
+    // Setters
+    function mint(address recipient, uint256 amount) external;
+    function burn(address recipient, uint256 amount) external;
+    function mintMaximumTo(address recipient) external;
+    function addWhitelist(address account) external;
+    function removeWhitelist(address account) external;
 }

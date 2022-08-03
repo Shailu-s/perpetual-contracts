@@ -1,13 +1,10 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: BUSL - 1.1
 
-pragma solidity 0.7.6;
-pragma abicoder v2;
-
-import "../libs/ExchangeFee.sol";
+pragma solidity =0.8.12;
 
 interface IAssetMatcher {
-    function matchAssets(
-        LibAsset.AssetType memory leftAssetType,
-        LibAsset.AssetType memory rightAssetType
-    ) external view returns (LibAsset.AssetType memory);
+    function _matchAssets(address leftBaseToken, address rightBaseToken)
+        external
+        pure
+        returns (address baseToken);
 }

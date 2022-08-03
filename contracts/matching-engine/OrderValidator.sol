@@ -1,10 +1,10 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: BUSL - 1.1
 
-pragma solidity 0.7.6;
+pragma solidity =0.8.12;
 
+import { EIP712Upgradeable } from "@openzeppelin/contracts-upgradeable/utils/cryptography/draft-EIP712Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/drafts/EIP712Upgradeable.sol";
 
 import "../interfaces/IERC1271.sol";
 import "../libs/LibOrder.sol";
@@ -16,35 +16,41 @@ abstract contract OrderValidator is Initializable, ContextUpgradeable, EIP712Upg
     
     bytes4 constant internal MAGICVALUE = 0x1626ba7e;
 
+    mapping(address => uint256) public makerMinSalt;
+
     function __OrderValidator_init_unchained() internal initializer {
-        __EIP712_init_unchained("Exchange", "2");
+        __EIP712_init_unchained("V_PERP", "1");
     }
 
-    function validate(LibOrder.Order memory order, bytes memory signature) internal view {
+    function _validate(LibOrder.Order memory order, bytes memory signature) internal view {
         if (order.salt == 0) {
-            if (order.maker != address(0)) {
-                require(_msgSender() == order.maker, "maker is not tx sender");
+            if (order.trader != address(0)) {
+                require(_msgSender() == order.trader, "V_PERP_M: maker is not tx sender");
             } else {
-                order.maker = _msgSender();
+                order.trader = _msgSender();
             }
         } else {
-            if (_msgSender() != order.maker) {
+            require(
+                (order.salt >= makerMinSalt[order.trader]),
+                "V_PERP_M: Order canceled"
+            );
+            if (_msgSender() != order.trader) {
                 bytes32 hash = LibOrder.hash(order);
                 address signer;
                 if (signature.length == 65) {
                     signer = _hashTypedDataV4(hash).recover(signature);
                 }
-                if  (signer != order.maker) {
-                    if (order.maker.isContract()) {
+                if  (signer != order.trader) {
+                    if (order.trader.isContract()) {
                         require(
-                            IERC1271(order.maker).isValidSignature(_hashTypedDataV4(hash), signature) == MAGICVALUE,
-                            "contract order signature verification error"
+                            IERC1271(order.trader).isValidSignature(_hashTypedDataV4(hash), signature) == MAGICVALUE,
+                            "V_PERP_M: contract order signature verification error"
                         );
                     } else {
-                        revert("order signature verification error");
+                        revert("V_PERP_M: order signature verification error");
                     }
                 } else {
-                    require (order.maker != address(0), "no maker");
+                    require (order.trader != address(0), "V_PERP_M: no trader");
                 }
             }
         }

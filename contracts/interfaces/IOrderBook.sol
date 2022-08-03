@@ -1,6 +1,5 @@
-// SPDX-License-Identifier: GPL-3.0-or-later
-pragma solidity 0.7.6;
-pragma abicoder v2;
+// SPDX-License-Identifier: BUSL - 1.1
+pragma solidity =0.8.12;
 
 import { OpenOrder } from "../libs/OpenOrder.sol";
 

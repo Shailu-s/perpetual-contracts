@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: BUSL-1.1
 
-pragma solidity 0.7.6;
+pragma solidity =0.8.12;
 
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/utils/introspection/ERC165StorageUpgradeable.sol";
 
-import "../helpers/ERC165StorageUpgradeable.sol";
 import "../interfaces/IVolmexProtocol.sol";
 import "../interfaces/IIndexPriceOracle.sol";
 import "./IndexTWAP.sol";
@@ -25,19 +25,19 @@ contract IndexPriceOracle is OwnableUpgradeable, ERC165StorageUpgradeable, Index
     mapping(uint256 => uint256) private _volatilityTokenPriceByIndex;
 
     // Store the volatilitycapratio by index
-    mapping(uint256 => uint256) public override volatilityCapRatioByIndex;
+    mapping(uint256 => uint256) public volatilityCapRatioByIndex;
     // Store the proof of hash of the current volatility token price
-    mapping(uint256 => bytes32) public override volatilityTokenPriceProofHash;
+    mapping(uint256 => bytes32) public volatilityTokenPriceProofHash;
     // Store the index of volatility by symbol
-    mapping(string => uint256) public override volatilityIndexBySymbol;
+    mapping(string => uint256) public volatilityIndexBySymbol;
     // Store the leverage on volatility by index
-    mapping(uint256 => uint256) public override volatilityLeverageByIndex;
+    mapping(uint256 => uint256) public volatilityLeverageByIndex;
     // Store the base volatility index by leverage volatility index
-    mapping(uint256 => uint256) public override baseVolatilityIndex;
+    mapping(uint256 => uint256) public baseVolatilityIndex;
     // Store the number of indexes
-    uint256 public override indexCount;
+    uint256 public indexCount;
     // Store the timestamp of volatility price update by index
-    mapping(uint256 => uint256) public override volatilityLastUpdateTimestamp;
+    mapping(uint256 => uint256) public volatilityLastUpdateTimestamp;
 
     /**
      * @notice Initializes the contract setting the deployer as the initial owner.
@@ -66,7 +66,7 @@ contract IndexPriceOracle is OwnableUpgradeable, ERC165StorageUpgradeable, Index
      * @param _index Number value of the index. { eg. 0 }
      * @param _tokenSymbol Symbol of the adding volatility token
      */
-    function updateIndexBySymbol(string calldata _tokenSymbol, uint256 _index) external override onlyOwner {
+    function updateIndexBySymbol(string calldata _tokenSymbol, uint256 _index) external onlyOwner {
         volatilityIndexBySymbol[_tokenSymbol] = _index;
 
         emit SymbolIndexUpdated(_index);
@@ -80,7 +80,7 @@ contract IndexPriceOracle is OwnableUpgradeable, ERC165StorageUpgradeable, Index
     function updateBaseVolatilityIndex(
         uint256 _leverageVolatilityIndex,
         uint256 _newBaseVolatilityIndex
-    ) external override onlyOwner {
+    ) external onlyOwner {
         baseVolatilityIndex[_leverageVolatilityIndex] = _newBaseVolatilityIndex;
 
         emit BaseVolatilityIndexUpdated(_newBaseVolatilityIndex);
@@ -102,7 +102,7 @@ contract IndexPriceOracle is OwnableUpgradeable, ERC165StorageUpgradeable, Index
         uint256 _leverage,
         uint256 _baseVolatilityIndex,
         bytes32 _proofHash
-    ) external override onlyOwner {
+    ) external onlyOwner {
         require(address(_protocol) != address(0), "VolmexOracle: protocol address can't be zero");
         uint256 _volatilityCapRatio = _protocol.volatilityCapRatio() * _VOLATILITY_PRICE_PRECISION;
         require(
@@ -167,7 +167,7 @@ contract IndexPriceOracle is OwnableUpgradeable, ERC165StorageUpgradeable, Index
         uint256[] memory _volatilityIndexes,
         uint256[] memory _volatilityTokenPrices,
         bytes32[] memory _proofHashes
-    ) external override onlyOwner {
+    ) external onlyOwner {
         require(
             _volatilityIndexes.length == _volatilityTokenPrices.length &&
                 _volatilityIndexes.length == _proofHashes.length,
@@ -210,7 +210,6 @@ contract IndexPriceOracle is OwnableUpgradeable, ERC165StorageUpgradeable, Index
     function getVolatilityPriceBySymbol(string calldata _volatilityTokenSymbol)
         external
         view
-        override
         returns (
             uint256 volatilityTokenPrice,
             uint256 iVolatilityTokenPrice,
@@ -232,7 +231,6 @@ contract IndexPriceOracle is OwnableUpgradeable, ERC165StorageUpgradeable, Index
     function getVolatilityTokenPriceByIndex(uint256 _index)
         external
         view
-        override
         returns (
             uint256 volatilityTokenPrice,
             uint256 iVolatilityTokenPrice,
@@ -255,7 +253,6 @@ contract IndexPriceOracle is OwnableUpgradeable, ERC165StorageUpgradeable, Index
     function getIndexTwap(uint256 _index)
         external
         view
-        override
         returns (
             uint256 volatilityTokenTwap,
             uint256 iVolatilityTokenTwap,
@@ -295,7 +292,6 @@ contract IndexPriceOracle is OwnableUpgradeable, ERC165StorageUpgradeable, Index
         external
         view
         virtual
-        override
         returns (uint256 answer, uint256 lastUpdateTimestamp)
     {
         answer = _getIndexTwap(_index) * 100;

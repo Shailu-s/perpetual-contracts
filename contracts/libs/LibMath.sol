@@ -1,12 +1,8 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: BUSL - 1.1
 
-pragma solidity 0.7.6;
-
-import "@openzeppelin/contracts-upgradeable/math/SafeMathUpgradeable.sol";
+pragma solidity =0.8.12;
 
 library LibMath {
-    using SafeMathUpgradeable for uint;
-
     /// @dev Calculates partial value given a numerator and denominator rounded down.
     ///      Reverts if rounding error is >= 0.1%
     /// @param numerator Numerator.
@@ -21,7 +17,7 @@ library LibMath {
         if (isRoundingErrorFloor(numerator, denominator, target)) {
             revert("rounding error");
         }
-        partialAmount = numerator.mul(target).div(denominator);
+        partialAmount = (numerator * target) / denominator;
     }
 
     /// @dev Checks if rounding error >= 0.1% when rounding down.
@@ -64,12 +60,8 @@ library LibMath {
         //        1000 * remainder  <  numerator * target
         // so we have a rounding error iff:
         //        1000 * remainder  >=  numerator * target
-        uint256 remainder = mulmod(
-            target,
-            numerator,
-            denominator
-        );
-        isError = remainder.mul(1000) >= numerator.mul(target);
+        uint256 remainder = mulmod(target, numerator, denominator);
+        isError = (remainder * 1000) >= (numerator * target);
     }
 
     function safeGetPartialAmountCeil(
@@ -80,7 +72,7 @@ library LibMath {
         if (isRoundingErrorCeil(numerator, denominator, target)) {
             revert("rounding error");
         }
-        partialAmount = numerator.mul(target).add(denominator.sub(1)).div(denominator);
+        partialAmount = ((numerator * target) + (denominator - 1)) / denominator;
     }
 
     /// @dev Checks if rounding error >= 0.1% when rounding up.
@@ -94,7 +86,7 @@ library LibMath {
         uint256 target
     ) internal pure returns (bool isError) {
         if (denominator == 0) {
-            revert("division by zero");
+            revert("V_PERP_M: division by zero");
         }
 
         // See the comments in `isRoundingError`.
@@ -105,13 +97,9 @@ library LibMath {
             return false;
         }
         // Compute remainder as before
-        uint256 remainder = mulmod(
-            target,
-            numerator,
-            denominator
-        );
-        remainder = denominator.sub(remainder) % denominator;
-        isError = remainder.mul(1000) >= numerator.mul(target);
+        uint256 remainder = mulmod(target, numerator, denominator);
+        remainder = (denominator - remainder) % denominator;
+        isError = (remainder * 1000) >= (numerator * target);
         return isError;
     }
 }

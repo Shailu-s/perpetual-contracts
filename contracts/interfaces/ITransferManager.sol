@@ -1,16 +1,17 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: BUSL - 1.1
 
-pragma solidity 0.7.6;
-pragma abicoder v2;
+pragma solidity =0.8.12;
 
-import "../libs/ExchangeFee.sol";
+import "../libs/LibDeal.sol";
 import "./ITransferExecutor.sol";
 
 abstract contract ITransferManager is ITransferExecutor {
 
-    function doTransfers(
+    function _doTransfers(
         LibDeal.DealSide memory left,
         LibDeal.DealSide memory right,
         LibDeal.DealData memory dealData
     ) internal virtual returns (uint totalMakeValue, uint totalTakeValue);
+
+    function _getProtocolFee() internal virtual view returns (uint256);
 }

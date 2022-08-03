@@ -1,5 +1,5 @@
-// SPDX-License-Identifier: GPL-3.0-or-later
-pragma solidity 0.7.6;
+// SPDX-License-Identifier: BUSL - 1.1
+pragma solidity =0.8.12;
 
 import { SafeOwnable } from "../helpers/SafeOwnable.sol";
 import { PositioningConfigStorageV2 } from "../storage/PositioningConfigStorage.sol";
