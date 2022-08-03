@@ -16,10 +16,11 @@ import { PerpMath } from "../libs/PerpMath.sol";
 import { SettlementTokenMath } from "../libs/SettlementTokenMath.sol";
 import { TestERC20 } from "../test/TestERC20.sol";
 import { IVault } from "../interfaces/IVault.sol";
+import { IVaultController } from "../interfaces/IVaultController.sol";
 import { Vault } from "./Vault.sol";
 import "@openzeppelin/contracts/proxy/Clones.sol";
 
-contract VaultController is ReentrancyGuardUpgradeable, BaseRelayRecipient, OwnerPausable, VaultControllerStorage {
+contract VaultController is ReentrancyGuardUpgradeable, BaseRelayRecipient, OwnerPausable, VaultControllerStorage, IVaultController {
     using AddressUpgradeable for address;
     using SafeMathUpgradeable for uint256;
     using SignedSafeMathUpgradeable for int256;
@@ -39,7 +40,7 @@ contract VaultController is ReentrancyGuardUpgradeable, BaseRelayRecipient, Owne
         address positioningConfig,
         address accountBalanceArg,
         address vaultImplementationArg
-    ) external initializer {
+    ) external override initializer {
         __ReentrancyGuard_init();
         __OwnerPausable_init();
 
@@ -58,7 +59,7 @@ contract VaultController is ReentrancyGuardUpgradeable, BaseRelayRecipient, Owne
         isZkSync = (networkId == 280) ? true : false;
     }
 
-    function deployVault(address _token,bool isEthVault) external onlyOwner returns (address) {
+    function deployVault(address _token,bool isEthVault) external onlyOwner override returns (address) {
         IVault vault;
         if (isZkSync) {
             vault = new Vault();
@@ -74,11 +75,11 @@ contract VaultController is ReentrancyGuardUpgradeable, BaseRelayRecipient, Owne
         return address(vault);
     }
 
-    function getVault(address _token) public view returns (address vault) {
+    function getVault(address _token) public view override returns (address vault) {
         vault = _vaultAddress[_token];
     }
 
-    function deposit(address token, uint256 amount) external payable whenNotPaused nonReentrant {
+    function deposit(address token, uint256 amount) external payable override whenNotPaused nonReentrant {
         address _vault = getVault(token);
         // vault of token is not available
         require(_vault != address(0), "VC_VOTNA");
@@ -90,7 +91,7 @@ contract VaultController is ReentrancyGuardUpgradeable, BaseRelayRecipient, Owne
         IVault(_vault).deposit{value: msg.value}(token, amount, from);
     }
 
-    function withdraw(address token, uint256 amount) external whenNotPaused nonReentrant {
+    function withdraw(address token, uint256 amount) external override whenNotPaused nonReentrant {
         address _vault = getVault(token);
         // vault of token is not available
         require(_vault != address(0), "VC_VOTNA");
@@ -98,7 +99,7 @@ contract VaultController is ReentrancyGuardUpgradeable, BaseRelayRecipient, Owne
         IVault(_vault).withdraw(token, amount, to);
     }
 
-    function getAccountValue(address trader) external view virtual whenNotPaused returns (int256) {
+    function getAccountValue(address trader) external view virtual override whenNotPaused returns (int256) {
         // _requireOnlyPositioning();
         int256 fundingPayment = IPositioning(_positioning).getAllPendingFundingPayment(trader);
         (int256 owedRealizedPnl, int256 unrealizedPnl, uint256 pendingFee) =
