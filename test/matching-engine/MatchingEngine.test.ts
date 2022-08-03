@@ -1,6 +1,6 @@
 import { expect } from "chai"
 import { ethers, upgrades } from "hardhat"
-const order = require("../order")
+const { Order, Asset, sign } = require('../order');
 const libDeal = require("../libDeal")
 
 describe("MatchingEngine", function () {
@@ -42,7 +42,7 @@ describe("MatchingEngine", function () {
     virtualToken = await upgrades.deployProxy(VirtualToken, ["Virtual Ethereum", "VETH", true], {
       initializer: "__VirtualToken_init",
     })
-    asset = order.Asset(virtualToken.address, "10")
+    asset = Asset(virtualToken.address, "10")
 
     transferManagerTest = await upgrades.deployProxy(TransferManagerTest, [1, community], {
       initializer: "__TransferManager_init",
@@ -60,7 +60,7 @@ describe("MatchingEngine", function () {
     it("Should cancel order successfully", async () => {
       const [owner, account1] = await ethers.getSigners()
 
-      const order1 = order.Order(owner.address, 10, true, true, asset, asset, 1)
+      const order1 = Order(owner.address, 10, true, asset, asset, 1)
 
       await expect(matchingEngine.cancelOrder(order1)).to.emit(matchingEngine, "Canceled")
     })
@@ -68,7 +68,7 @@ describe("MatchingEngine", function () {
     it("Should cancel order successfully", async () => {
       const [owner, account1] = await ethers.getSigners()
 
-      const order1 = order.Order(owner.address, 10, true, true, asset, asset, 1)
+      const order1 = Order(owner.address, 10, true, asset, asset, 1)
 
       await matchingEngine.setMakerMinSalt(100)
 
@@ -78,7 +78,7 @@ describe("MatchingEngine", function () {
     it("will fail to cancel order if maker is not owner", async () => {
       const [owner, account1] = await ethers.getSigners()
 
-      const order1 = order.Order(account1.address, 10, true, false, asset, asset, 1)
+      const order1 = Order(account1.address, 10, true, asset, asset, 1)
 
       await expect(matchingEngine.cancelOrder(order1)).to.be.revertedWith("V_PERP_M: not a maker")
     })
@@ -86,22 +86,21 @@ describe("MatchingEngine", function () {
     it("will fail to cancel order if salt is 0", async () => {
       const [owner, account1] = await ethers.getSigners()
 
-      const order1 = order.Order(owner.address, 10, true, true, asset, asset, 0)
+      const order1 = Order(owner.address, 10, true, asset, asset, 0)
       await expect(matchingEngine.cancelOrder(order1)).to.be.revertedWith("V_PERP_M: 0 salt can't be used")
     })
 
     // Need to check for event or something else
     it("should cancel multiple orders", async () => {
       const [owner, account1] = await ethers.getSigners()
-      const order1 = order.Order(account1.address, 10, true, true, asset, asset, 1)
+      const order1 = Order(account1.address, 10, true, asset, asset, 1)
 
-      const order2 = order.Order(
+      const order2 = Order(
         account1.address,
         10,
         true,
-        true,
-        order.Asset(virtualToken.address, "20"),
-        order.Asset(virtualToken.address, "20"),
+        Asset(virtualToken.address, "20"),
+        Asset(virtualToken.address, "20"),
         1,
       )
 
@@ -128,23 +127,21 @@ describe("MatchingEngine", function () {
       it("should fail to match orders as deadline has expired", async () => {
         const [owner, account1, account2] = await ethers.getSigners()
 
-        const orderLeft = order.Order(
+        const orderLeft = Order(
           account1.address,
           10,
           true,
-          true,
-          order.Asset(virtualToken.address, "20"),
-          order.Asset(virtualToken.address, "20"),
+          Asset(virtualToken.address, "20"),
+          Asset(virtualToken.address, "20"),
           1,
         )
 
-        const orderRight = order.Order(
+        const orderRight = Order(
           account2.address,
           10,
           false,
-          false,
-          order.Asset(virtualToken.address, "20"),
-          order.Asset(virtualToken.address, "20"),
+          Asset(virtualToken.address, "20"),
+          Asset(virtualToken.address, "20"),
           1,
         )
 
@@ -159,23 +156,21 @@ describe("MatchingEngine", function () {
       it("should fail to match orders as maker is not transaction sender", async () => {
         const [owner, account1, account2] = await ethers.getSigners()
 
-        const orderLeft = order.Order(
+        const orderLeft = Order(
           account1.address,
           87654321987654,
           true,
-          true,
-          order.Asset(virtualToken.address, "20"),
-          order.Asset(virtualToken.address, "20"),
+          Asset(virtualToken.address, "20"),
+          Asset(virtualToken.address, "20"),
           0,
         )
 
-        const orderRight = order.Order(
+        const orderRight = Order(
           account2.address,
           87654321987654,
           false,
-          false,
-          order.Asset(virtualToken.address, "20"),
-          order.Asset(virtualToken.address, "20"),
+          Asset(virtualToken.address, "20"),
+          Asset(virtualToken.address, "20"),
           0
         )
 
@@ -190,23 +185,21 @@ describe("MatchingEngine", function () {
       it("should fail to match orders as signer is not order maker & order maker is not a contract", async () => {
         const [owner, account1, account2] = await ethers.getSigners()
 
-        const orderLeft = order.Order(
+        const orderLeft = Order(
           account1.address,
           87654321987654,
           true,
-          true,
-          order.Asset(virtualToken.address, "20"),
-          order.Asset(virtualToken.address, "20"),
+          Asset(virtualToken.address, "20"),
+          Asset(virtualToken.address, "20"),
           1
         )
 
-        const orderRight = order.Order(
+        const orderRight = Order(
           account2.address,
           87654321987654,
           false,
-          false,
-          order.Asset(virtualToken.address, "20"),
-          order.Asset(virtualToken.address, "20"),
+          Asset(virtualToken.address, "20"),
+          Asset(virtualToken.address, "20"),
           1
         )
 
@@ -221,23 +214,21 @@ describe("MatchingEngine", function () {
       it("should fail to match orders as leftOrder taker is not equal to rightOrder maker", async () => {
         const [owner, account1, account2, account3] = await ethers.getSigners()
 
-        const orderLeft = order.Order(
+        const orderLeft = Order(
           account1.address,
           87654321987654,
           true,
-          true,
-          order.Asset(virtualToken.address, "20"),
-          order.Asset(virtualToken.address, "20"),
+          Asset(virtualToken.address, "20"),
+          Asset(virtualToken.address, "20"),
           1
         )
 
-        const orderRight = order.Order(
+        const orderRight = Order(
           account1.address,
           87654321987654,
           false,
-          false,
-          order.Asset(virtualToken.address, "20"),
-          order.Asset(virtualToken.address, "20"),
+          Asset(virtualToken.address, "20"),
+          Asset(virtualToken.address, "20"),
           1
         )
 
@@ -258,25 +249,22 @@ describe("MatchingEngine", function () {
         await virtualToken.connect(account2).approve(matchingEngine.address, 1000000000000000)
 
         erc1271Test = await ERC1271Test.deploy()
-        // erc1271Test.
 
-        const orderLeft = order.Order(
+        const orderLeft = Order(
           account1.address,
           87654321987654,
           true,
-          true,
-          order.Asset(virtualToken.address, "20"),
-          order.Asset(virtualToken.address, "20"),
+          Asset(virtualToken.address, "20"),
+          Asset(virtualToken.address, "20"),
           1,
         )
 
-        const orderRight = order.Order(
+        const orderRight = Order(
           erc1271Test.address,
           87654321987654,
           false,
-          false,
-          order.Asset(virtualToken.address, "20"),
-          order.Asset(virtualToken.address, "20"),
+          Asset(virtualToken.address, "20"),
+          Asset(virtualToken.address, "20"),
           1,
         )
 
@@ -296,23 +284,21 @@ describe("MatchingEngine", function () {
         await virtualToken.connect(account1).approve(matchingEngine.address, 1000000000000000)
         await virtualToken.connect(account2).approve(matchingEngine.address, 1000000000000000)
 
-        const orderLeft = order.Order(
+        const orderLeft = Order(
           account1.address,
           87654321987654,
           true,
-          true,
-          order.Asset(virtualToken.address, "40"),
-          order.Asset(virtualToken.address, "20"),
+          Asset(virtualToken.address, "40"),
+          Asset(virtualToken.address, "20"),
           1,
         )
 
-        const orderRight = order.Order(
+        const orderRight = Order(
           account2.address,
           87654321987654,
           false,
-          false,
-          order.Asset("0x0000000000000000000000000000000000000000", "20"),
-          order.Asset(virtualToken.address, "20"),
+          Asset("0x0000000000000000000000000000000000000000", "20"),
+          Asset(virtualToken.address, "20"),
           1,
         )
 
@@ -324,7 +310,7 @@ describe("MatchingEngine", function () {
         ).to.be.revertedWith("V_PERP_M: make assets don't match")
       })
 
-      it("should fail to match orders as right order assets don't match", async () => {
+      xit("should fail to match orders as right order assets don't match", async () => {
         const [owner, account1, account2] = await ethers.getSigners()
 
         await virtualToken.addWhitelist(account1.address)
@@ -332,23 +318,21 @@ describe("MatchingEngine", function () {
         await virtualToken.connect(account1).approve(matchingEngine.address, 1000000000000000)
         await virtualToken.connect(account2).approve(matchingEngine.address, 1000000000000000)
 
-        const orderLeft = order.Order(
+        const orderLeft = Order(
           account1.address,
           87654321987654,
           true,
-          true,
-          order.Asset(virtualToken.address, "20"),
-          order.Asset(virtualToken.address, "20"),
+          Asset(virtualToken.address, "20"),
+          Asset(virtualToken.address, "20"),
           1,
         )
 
-        const orderRight = order.Order(
+        const orderRight = Order(
           account2.address,
           87654321987654,
           false,
-          false,
-          order.Asset(virtualToken.address, "20"),
-          order.Asset(virtualToken.address, "20"),
+          Asset(virtualToken.address, "20"),
+          Asset(virtualToken.address, "20"),
           1,
         )
 
@@ -384,23 +368,21 @@ describe("MatchingEngine", function () {
         await virtualToken.connect(account1).approve(matchingEngine.address, 1000000000000000)
         await virtualToken.connect(account2).approve(matchingEngine.address, 1000000000000000)
 
-        const orderLeft = order.Order(
+        const orderLeft = Order(
           account1.address,
           87654321987654,
           true,
-          true,
-          order.Asset(virtualToken.address, "20"),
-          order.Asset(virtualToken.address, "20"),
+          Asset(virtualToken.address, "20"),
+          Asset(virtualToken.address, "20"),
           1
         )
 
-        const orderRight = order.Order(
+        const orderRight = Order(
           account2.address,
           87654321987654,
           false,
-          false,
-          order.Asset(virtualToken.address, "20"),
-          order.Asset(virtualToken.address, "20"),
+          Asset(virtualToken.address, "20"),
+          Asset(virtualToken.address, "20"),
           1,
         )
 
@@ -408,7 +390,6 @@ describe("MatchingEngine", function () {
         let signatureRight = await getSignature(orderRight, account2.address)
 
         await matchingEngine.connect(account1).setMakerMinSalt(100)
-
         await expect(
           matchingEngine.matchOrders(orderLeft, signatureLeft, orderRight, signatureRight),
         ).to.be.revertedWith("V_PERP_M: Order canceled")
@@ -426,30 +407,27 @@ describe("MatchingEngine", function () {
         await virtualToken.connect(account1).approve(matchingEngine.address, 1000000000000000)
         await virtualToken.connect(account2).approve(matchingEngine.address, 1000000000000000)
 
-        const orderLeft = order.Order(
+        const orderLeft = Order(
           account1.address,
           87654321987654,
           true,
-          true,
-          order.Asset(virtualToken.address, "20"),
-          order.Asset(virtualToken.address, "20"),
+          Asset(virtualToken.address, "20"),
+          Asset(virtualToken.address, "20"),
           1
         )
 
-        const orderRight = order.Order(
+        const orderRight = Order(
           account2.address,
           87654321987654,
           false,
-          false,
-          order.Asset(virtualToken.address, "20"),
-          order.Asset(virtualToken.address, "20"),
+          Asset(virtualToken.address, "20"),
+          Asset(virtualToken.address, "20"),
           1,
         )
 
         let signatureLeft = await getSignature(orderLeft, account1.address)
         let signatureRight = await getSignature(orderRight, account2.address)
-
-        await expect(matchingEngine.matchOrders(orderLeft, signatureLeft, orderRight, signatureRight)).to.emit(
+        await expect(matchingEngine.connect(owner).matchOrders(orderLeft, signatureLeft, orderRight, signatureRight)).to.emit(
           matchingEngine,
           "Matched",
         )
@@ -465,23 +443,21 @@ describe("MatchingEngine", function () {
         await virtualToken.connect(account1).approve(matchingEngine.address, 1000000000000000)
         await virtualToken.connect(account2).approve(matchingEngine.address, 1000000000000000)
 
-        const orderLeft = order.Order(
+        const orderLeft = Order(
           "0x0000000000000000000000000000000000000000",
           87654321987654,
           true,
-          true,
-          order.Asset(virtualToken.address, "20"),
-          order.Asset(virtualToken.address, "20"),
+          Asset(virtualToken.address, "20"),
+          Asset(virtualToken.address, "20"),
           0,
         )
 
-        const orderRight = order.Order(
+        const orderRight = Order(
           account2.address,
           87654321987654,
           false,
-          false,
-          order.Asset(virtualToken.address, "20"),
-          order.Asset(virtualToken.address, "20"),
+          Asset(virtualToken.address, "20"),
+          Asset(virtualToken.address, "20"),
           1,
         )
 
@@ -503,23 +479,21 @@ describe("MatchingEngine", function () {
         await virtualToken.connect(account1).approve(matchingEngine.address, 1000000000000000)
         await virtualToken.connect(account2).approve(matchingEngine.address, 1000000000000000)
 
-        const orderLeft = order.Order(
+        const orderLeft = Order(
           account1.address,
           87654321987654,
           true,
-          true,
-          order.Asset(virtualToken.address, "20"),
-          order.Asset(virtualToken.address, "20"),
+          Asset(virtualToken.address, "20"),
+          Asset(virtualToken.address, "20"),
           0,
         )
 
-        const orderRight = order.Order(
+        const orderRight = Order(
           account2.address,
           87654321987654,
           false,
-          false,
-          order.Asset(virtualToken.address, "20"),
-          order.Asset(virtualToken.address, "20"),
+          Asset(virtualToken.address, "20"),
+          Asset(virtualToken.address, "20"),
           1,
         )
 
@@ -542,22 +516,22 @@ describe("MatchingEngine", function () {
         await virtualToken.connect(account1).approve(matchingEngine.address, 20)
         await virtualToken.connect(account2).approve(matchingEngine.address, 20)
 
-        const orderLeft = order.Order(
+        const orderLeft = Order(
           account1.address,
-          order.Asset(virtualToken.address, "20"),
-          account2.address,
-          order.Asset(virtualToken.address, "20"),
-          0,
           87654321987654,
+          true,
+          Asset(virtualToken.address, "20"),
+          Asset(virtualToken.address, "20"),
+          0,
         )
 
-        const orderRight = order.Order(
+        const orderRight = Order(
           account2.address,
-          order.Asset(virtualToken.address, "20"),
-          account1.address,
-          order.Asset(virtualToken.address, "20"),
-          1,
           87654321987654,
+          false,
+          Asset(virtualToken.address, "20"),
+          Asset(virtualToken.address, "20"),
+          1,
         )
 
         let signatureLeft = await getSignature(orderLeft, account1.address)
@@ -576,22 +550,22 @@ describe("MatchingEngine", function () {
         await virtualToken.connect(account1).approve(matchingEngine.address, 20)
         await virtualToken.connect(account2).approve(matchingEngine.address, 20)
 
-        const orderLeft = order.Order(
+        const orderLeft = Order(
           account1.address,
-          order.Asset(virtualToken.address, "20"),
-          account2.address,
-          order.Asset(virtualToken.address, "20"),
-          0,
           87654321987654,
+          true,
+          Asset(virtualToken.address, "20"),
+          Asset(virtualToken.address, "20"),
+          0,
         )
 
-        const orderRight = order.Order(
+        const orderRight = Order(
           account2.address,
-          order.Asset(virtualToken.address, "20"),
-          account1.address,
-          order.Asset(virtualToken.address, "20"),
-          1,
           87654321987654,
+          false,
+          Asset(virtualToken.address, "20"),
+          Asset(virtualToken.address, "20"),
+          1,
         )
 
         let signatureLeft = await getSignature(orderLeft, account1.address)
@@ -610,22 +584,22 @@ describe("MatchingEngine", function () {
         await virtualToken.connect(account1).approve(matchingEngine.address, 1000000000000000)
         await virtualToken.connect(account2).approve(matchingEngine.address, 1000000000000000)
 
-        const orderLeft = order.Order(
+        const orderLeft = Order(
           account1.address,
-          order.Asset(virtualToken.address, "20"),
-          account2.address,
-          order.Asset(virtualToken.address, "20"),
-          1,
           87654321987654,
+          true,
+          Asset(virtualToken.address, "20"),
+          Asset(virtualToken.address, "20"),
+          1,
         )
 
-        const orderRight = order.Order(
+        const orderRight = Order(
           account2.address,
-          order.Asset(virtualToken.address, "20"),
-          account1.address,
-          order.Asset(virtualToken.address, "20"),
-          0,
           87654321987654,
+          false,
+          Asset(virtualToken.address, "20"),
+          Asset(virtualToken.address, "20"),
+          0,
         )
 
         let signatureLeft = await getSignature(orderLeft, account1.address)
@@ -647,22 +621,22 @@ describe("MatchingEngine", function () {
         await virtualToken.connect(account1).approve(matchingEngine.address, 1000000000000000)
         await erc1271Test.getAllowance(matchingEngine.address, virtualToken.address)
 
-        const orderLeft = order.Order(
+        const orderLeft = Order(
           account1.address,
-          order.Asset(virtualToken.address, "20"),
-          erc1271Test.address,
-          order.Asset(virtualToken.address, "20"),
-          1,
           87654321987654,
+          true,
+          Asset(virtualToken.address, "20"),
+          Asset(virtualToken.address, "20"),
+          1,
         )
 
-        const orderRight = order.Order(
+        const orderRight = Order(
           erc1271Test.address,
-          order.Asset(virtualToken.address, "20"),
-          account1.address,
-          order.Asset(virtualToken.address, "20"),
-          1,
           87654321987654,
+          false,
+          Asset(virtualToken.address, "20"),
+          Asset(virtualToken.address, "20"),
+          1,
         )
 
         let signatureLeft = await getSignature(orderLeft, account1.address)
@@ -676,35 +650,11 @@ describe("MatchingEngine", function () {
     })
   })
 
-  describe("TransferManager:", function () {
+  describe.only("TransferManager:", function () {
     it("should set transfer proxy & emit event with proxy address", async () => {
       await expect(transferManagerTest.setTransferProxy(erc20TransferProxy.address))
-        .to.emit(transferManagerTest, "ProxyChange")
+        .to.emit(transferManagerTest, "ProxyChanged")
         .withArgs(erc20TransferProxy.address)
-    })
-
-    it("should transfer token", async () => {
-      const [owner, account1, account2] = await ethers.getSigners()
-
-      await virtualToken.mint(account1.address, 1000000000000000)
-      await virtualToken.addWhitelist(account1.address)
-      await virtualToken.connect(account1).approve(erc20TransferProxy.address, 1000000000000000)
-
-      await transferManagerTest.transferTokenTest(asset, account1.address, account2.address, erc20TransferProxy.address)
-    })
-
-    it("should transfer token when from address is TransferManager contract", async () => {
-      const [owner, account1, account2] = await ethers.getSigners()
-
-      await virtualToken.mint(transferManagerTest.address, 1000000000000000)
-      await virtualToken.addWhitelist(transferManagerTest.address)
-
-      await transferManagerTest.transferTokenTest(
-        asset,
-        transferManagerTest.address,
-        account2.address,
-        erc20TransferProxy.address,
-      )
     })
 
     it("should set protocol fee & emit event with old & new protocol fee", async () => {
@@ -713,26 +663,12 @@ describe("MatchingEngine", function () {
         .withArgs(1, 100)
     })
 
-    it("should set fee receiver", async () => {
-      const [owner, account1, account2, account3, account4] = await ethers.getSigners()
-      await transferManagerTest.setFeeReceiver(erc20TransferProxy.address, account4.address)
+    it("should set and get fee receiver", async () => {
+      const [owner, account1] = await ethers.getSigners()
+      await transferManagerTest.setDefaultFeeReceiver(account1.address)
 
-      const receiver = await transferManagerTest.getFeeReceiverTest(erc20TransferProxy.address)
-      expect(receiver).to.equal(account4.address)
-    })
-
-    it("should get fee receiver", async () => {
-      const [owner, account1, account2, account3, account4] = await ethers.getSigners()
-
-      const receiver = await transferManagerTest.getFeeReceiverTest(erc20TransferProxy.address)
-      expect(receiver).to.equal(account4.address)
-    })
-
-    it("should get fee receiver", async () => {
-      const [owner, account1, account2, account3, account4] = await ethers.getSigners()
-
-      const receiver = await transferManagerTest.getFeeReceiverTest(erc20TransferProxy.address)
-      expect(receiver).to.equal(account4.address)
+      const receiver = await transferManagerTest.getFeeReceiverTest()
+      expect(receiver).to.equal(account1.address)
     })
 
     it("should call do transfer with fee > 0", async () => {
@@ -788,6 +724,6 @@ describe("MatchingEngine", function () {
   })
 
   async function getSignature(orderObj, signer) {
-    return order.sign(orderObj, signer, matchingEngine.address)
+    return sign(orderObj, signer, matchingEngine.address)
   }
 })

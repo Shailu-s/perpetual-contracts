@@ -60,10 +60,10 @@ abstract contract TransferManager is OwnableUpgradeable, ITransferManager {
 
         if (dealData.feeSide == LibFeeSide.FeeSide.LEFT) {
             totalLeftValue = _doTransfersWithFees(left, right, dealData.protocolFee, dealData.maxFeesBasePoint);
-            _transferPayouts(right.asset.virtualToken, right.asset.value, right.from, left.from, 0, right.proxy);
+            _transferPayouts(right.asset.virtualToken, right.asset.value, right.from, left.from, 10000, right.proxy);
         } else if (dealData.feeSide == LibFeeSide.FeeSide.RIGHT) {
             totalRightValue = _doTransfersWithFees(right, left, dealData.protocolFee, dealData.maxFeesBasePoint);
-            _transferPayouts(left.asset.virtualToken, left.asset.value, left.from, right.from, 0, left.proxy);
+            _transferPayouts(left.asset.virtualToken, left.asset.value, left.from, right.from, 10000, left.proxy);
         }
     }
 
@@ -79,12 +79,13 @@ abstract contract TransferManager is OwnableUpgradeable, ITransferManager {
         uint sumBps = 0;
         uint restValue = amount;
         uint currentAmount = (amount * value) / _BASE;
+        // TODO: Need to check the bps and value relation
         sumBps = sumBps + value;
         if (currentAmount > 0) {
             restValue = restValue - currentAmount;
             _transfer(LibAsset.Asset(matchCalculate, currentAmount), from, to, proxy);
         }
-        sumBps = sumBps + value;
+
         require(sumBps == 10000, "V_PERP_M: Sum payouts Bps not equal 100%");
         if (restValue > 0) {
             _transfer(LibAsset.Asset(matchCalculate, restValue), from, to, proxy);
@@ -117,7 +118,7 @@ abstract contract TransferManager is OwnableUpgradeable, ITransferManager {
             rest,
             calculateSide.from,
             anotherSide.from,
-            0,
+            10000,
             calculateSide.proxy
         );
     }

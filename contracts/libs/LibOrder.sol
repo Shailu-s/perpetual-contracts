@@ -8,7 +8,7 @@ import "./LibAsset.sol";
 library LibOrder {
     bytes32 constant ORDER_TYPEHASH =
         keccak256(
-            "Order(address trader,uint256 deadline,bool isShort,Asset makeAsset, Asset takeAsset,uint256 salt)Asset(address virtualToken,uint256 value)"
+            "Order(address trader,uint256 deadline,bool isShort,Asset makeAsset,Asset takeAsset,uint256 salt)Asset(address virtualToken,uint256 value)"
         );
 
     struct Order {
@@ -44,8 +44,8 @@ library LibOrder {
                     order.trader,
                     order.deadline,
                     order.isShort,
-                    order.makeAsset,
-                    order.takeAsset,
+                    LibAsset.hash(order.makeAsset),
+                    LibAsset.hash(order.takeAsset),
                     order.salt
                 )
             );
