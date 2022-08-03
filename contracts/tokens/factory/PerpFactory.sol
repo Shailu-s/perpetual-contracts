@@ -14,7 +14,7 @@ import "../../../contracts/orderbook/VaultController.sol";
  * @title Factory Contract
  * @author volmex.finance [security@volmexlabs.com]
  */
-contract Factory is Initializable, BlockContext {
+contract PerpFactory is Initializable, BlockContext {
     // Volatility token implementation contract for factory
     address public tokenImplementation;
 
