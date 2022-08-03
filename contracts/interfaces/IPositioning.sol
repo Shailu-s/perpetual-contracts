@@ -189,6 +189,11 @@ interface IPositioning {
     /// @return PositioningConfig PositioningConfig address
     function getPositioningConfig() external view returns (address PositioningConfig);
 
+    /// @notice Get total pending funding payment of trader
+    /// @param trader address of the trader
+    /// @return pendingFundingPayment  total pending funding
+    function getAllPendingFundingPayment(address trader) external view returns (int256 pendingFundingPayment);
+
     /// @notice Get `Vault` address
     /// @return vault `Vault` address
     function getVault() external view returns (address vault);

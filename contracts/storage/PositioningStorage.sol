@@ -12,10 +12,7 @@ abstract contract PositioningStorageV1 {
     uint8 internal _settlementTokenDecimals;
     // --------- ^^^^^^^^^ ---------
 
-    address internal _PositioningConfig;
     address internal _vault;
     address internal _exchange;
-    address internal _orderBook;
-    address internal _accountBalance;
     address internal _insuranceFund;
 }
