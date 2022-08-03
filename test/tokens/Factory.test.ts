@@ -23,6 +23,7 @@ describe('Factory', function () {
   let vault;
   let TestERC20;
   let USDC;
+  const ZERO_ADDR = '0x0000000000000000000000000000000000000000';
 
   this.beforeAll(async () => {
     Factory = await ethers.getContractFactory("Factory");
@@ -118,26 +119,85 @@ describe('Factory', function () {
   });
 
   describe('Clone:', function() {
-    it("Should set implementation contract correctly", async () => {
+    it("Should set token implementation contract correctly", async () => {
       await factory.cloneBaseToken("MyTestToken", "MTK", indexPriceOracle.address);
       const tokenImplementation = await factory.tokenImplementation();
       expect(tokenImplementation).equal(volmexBaseToken.address);
     });
 
+    it("Should set vault controller implementation contract correctly", async () => {
+      const vaultControllerImplementation = await factory.vaultControllerImplementation();
+      expect(vaultControllerImplementation).equal(vaultController.address);
+    });
+
     it("Should clone base token", async () => {
       await factory.cloneBaseToken("MyTestToken", "MTK", indexPriceOracle.address);
       const cloneTokenAddress = await factory.tokenByIndex(0);
-      expect(cloneTokenAddress).not.equal('0x0000000000000000000000000000000000000000');
+      expect(cloneTokenAddress).not.equal(ZERO_ADDR);
+    });
+
+    it("Should clone vault controller", async () => {
+      USDC = await TestERC20.deploy();
+      await USDC.__TestERC20_init("TestUSDC", "USDC", 6);
+
+      positioningConfig = await PositioningConfig.deploy();
+      await positioningConfig.initialize();
+      accountBalance = await AccountBalance.deploy();
+      positioning = await Positioning.deploy();
+      vault = await Vault.deploy();
+      await vault.initialize(positioningConfig.address, accountBalance.address, USDC.address, USDC.address, true);
+
+      await factory.cloneVaultController(
+        positioning.address,
+        positioningConfig.address,
+        accountBalance.address,
+        vault.address,
+      );
+      const cloneTokenAddress = await factory.vaultControllersByIndex(0);
+      expect(cloneTokenAddress).not.equal(ZERO_ADDR);
     });
 
     it("Should increment indexCount when cloning a new token", async () => {
       await factory.cloneBaseToken("MyTestToken", "MTK", indexPriceOracle.address);
-      let cloneTokenAddress = await factory.tokenIndexCount();
-      expect(cloneTokenAddress).equal(1);
+      let cloneTokenIndexCount = await factory.tokenIndexCount();
+      expect(cloneTokenIndexCount).equal(1);
 
       await factory.cloneBaseToken("AnotherToken", "ATK", indexPriceOracle.address);
-      cloneTokenAddress = await factory.tokenIndexCount();
-      expect(cloneTokenAddress).equal(2);
+      cloneTokenIndexCount = await factory.tokenIndexCount();
+      expect(cloneTokenIndexCount).equal(2);
+    });
+
+    it.only("Should increment vaultControllerIndexCount when cloning a new vault controller", async () => {
+      USDC = await TestERC20.deploy();
+      await USDC.__TestERC20_init("TestUSDC", "USDC", 6);
+
+      positioningConfig = await PositioningConfig.deploy();
+      await positioningConfig.initialize();
+      accountBalance = await AccountBalance.deploy();
+      positioning = await Positioning.deploy();
+      vault = await Vault.deploy();
+      await vault.initialize(positioningConfig.address, accountBalance.address, USDC.address, USDC.address, true);
+
+      await factory.cloneVaultController(
+        positioning.address,
+        positioningConfig.address,
+        accountBalance.address,
+        vault.address,
+      );
+      const cloneVaultControllerAddr = await factory.vaultControllersByIndex(0);
+      expect(cloneVaultControllerAddr).not.equal(ZERO_ADDR);
+
+      let cloneVaultControllerIndexCount = await factory.vaultControllerIndexCount();
+      expect(cloneVaultControllerIndexCount).equal(1);
+
+      await factory.cloneVaultController(
+        positioning.address,
+        positioningConfig.address,
+        accountBalance.address,
+        vault.address,
+      );
+      cloneVaultControllerIndexCount = await factory.vaultControllerIndexCount();
+      expect(cloneVaultControllerIndexCount).equal(2);
     });
   });
 
@@ -193,7 +253,7 @@ describe('Factory', function () {
         
         await expect(virtualTokenTest.mintMaximumTo(account1.address))
         .to.emit(virtualTokenTest, "Transfer").withArgs(
-          '0x0000000000000000000000000000000000000000',
+          ZERO_ADDR,
           account1.address,
           '115792089237316195423570985008687907853269984665640564039457584007913129639935' // type(uint256).max
         );
@@ -252,7 +312,7 @@ describe('Factory', function () {
 
         await expect(virtualTokenTest.mintMaximumTo(account1.address))
         .to.emit(virtualTokenTest, "Transfer").withArgs(
-          '0x0000000000000000000000000000000000000000',
+          ZERO_ADDR,
           account1.address,
           '115792089237316195423570985008687907853269984665640564039457584007913129639935' // type(uint256).max
         );
@@ -298,7 +358,7 @@ describe('Factory', function () {
         );
         
         let receipt = await virtualTokenTest.beforeTokenTransfer(
-          '0x0000000000000000000000000000000000000000',
+          ZERO_ADDR,
           account1.address,
           10,
         );
