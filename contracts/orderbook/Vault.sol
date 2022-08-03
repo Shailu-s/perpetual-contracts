@@ -13,7 +13,6 @@ import { PerpSafeCast } from "../libs/PerpSafeCast.sol";
 import { SettlementTokenMath } from "../libs/SettlementTokenMath.sol";
 import { PerpMath } from "../libs/PerpMath.sol";
 import { IERC20Metadata } from "../interfaces/IERC20Metadata.sol";
-import { IInsuranceFund } from "../interfaces/IInsuranceFund.sol";
 import { IExchange } from "../interfaces/IExchange.sol";
 import { IAccountBalance } from "../interfaces/IAccountBalance.sol";
 import { IPositioningConfig } from "../interfaces/IPositioningConfig.sol";
@@ -35,6 +34,10 @@ contract Vault is IVault, ReentrancyGuardUpgradeable, OwnerPausable, BaseRelayRe
     using PerpMath for uint256;
     using AddressUpgradeable for address;
 
+    event LowBalance(uint256 amount);
+    event BorrowFund(address from, uint256 amount);
+    event DebtRepayed(address to, uint256 amount);
+
     //
     // MODIFIER
     //
@@ -50,13 +53,18 @@ contract Vault is IVault, ReentrancyGuardUpgradeable, OwnerPausable, BaseRelayRe
     //
 
     function initialize(
-        address insuranceFundArg,
         address PositioningConfigArg,
         address accountBalanceArg,
-        address exchangeArg
-    ) external initializer {
-        address settlementTokenArg = IInsuranceFund(insuranceFundArg).getToken();
-        uint8 decimalsArg = IERC20Metadata(settlementTokenArg).decimals();
+        address tokenArg,
+        address vaultControllerArg,
+        bool isEthVaultArg
+    ) external override initializer {
+        uint8 decimalsArg = 0;
+        if (isEthVaultArg){
+            decimalsArg = 18;
+        } else {
+            decimalsArg = IERC20Metadata(tokenArg).decimals();
+        }
 
         // invalid settlementToken decimals
         require(decimalsArg <= 18, "V_ISTD");
@@ -64,72 +72,82 @@ contract Vault is IVault, ReentrancyGuardUpgradeable, OwnerPausable, BaseRelayRe
         require(PositioningConfigArg.isContract(), "V_CHCNC");
         // accountBalance address is not contract
         require(accountBalanceArg.isContract(), "V_ABNC");
-        // exchange address is not contract
-        require(exchangeArg.isContract(), "V_ENC");
 
         __ReentrancyGuard_init();
         __OwnerPausable_init();
 
         // update states
         _decimals = decimalsArg;
-        _settlementToken = settlementTokenArg;
-        _insuranceFund = insuranceFundArg;
+        _settlementToken = tokenArg;
         _PositioningConfig = PositioningConfigArg;
         _accountBalance = accountBalanceArg;
-        _exchange = exchangeArg;
+        _vaultController = vaultControllerArg;
+        _isEthVault = isEthVaultArg;
     }
 
-    function setTrustedForwarder(address trustedForwarderArg) external onlyOwner {
-        // V_TFNC: TrustedForwarder address is not contract
-        require(trustedForwarderArg.isContract(), "V_TFNC");
-        _setTrustedForwarder(trustedForwarderArg);
-    }
-
-    function setPositioning(address PositioningArg) external onlyOwner {
+    function setPositioning(address PositioningArg) external {
         // V_VPMM: Positioning is not contract
         require(PositioningArg.isContract(), "V_VPMM");
         _Positioning = PositioningArg;
     }
 
-    /// @inheritdoc IVault
-    function deposit(address token, uint256 amountX10_D)
-        external
-        override
-        whenNotPaused
-        nonReentrant
-        onlySettlementToken(token)
-    {
-        // input requirement checks:
-        //   token: here
-        //   amountX10_D: here
-        address from = _msgSender();
-        _modifyBalance(from, token, amountX10_D.toInt256());
-
-        // check for deflationary tokens by assuring balances before and after transferring to be the same
-        uint256 balanceBefore = IERC20Metadata(token).balanceOf(address(this));
-        SafeERC20Upgradeable.safeTransferFrom(IERC20Upgradeable(token), from, address(this), amountX10_D);
-        // V_BAI: inconsistent balance amount, to prevent from deflationary tokens
-        require((IERC20Metadata(token).balanceOf(address(this)).sub(balanceBefore)) == amountX10_D, "V_IBA");
-
-        uint256 settlementTokenBalanceCap =
-            IPositioningConfig(_PositioningConfig).getSettlementTokenBalanceCap();
-        // V_GTSTBC: greater than settlement token balance cap
-        require(IERC20Metadata(token).balanceOf(address(this)) <= settlementTokenBalanceCap, "V_GTSTBC");
-
-        emit Deposited(token, from, amountX10_D);
+    function setVaultController(address vaultControllerArg) external onlyOwner {
+        _vaultController = vaultControllerArg;
     }
 
     /// @inheritdoc IVault
-    function withdraw(address token, uint256 amountX10_D)
-        external
-        override
-        whenNotPaused
-        nonReentrant
-        onlySettlementToken(token)
-    {
+    function deposit(
+        address token,
+        uint256 amount,
+        address from
+    ) external payable override whenNotPaused nonReentrant onlySettlementToken(token) {
         // input requirement checks:
         //   token: here
-        //   amountX10_D: here
+        //   amount: here
+        _requireOnlyVaultController();
+        _deposit(token, amount, from);
+    }
+
+    function _deposit(
+        address token,
+        uint256 amount,
+        address from
+    ) internal {
+        // input requirement checks:
+        //   token: here
+        //   amount: here
+        _modifyBalance(from, token, amount.toInt256());
+        uint256 _vaultBalance;
+
+        if (_isEthVault) {
+            // amount not equal
+            require(msg.value == amount, "V_ANE");
+            _vaultBalance = address(this).balance;
+        } else {
+            // check for deflationary tokens by assuring balances before and after transferring to be the same
+            uint256 balanceBefore = IERC20Metadata(token).balanceOf(address(this));
+            SafeERC20Upgradeable.safeTransferFrom(IERC20Upgradeable(token), from, address(this), amount);
+            // V_BAI: inconsistent balance amount, to prevent from deflationary tokens
+            require((IERC20Metadata(token).balanceOf(address(this)).sub(balanceBefore)) == amount, "V_IBA");
+            _vaultBalance = IERC20Metadata(token).balanceOf(address(this));
+        }
+
+        uint256 settlementTokenBalanceCap = IPositioningConfig(_PositioningConfig).getSettlementTokenBalanceCap();
+        // V_GTSTBC: greater than settlement token balance cap
+        require(_vaultBalance <= settlementTokenBalanceCap, "V_GTSTBC");
+        emit Deposited(token, from, amount);
+    }
+
+    /// @inheritdoc IVault
+    function withdraw(
+        address token,
+        uint256 amount,
+        address payable to
+    ) external virtual override whenNotPaused nonReentrant onlySettlementToken(token) {
+        _requireOnlyVaultController();
+        // input requirement checks:
+        //   token: here
+        //   amount: here
 
         // the full process of withdrawal:
         // 1. settle funding payment to owedRealizedPnl
@@ -137,8 +155,6 @@ contract Vault is IVault, ReentrancyGuardUpgradeable, OwnerPausable, BaseRelayRe
         // 3. call Vault.withdraw(token, amount)
         // 4. settle pnl to trader balance in Vault
         // 5. transfer the amount to trader
-
-        address to = _msgSender();
 
         // settle all funding payments owedRealizedPnl
         // pending fee can be withdraw but won't be settled
@@ -148,32 +164,78 @@ contract Vault is IVault, ReentrancyGuardUpgradeable, OwnerPausable, BaseRelayRe
         int256 owedRealizedPnlX10_18 = IAccountBalance(_accountBalance).settleOwedRealizedPnl(to);
 
         // by this time there should be no owedRealizedPnl nor pending funding payment in free collateral
-        int256 freeCollateralByImRatioX10_D =
+        int256 freeCollateralByImRatio =
             getFreeCollateralByRatio(to, IPositioningConfig(_PositioningConfig).getImRatio());
+        
         // V_NEFC: not enough freeCollateral
         require(
-            freeCollateralByImRatioX10_D.add(owedRealizedPnlX10_18.formatSettlementToken(_decimals)) >=
-                amountX10_D.toInt256(),
+            freeCollateralByImRatio.add(owedRealizedPnlX10_18.formatSettlementToken(_decimals)) >= amount.toInt256(),
             "V_NEFC"
         );
 
-        // borrow settlement token from insurance fund if the token balance in Vault is not enough
-        uint256 vaultBalanceX10_D = IERC20Metadata(token).balanceOf(address(this));
-        if (vaultBalanceX10_D < amountX10_D) {
-            uint256 borrowedAmountX10_D = amountX10_D - vaultBalanceX10_D;
-            IInsuranceFund(_insuranceFund).borrow(borrowedAmountX10_D);
-            _totalDebt += borrowedAmountX10_D;
+        uint256 amountToTransfer = amount;
+        if (_isEthVault) {
+            // not enough balance
+            require( address(this).balance >= amount, "V_NEB");
+            to.transfer(amount);
+        } else {
+            // send available funds to trader if vault balance is not enough and emit LowBalance event
+            uint256 vaultBalance = IERC20Metadata(token).balanceOf(address(this));
+            uint256 remainingAmount = 0;
+            if (vaultBalance < amount) {
+                remainingAmount = amount.sub(vaultBalance);
+                emit LowBalance(remainingAmount);
+            }
+            amountToTransfer = amount.sub(remainingAmount);
+
+            SafeERC20Upgradeable.safeTransfer(IERC20Upgradeable(token), to, amountToTransfer);
         }
 
         // settle withdrawn amount and owedRealizedPnl to collateral
         _modifyBalance(
             to,
             token,
-            (amountX10_D.toInt256().sub(owedRealizedPnlX10_18.formatSettlementToken(_decimals))).neg256()
+            (amountToTransfer.toInt256().sub(owedRealizedPnlX10_18.formatSettlementToken(_decimals))).neg256()
         );
-        SafeERC20Upgradeable.safeTransfer(IERC20Upgradeable(token), to, amountX10_D);
 
-        emit Withdrawn(token, to, amountX10_D);
+        emit Withdrawn(token, to, amountToTransfer);
+    }
+
+    /// @inheritdoc IVault
+    function transferFundToVault(address token, uint256 amount)
+        external
+        override
+        whenNotPaused
+        nonReentrant
+        onlySettlementToken(token)
+        onlyOwner
+    {
+        address from = _msgSender();
+        SafeERC20Upgradeable.safeTransferFrom(IERC20Upgradeable(token), from, address(this), amount);
+        _totalDebt += amount;
+        emit BorrowFund(from, amount);
+    }
+
+    /// @inheritdoc IVault
+    function repayDebtToOwner(address token, uint256 amount)
+        external
+        override
+        whenNotPaused
+        nonReentrant
+        onlySettlementToken(token)
+        onlyOwner
+    {
+        address to = _msgSender();
+        //V_AIMTD: amount is more that debt
+        require(_totalDebt >= amount, "V_AIMTD");
+        SafeERC20Upgradeable.safeTransfer(IERC20Upgradeable(token), to, amount);
+        _totalDebt -= amount;
+        emit DebtRepayed(to, amount);
+    }
+
+    /// @inheritdoc IVault
+    function setSettlementToken(address newTokenArg) external override onlyOwner {
+        _settlementToken = newTokenArg;
     }
 
     //
@@ -206,31 +268,19 @@ contract Vault is IVault, ReentrancyGuardUpgradeable, OwnerPausable, BaseRelayRe
     }
 
     /// @inheritdoc IVault
-    function getInsuranceFund() external view override returns (address) {
-        return _insuranceFund;
-    }
-
-    /// @inheritdoc IVault
-    function getExchange() external view override returns (address) {
-        return _exchange;
-    }
-
-    /// @inheritdoc IVault
     function getPositioning() external view override returns (address) {
         return _Positioning;
+    }
+
+    function getVaultController() external view returns (address) {
+        return _vaultController;
     }
 
     /// @inheritdoc IVault
     function getFreeCollateral(address trader) external view override returns (uint256) {
         return
             PerpMath
-                .max(
-                getFreeCollateralByRatio(
-                    trader,
-                    IPositioningConfig(_PositioningConfig).getImRatio()
-                ),
-                0
-            )
+                .max(getFreeCollateralByRatio(trader, IPositioningConfig(_PositioningConfig).getImRatio()), 0)
                 .toUint256();
     }
 
@@ -244,12 +294,12 @@ contract Vault is IVault, ReentrancyGuardUpgradeable, OwnerPausable, BaseRelayRe
     }
 
     /// @inheritdoc IVault
-    function getFreeCollateralByRatio(address trader, uint24 ratio) public view override returns (int256) {
+    function getFreeCollateralByRatio(address trader, uint24 ratio) public view virtual override returns (int256) {
         // conservative config: freeCollateral = min(collateral, accountValue) - margin requirement ratio
         int256 fundingPaymentX10_18 = IPositioning(_Positioning).getAllPendingFundingPayment(trader);
         (int256 owedRealizedPnlX10_18, int256 unrealizedPnlX10_18, uint256 pendingFeeX10_18) =
             IAccountBalance(_accountBalance).getPnlAndPendingFee(trader);
-        int256 totalCollateralValueX10_D =
+        int256 totalCollateralValue =
             getBalance(trader).add(
                 owedRealizedPnlX10_18.sub(fundingPaymentX10_18).add(pendingFeeX10_18.toInt256()).formatSettlementToken(
                     _decimals
@@ -257,11 +307,11 @@ contract Vault is IVault, ReentrancyGuardUpgradeable, OwnerPausable, BaseRelayRe
             );
 
         // accountValue = totalCollateralValue + totalUnrealizedPnl, in the settlement token's decimals
-        int256 accountValueX10_D = totalCollateralValueX10_D.add(unrealizedPnlX10_18.formatSettlementToken(_decimals));
+        int256 accountValue = totalCollateralValue.add(unrealizedPnlX10_18.formatSettlementToken(_decimals));
         uint256 totalMarginRequirementX10_18 = _getTotalMarginRequirement(trader, ratio);
 
         return
-            PerpMath.min(totalCollateralValueX10_D, accountValueX10_D).sub(
+            PerpMath.min(totalCollateralValue, accountValue).sub(
                 totalMarginRequirementX10_18.toInt256().formatSettlementToken(_decimals)
             );
 
@@ -306,5 +356,10 @@ contract Vault is IVault, ReentrancyGuardUpgradeable, OwnerPausable, BaseRelayRe
     /// @inheritdoc BaseRelayRecipient
     function _msgData() internal view override(BaseRelayRecipient, OwnerPausable) returns (bytes memory) {
         return super._msgData();
+    }
+
+    function _requireOnlyVaultController() internal view {
+        // only VaultController
+        require(_msgSender() == _vaultController, "V_OVC");
     }
 }

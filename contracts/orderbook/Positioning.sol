@@ -107,14 +107,12 @@ contract Positioning is
     // solhint-disable-next-line func-order
     function initialize(
         address PositioningConfigArg,
-        address vaultArg,
         address quoteTokenArg,
         address exchangeArg,
         address accountBalanceArg,
         address insuranceFundArg
     ) public initializer {
-        // CH_VANC: Vault address is not contract
-        require(vaultArg.isContract(), "CH_VANC");
+
         // CH_QANC: QuoteToken address is not contract
         require(quoteTokenArg.isContract(), "CH_QANC");
         // CH_QDN18: QuoteToken decimals is not 18
@@ -136,13 +134,17 @@ contract Positioning is
         __OwnerPausable_init();
 
         _PositioningConfig = PositioningConfigArg;
-        _vault = vaultArg;
         _quoteToken = quoteTokenArg;
         _exchange = exchangeArg;
         _orderBook = orderBookArg;
         _accountBalance = accountBalanceArg;
         _insuranceFund = insuranceFundArg;
+    }
 
+    function setVault(address vaultArg) external onlyOwner{
+        // CH_VANC: Vault address is not contract
+        require(vaultArg.isContract(), "CH_VANC");
+        _vault = vaultArg;
         _settlementTokenDecimals = IVault(_vault).decimals();
     }
 
@@ -155,7 +157,7 @@ contract Positioning is
     }
 
     /// @inheritdoc IPositioning
-    function settleAllFunding(address trader) external override {
+    function settleAllFunding(address trader) external virtual override {
         address[] memory baseTokens = IAccountBalance(_accountBalance).getBaseTokens(trader);
         uint256 baseTokenLength = baseTokens.length;
         for (uint256 i = 0; i < baseTokenLength; i++) {
@@ -163,8 +165,14 @@ contract Positioning is
         }
     }
 
-        ///@dev this function calculates total pending funding payment of a trader
-    function getAllPendingFundingPayment(address trader) public view override returns (int256 pendingFundingPayment) {
+    ///@dev this function calculates total pending funding payment of a trader
+    function getAllPendingFundingPayment(address trader)
+        public
+        view
+        virtual
+        override
+        returns (int256 pendingFundingPayment)
+    {
         address[] memory baseTokens = IAccountBalance(_accountBalance).getBaseTokens(trader);
         uint256 baseTokenLength = baseTokens.length;
 
@@ -269,42 +277,6 @@ contract Positioning is
         return balanceX10_18.add(owedRealizedPnl.sub(fundingPayment)).add(unrealizedPnl).add(pendingFee.toInt256());
     }
 
-    //
-    // INTERNAL NON-VIEW
-    //
-
-    // /// @dev Calculate how much profit/loss we should settled,
-    // /// only used when removing liquidity. The profit/loss is calculated by using
-    // /// the removed base/quote amount and existing taker's base/quote amount.
-    // function _settleBalanceAndRealizePnl(
-    //     address maker,
-    //     address baseToken,
-    //     IOrderBook.RemoveLiquidityResponse memory response
-    // ) internal returns (int256) {
-    //     int256 pnlToBeRealized;
-    //     if (response.takerBase != 0) {
-    //         pnlToBeRealized = IExchange(_exchange).getPnlToBeRealized(
-    //             IExchange.RealizePnlParams({
-    //                 trader: maker,
-    //                 baseToken: baseToken,
-    //                 base: response.takerBase,
-    //                 quote: response.takerQuote
-    //             })
-    //         );
-    //     }
-
-    //     // pnlToBeRealized is realized here
-    //     IAccountBalance(_accountBalance).settleBalanceAndDeregister(
-    //         maker,
-    //         baseToken,
-    //         response.takerBase,
-    //         response.takerQuote,
-    //         pnlToBeRealized,
-    //         response.fee.toInt256()
-    //     );
-
-    //     return pnlToBeRealized;
-    // }
 
     /// @dev explainer diagram for the relationship between exchangedPositionNotional, fee and openNotional:
     ///      https://www.figma.com/file/xuue5qGH4RalX7uAbbzgP3/swap-accounting-and-events
@@ -382,10 +354,7 @@ contract Positioning is
     }
 
     /// @dev Settle trader's funding payment to his/her realized pnl.
-    function _settleFunding(address trader, address baseToken)
-        internal
-        returns (int256 growthTwPremium)
-    {
+    function _settleFunding(address trader, address baseToken) internal returns (int256 growthTwPremium) {
         int256 fundingPayment;
         (fundingPayment, growthTwPremium) = settleFunding(trader, baseToken);
 

@@ -244,6 +244,7 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
         external
         view
         override
+        virtual
         returns (
             int256,
             int256,
