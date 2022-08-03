@@ -1,12 +1,15 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-pragma solidity 0.8.12;
+pragma solidity 0.7.6;
 
 import { ERC20Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
-import { SafeOwnable } from "../base/SafeOwnable.sol";
+import { SafeOwnable } from "../helpers/SafeOwnable.sol";
 import { IVirtualToken } from "../interfaces/IVirtualToken.sol";
 
 contract VirtualToken is IVirtualToken, SafeOwnable, ERC20Upgradeable {
     mapping(address => bool) internal _whitelistMap;
+
+    // __gap is reserved storage
+    uint256[50] private __gap;
 
     event WhitelistAdded(address account);
     event WhitelistRemoved(address account);
@@ -51,6 +54,4 @@ contract VirtualToken is IVirtualToken, SafeOwnable, ERC20Upgradeable {
             require(_whitelistMap[from], "VT_NW");
         }
     }
-
-    uint256[50] private __gap;
 }

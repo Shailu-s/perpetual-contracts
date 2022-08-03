@@ -152,10 +152,10 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
     function updateTwPremiumGrowthGlobal(
         address trader,
         address baseToken,
-        int256 lastTwPremiumGrowthGlobalX96
+        int256 lastTwPremiumGrowthGlobal
     ) external override {
         _requireOnlyPositioning();
-        _accountMarketMap[trader][baseToken].lastTwPremiumGrowthGlobalX96 = lastTwPremiumGrowthGlobalX96;
+        _accountMarketMap[trader][baseToken].lastTwPremiumGrowthGlobal = lastTwPremiumGrowthGlobal;
     }
 
     //
@@ -244,6 +244,7 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
         external
         view
         override
+        virtual
         returns (
             int256,
             int256,

@@ -14,17 +14,49 @@ interface IVault {
     /// @param amount The amount of token that was withdrawn
     event Withdrawn(address indexed collateralToken, address indexed trader, uint256 amount);
 
+    function initialize(
+        address PositioningConfigArg,
+        address accountBalanceArg,
+        address tokenArg,
+        address vaultControllerArg,
+        bool isEthVaultArg
+    ) external;
+
     /// @notice Deposit collateral into vault
     /// @dev once multi-collateral is implemented, the token is not limited to settlementToken
     /// @param token The address of the token to deposit
     /// @param amountX10_D The amount of the token to deposit in decimals D (D = _decimals)
-    function deposit(address token, uint256 amountX10_D) external;
+    function deposit(
+        address token,
+        uint256 amountX10_D,
+        address from
+    ) external payable;
 
     /// @notice Withdraw collateral from vault
     /// @dev once multi-collateral is implemented, the token is not limited to settlementToken
     /// @param token The address of the token sender is going to withdraw
     /// @param amountX10_D The amount of the token to withdraw in decimals D (D = _decimals)
-    function withdraw(address token, uint256 amountX10_D) external;
+    function withdraw(
+        address token,
+        uint256 amountX10_D,
+        address payable to
+    ) external ;
+
+    /// @notice transfer fund to vault in case of low balance
+    /// @dev once multi-collateral is implemented, the token is not limited to settlementToken
+    /// @param token The address of the token vault need funding
+    /// @param amountX10_D The amount of the token to withdraw in decimals D (D = _decimals)
+    function transferFundToVault(address token, uint256 amountX10_D) external;
+
+    /// @notice function to repay debt taken during low balance period
+    /// @dev once multi-collateral is implemented, the token is not limited to settlementToken
+    /// @param token The address of the token
+    /// @param amountX10_D The amount of the token to withdraw in decimals D (D = _decimals)
+    function repayDebtToOwner(address token, uint256 amountX10_D) external;
+
+    /// @notice Set new settlement token
+    /// @param newTokenArg The address of `Positioning` contract
+    function setSettlementToken(address newTokenArg) external;
 
     /// @notice Get the balance in vault of specified account
     /// @return balance The balance amount
@@ -67,14 +99,6 @@ interface IVault {
     /// @notice Get `AccountBalance` contract address
     /// @return accountBalance The address of `AccountBalance` contract
     function getAccountBalance() external view returns (address accountBalance);
-
-    /// @notice Get `InsuranceFund` contract address
-    /// @return insuranceFund The address of `InsuranceFund` contract
-    function getInsuranceFund() external view returns (address);
-
-    /// @notice Get `Exchange` contract address
-    /// @return exchange The address of `Exchange` contract
-    function getExchange() external view returns (address);
 
     /// @notice Get `Positioning` contract address
     /// @return Positioning The address of `Positioning` contract
