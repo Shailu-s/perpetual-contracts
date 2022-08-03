@@ -11,6 +11,11 @@ describe("Vault tests", function () {
     let vaultController: VaultController
     let vaultFactory;
     let positioning
+    let VaultController;
+
+    this.beforeAll(async () => {
+        VaultController = await ethers.getContractFactory("VaultController")
+    });
     
     beforeEach(async function () {
         const [admin, alice] = await ethers.getSigners()
@@ -163,8 +168,7 @@ describe("Vault tests", function () {
         it("Check for set vault controller", async () => {
             const [owner, alice] = await ethers.getSigners()
 
-            const vaultControllerFactory = await ethers.getContractFactory("VaultController")
-            const newVaultController = await upgrades.deployProxy(vaultControllerFactory, [
+            const newVaultController = await upgrades.deployProxy(VaultController, [
                 positioning.address,
                 positioningConfig.address,
                 accountBalance.address,

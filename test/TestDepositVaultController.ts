@@ -12,6 +12,11 @@ describe("Vault Controller deposit tests", function () {
     let vaultFactory
     let DAI
     let positioning
+    let VaultController;
+
+    this.beforeAll(async () => {
+        VaultController = await ethers.getContractFactory("VaultController")
+    });
 
     beforeEach(async function () {
         const [admin, alice] = await ethers.getSigners()
@@ -45,8 +50,7 @@ describe("Vault Controller deposit tests", function () {
         vault = await vault1.deployed()
         await vault.initialize(positioningConfig.address, accountBalance.address, USDC.address, USDC.address, true)
 
-        const vaultControllerFactory = await ethers.getContractFactory("VaultController")
-        vaultController = await upgrades.deployProxy(vaultControllerFactory, [
+        vaultController = await upgrades.deployProxy(VaultController, [
             positioning.address,
             positioningConfig.address,
             accountBalance.address,
