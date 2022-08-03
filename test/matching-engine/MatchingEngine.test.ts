@@ -650,35 +650,11 @@ describe("MatchingEngine", function () {
     })
   })
 
-  describe("TransferManager:", function () {
+  describe.only("TransferManager:", function () {
     it("should set transfer proxy & emit event with proxy address", async () => {
       await expect(transferManagerTest.setTransferProxy(erc20TransferProxy.address))
-        .to.emit(transferManagerTest, "ProxyChange")
+        .to.emit(transferManagerTest, "ProxyChanged")
         .withArgs(erc20TransferProxy.address)
-    })
-
-    it("should transfer token", async () => {
-      const [owner, account1, account2] = await ethers.getSigners()
-
-      await virtualToken.mint(account1.address, 1000000000000000)
-      await virtualToken.addWhitelist(account1.address)
-      await virtualToken.connect(account1).approve(erc20TransferProxy.address, 1000000000000000)
-
-      await transferManagerTest.transferTokenTest(asset, account1.address, account2.address, erc20TransferProxy.address)
-    })
-
-    it("should transfer token when from address is TransferManager contract", async () => {
-      const [owner, account1, account2] = await ethers.getSigners()
-
-      await virtualToken.mint(transferManagerTest.address, 1000000000000000)
-      await virtualToken.addWhitelist(transferManagerTest.address)
-
-      await transferManagerTest.transferTokenTest(
-        asset,
-        transferManagerTest.address,
-        account2.address,
-        erc20TransferProxy.address,
-      )
     })
 
     it("should set protocol fee & emit event with old & new protocol fee", async () => {
@@ -687,26 +663,12 @@ describe("MatchingEngine", function () {
         .withArgs(1, 100)
     })
 
-    it("should set fee receiver", async () => {
-      const [owner, account1, account2, account3, account4] = await ethers.getSigners()
-      await transferManagerTest.setFeeReceiver(erc20TransferProxy.address, account4.address)
+    it("should set and get fee receiver", async () => {
+      const [owner, account1] = await ethers.getSigners()
+      await transferManagerTest.setDefaultFeeReceiver(account1.address)
 
-      const receiver = await transferManagerTest.getFeeReceiverTest(erc20TransferProxy.address)
-      expect(receiver).to.equal(account4.address)
-    })
-
-    it("should get fee receiver", async () => {
-      const [owner, account1, account2, account3, account4] = await ethers.getSigners()
-
-      const receiver = await transferManagerTest.getFeeReceiverTest(erc20TransferProxy.address)
-      expect(receiver).to.equal(account4.address)
-    })
-
-    it("should get fee receiver", async () => {
-      const [owner, account1, account2, account3, account4] = await ethers.getSigners()
-
-      const receiver = await transferManagerTest.getFeeReceiverTest(erc20TransferProxy.address)
-      expect(receiver).to.equal(account4.address)
+      const receiver = await transferManagerTest.getFeeReceiverTest()
+      expect(receiver).to.equal(account1.address)
     })
 
     it("should call do transfer with fee > 0", async () => {
