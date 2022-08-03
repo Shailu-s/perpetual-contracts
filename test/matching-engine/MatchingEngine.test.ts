@@ -650,7 +650,7 @@ describe("MatchingEngine", function () {
     })
   })
 
-  describe.only("TransferManager:", function () {
+  describe("TransferManager:", function () {
     it("should set transfer proxy & emit event with proxy address", async () => {
       await expect(transferManagerTest.setTransferProxy(erc20TransferProxy.address))
         .to.emit(transferManagerTest, "ProxyChanged")
