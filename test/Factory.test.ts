@@ -2,12 +2,12 @@ import { expect } from "chai";
 import { Signer } from "ethers";
 import { ethers, upgrades } from "hardhat";
 
-describe('Factory', function () {
+describe('PerpFactory', function () {
   let VolmexBaseToken;
   let volmexBaseToken;
   let VirtualTokenTest;
   let virtualTokenTest;
-  let Factory;
+  let PerpFactory;
   let factory;
   let IndexPriceOracle;
   let indexPriceOracle;
@@ -25,7 +25,7 @@ describe('Factory', function () {
   let USDC;
 
   this.beforeAll(async () => {
-    Factory = await ethers.getContractFactory("Factory");
+    PerpFactory = await ethers.getContractFactory("PerpFactory");
     VolmexBaseToken = await ethers.getContractFactory("VolmexBaseToken");
     VirtualTokenTest = await ethers.getContractFactory("VirtualTokenTest");
     IndexPriceOracle = await ethers.getContractFactory("IndexPriceOracle");
@@ -80,7 +80,7 @@ describe('Factory', function () {
     ]);
 
     factory = await upgrades.deployProxy(
-      Factory,
+      PerpFactory,
       [
         volmexBaseToken.address,
         vaultController.address
@@ -100,9 +100,9 @@ describe('Factory', function () {
   });
 
   describe('Deployment:', function() {
-    it("Factory deployed confirm", async () => {
+    it("PerpFactory deployed confirm", async () => {
       factory = await upgrades.deployProxy(
-        Factory,
+        PerpFactory,
         [
           volmexBaseToken.address,
           vaultController.address
