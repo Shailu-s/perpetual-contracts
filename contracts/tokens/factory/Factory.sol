@@ -5,6 +5,8 @@ import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/Initial
 import "@openzeppelin/contracts/proxy/Clones.sol";
 import "../VolmexBaseToken.sol";
 import "../../interfaces/IVolmexBaseToken.sol";
+// import "../../interfaces/IVaultController.sol";
+import { IVaultController } from "../../interfaces/IVaultController.sol";
 import "../../../contracts/orderbook/VaultController.sol";
 
 /**
@@ -95,7 +97,7 @@ contract Factory is Initializable {
         address _accountBalanceArg,
         address _vaultImplementationArg
     ) external returns (address) {
-        VaultController vaultController;
+        IVaultController vaultController;
 
         if (isZkSync) {
             vaultController = new VaultController();
@@ -109,14 +111,11 @@ contract Factory is Initializable {
             bytes32 salt = keccak256(
                 abi.encodePacked(
                     vaultControllerIndexCount, 
-                    _positioningArg,
-                    _positioningConfig,
-                    _accountBalanceArg,
                     _vaultImplementationArg
                 )
             );
 
-            vaultController = VaultController(
+            vaultController = IVaultController(
                 Clones.cloneDeterministic(vaultControllerImplementation, salt)
             );
 
