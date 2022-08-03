@@ -11,12 +11,30 @@ describe('Factory', function () {
   let factory;
   let IndexPriceOracle;
   let indexPriceOracle;
+  let VaultController;
+  let vaultController;
+  let PositioningConfig;
+  let positioningConfig;
+  let AccountBalance;
+  let accountBalance;
+  let Positioning;
+  let positioning;
+  let Vault;
+  let vault;
+  let TestERC20;
+  let USDC;
 
   this.beforeAll(async () => {
     Factory = await ethers.getContractFactory("Factory");
     VolmexBaseToken = await ethers.getContractFactory("VolmexBaseToken");
     VirtualTokenTest = await ethers.getContractFactory("VirtualTokenTest");
     IndexPriceOracle = await ethers.getContractFactory("IndexPriceOracle");
+    VaultController = await ethers.getContractFactory("VaultController");
+    PositioningConfig = await ethers.getContractFactory("PositioningConfig");
+    AccountBalance = await ethers.getContractFactory("AccountBalance");
+    Positioning = await ethers.getContractFactory("Positioning");
+    Vault = await ethers.getContractFactory("Vault");
+    TestERC20 = await ethers.getContractFactory("TestERC20");
   });
 
   beforeEach(async () => {
@@ -44,10 +62,28 @@ describe('Factory', function () {
       }
     );
 
+    USDC = await TestERC20.deploy()
+    await USDC.__TestERC20_init("TestUSDC", "USDC", 6)
+
+    positioningConfig = await PositioningConfig.deploy()
+    await positioningConfig.initialize()
+    accountBalance = await AccountBalance.deploy()
+    positioning = await Positioning.deploy()    
+    vault = await Vault.deploy()
+    await vault.initialize(positioningConfig.address, accountBalance.address, USDC.address, USDC.address, true)
+
+    vaultController = await upgrades.deployProxy(VaultController, [
+        positioning.address,
+        positioningConfig.address,
+        accountBalance.address,
+        vault.address,
+    ]);
+
     factory = await upgrades.deployProxy(
       Factory,
       [
-        volmexBaseToken.address, // implementation
+        volmexBaseToken.address,
+        vaultController.address
       ],
       {
         initializer: "initialize"
@@ -68,7 +104,8 @@ describe('Factory', function () {
       factory = await upgrades.deployProxy(
         Factory,
         [
-          volmexBaseToken.address, // implementation
+          volmexBaseToken.address,
+          vaultController.address
         ],
         {
           initializer: "initialize"
@@ -95,11 +132,11 @@ describe('Factory', function () {
 
     it("Should increment indexCount when cloning a new token", async () => {
       await factory.cloneBaseToken("MyTestToken", "MTK", indexPriceOracle.address);
-      let cloneTokenAddress = await factory.indexCount();
+      let cloneTokenAddress = await factory.tokenIndexCount();
       expect(cloneTokenAddress).equal(1);
 
       await factory.cloneBaseToken("AnotherToken", "ATK", indexPriceOracle.address);
-      cloneTokenAddress = await factory.indexCount();
+      cloneTokenAddress = await factory.tokenIndexCount();
       expect(cloneTokenAddress).equal(2);
     });
   });
