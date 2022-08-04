@@ -67,6 +67,9 @@ contract FundingRate is IFundingRate, BlockContext, PositioningCallee, FundingRa
         return (fundingPayment, growthTwPremium);
     }
 
+    /**
+    TODO:   we should check use cases here whether marketFundingRate goes -ve or not
+     */
     /// @dev this function calculates pending funding payment of user
     /// @param markTwap only for settleFunding()
     /// @param indexTwap only for settleFunding()
@@ -79,7 +82,7 @@ contract FundingRate is IFundingRate, BlockContext, PositioningCallee, FundingRa
     ) internal virtual view returns (int256 pendingFundingPayment) {
         int256 marketFundingRate = ((markTwap - (indexTwap)) / (indexTwap)) / (24);
         int256 PositionSize = IAccountBalance(_accountBalance).getTakerPositionSize(trader, baseToken);
-        pendingFundingPayment = PositionSize/marketFundingRate;
+        pendingFundingPayment = PositionSize*marketFundingRate;
     }
 
     /// @dev this function calculates the up-to-date growthTwPremium and twaps and pass them out

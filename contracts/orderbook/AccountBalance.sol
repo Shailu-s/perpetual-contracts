@@ -208,6 +208,10 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
         return quoteInPool.toInt256().add(quoteBalance);
     }
 
+    /**
+    TODO: getBase(trader, baseToken) = getPositionSize
+    Remove debt things here too
+     */
     /// @inheritdoc IAccountBalance
     function getTotalDebtValue(address trader) external view override returns (uint256) {
         int256 totalQuoteBalance;
@@ -274,6 +278,10 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
     // PUBLIC VIEW
     //
 
+    /**
+    TODO:   Remove Debt concept from here
+    Or can remove this and use getTakerPositionSize
+    */
     /// @inheritdoc IAccountBalance
     function getBase(address trader, address baseToken) public view override returns (int256) {
         uint256 orderDebt = IOrderBook(_orderBook).getTotalOrderDebt(trader, baseToken, true);
@@ -281,6 +289,10 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
         return _accountMarketMap[trader][baseToken].takerPositionSize.sub(orderDebt.toInt256());
     }
 
+    /**
+    TODO:   Remove Debt concept from here
+    or can remove this and use getTakerOpenNotional
+    */
     /// @inheritdoc IAccountBalance
     function getQuote(address trader, address baseToken) public view override returns (int256) {
         uint256 orderDebt = IOrderBook(_orderBook).getTotalOrderDebt(trader, baseToken, false);
@@ -392,6 +404,10 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
             );
     }
 
+    /**
+    TODO:   We should remove all orderbook stuff, pendingFee here and totalMakerQuoteBalance,
+            it is for adding liquidity to uniswap pools
+     */
     /// @return netQuoteBalance = quote.balance + totalQuoteInPools
     function _getNetQuoteBalanceAndPendingFee(address trader)
         internal

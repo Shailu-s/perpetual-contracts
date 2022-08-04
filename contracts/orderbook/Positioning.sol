@@ -2,9 +2,7 @@
 pragma solidity =0.8.12;
 
 import { AddressUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol";
-import {
-    ReentrancyGuardUpgradeable
-} from "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
+import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 import { PerpSafeCast } from "../libs/PerpSafeCast.sol";
 import { PerpMath } from "../libs/PerpMath.sol";
 import { SettlementTokenMath } from "../libs/SettlementTokenMath.sol";
@@ -90,6 +88,11 @@ contract Positioning is
     // EXTERNAL NON-VIEW
     //
 
+    /** 
+    TODO:   We should change Vault to VaultController here and 
+            update with decimals 18 as calculations here are done in 18 decimals
+            If not required we should get rid of Exchange contract 
+    */
     /// @dev this function is public for testing
     // solhint-disable-next-line func-order
     function initialize(
@@ -121,6 +124,9 @@ contract Positioning is
         _settlementTokenDecimals = IVault(_vault).decimals();
     }
 
+    /**
+    TODO:   Actually we can remove this, it is used in perp-curie to first register trader as trusted entity
+    */
     // solhint-disable-next-line func-order
     function setTrustedForwarder(address trustedForwarderArg) external onlyOwner {
         // CH_TFNC: TrustedForwarder is not contract
@@ -172,7 +178,8 @@ contract Positioning is
         // register token if it's the first time
         address leftTraderBasetoken;
         address rightTraderBasetoken;
-
+        
+        // short = selling base token
         if (orderLeft.isShort) {
             leftTraderBasetoken = orderLeft.makeAsset.virtualToken;
             rightTraderBasetoken = orderRight.takeAsset.virtualToken;
@@ -221,11 +228,13 @@ contract Positioning is
     /// @inheritdoc IPositioning
     function getAccountValue(address trader) public view override returns (int256) {
         int256 fundingPayment = getAllPendingFundingPayment(trader);
-        (int256 owedRealizedPnl, int256 unrealizedPnl, uint256 pendingFee) =
-            IAccountBalance(_accountBalance).getPnlAndPendingFee(trader);
+        (int256 owedRealizedPnl, int256 unrealizedPnl, uint256 pendingFee) = IAccountBalance(_accountBalance)
+            .getPnlAndPendingFee(trader);
         // solhint-disable-next-line var-name-mixedcase
-        int256 balanceX10_18 =
-            SettlementTokenMath.parseSettlementToken(IVault(_vault).getBalance(trader), _settlementTokenDecimals);
+        int256 balanceX10_18 = SettlementTokenMath.parseSettlementToken(
+            IVault(_vault).getBalance(trader),
+            _settlementTokenDecimals
+        );
 
         // accountValue = collateralValue + owedRealizedPnl - fundingPayment + unrealizedPnl + pendingMakerFee
         return balanceX10_18 + (owedRealizedPnl - fundingPayment) + (unrealizedPnl) + (pendingFee.toInt256());
@@ -239,13 +248,20 @@ contract Positioning is
         address leftBaseToken,
         address rightBaseToken
     ) internal returns (SwapResponse memory response) {
-        (, , LibFill.FillResult memory newFill, LibDeal.DealData memory dealData) =
-            IMatchingEngine(_matchingEngine).matchOrders(orderLeft, signatureLeft, orderRight, signatureRight);
-
+        /**
+        TODO: Matching Engine should update fee return values
+         */
+        (, , LibFill.FillResult memory newFill, LibDeal.DealData memory dealData) = IMatchingEngine(_matchingEngine)
+            .matchOrders(orderLeft, signatureLeft, orderRight, signatureRight);
 
         // transfer to left trader
+        // minting/transferring virtual tokens here
+        /**
+        TODO: see TODO in VirtualToken.sol as minting is not possible
+        This should be either removed or VirtualToken should be changed
+         */
         IVirtualToken leftToken = IVirtualToken(orderLeft.takeAsset.virtualToken);
-        if (leftToken.balanceOf(orderRight.trader) == 0){
+        if (leftToken.balanceOf(orderRight.trader) == 0) {
             leftToken.mint(orderLeft.trader, newFill.rightValue);
         } else if (leftToken.balanceOf(orderRight.trader) >= newFill.rightValue) {
             leftToken.transferFrom(orderRight.trader, orderLeft.trader, newFill.rightValue);
@@ -259,7 +275,7 @@ contract Positioning is
         // transfer to right trader
         IVirtualToken rightToken = IVirtualToken(orderRight.takeAsset.virtualToken);
         rightToken.mint(orderRight.trader, newFill.leftValue);
-        if (rightToken.balanceOf(orderLeft.trader) == 0){
+        if (rightToken.balanceOf(orderLeft.trader) == 0) {
             rightToken.mint(orderRight.trader, newFill.leftValue);
         } else if (rightToken.balanceOf(orderLeft.trader) >= newFill.leftValue) {
             rightToken.transferFrom(orderLeft.trader, orderRight.trader, newFill.leftValue);
@@ -269,7 +285,7 @@ contract Positioning is
             rightToken.transferFrom(orderLeft.trader, orderRight.trader, senderBalance);
             rightToken.mint(orderRight.trader, restToMint);
         }
-        
+
         response = SwapResponse(leftBaseToken, rightBaseToken, newFill, dealData);
 
         InternalData memory internalData;
@@ -288,6 +304,7 @@ contract Positioning is
             internalData.rightExchangedPositionNotional = response.newFill.leftValue.toInt256();
         }
 
+        // modifies positionSize and openNotional
         IAccountBalance(_accountBalance).modifyTakerBalance(
             orderLeft.trader,
             leftBaseToken,
@@ -311,22 +328,36 @@ contract Positioning is
         }
 
         // if not closing a position, check margin ratio after swap
-        internalData.leftPositionSize =
-            IAccountBalance(_accountBalance).getTakerPositionSize(orderLeft.trader, leftBaseToken);
+        /**
+        TODO: no need to fetch it again modifyTakerBalance gives resultant positonSize and openNotional
+         */
+        internalData.leftPositionSize = IAccountBalance(_accountBalance).getTakerPositionSize(
+            orderLeft.trader,
+            leftBaseToken
+        );
         if (internalData.leftPositionSize != 0) {
             _requireEnoughFreeCollateral(orderLeft.trader);
         }
 
-        internalData.rightPositionSize =
-            IAccountBalance(_accountBalance).getTakerPositionSize(orderRight.trader, rightBaseToken);
+        internalData.rightPositionSize = IAccountBalance(_accountBalance).getTakerPositionSize(
+            orderRight.trader,
+            rightBaseToken
+        );
         if (internalData.rightPositionSize != 0) {
             _requireEnoughFreeCollateral(orderRight.trader);
         }
 
-        int256 leftOpenNotional =
-            IAccountBalance(_accountBalance).getTakerOpenNotional(orderLeft.trader, leftBaseToken);
-        int256 rightOpenNotional =
-            IAccountBalance(_accountBalance).getTakerOpenNotional(orderRight.trader, rightBaseToken);
+        /**
+        TODO: no need to fetch it again modifyTakerBalance gives resultant positonSize and openNotional
+         */
+        int256 leftOpenNotional = IAccountBalance(_accountBalance).getTakerOpenNotional(
+            orderLeft.trader,
+            leftBaseToken
+        );
+        int256 rightOpenNotional = IAccountBalance(_accountBalance).getTakerOpenNotional(
+            orderRight.trader,
+            rightBaseToken
+        );
 
         emit PositionChanged(
             orderLeft.trader,
@@ -346,6 +377,7 @@ contract Positioning is
             rightOpenNotional
         );
 
+        // deregisters if positionSize or openNotional is less than DUST
         IAccountBalance(_accountBalance).deregisterBaseToken(orderLeft.trader, leftBaseToken);
         IAccountBalance(_accountBalance).deregisterBaseToken(orderRight.trader, rightBaseToken);
 
@@ -370,6 +402,9 @@ contract Positioning is
     // INTERNAL VIEW
     //
 
+    /**
+    TODO: we should remove BaseRelayRecipient
+     */
     /// @inheritdoc BaseRelayRecipient
     function _msgSender()
         internal

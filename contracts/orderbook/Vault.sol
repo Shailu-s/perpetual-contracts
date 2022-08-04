@@ -291,6 +291,10 @@ contract Vault is IVault, ReentrancyGuardUpgradeable, OwnerPausable, BaseRelayRe
         return _balance[trader][_settlementToken];
     }
 
+    /**
+    TODO: pendingFeeX10_18 should be removed
+    Also we don't need this function here, it is needed in VaultController
+     */
     /// @inheritdoc IVault
     function getFreeCollateralByRatio(address trader, uint24 ratio) public view virtual override returns (int256) {
         // conservative config: freeCollateral = min(collateral, accountValue) - margin requirement ratio

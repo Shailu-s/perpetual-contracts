@@ -97,6 +97,10 @@ contract VaultController is ReentrancyGuardUpgradeable, BaseRelayRecipient, Owne
         IVault(_vault).withdraw(token, amount, to);
     }
 
+    /**
+    TODO: remove pendingFee from here too
+    We should also include getFreeCollateralByRatio method here
+     */
     function getAccountValue(address trader) external view virtual whenNotPaused returns (int256) {
         // _requireOnlyPositioning();
         int256 fundingPayment = IPositioning(_positioning).getAllPendingFundingPayment(trader);
@@ -128,6 +132,9 @@ contract VaultController is ReentrancyGuardUpgradeable, BaseRelayRecipient, Owne
         require(_msgSender() == _positioning, "CHD_OCH");
     }
 
+    /**
+    TODO: we should remove BaseRelayRecipient
+     */
     /// @inheritdoc BaseRelayRecipient
     function _msgSender() internal view override(BaseRelayRecipient, OwnerPausable) returns (address) {
         return super._msgSender();
