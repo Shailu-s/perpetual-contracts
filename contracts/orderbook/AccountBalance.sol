@@ -3,7 +3,9 @@ pragma solidity =0.8.12;
 
 import { AddressUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol";
 import { SafeMathUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/math/SafeMathUpgradeable.sol";
-import { SignedSafeMathUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/math/SignedSafeMathUpgradeable.sol";
+import {
+    SignedSafeMathUpgradeable
+} from "@openzeppelin/contracts-upgradeable/utils/math/SignedSafeMathUpgradeable.sol";
 import { PositioningCallee } from "../helpers/PositioningCallee.sol";
 import { PerpSafeCast } from "../libs/PerpSafeCast.sol";
 import { PerpMath } from "../libs/PerpMath.sol";
@@ -144,7 +146,7 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
 
     /// @inheritdoc IAccountBalance
     function deregisterBaseToken(address trader, address baseToken) external override {
-        _requireOnlyPositioning();
+       _requireOnlyPositioning();
         _deregisterBaseToken(trader, baseToken);
     }
 
@@ -293,25 +295,8 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
     }
 
     /// @inheritdoc IAccountBalance
-    function getTotalPositionSize(address trader, address baseToken) public view override returns (int256) {
-        // NOTE: when a token goes into UniswapV3 pool (addLiquidity or swap), there would be 1 wei rounding error
-        // for instance, maker adds liquidity with 2 base (2000000000000000000),
-        // the actual base amount in pool would be 1999999999999999999
-
-        // makerBalance = totalTokenAmountInPool - totalOrderDebt
-        (uint256 totalBaseBalanceFromOrders, ) =
-            IOrderBook(_orderBook).getTotalTokenAmountInPoolAndPendingFee(trader, baseToken, true);
-        uint256 totalBaseDebtFromOrder = IOrderBook(_orderBook).getTotalOrderDebt(trader, baseToken, true);
-        int256 makerBaseBalance = totalBaseBalanceFromOrders.toInt256().sub(totalBaseDebtFromOrder.toInt256());
-
-        int256 takerPositionSize = _accountMarketMap[trader][baseToken].takerPositionSize;
-        int256 totalPositionSize = makerBaseBalance.add(takerPositionSize);
-        return totalPositionSize.abs() < _DUST ? int256(0) : totalPositionSize;
-    }
-
-    /// @inheritdoc IAccountBalance
     function getTotalPositionValue(address trader, address baseToken) public view override returns (int256) {
-        int256 positionSize = getTotalPositionSize(trader, baseToken);
+        int256 positionSize = getTakerPositionSize(trader, baseToken);
         if (positionSize == 0) return 0;
 
         uint256 indexTwap = _getIndexPrice(baseToken);
