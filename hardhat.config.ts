@@ -23,6 +23,14 @@ const config: HardhatUserConfig = {
               version: "0.8.12",
             },
         ],
+        settings: {
+            // for smock to mock contracts
+            outputSelection: {
+                "*": {
+                    "*": ["storageLayout"],
+                },
+            },
+        },
     },
     networks: {
         hardhat: {
