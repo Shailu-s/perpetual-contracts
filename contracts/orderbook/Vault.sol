@@ -2,9 +2,9 @@
 pragma solidity =0.8.12;
 
 import { AddressUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol";
-import { SafeMathUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/math/SafeMathUpgradeable.sol";
-import { SignedSafeMathUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/math/SignedSafeMathUpgradeable.sol";
-import { ReentrancyGuardUpgradeable } from "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
+import {
+    ReentrancyGuardUpgradeable
+} from "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 import {
     SafeERC20Upgradeable,
     IERC20Upgradeable
@@ -24,10 +24,8 @@ import { IVault } from "../interfaces/IVault.sol";
 
 // never inherit any new stateful contract. never change the orders of parent stateful contracts
 contract Vault is IVault, ReentrancyGuardUpgradeable, OwnerPausable, BaseRelayRecipient, VaultStorageV1 {
-    using SafeMathUpgradeable for uint256;
     using PerpSafeCast for uint256;
     using PerpSafeCast for int256;
-    using SignedSafeMathUpgradeable for int256;
     using SettlementTokenMath for uint256;
     using SettlementTokenMath for int256;
     using PerpMath for int256;
@@ -60,7 +58,7 @@ contract Vault is IVault, ReentrancyGuardUpgradeable, OwnerPausable, BaseRelayRe
         bool isEthVaultArg
     ) external override initializer {
         uint8 decimalsArg = 0;
-        if (isEthVaultArg){
+        if (isEthVaultArg) {
             decimalsArg = 18;
         } else {
             decimalsArg = IERC20Metadata(tokenArg).decimals();
@@ -128,7 +126,7 @@ contract Vault is IVault, ReentrancyGuardUpgradeable, OwnerPausable, BaseRelayRe
             uint256 balanceBefore = IERC20Metadata(token).balanceOf(address(this));
             SafeERC20Upgradeable.safeTransferFrom(IERC20Upgradeable(token), from, address(this), amount);
             // V_BAI: inconsistent balance amount, to prevent from deflationary tokens
-            require((IERC20Metadata(token).balanceOf(address(this)).sub(balanceBefore)) == amount, "V_IBA");
+            require((IERC20Metadata(token).balanceOf(address(this)) - balanceBefore) == amount, "V_IBA");
             _vaultBalance = IERC20Metadata(token).balanceOf(address(this));
         }
 
@@ -166,27 +164,27 @@ contract Vault is IVault, ReentrancyGuardUpgradeable, OwnerPausable, BaseRelayRe
         // by this time there should be no owedRealizedPnl nor pending funding payment in free collateral
         int256 freeCollateralByImRatio =
             getFreeCollateralByRatio(to, IPositioningConfig(_PositioningConfig).getImRatio());
-        
+
         // V_NEFC: not enough freeCollateral
         require(
-            freeCollateralByImRatio.add(owedRealizedPnlX10_18.formatSettlementToken(_decimals)) >= amount.toInt256(),
+            freeCollateralByImRatio + (owedRealizedPnlX10_18.formatSettlementToken(_decimals)) >= amount.toInt256(),
             "V_NEFC"
         );
 
         uint256 amountToTransfer = amount;
         if (_isEthVault) {
             // not enough balance
-            require( address(this).balance >= amount, "V_NEB");
+            require(address(this).balance >= amount, "V_NEB");
             to.transfer(amount);
         } else {
             // send available funds to trader if vault balance is not enough and emit LowBalance event
             uint256 vaultBalance = IERC20Metadata(token).balanceOf(address(this));
             uint256 remainingAmount = 0;
             if (vaultBalance < amount) {
-                remainingAmount = amount.sub(vaultBalance);
+                remainingAmount = amount - vaultBalance;
                 emit LowBalance(remainingAmount);
             }
-            amountToTransfer = amount.sub(remainingAmount);
+            amountToTransfer = amount - remainingAmount;
 
             SafeERC20Upgradeable.safeTransfer(IERC20Upgradeable(token), to, amountToTransfer);
         }
@@ -195,7 +193,7 @@ contract Vault is IVault, ReentrancyGuardUpgradeable, OwnerPausable, BaseRelayRe
         _modifyBalance(
             to,
             token,
-            (amountToTransfer.toInt256().sub(owedRealizedPnlX10_18.formatSettlementToken(_decimals))).neg256()
+            (amountToTransfer.toInt256() - (owedRealizedPnlX10_18.formatSettlementToken(_decimals))).neg256()
         );
 
         emit Withdrawn(token, to, amountToTransfer);
@@ -300,18 +298,18 @@ contract Vault is IVault, ReentrancyGuardUpgradeable, OwnerPausable, BaseRelayRe
         (int256 owedRealizedPnlX10_18, int256 unrealizedPnlX10_18, uint256 pendingFeeX10_18) =
             IAccountBalance(_accountBalance).getPnlAndPendingFee(trader);
         int256 totalCollateralValue =
-            getBalance(trader).add(
-                owedRealizedPnlX10_18.sub(fundingPaymentX10_18).add(pendingFeeX10_18.toInt256()).formatSettlementToken(
+            getBalance(trader) + (
+                owedRealizedPnlX10_18 - fundingPaymentX10_18 + (pendingFeeX10_18.toInt256()).formatSettlementToken(
                     _decimals
                 )
             );
 
         // accountValue = totalCollateralValue + totalUnrealizedPnl, in the settlement token's decimals
-        int256 accountValue = totalCollateralValue.add(unrealizedPnlX10_18.formatSettlementToken(_decimals));
+        int256 accountValue = totalCollateralValue + (unrealizedPnlX10_18.formatSettlementToken(_decimals));
         uint256 totalMarginRequirementX10_18 = _getTotalMarginRequirement(trader, ratio);
 
         return
-            PerpMath.min(totalCollateralValue, accountValue).sub(
+            PerpMath.min(totalCollateralValue, accountValue) - (
                 totalMarginRequirementX10_18.toInt256().formatSettlementToken(_decimals)
             );
 
@@ -335,7 +333,7 @@ contract Vault is IVault, ReentrancyGuardUpgradeable, OwnerPausable, BaseRelayRe
         address token,
         int256 amount
     ) internal {
-        _balance[trader][token] = _balance[trader][token].add(amount);
+        _balance[trader][token] = _balance[trader][token] + amount;
     }
 
     //

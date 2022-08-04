@@ -1,9 +1,10 @@
-// SPDX-License-Identifier: GPL-3.0-or-later
-pragma solidity 0.7.6;
+// SPDX-License-Identifier: BUSL - 1.1
+pragma solidity =0.8.12;
+
 import { AddressUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol";
-import { SafeMathUpgradeable } from "@openzeppelin/contracts-upgradeable/math/SafeMathUpgradeable.sol";
-import { SignedSafeMathUpgradeable } from "@openzeppelin/contracts-upgradeable/math/SignedSafeMathUpgradeable.sol";
-import { ReentrancyGuardUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
+import {
+    ReentrancyGuardUpgradeable
+} from "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 import { BaseRelayRecipient } from "../gsn/BaseRelayRecipient.sol";
 import { OwnerPausable } from "../helpers/OwnerPausable.sol";
 import { IERC20Metadata } from "../interfaces/IERC20Metadata.sol";
@@ -21,8 +22,6 @@ import "@openzeppelin/contracts/proxy/Clones.sol";
 
 contract VaultController is ReentrancyGuardUpgradeable, BaseRelayRecipient, OwnerPausable, VaultControllerStorage {
     using AddressUpgradeable for address;
-    using SafeMathUpgradeable for uint256;
-    using SignedSafeMathUpgradeable for int256;
     using PerpSafeCast for uint256;
     using PerpSafeCast for uint128;
     using PerpSafeCast for int256;
@@ -58,17 +57,17 @@ contract VaultController is ReentrancyGuardUpgradeable, BaseRelayRecipient, Owne
         isZkSync = (networkId == 280) ? true : false;
     }
 
-    function deployVault(address _token,bool isEthVault) external onlyOwner returns (address) {
+    function deployVault(address _token, bool isEthVault) external onlyOwner returns (address) {
         IVault vault;
         if (isZkSync) {
             vault = new Vault();
 
-            vault.initialize(_positioningConfig, _accountBalance, _token, address(this),isEthVault);
+            vault.initialize(_positioningConfig, _accountBalance, _token, address(this), isEthVault);
         } else {
             bytes32 salt = keccak256(abi.encodePacked(_token));
 
             vault = Vault(Clones.cloneDeterministic(_vaultImplementation, salt));
-            vault.initialize(_positioningConfig, _accountBalance, _token, address(this),isEthVault);
+            vault.initialize(_positioningConfig, _accountBalance, _token, address(this), isEthVault);
         }
         _vaultAddress[_token] = address(vault);
         return address(vault);
@@ -87,14 +86,14 @@ contract VaultController is ReentrancyGuardUpgradeable, BaseRelayRecipient, Owne
         if (IVault(_vault).getBalance(from) == 0) {
             _vaultList.push(_vault);
         }
-        IVault(_vault).deposit{value: msg.value}(token, amount, from);
+        IVault(_vault).deposit{ value: msg.value }(token, amount, from);
     }
 
     function withdraw(address token, uint256 amount) external whenNotPaused nonReentrant {
         address _vault = getVault(token);
         // vault of token is not available
         require(_vault != address(0), "VC_VOTNA");
-        address payable to = _msgSender();
+        address payable to = payable(_msgSender());
         IVault(_vault).withdraw(token, amount, to);
     }
 
@@ -110,16 +109,18 @@ contract VaultController is ReentrancyGuardUpgradeable, BaseRelayRecipient, Owne
 
         for (uint256 i; i < vaultLen; i++) {
             if (_vaultList[i] != address(0)) {
-                balanceX10_18 = balanceX10_18.add(
-                    SettlementTokenMath.parseSettlementToken(
-                        IVault(_vaultList[i]).getBalance(trader),
-                        IVault(_vaultList[i]).decimals()
-                    )
-                );
+                balanceX10_18 =
+                    balanceX10_18 +
+                    (
+                        SettlementTokenMath.parseSettlementToken(
+                            IVault(_vaultList[i]).getBalance(trader),
+                            IVault(_vaultList[i]).decimals()
+                        )
+                    );
             }
         }
         // accountValue = collateralValue + owedRealizedPnl - fundingPayment + unrealizedPnl + pendingMakerFee
-        return balanceX10_18.add(owedRealizedPnl.sub(fundingPayment)).add(unrealizedPnl).add(pendingFee.toInt256());
+        return balanceX10_18 + (owedRealizedPnl - fundingPayment) + unrealizedPnl + (pendingFee.toInt256());
     }
 
     function _requireOnlyPositioning() internal view {
@@ -128,7 +129,7 @@ contract VaultController is ReentrancyGuardUpgradeable, BaseRelayRecipient, Owne
     }
 
     /// @inheritdoc BaseRelayRecipient
-    function _msgSender() internal view override(BaseRelayRecipient, OwnerPausable) returns (address payable) {
+    function _msgSender() internal view override(BaseRelayRecipient, OwnerPausable) returns (address) {
         return super._msgSender();
     }
 

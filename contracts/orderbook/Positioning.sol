@@ -2,9 +2,9 @@
 pragma solidity =0.8.12;
 
 import { AddressUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol";
-import { SafeMathUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/math/SafeMathUpgradeable.sol";
-import { SignedSafeMathUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/math/SignedSafeMathUpgradeable.sol";
-import { ReentrancyGuardUpgradeable } from "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
+import {
+    ReentrancyGuardUpgradeable
+} from "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 import { PerpSafeCast } from "../libs/PerpSafeCast.sol";
 import { PerpMath } from "../libs/PerpMath.sol";
 import { SettlementTokenMath } from "../libs/SettlementTokenMath.sol";
@@ -19,12 +19,18 @@ import { BaseRelayRecipient } from "../gsn/BaseRelayRecipient.sol";
 import { PositioningStorageV1 } from "../storage/PositioningStorage.sol";
 import { BlockContext } from "../helpers/BlockContext.sol";
 import { IPositioning } from "../interfaces/IPositioning.sol";
+import { IMatchingEngine } from "../interfaces/IMatchingEngine.sol";
 import { AccountMarket } from "../libs/AccountMarket.sol";
 import { OpenOrder } from "../libs/OpenOrder.sol";
+import { IVirtualToken } from "../interfaces/IVirtualToken.sol";
+import "../libs/LibAsset.sol";
 import "../interfaces/IIndexPrice.sol";
 import "../interfaces/IBaseToken.sol";
 import { FundingRate } from "../funding-rate/FundingRate.sol";
 import { ContextUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol";
+import "../libs/LibOrder.sol";
+import "../libs/LibFill.sol";
+import "../libs/LibDeal.sol";
 
 // never inherit any new stateful contract. never change the orders of parent stateful contracts
 contract Positioning is
@@ -37,8 +43,6 @@ contract Positioning is
     FundingRate
 {
     using AddressUpgradeable for address;
-    using SafeMathUpgradeable for uint256;
-    using SignedSafeMathUpgradeable for int256;
     using PerpSafeCast for uint256;
     using PerpSafeCast for uint128;
     using PerpSafeCast for int256;
@@ -53,51 +57,34 @@ contract Positioning is
     // STRUCT
     //
 
-    /// @param sqrtPriceLimitX96 tx will fill until it reaches this price but WON'T REVERT
-    struct InternalOpenPositionParams {
+    struct InternalOrderParams {
         address trader;
-        address baseToken;
+        uint64 deadline;
         bool isShort;
-        bool isClose;
-        uint256 amount;
-        bool isLiquidation;
+        bool isMaker;
+        LibAsset.Asset makeAsset;
+        LibAsset.Asset takeAsset;
+        uint256 salt;
         bytes signature;
     }
 
-    struct InternalClosePositionParams {
-        address trader;
-        address baseToken;
-        uint160 sqrtPriceLimitX96;
-        bool isLiquidation;
-    }
-
-    struct InternalCheckSlippageParams {
-        bool isBaseToQuote;
-        bool isExactInput;
-        uint256 base;
-        uint256 quote;
-        uint256 oppositeAmountBound;
+    struct InternalData {
+        int256 leftExchangedPositionSize;
+        int256 leftExchangedPositionNotional;
+        int256 rightExchangedPositionSize;
+        int256 rightExchangedPositionNotional;
+        int256 leftPositionSize;
+        int256 rightPositionSize;
     }
 
     //
     // MODIFIER
     //
-
-    modifier onlyExchange() {
-        // only exchange
-        // For caller validation purposes it would be more efficient and more reliable to use
-        // "msg.sender" instead of "_msgSender()" as contracts never call each other through GSN.
-        require(msg.sender == _exchange, "CH_OE");
-        _;
-    }
-
     modifier checkDeadline(uint256 deadline) {
         // transaction expires
         require(_blockTimestamp() <= deadline, "CH_TE");
         _;
     }
-
-    mapping(address => uint256) public costBasis;
 
     //
     // EXTERNAL NON-VIEW
@@ -107,44 +94,30 @@ contract Positioning is
     // solhint-disable-next-line func-order
     function initialize(
         address PositioningConfigArg,
-        address quoteTokenArg,
+        address vaultArg,
         address exchangeArg,
         address accountBalanceArg,
-        address insuranceFundArg
+        address matchingEngineArg
     ) public initializer {
-
-        // CH_QANC: QuoteToken address is not contract
-        require(quoteTokenArg.isContract(), "CH_QANC");
-        // CH_QDN18: QuoteToken decimals is not 18
-        require(IERC20Metadata(quoteTokenArg).decimals() == 18, "CH_QDN18");
+        // CH_VANC: Vault address is not contract
+        require(vaultArg.isContract(), "CH_VANC");
         // PositioningConfig address is not contract
         require(PositioningConfigArg.isContract(), "CH_CCNC");
         // AccountBalance is not contract
         require(accountBalanceArg.isContract(), "CH_ABNC");
         // CH_ENC: Exchange is not contract
         require(exchangeArg.isContract(), "CH_ENC");
-        // CH_IFANC: InsuranceFund address is not contract
-        require(insuranceFundArg.isContract(), "CH_IFANC");
-
-        address orderBookArg = IExchange(exchangeArg).getOrderBook();
-        // orderBook is not contract
-        require(orderBookArg.isContract(), "CH_OBNC");
+        // CH_MENC: Matching Engine is not contract
+        require(matchingEngineArg.isContract(), "CH_MENC");
 
         __ReentrancyGuard_init();
         __OwnerPausable_init();
 
         _PositioningConfig = PositioningConfigArg;
-        _quoteToken = quoteTokenArg;
-        _exchange = exchangeArg;
-        _orderBook = orderBookArg;
-        _accountBalance = accountBalanceArg;
-        _insuranceFund = insuranceFundArg;
-    }
-
-    function setVault(address vaultArg) external onlyOwner{
-        // CH_VANC: Vault address is not contract
-        require(vaultArg.isContract(), "CH_VANC");
         _vault = vaultArg;
+        _exchange = exchangeArg;
+        _accountBalance = accountBalanceArg;
+        _matchingEngine = matchingEngineArg;
         _settlementTokenDecimals = IVault(_vault).decimals();
     }
 
@@ -177,61 +150,52 @@ contract Positioning is
         uint256 baseTokenLength = baseTokens.length;
 
         for (uint256 i = 0; i < baseTokenLength; i++) {
-            pendingFundingPayment = pendingFundingPayment.add(getPendingFundingPayment(trader, baseTokens[i]));
+            pendingFundingPayment = pendingFundingPayment + (getPendingFundingPayment(trader, baseTokens[i]));
         }
         return pendingFundingPayment;
     }
 
     /// @inheritdoc IPositioning
     function openPosition(
-        PositionParams memory positionLeft,
+        LibOrder.Order memory orderLeft,
         bytes memory signatureLeft,
-        PositionParams memory positionRight,
+        LibOrder.Order memory orderRight,
         bytes memory signatureRight
     )
-        external
+        public
         override
         whenNotPaused
         nonReentrant
-        checkDeadline(positionLeft.deadline)
-        returns (uint256 base, uint256 quote)
+        checkDeadline(orderLeft.deadline)
+        returns (SwapResponse memory response)
     {
-        require(positionLeft.isMaker, "Positioning: Left order should be maker");
         // register token if it's the first time
-        IAccountBalance(_accountBalance).registerBaseToken(positionLeft.trader, positionLeft.baseToken);
-        IAccountBalance(_accountBalance).registerBaseToken(positionRight.trader, positionRight.baseToken);
+        address leftTraderBasetoken;
+        address rightTraderBasetoken;
+
+        if (orderLeft.isShort) {
+            leftTraderBasetoken = orderLeft.makeAsset.virtualToken;
+            rightTraderBasetoken = orderRight.takeAsset.virtualToken;
+        } else {
+            leftTraderBasetoken = orderLeft.takeAsset.virtualToken;
+            rightTraderBasetoken = orderRight.makeAsset.virtualToken;
+        }
+
+        IAccountBalance(_accountBalance).registerBaseToken(orderLeft.trader, leftTraderBasetoken);
+        IAccountBalance(_accountBalance).registerBaseToken(orderRight.trader, rightTraderBasetoken);
 
         // must settle funding first
-        _settleFunding(positionLeft.trader, positionLeft.baseToken);
-        _settleFunding(positionRight.trader, positionRight.baseToken);
+        _settleFunding(orderLeft.trader, leftTraderBasetoken);
+        _settleFunding(orderRight.trader, rightTraderBasetoken);
 
-        IExchange.SwapResponse memory response =
-            _openPosition(
-                InternalOpenPositionParams({
-                    trader: positionLeft.trader,
-                    baseToken: positionLeft.baseToken,
-                    isShort: positionLeft.isShort,
-                    isClose: false,
-                    amount: positionLeft.amount,
-                    isLiquidation: false,
-                    signature: signatureLeft
-                }),
-                InternalOpenPositionParams({
-                    trader: positionRight.trader,
-                    baseToken: positionRight.baseToken,
-                    isShort: positionRight.isShort,
-                    isClose: false,
-                    amount: positionRight.amount,
-                    isLiquidation: false,
-                    signature: signatureRight
-                })
-            );
-        return (response.base, response.quote);
-    }
-
-    /// @inheritdoc IPositioning
-    function getQuoteToken() external view override returns (address) {
-        return _quoteToken;
+        response = _openPosition(
+            orderLeft,
+            signatureLeft,
+            orderRight,
+            signatureRight,
+            leftTraderBasetoken,
+            rightTraderBasetoken
+        );
     }
 
     /// @inheritdoc IPositioning
@@ -250,18 +214,8 @@ contract Positioning is
     }
 
     /// @inheritdoc IPositioning
-    function getOrderBook() external view override returns (address) {
-        return _orderBook;
-    }
-
-    /// @inheritdoc IPositioning
     function getAccountBalance() external view override returns (address) {
         return _accountBalance;
-    }
-
-    /// @inheritdoc IPositioning
-    function getInsuranceFund() external view override returns (address) {
-        return _insuranceFund;
     }
 
     /// @inheritdoc IPositioning
@@ -274,81 +228,126 @@ contract Positioning is
             SettlementTokenMath.parseSettlementToken(IVault(_vault).getBalance(trader), _settlementTokenDecimals);
 
         // accountValue = collateralValue + owedRealizedPnl - fundingPayment + unrealizedPnl + pendingMakerFee
-        return balanceX10_18.add(owedRealizedPnl.sub(fundingPayment)).add(unrealizedPnl).add(pendingFee.toInt256());
+        return balanceX10_18 + (owedRealizedPnl - fundingPayment) + (unrealizedPnl) + (pendingFee.toInt256());
     }
 
+    function _openPosition(
+        LibOrder.Order memory orderLeft,
+        bytes memory signatureLeft,
+        LibOrder.Order memory orderRight,
+        bytes memory signatureRight,
+        address leftBaseToken,
+        address rightBaseToken
+    ) internal returns (SwapResponse memory response) {
+        (, , LibFill.FillResult memory newFill, LibDeal.DealData memory dealData) =
+            IMatchingEngine(_matchingEngine).matchOrders(orderLeft, signatureLeft, orderRight, signatureRight);
 
-    /// @dev explainer diagram for the relationship between exchangedPositionNotional, fee and openNotional:
-    ///      https://www.figma.com/file/xuue5qGH4RalX7uAbbzgP3/swap-accounting-and-events
-    function _openPosition(InternalOpenPositionParams memory params1, InternalOpenPositionParams memory params2)
-        internal
-        returns (IExchange.SwapResponse memory)
-    {
-        IExchange.SwapResponse memory response =
-            IExchange(_exchange).swap(
-                IExchange.SwapParams({
-                    trader: params1.trader,
-                    baseToken: params1.baseToken,
-                    isShort: params1.isShort,
-                    isClose: params1.isClose,
-                    amount: params1.amount
-                }),
-                IExchange.SwapParams({
-                    trader: params2.trader,
-                    baseToken: params2.baseToken,
-                    isShort: params2.isShort,
-                    isClose: params2.isClose,
-                    amount: params2.amount
-                })
-            );
 
-        IAccountBalance(_accountBalance).modifyOwedRealizedPnl(_insuranceFund, response.insuranceFundFee.toInt256());
+        // transfer to left trader
+        IVirtualToken leftToken = IVirtualToken(orderLeft.takeAsset.virtualToken);
+        if (leftToken.balanceOf(orderRight.trader) == 0){
+            leftToken.mint(orderLeft.trader, newFill.rightValue);
+        } else if (leftToken.balanceOf(orderRight.trader) >= newFill.rightValue) {
+            leftToken.transferFrom(orderRight.trader, orderLeft.trader, newFill.rightValue);
+        } else {
+            uint256 senderBalance = leftToken.balanceOf(orderRight.trader);
+            uint256 restToMint = newFill.rightValue - senderBalance;
+            leftToken.transferFrom(orderRight.trader, orderLeft.trader, senderBalance);
+            leftToken.mint(orderLeft.trader, restToMint);
+        }
 
-        // examples:
-        // https://www.figma.com/file/xuue5qGH4RalX7uAbbzgP3/swap-accounting-and-events?node-id=0%3A1
+        // transfer to right trader
+        IVirtualToken rightToken = IVirtualToken(orderRight.takeAsset.virtualToken);
+        rightToken.mint(orderRight.trader, newFill.leftValue);
+        if (rightToken.balanceOf(orderLeft.trader) == 0){
+            rightToken.mint(orderRight.trader, newFill.leftValue);
+        } else if (rightToken.balanceOf(orderLeft.trader) >= newFill.leftValue) {
+            rightToken.transferFrom(orderLeft.trader, orderRight.trader, newFill.leftValue);
+        } else {
+            uint256 senderBalance = rightToken.balanceOf(orderLeft.trader);
+            uint256 restToMint = newFill.leftValue - senderBalance;
+            rightToken.transferFrom(orderLeft.trader, orderRight.trader, senderBalance);
+            rightToken.mint(orderRight.trader, restToMint);
+        }
+        
+        response = SwapResponse(leftBaseToken, rightBaseToken, newFill, dealData);
+
+        InternalData memory internalData;
+
+        if (orderLeft.isShort) {
+            internalData.leftExchangedPositionSize = response.newFill.leftValue.neg256();
+            internalData.rightExchangedPositionSize = response.newFill.leftValue.toInt256();
+
+            internalData.leftExchangedPositionNotional = response.newFill.rightValue.toInt256();
+            internalData.rightExchangedPositionNotional = response.newFill.rightValue.neg256();
+        } else {
+            internalData.leftExchangedPositionSize = response.newFill.rightValue.toInt256();
+            internalData.rightExchangedPositionSize = response.newFill.rightValue.neg256();
+
+            internalData.leftExchangedPositionNotional = response.newFill.leftValue.neg256();
+            internalData.rightExchangedPositionNotional = response.newFill.leftValue.toInt256();
+        }
+
         IAccountBalance(_accountBalance).modifyTakerBalance(
-            params2.trader,
-            params2.baseToken,
-            response.exchangedPositionSize,
-            response.exchangedPositionNotional.sub(response.fee.toInt256())
+            orderLeft.trader,
+            leftBaseToken,
+            internalData.leftExchangedPositionSize,
+            internalData.leftExchangedPositionNotional
         );
 
-        if (response.pnlToBeRealized != 0) {
-            IAccountBalance(_accountBalance).settleQuoteToOwedRealizedPnl(
-                params1.trader,
-                params1.baseToken,
-                response.pnlToBeRealized
-            );
+        IAccountBalance(_accountBalance).modifyTakerBalance(
+            orderRight.trader,
+            rightBaseToken,
+            internalData.rightExchangedPositionSize,
+            internalData.rightExchangedPositionNotional
+        );
 
-            // if realized pnl is not zero, that means trader is reducing or closing position
-            // trader cannot reduce/close position if bad debt happen
-            // unless it's a liquidation from backstop liquidity provider
-            // CH_BD: trader has bad debt after reducing/closing position
-            require(
-                (params1.isLiquidation &&
-                    IPositioningConfig(_PositioningConfig).isBackstopLiquidityProvider(_msgSender())) ||
-                    getAccountValue(params1.trader) >= 0,
-                "CH_BD"
-            );
+        if (_firstTradedTimestampMap[leftBaseToken] == 0) {
+            _firstTradedTimestampMap[leftBaseToken] = _blockTimestamp();
+        }
+
+        if (_firstTradedTimestampMap[rightBaseToken] == 0) {
+            _firstTradedTimestampMap[rightBaseToken] = _blockTimestamp();
         }
 
         // if not closing a position, check margin ratio after swap
-        if (!params1.isClose) {
-            _requireEnoughFreeCollateral(params1.trader);
+        internalData.leftPositionSize =
+            IAccountBalance(_accountBalance).getTakerPositionSize(orderLeft.trader, leftBaseToken);
+        if (internalData.leftPositionSize != 0) {
+            _requireEnoughFreeCollateral(orderLeft.trader);
         }
 
-        int256 openNotional = IAccountBalance(_accountBalance).getTakerOpenNotional(params2.trader, params2.baseToken);
+        internalData.rightPositionSize =
+            IAccountBalance(_accountBalance).getTakerPositionSize(orderRight.trader, rightBaseToken);
+        if (internalData.rightPositionSize != 0) {
+            _requireEnoughFreeCollateral(orderRight.trader);
+        }
+
+        int256 leftOpenNotional =
+            IAccountBalance(_accountBalance).getTakerOpenNotional(orderLeft.trader, leftBaseToken);
+        int256 rightOpenNotional =
+            IAccountBalance(_accountBalance).getTakerOpenNotional(orderRight.trader, rightBaseToken);
+
         emit PositionChanged(
-            params1.trader,
-            params1.baseToken,
-            response.exchangedPositionSize,
-            response.exchangedPositionNotional,
-            response.fee,
-            openNotional,
-            response.pnlToBeRealized
+            orderLeft.trader,
+            leftBaseToken,
+            internalData.leftExchangedPositionSize,
+            internalData.leftExchangedPositionNotional,
+            response.dealData.protocolFee,
+            leftOpenNotional
         );
 
-        IAccountBalance(_accountBalance).deregisterBaseToken(params1.trader, params1.baseToken);
+        emit PositionChanged(
+            orderRight.trader,
+            rightBaseToken,
+            internalData.rightExchangedPositionSize,
+            internalData.rightExchangedPositionNotional,
+            response.dealData.protocolFee,
+            rightOpenNotional
+        );
+
+        IAccountBalance(_accountBalance).deregisterBaseToken(orderLeft.trader, leftBaseToken);
+        IAccountBalance(_accountBalance).deregisterBaseToken(orderRight.trader, rightBaseToken);
 
         return response;
     }
@@ -376,7 +375,7 @@ contract Positioning is
         internal
         view
         override(BaseRelayRecipient, OwnerPausable, ContextUpgradeable)
-        returns (address payable)
+        returns (address)
     {
         return super._msgSender();
     }
@@ -401,45 +400,5 @@ contract Positioning is
             _getFreeCollateralByRatio(trader, IPositioningConfig(_PositioningConfig).getImRatio()) >= 0,
             "CH_NEFCI"
         );
-    }
-
-    function _getPartialOppositeAmount(uint256 oppositeAmountBound, bool isPartialClose)
-        internal
-        view
-        returns (uint256)
-    {
-        return
-            isPartialClose
-                ? oppositeAmountBound.mulRatio(IPositioningConfig(_PositioningConfig).getPartialCloseRatio())
-                : oppositeAmountBound;
-    }
-
-    function _checkSlippage(InternalCheckSlippageParams memory params) internal pure {
-        // skip when params.oppositeAmountBound is zero
-        if (params.oppositeAmountBound == 0) {
-            return;
-        }
-
-        // B2Q + exact input, want more output quote as possible, so we set a lower bound of output quote
-        // B2Q + exact output, want less input base as possible, so we set a upper bound of input base
-        // Q2B + exact input, want more output base as possible, so we set a lower bound of output base
-        // Q2B + exact output, want less input quote as possible, so we set a upper bound of input quote
-        if (params.isBaseToQuote) {
-            if (params.isExactInput) {
-                // too little received when short
-                require(params.quote >= params.oppositeAmountBound, "CH_TLRS");
-            } else {
-                // too much requested when short
-                require(params.base <= params.oppositeAmountBound, "CH_TMRS");
-            }
-        } else {
-            if (params.isExactInput) {
-                // too little received when long
-                require(params.base >= params.oppositeAmountBound, "CH_TLRL");
-            } else {
-                // too much requested when long
-                require(params.quote <= params.oppositeAmountBound, "CH_TMRL");
-            }
-        }
     }
 }
