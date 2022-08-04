@@ -1,17 +1,14 @@
-// SPDX-License-Identifier: GPL-3.0-or-later
-pragma solidity 0.7.6;
+// SPDX-License-Identifier: BUSL - 1.1
+pragma solidity =0.8.12;
 
-import { SafeMathUpgradeable } from "@openzeppelin/contracts-upgradeable/math/SafeMathUpgradeable.sol";
 import { IPriceFeed } from "@perp/perp-oracle-contract/contracts/interface/IPriceFeed.sol";
 import { IIndexPrice } from "../interfaces/IIndexPrice.sol";
-import { VirtualToken } from "./VirtualToken.sol";
+import { VirtualToken } from "../tokens/VirtualToken.sol";
 import { BaseTokenStorageV1 } from "../storage/BaseTokenStorage.sol";
 import { IBaseToken } from "../interfaces/IBaseToken.sol";
 
 // never inherit any new stateful contract. never change the orders of parent stateful contracts
 contract BaseToken is IBaseToken, IIndexPrice, VirtualToken, BaseTokenStorageV1 {
-    using SafeMathUpgradeable for uint256;
-    using SafeMathUpgradeable for uint8;
 
     //
     // EXTERNAL NON-VIEW
@@ -22,7 +19,7 @@ contract BaseToken is IBaseToken, IIndexPrice, VirtualToken, BaseTokenStorageV1 
         string memory symbolArg,
         address priceFeedArg
     ) external initializer {
-        __VirtualToken_init(nameArg, symbolArg);
+        __VirtualToken_init(nameArg, symbolArg, false);
 
         uint8 priceFeedDecimals = IPriceFeed(priceFeedArg).decimals();
 
@@ -66,6 +63,6 @@ contract BaseToken is IBaseToken, IIndexPrice, VirtualToken, BaseTokenStorageV1 
     //
 
     function _formatDecimals(uint256 _price) internal view returns (uint256) {
-        return _price.mul(10**(decimals().sub(_priceFeedDecimals)));
+        return _price*(10**(decimals() - (_priceFeedDecimals)));
     }
 }

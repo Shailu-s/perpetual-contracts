@@ -6,13 +6,14 @@ pragma solidity =0.8.12;
 /// PositioningStorageVX.
 abstract contract PositioningStorageV1 {
     // --------- IMMUTABLE ---------
-    address internal _quoteToken;
 
     // cache the settlement token's decimals for gas optimization
     uint8 internal _settlementTokenDecimals;
     // --------- ^^^^^^^^^ ---------
-
+    mapping(address => uint256) internal _firstTradedTimestampMap;
+    address internal _PositioningConfig;
     address internal _vault;
     address internal _exchange;
-    address internal _insuranceFund;
+    address internal _accountBalance;
+    address internal _matchingEngine;
 }

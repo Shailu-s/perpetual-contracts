@@ -1,11 +1,12 @@
-// SPDX-License-Identifier: GPL-3.0-or-later
-pragma solidity 0.7.6;
+// SPDX-License-Identifier: BUSL - 1.1
+pragma solidity =0.8.12;
 
-import "@openzeppelin/contracts-upgradeable/proxy/Initializable.sol";
-import "@openzeppelin/contracts-upgradeable/presets/ERC20PresetMinterPauserUpgradeable.sol";
+import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC20/presets/ERC20PresetMinterPauserUpgradeable.sol";
 
 contract TestERC20 is ERC20PresetMinterPauserUpgradeable {
     uint256 _transferFeeRatio;
+    uint8 _decimal;
 
     function __TestERC20_init(
         string memory name,
@@ -13,8 +14,12 @@ contract TestERC20 is ERC20PresetMinterPauserUpgradeable {
         uint8 decimal
     ) public initializer {
         __ERC20PresetMinterPauser_init(name, symbol);
-        _setupDecimals(decimal);
         _transferFeeRatio = 0;
+        _decimal = decimal;
+    }
+
+    function decimals() public view override returns (uint8) {
+        return _decimal;
     }
 
     function setMinter(address minter) external {

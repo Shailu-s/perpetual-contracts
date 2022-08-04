@@ -176,13 +176,6 @@ interface IAccountBalance {
     /// @return takerPositionSize The taker position size of trader's baseToken market
     function getTakerPositionSize(address trader, address baseToken) external view returns (int256);
 
-    /// @notice Get total position size of trader's baseToken market
-    /// @dev `total position size = taker position size + maker impermanent position size`
-    /// @param trader The address of trader
-    /// @param baseToken The address of baseToken
-    /// @return totalPositionSize The total position size of trader's baseToken market
-    function getTotalPositionSize(address trader, address baseToken) external view returns (int256);
-
     /// @notice Get total position value of trader's baseToken market
     /// @dev A negative returned value is only be used when calculating pnl,
     /// @dev we use `15 mins` twap to calc position value
