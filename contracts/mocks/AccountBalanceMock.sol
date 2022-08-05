@@ -27,10 +27,9 @@ contract AccountBalanceMock is AccountBalance {
         override
         returns (
             int256,
-            int256,
-            uint256
+            int256
         )
     {
-        return (fakeOwedRealisedPnlX10_18, fakeUnrealizedPnlX10_18, fakePendingFeeX10_18);
+        return (fakeOwedRealisedPnlX10_18, fakeUnrealizedPnlX10_18);
     }
 }
