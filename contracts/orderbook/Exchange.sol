@@ -1,10 +1,9 @@
-// SPDX-License-Identifier: GPL-3.0-or-later
-pragma solidity 0.7.6;
-pragma abicoder v2;
+// SPDX-License-Identifier: BUSL - 1.1
+pragma solidity =0.8.12;
 
 import { AddressUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol";
-import { SafeMathUpgradeable } from "@openzeppelin/contracts-upgradeable/math/SafeMathUpgradeable.sol";
-import { SignedSafeMathUpgradeable } from "@openzeppelin/contracts-upgradeable/math/SignedSafeMathUpgradeable.sol";
+import { SafeMathUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/math/SafeMathUpgradeable.sol";
+import { SignedSafeMathUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/math/SignedSafeMathUpgradeable.sol";
 import { BlockContext } from "../helpers/BlockContext.sol";
 import { PerpSafeCast } from "../libs/PerpSafeCast.sol";
 import { SwapMath } from "../libs/SwapMath.sol";
@@ -22,7 +21,7 @@ import { IExchange } from "../interfaces/IExchange.sol";
 import { OpenOrder } from "../libs/OpenOrder.sol";
 import { IMarkPriceOracle } from "../interfaces/IMarkPriceOracle.sol";
 import { IExchangeManager } from "../interfaces/IExchangeManager.sol";
-import { FullMath } from "@uniswap/v3-core/contracts/libraries/FullMath.sol";
+import { FullMath } from "../libs/FullMath.sol";
 
 // never inherit any new stateful contract. never change the orders of parent stateful contracts
 contract Exchange is IExchange, BlockContext, PositioningCallee, ExchangeStorageV1 {
@@ -181,7 +180,7 @@ contract Exchange is IExchange, BlockContext, PositioningCallee, ExchangeStorage
         int256 takerOpenNotional = info.takerOpenNotional;
         int256 takerPositionSize = info.takerPositionSize;
         // when takerPositionSize < 0, it's a short position; when base < 0, isBaseToQuote(shorting)
-        bool isReducingPosition = takerPositionSize == 0 ? false : takerPositionSize < 0 != params.base < 0;
+        bool isReducingPosition = takerPositionSize == int256(0) ? false : takerPositionSize < 0 != params.base < 0;
 
         return
             isReducingPosition
@@ -195,7 +194,7 @@ contract Exchange is IExchange, BlockContext, PositioningCallee, ExchangeStorage
                         quote: params.quote
                     })
                 )
-                : 0;
+                : int256(0);
     }
 
     //

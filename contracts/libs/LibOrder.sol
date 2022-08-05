@@ -1,20 +1,16 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: BUSL - 1.1
 
-pragma solidity 0.7.6;
-
-import "./ExchangeFee.sol";
+pragma solidity =0.8.12;
 
 import "./LibMath.sol";
-import "./LibOrderDataV3.sol";
-import "./LibOrderDataV2.sol";
-import "./LibOrderDataV1.sol";
+import "./LibAsset.sol";
 
 library LibOrder {
     using SafeMathUpgradeable for uint256;
 
     bytes32 constant ORDER_TYPEHASH =
         keccak256(
-            "Order(address maker,Asset makeAsset,address taker,Asset takeAsset,uint256 salt,uint256 start,uint256 end,bytes4 dataType,bytes data)Asset(AssetType assetType,uint256 value)AssetType(bytes4 assetClass,bytes data)"
+            "Order(address maker,Asset makeAsset,address taker,Asset takeAsset,uint256 salt,uint256 start,uint256 end,bytes4 dataType,bytes data)Asset(address virtualToken,uint256 value)"
         );
 
     uint256 constant ON_CHAIN_ORDER = 0;
@@ -32,35 +28,20 @@ library LibOrder {
         bytes data;
     }
 
-    struct MatchedAssets {
-        LibAsset.AssetType makeMatch;
-        LibAsset.AssetType takeMatch;
-    }
-
-    function calculateRemaining(
-        Order memory order,
-        uint256 fill,
-        bool isMakeFill
-    ) internal pure returns (uint256 makeValue, uint256 takeValue) {
-        if (isMakeFill) {
-            makeValue = order.makeAsset.value.sub(fill);
-            takeValue = LibMath.safeGetPartialAmountFloor(order.takeAsset.value, order.makeAsset.value, makeValue);
-        } else {
-            takeValue = order.takeAsset.value.sub(fill);
-            makeValue = LibMath.safeGetPartialAmountFloor(order.makeAsset.value, order.takeAsset.value, takeValue);
-        }
+    function calculateRemaining(Order memory order, uint256 fill)
+        internal
+        pure
+        returns (uint256 makeValue, uint256 takeValue)
+    {
+        takeValue = order.takeAsset.value.sub(fill);
+        makeValue = LibMath.safeGetPartialAmountFloor(order.makeAsset.value, order.takeAsset.value, takeValue);
     }
 
     function hashKey(Order memory order) internal pure returns (bytes32) {
-        if (order.dataType == LibOrderDataV1.V1 || order.dataType == DEFAULT_ORDER_TYPE) {
+        if (order.dataType == DEFAULT_ORDER_TYPE) {
             return
                 keccak256(
-                    abi.encode(
-                        order.maker,
-                        LibAsset.hash(order.makeAsset.assetType),
-                        LibAsset.hash(order.takeAsset.assetType),
-                        order.salt
-                    )
+                    abi.encode(order.maker, LibAsset.hash(order.makeAsset), LibAsset.hash(order.takeAsset), order.salt)
                 );
         } else {
             //order.data is in hash for V2, V3 and all new order
@@ -68,8 +49,8 @@ library LibOrder {
                 keccak256(
                     abi.encode(
                         order.maker,
-                        LibAsset.hash(order.makeAsset.assetType),
-                        LibAsset.hash(order.takeAsset.assetType),
+                        LibAsset.hash(order.makeAsset),
+                        LibAsset.hash(order.takeAsset),
                         order.salt,
                         order.data
                     )

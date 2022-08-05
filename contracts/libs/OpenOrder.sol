@@ -1,5 +1,5 @@
-// SPDX-License-Identifier: GPL-3.0-or-later
-pragma solidity 0.7.6;
+// SPDX-License-Identifier: BUSL - 1.1
+pragma solidity =0.8.12;
 
 library OpenOrder {
     /// @param lastFeeGrowthInsideX128 fees in quote token recorded in Exchange

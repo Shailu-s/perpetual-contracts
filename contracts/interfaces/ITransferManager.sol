@@ -1,9 +1,8 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: BUSL - 1.1
 
-pragma solidity 0.7.6;
-pragma abicoder v2;
+pragma solidity =0.8.12;
 
-import "../libs/ExchangeFee.sol";
+import "../libs/LibDeal.sol";
 import "./ITransferExecutor.sol";
 
 abstract contract ITransferManager is ITransferExecutor {

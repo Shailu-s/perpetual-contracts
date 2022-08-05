@@ -1,10 +1,10 @@
-// SPDX-License-Identifier: GPL-3.0-or-later
-pragma solidity 0.7.6;
+// SPDX-License-Identifier: BUSL - 1.1
+pragma solidity =0.8.12;
 
 import { PerpMath } from "./PerpMath.sol";
 import { PerpSafeCast } from "./PerpSafeCast.sol";
-import { FullMath } from "@uniswap/v3-core/contracts/libraries/FullMath.sol";
-import { SafeMathUpgradeable } from "@openzeppelin/contracts-upgradeable/math/SafeMathUpgradeable.sol";
+import { FullMath } from "../libs/FullMath.sol";
+import { SafeMathUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/math/SafeMathUpgradeable.sol";
 
 library SwapMath {
     using PerpMath for int256;

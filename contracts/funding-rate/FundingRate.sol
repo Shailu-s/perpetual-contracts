@@ -1,15 +1,14 @@
-// SPDX-License-Identifier: GPL-3.0-or-later
-pragma solidity 0.7.6;
-pragma abicoder v2;
+// SPDX-License-Identifier: BUSL - 1.1
+pragma solidity =0.8.12;
 
 import { AddressUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol";
-import { SafeMathUpgradeable } from "@openzeppelin/contracts-upgradeable/math/SafeMathUpgradeable.sol";
-import { SignedSafeMathUpgradeable } from "@openzeppelin/contracts-upgradeable/math/SignedSafeMathUpgradeable.sol";
+import { SafeMathUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/math/SafeMathUpgradeable.sol";
+import { SignedSafeMathUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/math/SignedSafeMathUpgradeable.sol";
 import { PerpSafeCast } from "../libs/PerpSafeCast.sol";
 import { SwapMath } from "../libs/SwapMath.sol";
 import { PerpFixedPoint96 } from "../libs/PerpFixedPoint96.sol";
 import { PerpMath } from "../libs/PerpMath.sol";
-import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/Initializable.sol";
+import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import { PositioningCallee } from "../helpers/PositioningCallee.sol";
 import { BlockContext } from "../helpers/BlockContext.sol";
 import { FundingRateStorage } from "../storage/FundingRateStorage.sol";

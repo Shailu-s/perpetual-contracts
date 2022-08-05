@@ -1,16 +1,12 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: BUSL - 1.1
 
-pragma solidity 0.7.6;
-pragma abicoder v2;
+pragma solidity =0.8.12;
 
+import "../interfaces/ITransferManager.sol";
 import "../libs/LibFill.sol";
-import "../libs/LibOrderData.sol";
 import "./OrderValidator.sol";
 import "./AssetMatcher.sol";
-
 import "./TransferExecutor.sol";
-import "../interfaces/ITransferManager.sol";
-import "../libs/ExchangeFee.sol";
 
 abstract contract MatchingEngine is
     Initializable,
@@ -62,78 +58,30 @@ abstract contract MatchingEngine is
         @param orderRight the right order of the match
     */
     function matchAndTransfer(LibOrder.Order memory orderLeft, LibOrder.Order memory orderRight) internal {
-        (LibAsset.AssetType memory makeMatch, LibAsset.AssetType memory takeMatch) = matchAssets(orderLeft, orderRight);
+        (LibAsset.Asset memory makeMatch, LibAsset.Asset memory takeMatch) = matchAssets(orderLeft, orderRight);
 
-        LibOrderData.GenericOrderData memory leftOrderData = LibOrderData.parse(orderLeft);
-        LibOrderData.GenericOrderData memory rightOrderData = LibOrderData.parse(orderRight);
+        LibFill.FillResult memory newFill = getFillSetNew(orderLeft, orderRight);
 
-        LibFill.FillResult memory newFill =
-            getFillSetNew(orderLeft, orderRight, leftOrderData.isMakeFill, rightOrderData.isMakeFill);
-
-        (uint256 totalMakeValue, uint256 totalTakeValue) =
-            doTransfers(
-                LibDeal.DealSide(
-                    LibAsset.Asset(makeMatch, newFill.leftValue),
-                    leftOrderData.payouts,
-                    leftOrderData.originFees,
-                    proxies[makeMatch.assetClass],
-                    orderLeft.maker
-                ),
-                LibDeal.DealSide(
-                    LibAsset.Asset(takeMatch, newFill.rightValue),
-                    rightOrderData.payouts,
-                    rightOrderData.originFees,
-                    proxies[takeMatch.assetClass],
-                    orderRight.maker
-                ),
-                getDealData(
-                    makeMatch.assetClass,
-                    takeMatch.assetClass,
-                    orderLeft.dataType,
-                    orderRight.dataType,
-                    leftOrderData,
-                    rightOrderData
-                )
-            );
+        doTransfers(
+            LibDeal.DealSide(LibAsset.Asset(makeMatch.virtualToken, newFill.leftValue), _proxy, orderLeft.maker),
+            LibDeal.DealSide(LibAsset.Asset(takeMatch.virtualToken, newFill.rightValue), _proxy, orderRight.maker),
+            getDealData(orderLeft.dataType, orderRight.dataType)
+        );
 
         emit Match(newFill.rightValue, newFill.leftValue);
     }
 
     /**
         @notice determines the max amount of fees for the match
-        @param dataTypeLeft data type of the left order
-        @param dataTypeRight data type of the right order
-        @param leftOrderData data of the left order
-        @param rightOrderData data of the right order
         @param feeSide fee side of the match
         @param _protocolFee protocol fee of the match
         @return max fee amount in base points
     */
-    function getMaxFee(
-        bytes4 dataTypeLeft,
-        bytes4 dataTypeRight,
-        LibOrderData.GenericOrderData memory leftOrderData,
-        LibOrderData.GenericOrderData memory rightOrderData,
-        LibFeeSide.FeeSide feeSide,
-        uint256 _protocolFee
-    ) internal pure returns (uint256) {
-        if (
-            dataTypeLeft != LibOrderDataV3.V3_SELL &&
-            dataTypeRight != LibOrderDataV3.V3_SELL &&
-            dataTypeLeft != LibOrderDataV3.V3_BUY &&
-            dataTypeRight != LibOrderDataV3.V3_BUY
-        ) {
-            return 0;
-        }
-
-        uint256 matchFees = getSumFees(_protocolFee, leftOrderData.originFees, rightOrderData.originFees);
+    function getMaxFee(LibFeeSide.FeeSide feeSide, uint256 _protocolFee) internal pure returns (uint256) {
+        uint256 matchFees = getSumFees(_protocolFee);
         uint256 maxFee;
         if (feeSide == LibFeeSide.FeeSide.LEFT) {
-            maxFee = rightOrderData.maxFeesBasePoint;
-            require(dataTypeLeft == LibOrderDataV3.V3_BUY && dataTypeRight == LibOrderDataV3.V3_SELL, "wrong V3 type1");
-        } else if (feeSide == LibFeeSide.FeeSide.RIGHT) {
-            maxFee = leftOrderData.maxFeesBasePoint;
-            require(dataTypeRight == LibOrderDataV3.V3_BUY && dataTypeLeft == LibOrderDataV3.V3_SELL, "wrong V3 type2");
+            maxFee = 1000;
         } else {
             return 0;
         }
@@ -142,50 +90,24 @@ abstract contract MatchingEngine is
         return maxFee;
     }
 
-    function getDealData(
-        bytes4 makeMatchAssetClass,
-        bytes4 takeMatchAssetClass,
-        bytes4 leftDataType,
-        bytes4 rightDataType,
-        LibOrderData.GenericOrderData memory leftOrderData,
-        LibOrderData.GenericOrderData memory rightOrderData
-    ) internal view returns (LibDeal.DealData memory dealData) {
-        dealData.protocolFee = getProtocolFeeConditional(leftDataType);
-        dealData.feeSide = LibFeeSide.getFeeSide(makeMatchAssetClass, takeMatchAssetClass);
-        dealData.maxFeesBasePoint = getMaxFee(
-            leftDataType,
-            rightDataType,
-            leftOrderData,
-            rightOrderData,
-            dealData.feeSide,
-            dealData.protocolFee
-        );
+    function getDealData(bytes4 leftDataType, bytes4 rightDataType)
+        internal
+        view
+        returns (LibDeal.DealData memory dealData)
+    {
+        dealData.protocolFee = getProtocolFee();
+        dealData.feeSide = LibFeeSide.getFeeSide();
+        dealData.maxFeesBasePoint = getMaxFee(dealData.feeSide, dealData.protocolFee);
     }
 
     /**
         @notice calculates amount of fees for the match
         @param _protocolFee protocolFee of the match
-        @param originLeft origin fees of the left order
-        @param originRight origin fees of the right order
         @return sum of all fees for the match (protcolFee + leftOrder.originFees + rightOrder.originFees)
      */
-    function getSumFees(
-        uint256 _protocolFee,
-        LibPart.Part[] memory originLeft,
-        LibPart.Part[] memory originRight
-    ) internal pure returns (uint256) {
+    function getSumFees(uint256 _protocolFee) internal pure returns (uint256) {
         //start from protocol fee
         uint256 result = _protocolFee;
-
-        //adding left origin fees
-        for (uint256 i; i < originLeft.length; i++) {
-            result = result + originLeft[i].value;
-        }
-
-        //adding right protocol fees
-        for (uint256 i; i < originRight.length; i++) {
-            result = result + originRight[i].value;
-        }
 
         return result;
     }
@@ -194,39 +116,26 @@ abstract contract MatchingEngine is
         @notice calculates fills for the matched orders and set them in "fills" mapping
         @param orderLeft left order of the match
         @param orderRight right order of the match
-        @param leftMakeFill true if the left orders uses make-side fills, false otherwise
-        @param rightMakeFill true if the right orders uses make-side fills, false otherwise
         @return returns change in orders' fills by the match 
     */
-    function getFillSetNew(
-        LibOrder.Order memory orderLeft,
-        LibOrder.Order memory orderRight,
-        bool leftMakeFill,
-        bool rightMakeFill
-    ) internal returns (LibFill.FillResult memory) {
+    function getFillSetNew(LibOrder.Order memory orderLeft, LibOrder.Order memory orderRight)
+        internal
+        returns (LibFill.FillResult memory)
+    {
         bytes32 leftOrderKeyHash = LibOrder.hashKey(orderLeft);
         bytes32 rightOrderKeyHash = LibOrder.hashKey(orderRight);
         uint256 leftOrderFill = getOrderFill(orderLeft.salt, leftOrderKeyHash);
         uint256 rightOrderFill = getOrderFill(orderRight.salt, rightOrderKeyHash);
-        LibFill.FillResult memory newFill =
-            LibFill.fillOrder(orderLeft, orderRight, leftOrderFill, rightOrderFill, leftMakeFill, rightMakeFill);
+        LibFill.FillResult memory newFill = LibFill.fillOrder(orderLeft, orderRight, leftOrderFill, rightOrderFill);
 
         require(newFill.rightValue > 0 && newFill.leftValue > 0, "nothing to fill");
 
         if (orderLeft.salt != 0) {
-            if (leftMakeFill) {
-                fills[leftOrderKeyHash] = leftOrderFill.add(newFill.leftValue);
-            } else {
-                fills[leftOrderKeyHash] = leftOrderFill.add(newFill.rightValue);
-            }
+            fills[leftOrderKeyHash] = leftOrderFill.add(newFill.leftValue);
         }
 
         if (orderRight.salt != 0) {
-            if (rightMakeFill) {
-                fills[rightOrderKeyHash] = rightOrderFill.add(newFill.rightValue);
-            } else {
-                fills[rightOrderKeyHash] = rightOrderFill.add(newFill.leftValue);
-            }
+            fills[rightOrderKeyHash] = rightOrderFill.add(newFill.rightValue);
         }
         return newFill;
     }
@@ -241,13 +150,13 @@ abstract contract MatchingEngine is
 
     function matchAssets(LibOrder.Order memory orderLeft, LibOrder.Order memory orderRight)
         internal
-        view
-        returns (LibAsset.AssetType memory makeMatch, LibAsset.AssetType memory takeMatch)
+        pure
+        returns (LibAsset.Asset memory makeMatch, LibAsset.Asset memory takeMatch)
     {
-        makeMatch = matchAssets(orderLeft.makeAsset.assetType, orderRight.takeAsset.assetType);
-        require(makeMatch.assetClass != 0, "assets don't match");
-        takeMatch = matchAssets(orderLeft.takeAsset.assetType, orderRight.makeAsset.assetType);
-        require(takeMatch.assetClass != 0, "assets don't match");
+        makeMatch = matchAssets(orderLeft.makeAsset, orderRight.takeAsset);
+        require(makeMatch.virtualToken != address(0), "assets don't match");
+        takeMatch = matchAssets(orderLeft.takeAsset, orderRight.makeAsset);
+        require(takeMatch.virtualToken != address(0), "assets don't match");
     }
 
     function validateFull(LibOrder.Order memory order, bytes memory signature) internal view {
@@ -263,10 +172,7 @@ abstract contract MatchingEngine is
         @return protocol fee
     */
     function getProtocolFeeConditional(bytes4 leftDataType) internal view returns (uint256) {
-        if (leftDataType == LibOrderDataV3.V3_SELL || leftDataType == LibOrderDataV3.V3_BUY) {
-            return getProtocolFee();
-        }
-        return 0;
+        return getProtocolFee();
     }
 
     uint256[47] private __gap;
