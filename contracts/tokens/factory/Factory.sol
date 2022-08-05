@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-pragma solidity 0.7.6;
+pragma solidity =0.8.12;
 
-import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/Initializable.sol";
+import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts/proxy/Clones.sol";
 import "../VolmexBaseToken.sol";
 import "../../interfaces/IVolmexBaseToken.sol";
@@ -72,12 +72,6 @@ contract Factory is Initializable {
         IVolmexBaseToken volmexBaseToken;
         if (isZkSync) {
             volmexBaseToken = new VolmexBaseToken();
-
-            volmexBaseToken.initialize(
-                _name,
-                _symbol,
-                _priceFeed
-            );
         } else {
             bytes32 salt = keccak256(abi.encodePacked(tokenIndexCount, _name, _symbol));
 
@@ -85,8 +79,8 @@ contract Factory is Initializable {
             VolmexBaseToken(
                 Clones.cloneDeterministic(tokenImplementation, salt)
             );
-            volmexBaseToken.initialize(_name, _symbol, _priceFeed);
         }
+        volmexBaseToken.initialize(_name, _symbol, _priceFeed);
         tokenByIndex[tokenIndexCount] = address(volmexBaseToken);
         tokenIndexCount++;
         return address(volmexBaseToken);
@@ -102,12 +96,6 @@ contract Factory is Initializable {
 
         if (isZkSync) {
             vaultController = new VaultController();
-            vaultController.initialize(
-                _positioningArg, 
-                _positioningConfig, 
-                _accountBalanceArg, 
-                _vaultImplementationArg
-            );
         } else {
             bytes32 salt = keccak256(
                 abi.encodePacked(
@@ -119,14 +107,13 @@ contract Factory is Initializable {
             vaultController = IVaultController(
                 Clones.cloneDeterministic(vaultControllerImplementation, salt)
             );
-
-            vaultController.initialize(
-                _positioningArg, 
-                _positioningConfig, 
-                _accountBalanceArg, 
-                _vaultImplementationArg
-            );
         }
+        vaultController.initialize(
+            _positioningArg, 
+            _positioningConfig, 
+            _accountBalanceArg, 
+            _vaultImplementationArg
+        );
         vaultControllersByIndex[vaultControllerIndexCount] = address(vaultController);
         vaultControllerIndexCount++;
         return address(vaultController);

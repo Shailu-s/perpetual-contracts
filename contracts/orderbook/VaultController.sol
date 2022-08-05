@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-pragma solidity 0.7.6;
+pragma solidity =0.8.12;
 import { AddressUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol";
-import { SafeMathUpgradeable } from "@openzeppelin/contracts-upgradeable/math/SafeMathUpgradeable.sol";
-import { SignedSafeMathUpgradeable } from "@openzeppelin/contracts-upgradeable/math/SignedSafeMathUpgradeable.sol";
-import { ReentrancyGuardUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
+import { SafeMathUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/math/SafeMathUpgradeable.sol";
+import { SignedSafeMathUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/math/SignedSafeMathUpgradeable.sol";
+import { ReentrancyGuardUpgradeable } from "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 import { BaseRelayRecipient } from "../gsn/BaseRelayRecipient.sol";
 import { OwnerPausable } from "../helpers/OwnerPausable.sol";
 import { IERC20Metadata } from "../interfaces/IERC20Metadata.sol";
@@ -101,7 +101,7 @@ contract VaultController is ReentrancyGuardUpgradeable, BaseRelayRecipient, Owne
         address _vault = getVault(token);
         // vault of token is not available
         require(_vault != address(0), "VC_VOTNA");
-        address payable to = _msgSender();
+        address payable to = payable(_msgSender());
         IVault(_vault).withdraw(token, amount, to);
     }
 
@@ -135,7 +135,7 @@ contract VaultController is ReentrancyGuardUpgradeable, BaseRelayRecipient, Owne
     }
 
     /// @inheritdoc BaseRelayRecipient
-    function _msgSender() internal view override(BaseRelayRecipient, OwnerPausable) returns (address payable) {
+    function _msgSender() internal view override(BaseRelayRecipient, OwnerPausable) returns (address) {
         return super._msgSender();
     }
 

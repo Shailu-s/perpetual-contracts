@@ -25,7 +25,7 @@ abstract contract SafeOwnable is ContextUpgradeable {
      * @dev Initializes the contract setting the deployer as the initial owner.
      */
 
-    function __SafeOwnable_init() internal initializer {
+    function __SafeOwnable_init() internal onlyInitializing {
         __Context_init();
         address msgSender = _msgSender();
         _owner = msgSender;

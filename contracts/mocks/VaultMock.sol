@@ -1,15 +1,15 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-pragma solidity 0.7.6;
+pragma solidity =0.8.12;
 
 import { Vault } from "../orderbook/Vault.sol";
 import { IERC20Metadata } from "../interfaces/IERC20Metadata.sol";
 import {
     SafeERC20Upgradeable,
     IERC20Upgradeable
-} from "@openzeppelin/contracts-upgradeable/token/ERC20/SafeERC20Upgradeable.sol";
-import { SafeMathUpgradeable } from "@openzeppelin/contracts-upgradeable/math/SafeMathUpgradeable.sol";
+} from "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
+import { SafeMathUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/math/SafeMathUpgradeable.sol";
 import { PerpSafeCast } from "../libs/PerpSafeCast.sol";
-import { SignedSafeMathUpgradeable } from "@openzeppelin/contracts-upgradeable/math/SignedSafeMathUpgradeable.sol";
+import { SignedSafeMathUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/math/SignedSafeMathUpgradeable.sol";
 import { SettlementTokenMath } from "../libs/SettlementTokenMath.sol";
 import { PerpMath } from "../libs/PerpMath.sol";
 import { SettlementTokenMath } from "../libs/SettlementTokenMath.sol";
