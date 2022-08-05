@@ -9,8 +9,6 @@ import { SettlementTokenMath } from "../libs/SettlementTokenMath.sol";
 import { OwnerPausable } from "../helpers/OwnerPausable.sol";
 import { IERC20Metadata } from "../interfaces/IERC20Metadata.sol";
 import { IVault } from "../interfaces/IVault.sol";
-import { IExchange } from "../interfaces/IExchange.sol";
-import { IOrderBook } from "../interfaces/IOrderBook.sol";
 import { IPositioningConfig } from "../interfaces/IPositioningConfig.sol";
 import { IAccountBalance } from "../interfaces/IAccountBalance.sol";
 import { PositioningStorageV1 } from "../storage/PositioningStorage.sol";
@@ -96,7 +94,9 @@ contract Positioning is
         address PositioningConfigArg,
         address vaultArg,
         address accountBalanceArg,
-        address matchingEngineArg
+        address matchingEngineArg,
+        address markPriceArg,
+        address indexPriceArg
     ) public initializer {
         // CH_VANC: Vault address is not contract
         require(vaultArg.isContract(), "CH_VANC");
@@ -109,6 +109,8 @@ contract Positioning is
 
         __ReentrancyGuard_init();
         __OwnerPausable_init();
+        __FundingRate_init(markPriceArg, indexPriceArg);
+
 
         _PositioningConfig = PositioningConfigArg;
         _vault = vaultArg;
@@ -205,7 +207,7 @@ contract Positioning is
     /// @inheritdoc IPositioning
     function getAccountValue(address trader) public view override returns (int256) {
         int256 fundingPayment = getAllPendingFundingPayment(trader);
-        (int256 owedRealizedPnl, int256 unrealizedPnl, uint256 pendingFee) = IAccountBalance(_accountBalance)
+        (int256 owedRealizedPnl, int256 unrealizedPnl ) = IAccountBalance(_accountBalance)
             .getPnlAndPendingFee(trader);
         // solhint-disable-next-line var-name-mixedcase
         int256 balanceX10_18 = SettlementTokenMath.parseSettlementToken(
@@ -214,7 +216,7 @@ contract Positioning is
         );
 
         // accountValue = collateralValue + owedRealizedPnl - fundingPayment + unrealizedPnl + pendingMakerFee
-        return balanceX10_18 + (owedRealizedPnl - fundingPayment) + (unrealizedPnl) + (pendingFee.toInt256());
+        return balanceX10_18 + (owedRealizedPnl - fundingPayment) + (unrealizedPnl);
     }
 
     function _openPosition(
@@ -233,10 +235,6 @@ contract Positioning is
 
         // transfer to left trader
         // minting/transferring virtual tokens here
-        /**
-        TODO: see Tod in VirtualToken.sol as minting is not possible
-        This should be either removed or VirtualToken should be changed
-         */
         IVirtualToken leftToken = IVirtualToken(orderLeft.takeAsset.virtualToken);
         if (leftToken.balanceOf(orderRight.trader) == 0) {
             leftToken.mint(orderLeft.trader, newFill.rightValue);
@@ -280,16 +278,17 @@ contract Positioning is
             internalData.leftExchangedPositionNotional = response.newFill.leftValue.neg256();
             internalData.rightExchangedPositionNotional = response.newFill.leftValue.toInt256();
         }
-
+        int256 leftOpenNotional;
+        int256 rightOpenNotional;
         // modifies positionSize and openNotional
-        IAccountBalance(_accountBalance).modifyTakerBalance(
+        (internalData.leftPositionSize, leftOpenNotional ) = IAccountBalance(_accountBalance).modifyTakerBalance(
             orderLeft.trader,
             leftBaseToken,
             internalData.leftExchangedPositionSize,
             internalData.leftExchangedPositionNotional
         );
 
-        IAccountBalance(_accountBalance).modifyTakerBalance(
+        (internalData.rightPositionSize, rightOpenNotional ) = IAccountBalance(_accountBalance).modifyTakerBalance(
             orderRight.trader,
             rightBaseToken,
             internalData.rightExchangedPositionSize,
@@ -305,36 +304,13 @@ contract Positioning is
         }
 
         // if not closing a position, check margin ratio after swap
-        /**
-        TODO: no need to fetch it again modifyTakerBalance gives resultant positonSize and openNotional
-         */
-        internalData.leftPositionSize = IAccountBalance(_accountBalance).getTakerPositionSize(
-            orderLeft.trader,
-            leftBaseToken
-        );
         if (internalData.leftPositionSize != 0) {
             _requireEnoughFreeCollateral(orderLeft.trader);
         }
 
-        internalData.rightPositionSize = IAccountBalance(_accountBalance).getTakerPositionSize(
-            orderRight.trader,
-            rightBaseToken
-        );
         if (internalData.rightPositionSize != 0) {
             _requireEnoughFreeCollateral(orderRight.trader);
         }
-
-        /**
-        TODO: no need to fetch it again modifyTakerBalance gives resultant positonSize and openNotional
-         */
-        int256 leftOpenNotional = IAccountBalance(_accountBalance).getTakerOpenNotional(
-            orderLeft.trader,
-            leftBaseToken
-        );
-        int256 rightOpenNotional = IAccountBalance(_accountBalance).getTakerOpenNotional(
-            orderRight.trader,
-            rightBaseToken
-        );
 
         emit PositionChanged(
             orderLeft.trader,

@@ -104,7 +104,7 @@ contract VaultController is ReentrancyGuardUpgradeable, BaseRelayRecipient, Owne
     function getAccountValue(address trader) external view virtual whenNotPaused returns (int256) {
         // _requireOnlyPositioning();
         int256 fundingPayment = IPositioning(_positioning).getAllPendingFundingPayment(trader);
-        (int256 owedRealizedPnl, int256 unrealizedPnl, uint256 pendingFee) =
+        (int256 owedRealizedPnl, int256 unrealizedPnl) =
             IAccountBalance(_accountBalance).getPnlAndPendingFee(trader);
 
         address[] storage _vaultList = _tradersVaultMap[trader];
@@ -124,8 +124,10 @@ contract VaultController is ReentrancyGuardUpgradeable, BaseRelayRecipient, Owne
             }
         }
         // accountValue = collateralValue + owedRealizedPnl - fundingPayment + unrealizedPnl + pendingMakerFee
-        return balanceX10_18 + (owedRealizedPnl - fundingPayment) + unrealizedPnl + (pendingFee.toInt256());
+        return balanceX10_18 + (owedRealizedPnl - fundingPayment) + unrealizedPnl;
     }
+
+
 
     function _requireOnlyPositioning() internal view {
         // only Positioning

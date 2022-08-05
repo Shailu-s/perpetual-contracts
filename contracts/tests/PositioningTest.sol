@@ -10,15 +10,20 @@ contract PositioningTest is Positioning {
         address positioningConfigArg,
         address vault,
         address accountBalance,
-         address matchingEngine
+         address matchingEngine,
+        address markPriceArg,
+        address indexPriceArg
     ) external initializer {
         initialize(
             positioningConfigArg,
             vault,
             accountBalance,
-            matchingEngine
+            matchingEngine,
+            markPriceArg,
+            indexPriceArg
         );
         __OwnerPausable_init();
+        __FundingRate_init(markPriceArg, indexPriceArg);
     }
 
     function openPositionTest( 

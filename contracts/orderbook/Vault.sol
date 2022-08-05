@@ -13,7 +13,6 @@ import { PerpSafeCast } from "../libs/PerpSafeCast.sol";
 import { SettlementTokenMath } from "../libs/SettlementTokenMath.sol";
 import { PerpMath } from "../libs/PerpMath.sol";
 import { IERC20Metadata } from "../interfaces/IERC20Metadata.sol";
-import { IExchange } from "../interfaces/IExchange.sol";
 import { IAccountBalance } from "../interfaces/IAccountBalance.sol";
 import { IPositioningConfig } from "../interfaces/IPositioningConfig.sol";
 import { IPositioning } from "../interfaces/IPositioning.sol";
@@ -299,11 +298,11 @@ contract Vault is IVault, ReentrancyGuardUpgradeable, OwnerPausable, BaseRelayRe
     function getFreeCollateralByRatio(address trader, uint24 ratio) public view virtual override returns (int256) {
         // conservative config: freeCollateral = min(collateral, accountValue) - margin requirement ratio
         int256 fundingPaymentX10_18 = IPositioning(_Positioning).getAllPendingFundingPayment(trader);
-        (int256 owedRealizedPnlX10_18, int256 unrealizedPnlX10_18, uint256 pendingFeeX10_18) =
+        (int256 owedRealizedPnlX10_18, int256 unrealizedPnlX10_18 ) =
             IAccountBalance(_accountBalance).getPnlAndPendingFee(trader);
         int256 totalCollateralValue =
             getBalance(trader) + (
-                owedRealizedPnlX10_18 - fundingPaymentX10_18 + (pendingFeeX10_18.toInt256()).formatSettlementToken(
+                (owedRealizedPnlX10_18 - fundingPaymentX10_18).formatSettlementToken(
                     _decimals
                 )
             );
