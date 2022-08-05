@@ -26,18 +26,11 @@ contract FundingRate is IFundingRate, BlockContext, PositioningCallee, FundingRa
     using PerpSafeCast for uint256;
     using PerpSafeCast for int256;
 
-    function initialize(
-        address positioningConfigArg,
+    function __FundingRate_init(
         address markPriceOracleArg,
         address indexPriceOracleArg
-    ) external initializer {
+    ) internal initializer {
         __PositioningCallee_init();
-
-        // E_PCANC: PCA is not contract
-        require(positioningConfigArg.isContract(), "E_VPMMNC");
-
-        // update states
-        _PositioningConfig = positioningConfigArg;
         _markPriceOracleArg = markPriceOracleArg;
         _indexPriceOracleArg = indexPriceOracleArg;
     }
@@ -80,7 +73,7 @@ contract FundingRate is IFundingRate, BlockContext, PositioningCallee, FundingRa
         int256 markTwap,
         int256 indexTwap
     ) internal virtual view returns (int256 pendingFundingPayment) {
-        int256 marketFundingRate = ((markTwap - (indexTwap)) / (indexTwap)) / (24);
+        int256 marketFundingRate = ((markTwap - indexTwap) / indexTwap) / (24);
         int256 PositionSize = IAccountBalance(_accountBalance).getTakerPositionSize(trader, baseToken);
         pendingFundingPayment = PositionSize*marketFundingRate;
     }

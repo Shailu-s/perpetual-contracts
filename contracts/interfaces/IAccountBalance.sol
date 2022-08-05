@@ -50,21 +50,6 @@ interface IAccountBalance {
         int256 amount
     ) external;
 
-    /// @notice Settle account balance and deregister base token
-    /// @dev Only used by `Positioning` contract
-    /// @param maker The address of the maker
-    /// @param baseToken The address of the baseToken
-    /// @param realizedPnl Amount of pnl realized
-    /// @param fee Amount of fee collected from pool
-    function settleBalanceAndDeregister(
-        address maker,
-        address baseToken,
-        int256 takerBase,
-        int256 takerQuote,
-        int256 realizedPnl,
-        int256 fee
-    ) external;
-
     /// @notice Every time a trader's position value is checked, the base token list of this trader will be traversed;
     /// thus, this list should be kept as short as possible
     /// @dev Only used by `Positioning` contract
@@ -93,10 +78,6 @@ interface IAccountBalance {
     /// @return PositioningConfig The address of PositioningConfig
     function getPositioningConfig() external view returns (address);
 
-    /// @notice Get `OrderBook` address
-    /// @return orderBook The address of OrderBook
-    function getOrderBook() external view returns (address);
-
     /// @notice Get `Vault` address
     /// @return vault The address of Vault
     function getVault() external view returns (address);
@@ -118,12 +99,6 @@ interface IAccountBalance {
     /// @return openNotional The taker cost of trader's baseToken
     function getTakerOpenNotional(address trader, address baseToken) external view returns (int256);
 
-    /// @notice Get total cost of trader's baseToken
-    /// @param trader The address of trader
-    /// @param baseToken The address of baseToken
-    /// @return totalOpenNotional the amount of quote token paid for a position when opening
-    function getTotalOpenNotional(address trader, address baseToken) external view returns (int256);
-
     /// @notice Get total debt value of trader
     /// @param trader The address of trader
     /// @dev Total debt value will relate to `Vault.getFreeCollateral()`
@@ -140,34 +115,13 @@ interface IAccountBalance {
     /// @param trader The address of trader
     /// @return owedRealizedPnl the pnl realized already but stored temporarily in AccountBalance
     /// @return unrealizedPnl the pnl not yet realized
-    /// @return pendingFee the pending fee of maker earned
     function getPnlAndPendingFee(address trader)
         external
         view
         returns (
             int256 owedRealizedPnl,
-            int256 unrealizedPnl,
-            uint256 pendingFee
+            int256 unrealizedPnl
         );
-
-    /// @notice Check trader has open order or not
-    /// @param trader The address of trader
-    /// @return hasOrderOrNot True of false
-    function hasOrder(address trader) external view returns (bool);
-
-    /// @notice Get trader base amount
-    /// @dev `base amount = takerPositionSize - orderBaseDebt`
-    /// @param trader The address of trader
-    /// @param baseToken The address of baseToken
-    /// @return baseAmount The base amount of trader's baseToken market
-    function getBase(address trader, address baseToken) external view returns (int256);
-
-    /// @notice Get trader quote amount
-    /// @dev `quote amount = takerOpenNotional - orderQuoteDebt`
-    /// @param trader The address of trader
-    /// @param baseToken The address of baseToken
-    /// @return quoteAmount The quote amount of trader's baseToken market
-    function getQuote(address trader, address baseToken) external view returns (int256);
 
     /// @notice Get taker position size of trader's baseToken market
     /// @dev This will only has taker position, can get maker impermanent position through `getTotalPositionSize`

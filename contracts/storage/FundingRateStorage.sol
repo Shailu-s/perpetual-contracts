@@ -5,7 +5,6 @@ pragma solidity =0.8.12;
 /// contract which implements ExchangeStorageV1 and following the naming convention
 /// ExchangeStorageVX.
 abstract contract FundingRateStorage {
-    address internal _orderBook;
     address internal _markPriceOracleArg;
     address internal _indexPriceOracleArg;
 
