@@ -52,17 +52,7 @@ describe('Factory', function () {
     );
     await indexPriceOracle.deployed();
 
-    volmexBaseToken = await upgrades.deployProxy(
-      VolmexBaseToken,
-      [
-        "VolmexBaseToken", // nameArg
-        "VBT", // symbolArg,
-        indexPriceOracle.address, // priceFeedArg
-      ],
-      {
-        initializer: "initialize",
-      }
-    );
+    volmexBaseToken = await VolmexBaseToken.deploy();
     await volmexBaseToken.deployed();
 
     USDC = await TestERC20.deploy()
@@ -71,7 +61,6 @@ describe('Factory', function () {
 
     positioningConfig = await PositioningConfig.deploy()
     await positioningConfig.deployed();
-    await positioningConfig.initialize()
 
     accountBalance = await AccountBalance.deploy()
     await accountBalance.deployed();
@@ -148,11 +137,11 @@ describe('Factory', function () {
       await USDC.__TestERC20_init("TestUSDC", "USDC", 6);
 
       positioningConfig = await PositioningConfig.deploy();
-      await positioningConfig.initialize();
       accountBalance = await AccountBalance.deploy();
       positioning = await Positioning.deploy();
       vault = await Vault.deploy();
-      await vault.initialize(positioningConfig.address, accountBalance.address, USDC.address, USDC.address, true);
+      let vaultController = await factory.vaultControllersByIndex(0);
+      expect(vaultController).to.equal(ZERO_ADDR);
 
       await factory.cloneVaultController(
         positioning.address,
@@ -160,7 +149,7 @@ describe('Factory', function () {
         accountBalance.address,
         vault.address,
       );
-      const vaultController = await factory.vaultControllersByIndex(0);
+      vaultController = await factory.vaultControllersByIndex(0);
       expect(vaultController).not.equal(ZERO_ADDR);
     });
 
@@ -235,7 +224,19 @@ describe('Factory', function () {
     });
   });
 
-  describe('Price Feed', () => {
+  describe('Price Feed', async () => {
+    const newVolmexBaseToken = await upgrades.deployProxy(
+      VolmexBaseToken,
+      [
+        "VolmexBaseToken", // nameArg
+        "VBT", // symbolArg,
+        indexPriceOracle.address, // priceFeedArg
+      ],
+      {
+        initializer: "initialize",
+      }
+    );
+
     it("Should update the priceFeed", async () => {
       const [owner] = await ethers.getSigners();
 
@@ -247,19 +248,31 @@ describe('Factory', function () {
         }
       );
 
-      await expect(volmexBaseToken.setPriceFeed(newIndexPriceOracle.address))
-        .to.emit(volmexBaseToken, "PriceFeedChanged").withArgs(newIndexPriceOracle.address);
+      await expect(newVolmexBaseToken.setPriceFeed(newIndexPriceOracle.address))
+        .to.emit(newVolmexBaseToken, "PriceFeedChanged").withArgs(newIndexPriceOracle.address);
     });
 
     it("Should return the current priceFeed", async () => {
-      const priceFeed = await volmexBaseToken.getPriceFeed();
+      const priceFeed = await newVolmexBaseToken.getPriceFeed();
       expect(priceFeed).to.equal(indexPriceOracle.address);
     });
   });
 
   describe('Index Price', () => {
     it("Should return the current index price", async () => {
-      const volmexBaseTokenIndexPrice = await volmexBaseToken.getIndexPrice(0);
+      const newVolmexBaseToken = await upgrades.deployProxy(
+        VolmexBaseToken,
+        [
+          "VolmexBaseToken", // nameArg
+          "VBT", // symbolArg,
+          indexPriceOracle.address, // priceFeedArg
+        ],
+        {
+          initializer: "initialize",
+        }
+      );
+
+      const volmexBaseTokenIndexPrice = await newVolmexBaseToken.getIndexPrice(0);
       const priceFeedIndexPrice = await indexPriceOracle.latestRoundData(0);
       expect(volmexBaseTokenIndexPrice).to.equal(priceFeedIndexPrice.answer);
     });
