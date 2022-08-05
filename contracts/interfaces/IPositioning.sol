@@ -76,10 +76,6 @@ interface IPositioning {
     /// @return vault `Vault` address
     function getVault() external view returns (address vault);
 
-    /// @notice Get `Exchange` address
-    /// @return exchange `Exchange` address
-    function getExchange() external view returns (address exchange);
-
     /// @notice Get AccountBalance address
     /// @return accountBalance `AccountBalance` address
     function getAccountBalance() external view returns (address accountBalance);

@@ -13,7 +13,6 @@ import { IExchange } from "../interfaces/IExchange.sol";
 import { IOrderBook } from "../interfaces/IOrderBook.sol";
 import { IPositioningConfig } from "../interfaces/IPositioningConfig.sol";
 import { IAccountBalance } from "../interfaces/IAccountBalance.sol";
-import { BaseRelayRecipient } from "../gsn/BaseRelayRecipient.sol";
 import { PositioningStorageV1 } from "../storage/PositioningStorage.sol";
 import { BlockContext } from "../helpers/BlockContext.sol";
 import { IPositioning } from "../interfaces/IPositioning.sol";
@@ -36,7 +35,6 @@ contract Positioning is
     BlockContext,
     ReentrancyGuardUpgradeable,
     OwnerPausable,
-    BaseRelayRecipient,
     PositioningStorageV1,
     FundingRate
 {
@@ -91,14 +89,12 @@ contract Positioning is
     /** 
     TODO:   We should change Vault to VaultController here and 
             update with decimals 18 as calculations here are done in 18 decimals
-            If not required we should get rid of Exchange contract 
     */
     /// @dev this function is public for testing
     // solhint-disable-next-line func-order
     function initialize(
         address PositioningConfigArg,
         address vaultArg,
-        address exchangeArg,
         address accountBalanceArg,
         address matchingEngineArg
     ) public initializer {
@@ -108,8 +104,6 @@ contract Positioning is
         require(PositioningConfigArg.isContract(), "CH_CCNC");
         // AccountBalance is not contract
         require(accountBalanceArg.isContract(), "CH_ABNC");
-        // CH_ENC: Exchange is not contract
-        require(exchangeArg.isContract(), "CH_ENC");
         // CH_MENC: Matching Engine is not contract
         require(matchingEngineArg.isContract(), "CH_MENC");
 
@@ -118,21 +112,9 @@ contract Positioning is
 
         _PositioningConfig = PositioningConfigArg;
         _vault = vaultArg;
-        _exchange = exchangeArg;
         _accountBalance = accountBalanceArg;
         _matchingEngine = matchingEngineArg;
         _settlementTokenDecimals = IVault(_vault).decimals();
-    }
-
-    /**
-    TODO:   Actually we can remove this, it is used in perp-curie to first register trader as trusted entity
-    */
-    // solhint-disable-next-line func-order
-    function setTrustedForwarder(address trustedForwarderArg) external onlyOwner {
-        // CH_TFNC: TrustedForwarder is not contract
-        require(trustedForwarderArg.isContract(), "CH_TFNC");
-        _setTrustedForwarder(trustedForwarderArg);
-        emit TrustedForwarderChanged(trustedForwarderArg);
     }
 
     /// @inheritdoc IPositioning
@@ -216,11 +198,6 @@ contract Positioning is
     }
 
     /// @inheritdoc IPositioning
-    function getExchange() external view override returns (address) {
-        return _exchange;
-    }
-
-    /// @inheritdoc IPositioning
     function getAccountBalance() external view override returns (address) {
         return _accountBalance;
     }
@@ -257,7 +234,7 @@ contract Positioning is
         // transfer to left trader
         // minting/transferring virtual tokens here
         /**
-        TODO: see TODO in VirtualToken.sol as minting is not possible
+        TODO: see Tod in VirtualToken.sol as minting is not possible
         This should be either removed or VirtualToken should be changed
          */
         IVirtualToken leftToken = IVirtualToken(orderLeft.takeAsset.virtualToken);
@@ -401,25 +378,19 @@ contract Positioning is
     //
     // INTERNAL VIEW
     //
-
-    /**
-    TODO: we should remove BaseRelayRecipient
-     */
-    /// @inheritdoc BaseRelayRecipient
     function _msgSender()
         internal
         view
-        override(BaseRelayRecipient, OwnerPausable, ContextUpgradeable)
+        override( OwnerPausable, ContextUpgradeable)
         returns (address)
     {
         return super._msgSender();
     }
 
-    /// @inheritdoc BaseRelayRecipient
     function _msgData()
         internal
         view
-        override(BaseRelayRecipient, OwnerPausable, ContextUpgradeable)
+        override( OwnerPausable, ContextUpgradeable)
         returns (bytes memory)
     {
         return super._msgData();
