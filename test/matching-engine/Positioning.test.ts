@@ -2,7 +2,7 @@ import { expect } from "chai"
 import { ethers, upgrades } from "hardhat"
 const { Order, Asset, sign } = require('../order');
 import { FakeContract, smock } from '@defi-wonderland/smock';
-import { FundingRate, MarkPriceOracle, PositioningTest } from "../../typechain";
+import { AccountBalance, FundingRate, IndexPriceOracle, MarkPriceOracle, PositioningTest } from "../../typechain";
 
 
 describe.only("Positioning", function () {
@@ -23,13 +23,10 @@ describe.only("Positioning", function () {
     let positioningConfig
     let Vault
     let vault
-    let Exchange
-    let exchange
     let AccountBalance
-    let accountBalance
-    let fundingRateFake: FakeContract<MarkPriceOracle>
-
-
+    let markPriceFake: FakeContract<MarkPriceOracle>
+    let indexPriceFake: FakeContract<IndexPriceOracle>
+    let accountBalance: FakeContract<AccountBalance>
     let transferManagerTest
 
     this.beforeAll(async () => {
@@ -41,27 +38,25 @@ describe.only("Positioning", function () {
         Positioning = await ethers.getContractFactory("PositioningTest")
         PositioningConfig = await ethers.getContractFactory("PositioningConfig")
         Vault = await ethers.getContractFactory("Vault")
-        Exchange = await ethers.getContractFactory("Exchange")
         AccountBalance = await ethers.getContractFactory("AccountBalance")
     })
 
     beforeEach(async () => {
         const [owner, account1, account2, account3, account4] = await ethers.getSigners()
 
-        fundingRateFake = await smock.fake('MarkPriceOracle');
-
+        markPriceFake = await smock.fake('MarkPriceOracle');
+        indexPriceFake = await smock.fake('IndexPriceOracle')
         erc20TransferProxy = await ERC20TransferProxyTest.deploy()
-        positioningConfig = await PositioningConfig.deploy()
-        exchange = await Exchange.deploy()
         erc1271Test = await ERC1271Test.deploy()
-
+        accountBalance = await smock.fake("AccountBalance")
         community = account4.address
 
-        accountBalance = await upgrades.deployProxy(
-            AccountBalance,
-            [positioningConfig.address, positioningConfig.address]
+        positioningConfig = await upgrades.deployProxy(
+            PositioningConfig,
+            []
         )
 
+        accountBalance
         matchingEngine = await upgrades.deployProxy(
             MatchingEngine,
             [erc20TransferProxy.address, 300, community, owner.address],
@@ -82,16 +77,16 @@ describe.only("Positioning", function () {
         transferManagerTest = await upgrades.deployProxy(TransferManagerTest, [1, community], {
             initializer: "__TransferManager_init",
         })
-
         positioning = await upgrades.deployProxy(
             Positioning,
-            [positioningConfig.address, vault.address, exchange.address, accountBalance.address,matchingEngine.address],
+            [positioningConfig.address, vault.address, accountBalance.address,matchingEngine.address,markPriceFake.address, indexPriceFake.address],
             {
                 initializer: "__PositioningTest_init",
             },
         )
         await accountBalance.connect(owner).setPositioning(positioning.address)
         await vault.setPositioning(positioning.address)
+        await positioningConfig.connect(owner).setMaxMarketsPerAccount(5)
     })
 
     describe("Deployment", function () {
@@ -109,10 +104,9 @@ describe.only("Positioning", function () {
         describe("Success:", function () {
             it("should match orders & emit event", async () => {
                 const [owner, account1, account2] = await ethers.getSigners()
-                const myFake = await smock.fake<MarkPriceOracle>('MarkPriceOracle');
 
-                myFake.getCumulativePrice.returns(0);
-
+                markPriceFake.getCumulativePrice.returns(0);
+                indexPriceFake.getIndexTwap.returns()
                 await virtualToken.mint(account1.address, 1000000000000000)
                 await virtualToken.mint(account2.address, 1000000000000000)
                 await virtualToken.addWhitelist(account1.address)
