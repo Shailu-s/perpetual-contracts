@@ -5,7 +5,7 @@ import { FakeContract, smock } from '@defi-wonderland/smock';
 import { AccountBalance, FundingRate, IndexPriceOracle, MarkPriceOracle, PositioningTest } from "../../typechain";
 
 
-describe.only("Positioning", function () {
+describe("Positioning", function () {
     let MatchingEngine
     let matchingEngine
     let VirtualToken
