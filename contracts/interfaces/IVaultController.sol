@@ -16,6 +16,8 @@ interface IVaultController {
 
     function withdraw(address token, uint256 amount) external;
 
+    function registerVault(address vault, address token) external;
+
     function getVault(address _token) external view returns (address vault);
 
     function getAccountValue(address trader) external view returns (int256);

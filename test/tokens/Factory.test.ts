@@ -50,6 +50,7 @@ describe('Factory', function () {
         initializer: "initialize",
       }
     );
+    await indexPriceOracle.deployed();
 
     volmexBaseToken = await upgrades.deployProxy(
       VolmexBaseToken,
@@ -62,23 +63,27 @@ describe('Factory', function () {
         initializer: "initialize",
       }
     );
+    await volmexBaseToken.deployed();
 
     USDC = await TestERC20.deploy()
     await USDC.__TestERC20_init("TestUSDC", "USDC", 6)
+    await USDC.deployed();
 
     positioningConfig = await PositioningConfig.deploy()
+    await positioningConfig.deployed();
     await positioningConfig.initialize()
-    accountBalance = await AccountBalance.deploy()
-    positioning = await Positioning.deploy()    
-    vault = await Vault.deploy()
-    await vault.initialize(positioningConfig.address, accountBalance.address, USDC.address, USDC.address, true)
 
-    vaultController = await upgrades.deployProxy(VaultController, [
-        positioning.address,
-        positioningConfig.address,
-        accountBalance.address,
-        vault.address,
-    ]);
+    accountBalance = await AccountBalance.deploy()
+    await accountBalance.deployed();
+
+    positioning = await Positioning.deploy()    
+    await positioning.deployed();
+
+    vault = await Vault.deploy()
+    await vault.deployed();
+
+    vaultController = await VaultController.deploy();
+    await vaultController.deployed();
 
     factory = await upgrades.deployProxy(
       Factory,
@@ -90,6 +95,7 @@ describe('Factory', function () {
         initializer: "initialize"
       }
     );
+    await factory.deployed();
 
     virtualTokenTest = await upgrades.deployProxy(
       VirtualTokenTest,
@@ -98,6 +104,7 @@ describe('Factory', function () {
         initializer: "initialize"
       }
     );
+    await virtualTokenTest.deployed();
   });
 
   describe('Deployment:', function() {
@@ -153,8 +160,35 @@ describe('Factory', function () {
         accountBalance.address,
         vault.address,
       );
-      const cloneTokenAddress = await factory.vaultControllersByIndex(0);
-      expect(cloneTokenAddress).not.equal(ZERO_ADDR);
+      const vaultController = await factory.vaultControllersByIndex(0);
+      expect(vaultController).not.equal(ZERO_ADDR);
+    });
+
+    it("Should deploy a new vault", async () => {
+      await factory.cloneVaultController(
+        positioning.address,
+        positioningConfig.address,
+        accountBalance.address,
+        vault.address,
+      );
+
+      const vaultControllerAddr = await factory.vaultControllersByIndex(0);
+      expect(vaultControllerAddr).not.equal(ZERO_ADDR);
+
+      expect(
+        await factory.cloneVault(
+          USDC.address,
+          true,
+          positioning.address,
+          accountBalance.address,
+          vault.address,
+          0
+        ),
+      ).to.emit(factory, "NewVaultCreated");
+      
+      let controllerInstance = await VaultController.attach(vaultControllerAddr);
+      let newVault = await controllerInstance.getVault(USDC.address);
+      expect(newVault).not.equal(ZERO_ADDR);
     });
 
     it("Should increment indexCount when cloning a new token", async () => {
@@ -167,7 +201,7 @@ describe('Factory', function () {
       expect(cloneTokenIndexCount).equal(2);
     });
 
-    it.only("Should increment vaultControllerIndexCount when cloning a new vault controller", async () => {
+    it("Should increment vaultControllerIndexCount when cloning a new vault controller", async () => {
       USDC = await TestERC20.deploy();
       await USDC.__TestERC20_init("TestUSDC", "USDC", 6);
 

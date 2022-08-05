@@ -5,7 +5,6 @@ import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/Initial
 import "@openzeppelin/contracts/proxy/Clones.sol";
 import "../VolmexBaseToken.sol";
 import "../../interfaces/IVolmexBaseToken.sol";
-// import "../../interfaces/IVaultController.sol";
 import { IVaultController } from "../../interfaces/IVaultController.sol";
 import "../../../contracts/orderbook/VaultController.sol";
 
@@ -14,6 +13,8 @@ import "../../../contracts/orderbook/VaultController.sol";
 * @author volmex.finance [security@volmexlabs.com]
 */
 contract Factory is Initializable {
+
+    event NewVaultCreated(address indexed vault, address indexed token);
 
     // Volatility token implementation contract for factory
     address public tokenImplementation;
@@ -129,5 +130,38 @@ contract Factory is Initializable {
         vaultControllersByIndex[vaultControllerIndexCount] = address(vaultController);
         vaultControllerIndexCount++;
         return address(vaultController);
+    }
+
+    function cloneVault(
+        address _token, 
+        bool isEthVault,
+        address _positioningConfig,
+        address _accountBalance,
+        address _vaultImplementation,
+        uint256 _vaultControllerIndex
+    ) external returns (address) {
+        address vaultControllerAddr = vaultControllersByIndex[_vaultControllerIndex];
+        // F_VCNF: Vault Controller Not Found
+        require(vaultControllerAddr != address(0), "F_VCNF");
+
+        IVault vault;
+        if (isZkSync) {
+            vault = new Vault();
+        } else {
+            bytes32 salt = keccak256(abi.encodePacked(_token, _vaultImplementation));
+            vault = Vault(
+                Clones.cloneDeterministic(_vaultImplementation, salt)
+            );
+        }
+        vault.initialize(
+            _positioningConfig, 
+            _accountBalance, 
+            _token, 
+            vaultControllerAddr, 
+            isEthVault
+        );
+        IVaultController(vaultControllerAddr).registerVault(address(vault), _token);
+        emit NewVaultCreated(address(vault), _token);
+        return address(vault);
     }
 }

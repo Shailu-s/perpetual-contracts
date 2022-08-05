@@ -59,6 +59,7 @@ contract VaultController is ReentrancyGuardUpgradeable, BaseRelayRecipient, Owne
         isZkSync = (networkId == 280) ? true : false;
     }
 
+    // TODO: Remove
     function deployVault(address _token,bool isEthVault) external onlyOwner override returns (address) {
         IVault vault;
         if (isZkSync) {
@@ -73,6 +74,11 @@ contract VaultController is ReentrancyGuardUpgradeable, BaseRelayRecipient, Owne
         }
         _vaultAddress[_token] = address(vault);
         return address(vault);
+    }
+
+    function registerVault(address _vault, address _token) external override {
+        // TODO: _requireOnlyFactory();
+        _vaultAddress[_token] = _vault;
     }
 
     function getVault(address _token) public view override returns (address vault) {
