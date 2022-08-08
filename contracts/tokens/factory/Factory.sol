@@ -6,7 +6,9 @@ import "@openzeppelin/contracts/proxy/Clones.sol";
 import "../VolmexBaseToken.sol";
 import "../../interfaces/IVolmexBaseToken.sol";
 import { IVaultController } from "../../interfaces/IVaultController.sol";
+import { IAccountBalance } from "../../interfaces/IAccountBalance.sol";
 import "../../../contracts/orderbook/VaultController.sol";
+import "../../../contracts/orderbook/AccountBalance.sol";
 
 /**
 * @title Factory Contract
@@ -22,8 +24,12 @@ contract Factory is Initializable {
     // Vault Controller implementation contract for factory
     address public vaultControllerImplementation;
 
+    address public accountBalanceImplementation;
+
     // To store the address of volatility.
     mapping(uint256 => address) public tokenByIndex;
+
+    mapping(uint256 => address) public accountBalanceByIndex;
 
     // Mapping to store VaultControllers by index
     mapping(uint256 => address) public vaultControllersByIndex;
@@ -42,10 +48,12 @@ contract Factory is Initializable {
     */
     function initialize(
         address _tokenImplementation,
-        address _vaultControllerImplementation
+        address _vaultControllerImplementation,
+        address _accountBalanceImplementation
     ) external initializer {
         tokenImplementation = _tokenImplementation;
         vaultControllerImplementation = _vaultControllerImplementation;
+        accountBalanceImplementation = _accountBalanceImplementation;
 
         // Get networkId & check for ZkSync
         uint256 networkId;
@@ -150,5 +158,29 @@ contract Factory is Initializable {
         IVaultController(vaultControllerAddr).registerVault(address(vault), _token);
         emit NewVaultCreated(address(vault), _token);
         return address(vault);
+    }
+
+    function cloneAccountBalance(address _positioningConfigArg, address _orderBookArg) external returns (address) {
+        IAccountBalance accountBalance;
+
+        if (isZkSync) {
+            accountBalance = new AccountBalance();
+        } else {
+            // TODO: Use perpIndexCount while creating salt
+            bytes32 salt = keccak256(abi.encodePacked(accountBalanceImplementation));
+            accountBalance = AccountBalance(
+                Clones.cloneDeterministic(accountBalanceImplementation, salt)
+            );
+
+            accountBalance.initialize(
+                _positioningConfigArg,
+                _orderBookArg
+            );
+        }
+
+        // TODO: Use perpIndexCount to store AccountBalance in mapping accountBalanceByIndex
+        // accountBalanceByIndex[perpIndexCount] = address(accountBalance);
+
+        return address(accountBalance);
     }
 }
