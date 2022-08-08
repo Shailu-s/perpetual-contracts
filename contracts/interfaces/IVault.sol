@@ -62,11 +62,6 @@ interface IVault {
     /// @return balance The balance amount
     function getBalance(address account) external view returns (int256 balance);
 
-    /// @notice Get free collateral amount of specified trader
-    /// @param trader The address of the trader
-    /// @return freeCollateral Max(0, amount of collateral available for withdraw or opening new positions or orders)
-    function getFreeCollateral(address trader) external view returns (uint256 freeCollateral);
-
     /// @notice Get free collateral amount of specified trader and collateral ratio
     /// @dev There are three configurations for different insolvency risk tolerances: **conservative, moderate,
     /// aggressive**, we will start with the **conservative** one and gradually move to aggressive to

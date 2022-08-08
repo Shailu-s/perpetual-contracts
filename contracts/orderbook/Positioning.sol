@@ -8,7 +8,7 @@ import { PerpMath } from "../libs/PerpMath.sol";
 import { SettlementTokenMath } from "../libs/SettlementTokenMath.sol";
 import { OwnerPausable } from "../helpers/OwnerPausable.sol";
 import { IERC20Metadata } from "../interfaces/IERC20Metadata.sol";
-import { IVault } from "../interfaces/IVault.sol";
+import { IVaultController } from "../interfaces/IVaultController.sol";
 import { IPositioningConfig } from "../interfaces/IPositioningConfig.sol";
 import { IAccountBalance } from "../interfaces/IAccountBalance.sol";
 import { PositioningStorageV1 } from "../storage/PositioningStorage.sol";
@@ -92,14 +92,14 @@ contract Positioning is
     // solhint-disable-next-line func-order
     function initialize(
         address PositioningConfigArg,
-        address vaultArg,
+        address vaultControllerArg,
         address accountBalanceArg,
         address matchingEngineArg,
         address markPriceArg,
         address indexPriceArg
     ) public initializer {
         // CH_VANC: Vault address is not contract
-        require(vaultArg.isContract(), "CH_VANC");
+        require(vaultControllerArg.isContract(), "CH_VANC");
         // PositioningConfig address is not contract
         require(PositioningConfigArg.isContract(), "CH_CCNC");
         // AccountBalance is not contract
@@ -113,10 +113,11 @@ contract Positioning is
 
 
         _PositioningConfig = PositioningConfigArg;
-        _vault = vaultArg;
+        _vaultController = vaultControllerArg;
         _accountBalance = accountBalanceArg;
         _matchingEngine = matchingEngineArg;
-        _settlementTokenDecimals = IVault(_vault).decimals();
+        // TODO: Set settlement token
+        // _settlementTokenDecimals = 0;
     }
 
     /// @inheritdoc IPositioning
@@ -187,36 +188,6 @@ contract Positioning is
             leftTraderBasetoken,
             rightTraderBasetoken
         );
-    }
-
-    /// @inheritdoc IPositioning
-    function getPositioningConfig() external view override returns (address) {
-        return _PositioningConfig;
-    }
-
-    /// @inheritdoc IPositioning
-    function getVault() external view override returns (address) {
-        return _vault;
-    }
-
-    /// @inheritdoc IPositioning
-    function getAccountBalance() external view override returns (address) {
-        return _accountBalance;
-    }
-
-    /// @inheritdoc IPositioning
-    function getAccountValue(address trader) public view override returns (int256) {
-        int256 fundingPayment = getAllPendingFundingPayment(trader);
-        (int256 owedRealizedPnl, int256 unrealizedPnl ) = IAccountBalance(_accountBalance)
-            .getPnlAndPendingFee(trader);
-        // solhint-disable-next-line var-name-mixedcase
-        int256 balanceX10_18 = SettlementTokenMath.parseSettlementToken(
-            IVault(_vault).getBalance(trader),
-            _settlementTokenDecimals
-        );
-
-        // accountValue = collateralValue + owedRealizedPnl - fundingPayment + unrealizedPnl + pendingMakerFee
-        return balanceX10_18 + (owedRealizedPnl - fundingPayment) + (unrealizedPnl);
     }
 
     function _openPosition(
@@ -330,10 +301,6 @@ contract Positioning is
             rightOpenNotional
         );
 
-        // deregisters if positionSize or openNotional is less than DUST
-        IAccountBalance(_accountBalance).deregisterBaseToken(orderLeft.trader, leftBaseToken);
-        IAccountBalance(_accountBalance).deregisterBaseToken(orderRight.trader, rightBaseToken);
-
         return response;
     }
 
@@ -373,9 +340,23 @@ contract Positioning is
     }
 
     function _getFreeCollateralByRatio(address trader, uint24 ratio) internal view returns (int256) {
-        return IVault(_vault).getFreeCollateralByRatio(trader, ratio);
+        return IVaultController(_vaultController).getFreeCollateralByRatio(trader, ratio);
     }
 
+    /// @inheritdoc IPositioning
+    function getPositioningConfig() public view override returns (address) {
+        return _PositioningConfig;
+    }
+
+    /// @inheritdoc IPositioning
+    function getVaultController() public view override returns (address) {
+        return _vaultController;
+    }
+
+    /// @inheritdoc IPositioning
+    function getAccountBalance() public view override returns (address) {
+        return _accountBalance;
+    }
     function _requireEnoughFreeCollateral(address trader) internal view {
         // CH_NEFCI: not enough free collateral by imRatio
         require(

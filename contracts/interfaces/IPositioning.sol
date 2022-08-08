@@ -57,12 +57,6 @@ interface IPositioning {
         bytes memory signatureRight
     ) external returns (SwapResponse memory);
 
-    /// @notice Get account value of trader
-    /// @dev accountValue = totalCollateralValue + totalUnrealizedPnl, in 18 decimals
-    /// @param trader The address of trader
-    /// @return accountValue The account value of trader
-    function getAccountValue(address trader) external view returns (int256);
-
     /// @notice Get PositioningConfig address
     /// @return PositioningConfig PositioningConfig address
     function getPositioningConfig() external view returns (address PositioningConfig);
@@ -74,7 +68,7 @@ interface IPositioning {
 
     /// @notice Get `Vault` address
     /// @return vault `Vault` address
-    function getVault() external view returns (address vault);
+    function getVaultController() external view returns (address vault);
 
     /// @notice Get AccountBalance address
     /// @return accountBalance `AccountBalance` address

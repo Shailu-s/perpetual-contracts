@@ -12,7 +12,7 @@ abstract contract PositioningStorageV1 {
     // --------- ^^^^^^^^^ ---------
     mapping(address => uint256) internal _firstTradedTimestampMap;
     address internal _PositioningConfig;
-    address internal _vault;
+    address internal _vaultController;
     address internal _exchange;
     address internal _accountBalance;
     address internal _matchingEngine;

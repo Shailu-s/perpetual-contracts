@@ -121,6 +121,8 @@ contract Vault is IVault, ReentrancyGuardUpgradeable, OwnerPausable, BaseRelayRe
             require(msg.value == amount, "V_ANE");
             _vaultBalance = address(this).balance;
         } else {
+            //amount not accepted
+            require(msg.value == 0, "V_ANA");
             // check for deflationary tokens by assuring balances before and after transferring to be the same
             uint256 balanceBefore = IERC20Metadata(token).balanceOf(address(this));
             SafeERC20Upgradeable.safeTransferFrom(IERC20Upgradeable(token), from, address(this), amount);
@@ -153,22 +155,8 @@ contract Vault is IVault, ReentrancyGuardUpgradeable, OwnerPausable, BaseRelayRe
         // 4. settle pnl to trader balance in Vault
         // 5. transfer the amount to trader
 
-        // settle all funding payments owedRealizedPnl
-        // pending fee can be withdraw but won't be settled
-        IPositioning(_Positioning).settleAllFunding(to);
-
         // settle owedRealizedPnl in AccountBalance
         int256 owedRealizedPnlX10_18 = IAccountBalance(_accountBalance).settleOwedRealizedPnl(to);
-
-        // by this time there should be no owedRealizedPnl nor pending funding payment in free collateral
-        int256 freeCollateralByImRatio =
-            getFreeCollateralByRatio(to, IPositioningConfig(_PositioningConfig).getImRatio());
-
-        // V_NEFC: not enough freeCollateral
-        require(
-            freeCollateralByImRatio + (owedRealizedPnlX10_18.formatSettlementToken(_decimals)) >= amount.toInt256(),
-            "V_NEFC"
-        );
 
         uint256 amountToTransfer = amount;
         if (_isEthVault) {
@@ -189,6 +177,7 @@ contract Vault is IVault, ReentrancyGuardUpgradeable, OwnerPausable, BaseRelayRe
         }
 
         // settle withdrawn amount and owedRealizedPnl to collateral
+        // TODO: Remove it from vault
         _modifyBalance(
             to,
             token,
@@ -273,14 +262,6 @@ contract Vault is IVault, ReentrancyGuardUpgradeable, OwnerPausable, BaseRelayRe
         return _vaultController;
     }
 
-    /// @inheritdoc IVault
-    function getFreeCollateral(address trader) external view override returns (uint256) {
-        return
-            PerpMath
-                .max(getFreeCollateralByRatio(trader, IPositioningConfig(_PositioningConfig).getImRatio()), 0)
-                .toUint256();
-    }
-
     //
     // PUBLIC VIEW
     //
@@ -290,10 +271,6 @@ contract Vault is IVault, ReentrancyGuardUpgradeable, OwnerPausable, BaseRelayRe
         return _balance[trader][_settlementToken];
     }
 
-    /**
-    TODO: pendingFeeX10_18 should be removed
-    Also we don't need this function here, it is needed in VaultController
-     */
     /// @inheritdoc IVault
     function getFreeCollateralByRatio(address trader, uint24 ratio) public view virtual override returns (int256) {
         // conservative config: freeCollateral = min(collateral, accountValue) - margin requirement ratio
@@ -315,15 +292,6 @@ contract Vault is IVault, ReentrancyGuardUpgradeable, OwnerPausable, BaseRelayRe
             PerpMath.min(totalCollateralValue, accountValue) - (
                 totalMarginRequirementX10_18.toInt256().formatSettlementToken(_decimals)
             );
-
-        // moderate config: freeCollateral = min(collateral, accountValue - imReq)
-        // return PerpMath.min(collateralValue, accountValue.subS(totalImReq.formatSettlementToken(_decimals));
-
-        // aggressive config: freeCollateral = accountValue - imReq
-        // note that the aggressive model depends entirely on unrealizedPnl, which depends on the index price
-        //      we should implement some sort of safety check before using this model; otherwise,
-        //      a trader could drain the entire vault if the index price deviates significantly.
-        // return accountValue.subS(totalImReq.formatSettlementToken(_decimals));
     }
 
     //
