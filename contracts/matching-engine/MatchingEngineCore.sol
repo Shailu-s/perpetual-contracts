@@ -46,7 +46,8 @@ abstract contract MatchingEngineCore is
     }
 
     function cancelOrdersInBatch(LibOrder.Order[] memory orders) external {
-        for (uint256 index = 0; index < orders.length; index++) {
+        uint256 orderlength = orders.length;
+        for (uint256 index = 0; index < orderlength; index++) {
             cancelOrder(orders[index]);
         }
     }
@@ -84,6 +85,18 @@ abstract contract MatchingEngineCore is
         );
 
         return (orderLeft.makeAsset.virtualToken, orderRight.makeAsset.virtualToken, newFill, dealData);
+    }
+
+    function matchOrderInBatch(
+        LibOrder.Order[] memory ordersLeft,
+        bytes[] memory signaturesLeft,
+        LibOrder.Order[] memory ordersRight,
+        bytes[] memory signaturesRight
+    ) external whenNotPaused {
+        uint256 ordersLength = ordersLeft.length;
+        for (uint256 index = 0; index < ordersLength; index++) {
+            matchOrders(ordersLeft[index], signaturesLeft[index], ordersRight[index], signaturesRight[index]);
+        }
     }
 
     /**
