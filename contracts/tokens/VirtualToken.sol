@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-pragma solidity 0.8.12;
+pragma solidity =0.8.12;
 
 import { ERC20Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
 import { SafeOwnable } from "../base/SafeOwnable.sol";
@@ -11,7 +11,7 @@ contract VirtualToken is IVirtualToken, SafeOwnable, ERC20Upgradeable {
     event WhitelistAdded(address account);
     event WhitelistRemoved(address account);
 
-    function __VirtualToken_init(string memory nameArg, string memory symbolArg) internal initializer {
+    function __VirtualToken_init(string memory nameArg, string memory symbolArg) internal onlyInitializing {
         __SafeOwnable_init();
         __ERC20_init(nameArg, symbolArg);
     }

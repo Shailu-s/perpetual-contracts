@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-pragma solidity 0.7.6;
+pragma solidity =0.8.12;
 
 interface IVaultController {
 
@@ -15,6 +15,8 @@ interface IVaultController {
     function deposit(address token, uint256 amount) external payable;
 
     function withdraw(address token, uint256 amount) external;
+
+    function registerVault(address vault, address token) external;
 
     function getVault(address _token) external view returns (address vault);
 

@@ -377,7 +377,7 @@ contract Positioning is
         internal
         view
         override(BaseRelayRecipient, OwnerPausable, ContextUpgradeable)
-        returns (address payable)
+        returns (address)
     {
         return super._msgSender();
     }

@@ -83,7 +83,7 @@ describe("Vault tests", function () {
         expect(await USDCVaultContract.getBalance(alice.address)).to.eq(parseUnits("100", await USDC.decimals()))
     })
 
-    it("force error,amount more than allowance", async () => {
+    it("force error, insufficient allowance", async () => {
         const [owner, alice] = await ethers.getSigners()
 
         await vaultController.deployVault(USDC.address, false)
@@ -92,7 +92,7 @@ describe("Vault tests", function () {
         await positioningConfig.setSettlementTokenBalanceCap(amount)
 
         await expect(vaultController.connect(owner).deposit(USDC.address, amount)).to.be.revertedWith(
-            "ERC20: transfer amount exceeds allowance",
+            "ERC20: insufficient allowance",
         )
     })
 
