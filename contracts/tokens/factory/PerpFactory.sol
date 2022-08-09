@@ -11,6 +11,7 @@ import "../../interfaces/IVolmexBaseToken.sol";
 import "../../interfaces/IVaultController.sol";
 import "../../interfaces/IPositioning.sol";
 import "../../orderbook/VaultController.sol";
+import "../../orderbook/AccountBalance.sol";
 
 /**
  * @title Factory Contract
@@ -18,6 +19,7 @@ import "../../orderbook/VaultController.sol";
  */
 contract PerpFactory is Initializable, BlockContext {
     event PerpSystemCreated(uint256 indexed perpIndex, address indexed positioning, address indexed vaultController);
+    event VaultCreated(address indexed vault, address indexed token);
 
     // Volatility token implementation contract for factory
     address public tokenImplementation;
@@ -30,6 +32,9 @@ contract PerpFactory is Initializable, BlockContext {
 
     // Address of vault contract implementation
     address public vaultImplementation;
+
+    // Address of the account balance contract implementation
+    address public accountBalanceImplementation;
 
     // To store the address of volatility.
     mapping(uint256 => address) public tokenByIndex;
@@ -46,6 +51,9 @@ contract PerpFactory is Initializable, BlockContext {
     // Used to store the address of perp ecosystem at a particular _index (incremental state of 1)
     uint256 public perpIndexCount;
 
+    // Used to store the address of vault at a particular _index (incremental state of 1)
+    uint256 public vaultIndexCount;
+
     // Used to store a boolean value if blockchain is ZkSync
     bool public isZkSync;
 
@@ -55,11 +63,15 @@ contract PerpFactory is Initializable, BlockContext {
     function initialize(
         address _tokenImplementation,
         address _vaultControllerImplementation,
-        address _vaultImplementation
+        address _vaultImplementation,
+        address _positioningImplementation,
+        address _accountBalanceImplementation
     ) external initializer {
         tokenImplementation = _tokenImplementation;
         vaultControllerImplementation = _vaultControllerImplementation;
         vaultImplementation = _vaultImplementation;
+        positioningImplementation = _positioningImplementation;
+        accountBalanceImplementation = _accountBalanceImplementation;
 
         // Get networkId & check for ZkSync
         uint256 networkId = _networkId();
@@ -97,6 +109,29 @@ contract PerpFactory is Initializable, BlockContext {
         tokenByIndex[tokenIndexCount] = address(volmexBaseToken);
         tokenIndexCount++;
         return address(volmexBaseToken);
+    }
+
+    function cloneVault(
+        address _token,
+        bool isEthVault,
+        address _positioningConfig,
+        address _accountBalance,
+        address _vaultImplementation,
+        uint256 _vaultControllerIndex
+    ) external returns (IVault vault) {
+        address vaultControllerAddr = vaultControllersByIndex[_vaultControllerIndex];
+        require(vaultControllerAddr != address(0), "PerpFactory: Vault Controller Not Found");
+
+        if (isZkSync) {
+            vault = new Vault();
+        } else {
+            bytes32 salt = keccak256(abi.encodePacked(_token, vaultIndexCount));
+            vault = Vault(Clones.cloneDeterministic(_vaultImplementation, salt));
+        }
+        vault.initialize(_positioningConfig, _accountBalance, _token, vaultControllerAddr, isEthVault);
+        vaultIndexCount++;
+        IVaultController(vaultControllerAddr).registerVault(address(vault), _token);
+        emit VaultCreated(address(vault), _token);
     }
 
     function clonePerpEcosystem(
