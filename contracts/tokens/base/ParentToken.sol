@@ -1,7 +1,7 @@
-// SPDX-License-Identifier: GPL-3.0-or-later
-pragma solidity 0.7.6;
+// SPDX-License-Identifier: BUSL-1.1
+pragma solidity =0.8.12;
 
-import { SafeMathUpgradeable } from "@openzeppelin/contracts-upgradeable/math/SafeMathUpgradeable.sol";
+import { SafeMathUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/math/SafeMathUpgradeable.sol";
 import { IPriceFeed } from "@perp/perp-oracle-contract/contracts/interface/IPriceFeed.sol";
 import { IIndexPrice } from "../../interfaces/IIndexPrice.sol";
 import { VirtualToken } from "../VirtualToken.sol";
@@ -20,9 +20,10 @@ abstract contract ParentToken is IVolmexBaseToken, IIndexPrice, VirtualToken, Ba
     function initialize(
         string memory nameArg,
         string memory symbolArg,
+        bool isBase,
         address priceFeedArg
     ) external override initializer {
-        __VirtualToken_init(nameArg, symbolArg);
+        __VirtualToken_init(nameArg, symbolArg, isBase);
         _priceFeed = priceFeedArg;
     }
 

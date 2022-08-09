@@ -4,7 +4,7 @@ pragma solidity =0.8.12;
 interface IVolmexBaseToken {
     event PriceFeedChanged(address indexed priceFeed);
 
-    function initialize(string memory nameArg, string memory symbolArg, address priceFeedArg) external;
+    function initialize(string memory nameArg, string memory symbolArg, bool isBase, address priceFeedArg) external;
 
     /// @dev This function is only used for emergency shutdown, to set priceFeed to an emergencyPriceFeed
     function setPriceFeed(address priceFeedArg) external;
