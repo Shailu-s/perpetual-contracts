@@ -2,10 +2,10 @@ import { expect } from "chai"
 import { ethers, upgrades } from "hardhat"
 const { Order, Asset, sign } = require('../order');
 import { FakeContract, smock } from '@defi-wonderland/smock';
-import { AccountBalance, FundingRate, IndexPriceOracle, MarkPriceOracle, PositioningTest } from "../../typechain";
+import { AccountBalance, AccountBalanceMock, FundingRate, IndexPriceOracle, MarkPriceOracle, PositioningTest } from "../../typechain";
 
 
-describe("Positioning", function () {
+describe.only("Positioning", function () {
     let MatchingEngine
     let matchingEngine
     let VirtualToken
@@ -23,11 +23,14 @@ describe("Positioning", function () {
     let positioningConfig
     let Vault
     let vault
+    let VaultController
+    let vaultController
     let AccountBalance
     let markPriceFake: FakeContract<MarkPriceOracle>
     let indexPriceFake: FakeContract<IndexPriceOracle>
     let accountBalance: FakeContract<AccountBalance>
     let transferManagerTest
+    let accountBalance1
 
     this.beforeAll(async () => {
         MatchingEngine = await ethers.getContractFactory("MatchingEngineTest")
@@ -38,6 +41,8 @@ describe("Positioning", function () {
         Positioning = await ethers.getContractFactory("PositioningTest")
         PositioningConfig = await ethers.getContractFactory("PositioningConfig")
         Vault = await ethers.getContractFactory("Vault")
+        VaultController = await ethers.getContractFactory("VaultController")
+
         AccountBalance = await ethers.getContractFactory("AccountBalance")
     })
 
@@ -46,9 +51,10 @@ describe("Positioning", function () {
 
         markPriceFake = await smock.fake('MarkPriceOracle');
         indexPriceFake = await smock.fake('IndexPriceOracle')
+        accountBalance = await smock.fake("AccountBalance")
+
         erc20TransferProxy = await ERC20TransferProxyTest.deploy()
         erc1271Test = await ERC1271Test.deploy()
-        accountBalance = await smock.fake("AccountBalance")
         community = account4.address
 
         positioningConfig = await upgrades.deployProxy(
@@ -56,7 +62,7 @@ describe("Positioning", function () {
             []
         )
 
-        accountBalance
+
         matchingEngine = await upgrades.deployProxy(
             MatchingEngine,
             [erc20TransferProxy.address, 300, community, owner.address],
@@ -77,14 +83,27 @@ describe("Positioning", function () {
         transferManagerTest = await upgrades.deployProxy(TransferManagerTest, [1, community], {
             initializer: "__TransferManager_init",
         })
+
+        vaultController = await upgrades.deployProxy(
+            VaultController,
+            [positioningConfig.address, accountBalance.address, vault.address]
+        )
+
+        accountBalance1 = await upgrades.deployProxy(
+            AccountBalance,
+            [positioningConfig.address]
+        )
+
         positioning = await upgrades.deployProxy(
             Positioning,
-            [positioningConfig.address, vault.address, accountBalance.address,matchingEngine.address,markPriceFake.address, indexPriceFake.address],
+            [positioningConfig.address, vaultController.address, accountBalance1.address,matchingEngine.address,markPriceFake.address, indexPriceFake.address],
             {
                 initializer: "__PositioningTest_init",
             },
         )
-        await accountBalance.connect(owner).setPositioning(positioning.address)
+
+        await accountBalance1.connect(owner).setPositioning(positioning.address)
+        await vaultController.connect(owner).setPositioning(positioning.address)
         await vault.setPositioning(positioning.address)
         await positioningConfig.connect(owner).setMaxMarketsPerAccount(5)
     })
@@ -105,8 +124,8 @@ describe("Positioning", function () {
             it("should match orders & emit event", async () => {
                 const [owner, account1, account2] = await ethers.getSigners()
 
-                markPriceFake.getCumulativePrice.returns(0);
-                indexPriceFake.getIndexTwap.returns()
+                markPriceFake.getCumulativePrice.returns(10);
+                indexPriceFake.getIndexTwap.returns(20)
                 await virtualToken.mint(account1.address, 1000000000000000)
                 await virtualToken.mint(account2.address, 1000000000000000)
                 await virtualToken.addWhitelist(account1.address)
@@ -139,6 +158,59 @@ describe("Positioning", function () {
                     positioning,
                     "PositionChanged",
                 )
+            })
+
+            it("should match orders & emit event when maker address is 0", async () => {
+                const [owner, account1, account2] = await ethers.getSigners()
+
+                markPriceFake.getCumulativePrice.returns(10);
+                indexPriceFake.getIndexTwap.returns(20)
+
+                await virtualToken.mint(account1.address, 1000000000000000)
+                await virtualToken.mint(account2.address, 1000000000000000)
+                await virtualToken.addWhitelist(account1.address)
+                await virtualToken.addWhitelist(account2.address)
+                await virtualToken.connect(account1).approve(matchingEngine.address, 1000000000000000)
+                await virtualToken.connect(account2).approve(matchingEngine.address, 1000000000000000)
+        
+                const orderLeft = Order(
+                  "0x0000000000000000000000000000000000000000",
+                  87654321987654,
+                  true,
+                  Asset(virtualToken.address, "20"),
+                  Asset(virtualToken.address, "20"),
+                  0,
+                )
+        
+                const orderRight = Order(
+                  account2.address,
+                  87654321987654,
+                  false,
+                  Asset(virtualToken.address, "20"),
+                  Asset(virtualToken.address, "20"),
+                  1,
+                )
+        
+                let signatureLeft = await getSignature(orderLeft, account1.address)
+                let signatureRight = await getSignature(orderRight, account2.address)
+        
+                await expect(positioning.connect(owner).openPosition(orderLeft, signatureLeft, orderRight, signatureRight)).to.emit(
+                    positioning,
+                    "PositionChanged",
+                )
+            })
+            it("test for get all funding payment", async () => {
+                const [owner, account1, account2] = await ethers.getSigners()
+                markPriceFake.getCumulativePrice.returns(25);
+                indexPriceFake.getIndexTwap.returns(20)
+               
+                expect(await positioning.getAllPendingFundingPayment(account1.address)).to.be.equal(0);
+            })
+            it("test for getters", async () => {
+                expect(await positioning.getVaultController()).to.be.equal(vaultController.address)           
+                expect(await positioning.getPositioningConfig()).to.be.equal(positioningConfig.address)           
+                expect(await positioning.getAccountBalance()).to.be.equal(accountBalance1.address)
+                console.log()           
             })
         })
     })
