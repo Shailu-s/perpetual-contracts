@@ -4,16 +4,16 @@ pragma solidity =0.8.12;
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts/proxy/Clones.sol";
 
-import "../VolmexBaseToken.sol";
-import "../VolmexQuoteToken.sol";
-import "../../helpers/BlockContext.sol";
-import "../../orderbook/Positioning.sol";
-import "../../orderbook/VaultController.sol";
-import "../../orderbook/AccountBalance.sol";
-import "../../interfaces/IVolmexBaseToken.sol";
-import "../../interfaces/IVaultController.sol";
-import "../../interfaces/IPositioning.sol";
-import "../../interfaces/IVolmexQuoteToken.sol";
+import "../tokens/VolmexBaseToken.sol";
+import "../tokens/VolmexQuoteToken.sol";
+import "../helpers/BlockContext.sol";
+import "../orderbook/Positioning.sol";
+import "../orderbook/VaultController.sol";
+import "../orderbook/AccountBalance.sol";
+import "../interfaces/IVolmexBaseToken.sol";
+import "../interfaces/IVaultController.sol";
+import "../interfaces/IPositioning.sol";
+import "../interfaces/IVolmexQuoteToken.sol";
 
 /**
  * @title Factory Contract
