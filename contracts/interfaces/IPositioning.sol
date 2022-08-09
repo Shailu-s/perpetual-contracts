@@ -5,13 +5,12 @@ import "../libs/LibFill.sol";
 import "../libs/LibDeal.sol";
 
 interface IPositioning {
-    struct SwapResponse {
-        address leftTraderBaseToken;
-        address RightTraderBaseToken;
+    struct MatchResponse {
         LibFill.FillResult newFill;
         LibDeal.DealData dealData;
     }
 
+    // TODO: Implement this event
     /// @notice Emitted when open position with non-zero referral code
     /// @param referralCode The referral code by partners
     event ReferredPositionChanged(bytes32 indexed referralCode);
@@ -55,7 +54,7 @@ interface IPositioning {
         bytes memory signatureLeft,
         LibOrder.Order memory orderRight,
         bytes memory signatureRight
-    ) external returns (SwapResponse memory);
+    ) external returns (MatchResponse memory);
 
     /// @notice Get PositioningConfig address
     /// @return PositioningConfig PositioningConfig address
