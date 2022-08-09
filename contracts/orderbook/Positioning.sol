@@ -237,6 +237,9 @@ contract Positioning is
             rightOpenNotional
         );
 
+        IAccountBalance(_accountBalance).deregisterBaseToken(orderRight.trader, BaseToken);
+        IAccountBalance(_accountBalance).deregisterBaseToken(orderLeft.trader, BaseToken);
+
         return response;
     }
 
