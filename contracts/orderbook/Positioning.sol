@@ -133,29 +133,29 @@ contract Positioning is
         nonReentrant
         returns (MatchResponse memory response)
     {
-        address Basetoken;
+        address baseToken;
 
         // short = selling base token
         if (orderLeft.isShort) {
-            Basetoken = orderLeft.makeAsset.virtualToken;
+            baseToken = orderLeft.makeAsset.virtualToken;
         } else {
-            Basetoken = orderLeft.takeAsset.virtualToken;
+            baseToken = orderLeft.takeAsset.virtualToken;
         }
 
         // register token if it's the first time
-        IAccountBalance(_accountBalance).registerBaseToken(orderLeft.trader, Basetoken);
-        IAccountBalance(_accountBalance).registerBaseToken(orderRight.trader, Basetoken);
+        IAccountBalance(_accountBalance).registerBaseToken(orderLeft.trader, baseToken);
+        IAccountBalance(_accountBalance).registerBaseToken(orderRight.trader, baseToken);
 
         // must settle funding first
-        _settleFunding(orderLeft.trader, Basetoken);
-        _settleFunding(orderRight.trader, Basetoken);
+        _settleFunding(orderLeft.trader, baseToken);
+        _settleFunding(orderRight.trader, baseToken);
 
         response = _openPosition(
             orderLeft,
             signatureLeft,
             orderRight,
             signatureRight,
-            Basetoken
+            baseToken
         );
     }
 
@@ -164,7 +164,7 @@ contract Positioning is
         bytes memory signatureLeft,
         LibOrder.Order memory orderRight,
         bytes memory signatureRight,
-        address BaseToken
+        address baseToken
     ) internal returns (MatchResponse memory response) {
         /**
         TODO: Matching Engine should update fee return values
@@ -194,20 +194,20 @@ contract Positioning is
         // modifies positionSize and openNotional
         (internalData.leftPositionSize, leftOpenNotional) = IAccountBalance(_accountBalance).modifyTakerBalance(
             orderLeft.trader,
-            BaseToken,
+            baseToken,
             internalData.leftExchangedPositionSize,
             internalData.leftExchangedPositionNotional
         );
 
         (internalData.rightPositionSize, rightOpenNotional) = IAccountBalance(_accountBalance).modifyTakerBalance(
             orderRight.trader,
-            BaseToken,
+            baseToken,
             internalData.rightExchangedPositionSize,
             internalData.rightExchangedPositionNotional
         );
 
-        if (_firstTradedTimestampMap[BaseToken] == 0) {
-            _firstTradedTimestampMap[BaseToken] = _blockTimestamp();
+        if (_firstTradedTimestampMap[baseToken] == 0) {
+            _firstTradedTimestampMap[baseToken] = _blockTimestamp();
         }
 
         // if not closing a position, check margin ratio after swap
@@ -221,7 +221,7 @@ contract Positioning is
 
         emit PositionChanged(
             orderLeft.trader,
-            BaseToken,
+            baseToken,
             internalData.leftExchangedPositionSize,
             internalData.leftExchangedPositionNotional,
             response.dealData.protocolFee,
@@ -230,15 +230,15 @@ contract Positioning is
 
         emit PositionChanged(
             orderRight.trader,
-            BaseToken,
+            baseToken,
             internalData.rightExchangedPositionSize,
             internalData.rightExchangedPositionNotional,
             response.dealData.protocolFee,
             rightOpenNotional
         );
 
-        IAccountBalance(_accountBalance).deregisterBaseToken(orderRight.trader, BaseToken);
-        IAccountBalance(_accountBalance).deregisterBaseToken(orderLeft.trader, BaseToken);
+        IAccountBalance(_accountBalance).deregisterBaseToken(orderRight.trader, baseToken);
+        IAccountBalance(_accountBalance).deregisterBaseToken(orderLeft.trader, baseToken);
 
         return response;
     }
