@@ -175,7 +175,6 @@ contract Positioning is
         response = MatchResponse(newFill, dealData);
 
         InternalData memory internalData;
-
         if (orderLeft.isShort) {
             internalData.leftExchangedPositionSize = response.newFill.leftValue.neg256();
             internalData.rightExchangedPositionSize = response.newFill.leftValue.toInt256();
@@ -206,10 +205,6 @@ contract Positioning is
             internalData.rightExchangedPositionSize,
             internalData.rightExchangedPositionNotional
         );
-
-        if (_firstTradedTimestampMap[BaseToken] == 0) {
-            _firstTradedTimestampMap[BaseToken] = _blockTimestamp();
-        }
 
         if (_firstTradedTimestampMap[BaseToken] == 0) {
             _firstTradedTimestampMap[BaseToken] = _blockTimestamp();

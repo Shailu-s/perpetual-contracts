@@ -2,10 +2,6 @@
 pragma solidity =0.8.12;
 
 import { AddressUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol";
-import { SafeMathUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/math/SafeMathUpgradeable.sol";
-import {
-    SignedSafeMathUpgradeable
-} from "@openzeppelin/contracts-upgradeable/utils/math/SignedSafeMathUpgradeable.sol";
 import { PositioningCallee } from "../helpers/PositioningCallee.sol";
 import { PerpSafeCast } from "../libs/PerpSafeCast.sol";
 import { PerpMath } from "../libs/PerpMath.sol";
@@ -18,8 +14,6 @@ import { IAccountBalance } from "../interfaces/IAccountBalance.sol";
 // never inherit any new stateful contract. never change the orders of parent stateful contracts
 contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, AccountBalanceStorageV1 {
     using AddressUpgradeable for address;
-    using SafeMathUpgradeable for uint256;
-    using SignedSafeMathUpgradeable for int256;
     using PerpSafeCast for uint256;
     using PerpSafeCast for int256;
     using PerpMath for uint256;
@@ -37,7 +31,7 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
     // EXTERNAL NON-VIEW
     //
 
-    function initialize(address PositioningConfigArg ) external initializer {
+    function initialize(address PositioningConfigArg) external initializer {
         // IPositioningConfig address is not contract
         require(PositioningConfigArg.isContract(), "AB_VPMMCNC");
 
@@ -100,16 +94,12 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
 
         tokensStorage.push(baseToken);
         // AB_MNE: markets number exceeds
-        require(
-            tokensStorage.length <=
-                IPositioningConfig(_PositioningConfig).getMaxMarketsPerAccount(),
-            "AB_MNE"
-        );
+        require(tokensStorage.length <= IPositioningConfig(_PositioningConfig).getMaxMarketsPerAccount(), "AB_MNE");
     }
 
     /// @inheritdoc IAccountBalance
     function deregisterBaseToken(address trader, address baseToken) external override {
-       _requireOnlyPositioning();
+        _requireOnlyPositioning();
         _deregisterBaseToken(trader, baseToken);
     }
 
@@ -174,44 +164,33 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
                 // baseDebtValue = baseDebt * indexPrice
                 baseDebtValue = baseBalance.mulDiv(_getIndexPrice(baseToken).toInt256(), 1e18);
             }
-            totalBaseDebtValue = totalBaseDebtValue.add(baseDebtValue);
+            totalBaseDebtValue = totalBaseDebtValue + baseDebtValue;
 
             // we can't calculate totalQuoteDebtValue until we have totalQuoteBalance
-            totalQuoteBalance = totalQuoteBalance.add(_accountMarketMap[trader][baseToken].takerOpenNotional);
+            totalQuoteBalance = totalQuoteBalance + _accountMarketMap[trader][baseToken].takerOpenNotional;
         }
         int256 totalQuoteDebtValue = totalQuoteBalance >= int256(0) ? int256(0) : totalQuoteBalance;
 
         // both values are negative due to the above condition checks
-        return totalQuoteDebtValue.add(totalBaseDebtValue).abs();
+        return (totalQuoteDebtValue + totalBaseDebtValue).abs();
     }
 
     /// @inheritdoc IAccountBalance
     function getMarginRequirementForLiquidation(address trader) external view override returns (int256) {
         return
-            getTotalAbsPositionValue(trader)
-                .mulRatio(IPositioningConfig(_PositioningConfig).getMmRatio())
-                .toInt256();
+            getTotalAbsPositionValue(trader).mulRatio(IPositioningConfig(_PositioningConfig).getMmRatio()).toInt256();
     }
 
     /// @inheritdoc IAccountBalance
-    function getPnlAndPendingFee(address trader)
-        external
-        view
-        override
-        virtual
-        returns (
-            int256,
-            int256
-        )
-    {
+    function getPnlAndPendingFee(address trader) external view virtual override returns (int256, int256) {
         int256 totalPositionValue;
         uint256 tokenLen = _baseTokensMap[trader].length;
         for (uint256 i = 0; i < tokenLen; i++) {
             address baseToken = _baseTokensMap[trader][i];
-            totalPositionValue = totalPositionValue.add(getTotalPositionValue(trader, baseToken));
+            totalPositionValue = totalPositionValue + getTotalPositionValue(trader, baseToken);
         }
-        (int256 netQuoteBalance ) = _getNetQuoteBalance(trader);
-        int256 unrealizedPnl = totalPositionValue.add(netQuoteBalance);
+        int256 netQuoteBalance = _getNetQuoteBalance(trader);
+        int256 unrealizedPnl = totalPositionValue + netQuoteBalance;
 
         return (_owedRealizedPnlMap[trader], unrealizedPnl);
     }
@@ -247,7 +226,7 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
             address baseToken = tokens[i];
             // will not use negative value in this case
             uint256 positionValue = getTotalPositionValue(trader, baseToken).abs();
-            totalPositionValue = totalPositionValue.add(positionValue);
+            totalPositionValue = totalPositionValue + positionValue;
         }
         return totalPositionValue;
     }
@@ -263,14 +242,14 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
         int256 quote
     ) internal returns (int256, int256) {
         AccountMarket.Info storage accountInfo = _accountMarketMap[trader][baseToken];
-        accountInfo.takerPositionSize = accountInfo.takerPositionSize.add(base);
-        accountInfo.takerOpenNotional = accountInfo.takerOpenNotional.add(quote);
+        accountInfo.takerPositionSize = accountInfo.takerPositionSize + base;
+        accountInfo.takerOpenNotional = accountInfo.takerOpenNotional + quote;
         return (accountInfo.takerPositionSize, accountInfo.takerOpenNotional);
     }
 
     function _modifyOwedRealizedPnl(address trader, int256 amount) internal {
         if (amount != 0) {
-            _owedRealizedPnlMap[trader] = _owedRealizedPnlMap[trader].add(amount);
+            _owedRealizedPnlMap[trader] = _owedRealizedPnlMap[trader] + amount;
             emit PnlRealized(trader, amount);
         }
     }
@@ -281,7 +260,7 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
         int256 amount
     ) internal {
         AccountMarket.Info storage accountInfo = _accountMarketMap[trader][baseToken];
-        accountInfo.takerOpenNotional = accountInfo.takerOpenNotional.sub(amount);
+        accountInfo.takerOpenNotional = accountInfo.takerOpenNotional - amount;
         _modifyOwedRealizedPnl(trader, amount);
     }
 
@@ -314,23 +293,16 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
     //
 
     function _getIndexPrice(address baseToken) internal view returns (uint256) {
-        return
-            IIndexPrice(baseToken).getIndexPrice(
-                IPositioningConfig(_PositioningConfig).getTwapInterval()
-            );
+        return IIndexPrice(baseToken).getIndexPrice(IPositioningConfig(_PositioningConfig).getTwapInterval());
     }
 
     /// @return netQuoteBalance = quote.balance
-    function _getNetQuoteBalance(address trader)
-        internal
-        view
-        returns (int256 netQuoteBalance)
-    {
+    function _getNetQuoteBalance(address trader) internal view returns (int256 netQuoteBalance) {
         int256 totalTakerQuoteBalance;
         uint256 tokenLen = _baseTokensMap[trader].length;
         for (uint256 i = 0; i < tokenLen; i++) {
             address baseToken = _baseTokensMap[trader][i];
-            totalTakerQuoteBalance = totalTakerQuoteBalance.add(_accountMarketMap[trader][baseToken].takerOpenNotional);
+            totalTakerQuoteBalance = totalTakerQuoteBalance + (_accountMarketMap[trader][baseToken].takerOpenNotional);
         }
 
         netQuoteBalance = totalTakerQuoteBalance;
