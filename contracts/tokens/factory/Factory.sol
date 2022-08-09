@@ -88,7 +88,7 @@ contract Factory is Initializable {
                 Clones.cloneDeterministic(tokenImplementation, salt)
             );
         }
-        volmexBaseToken.initialize(_name, _symbol, _priceFeed);
+        volmexBaseToken.initialize(_name, _symbol, _priceFeed, true);
         tokenByIndex[tokenIndexCount] = address(volmexBaseToken);
         tokenIndexCount++;
         return address(volmexBaseToken);

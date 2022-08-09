@@ -6,9 +6,10 @@ import "../tokens/VirtualToken.sol";
 contract VirtualTokenTest is VirtualToken {
   function initialize(
     string memory nameArg,
-    string memory symbolArg
+    string memory symbolArg,
+    bool isBaseArg
   ) external initializer {
-    __VirtualToken_init(nameArg, symbolArg);
+    __VirtualToken_init(nameArg, symbolArg, isBaseArg);
   }
 
   function beforeTokenTransfer(

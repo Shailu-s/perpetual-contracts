@@ -87,12 +87,12 @@ contract PerpFactory is Initializable, BlockContext {
         if (isZkSync) {
             volmexBaseToken = new VolmexBaseToken();
 
-            volmexBaseToken.initialize(_name, _symbol, _priceFeed);
+            volmexBaseToken.initialize(_name, _symbol, _priceFeed, true);
         } else {
             bytes32 salt = keccak256(abi.encodePacked(tokenIndexCount, _name, _symbol));
 
             volmexBaseToken = VolmexBaseToken(Clones.cloneDeterministic(tokenImplementation, salt));
-            volmexBaseToken.initialize(_name, _symbol, _priceFeed);
+            volmexBaseToken.initialize(_name, _symbol, _priceFeed, true);
         }
         tokenByIndex[tokenIndexCount] = address(volmexBaseToken);
         tokenIndexCount++;
@@ -139,7 +139,7 @@ contract PerpFactory is Initializable, BlockContext {
         if (isZkSync) {
             positioning = new Positioning();
         } else {
-            bytes salt = keccak256(abi.encodePacked(perpIndexCount, _positioningConfig));
+            bytes32 salt = keccak256(abi.encodePacked(perpIndexCount, _positioningConfig));
             positioning = IPositioning(Clones.cloneDeterministic(positioningImplementation, salt));
         }
         positioning.initialize(_positioningConfig, _quoteToken, _exchange, _accountBalance, _insuranceFund);

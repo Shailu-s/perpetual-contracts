@@ -2,30 +2,41 @@
 pragma solidity =0.8.12;
 
 import { ERC20Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
-import { SafeOwnable } from "../base/SafeOwnable.sol";
+import { OwnableUpgradeable } from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+
 import { IVirtualToken } from "../interfaces/IVirtualToken.sol";
 
-contract VirtualToken is IVirtualToken, SafeOwnable, ERC20Upgradeable {
+contract VirtualToken is IVirtualToken, OwnableUpgradeable, ERC20Upgradeable {
     mapping(address => bool) internal _whitelistMap;
+    bool public isBase;
 
     event WhitelistAdded(address account);
     event WhitelistRemoved(address account);
 
-    function __VirtualToken_init(string memory nameArg, string memory symbolArg) internal onlyInitializing {
-        __SafeOwnable_init();
+    function __VirtualToken_init(string memory nameArg, string memory symbolArg, bool isBaseArg) public initializer {
+        isBase = isBaseArg;
+        __Ownable_init();
         __ERC20_init(nameArg, symbolArg);
     }
 
-    function mintMaximumTo(address recipient) external onlyOwner {
+    function mint(address recipient, uint256 amount) external override {
+        _mint(recipient, amount);
+    }
+
+    function burn(address recipient, uint256 amount) external override onlyOwner {
+        _burn(recipient, amount);
+    }
+
+    function mintMaximumTo(address recipient) external override onlyOwner {
         _mint(recipient, type(uint256).max);
     }
 
-    function addWhitelist(address account) external onlyOwner {
+    function addWhitelist(address account) external override onlyOwner {
         _whitelistMap[account] = true;
         emit WhitelistAdded(account);
     }
 
-    function removeWhitelist(address account) external onlyOwner {
+    function removeWhitelist(address account) external override onlyOwner {
         // VT_BNZ: balance is not zero
         require(balanceOf(account) == 0, "VT_BNZ");
         delete _whitelistMap[account];

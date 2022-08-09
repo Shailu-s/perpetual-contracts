@@ -159,6 +159,15 @@ interface IPositioning {
     /// @param forwarder The trusted forwarder address
     event TrustedForwarderChanged(address indexed forwarder);
 
+    /// @dev this function is public for testing
+    function initialize(
+        address PositioningConfigArg,
+        address quoteTokenArg,
+        address exchangeArg,
+        address accountBalanceArg,
+        address insuranceFundArg
+    ) external;
+
     /// @notice Settle all markets fundingPayment to owedRealized Pnl
     /// @param trader The address of trader
     function settleAllFunding(address trader) external;
