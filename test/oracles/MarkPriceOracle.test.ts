@@ -42,6 +42,7 @@ describe('MarkPriceOracle', function () {
       [
         "VolmexBaseToken", // nameArg
         "VBT", // symbolArg,
+        true, // isBase
         indexPriceOracle.address, // priceFeedArg
       ],
       {
