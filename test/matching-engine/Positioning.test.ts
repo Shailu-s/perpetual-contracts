@@ -2,7 +2,7 @@ import { expect } from "chai"
 import { ethers, upgrades } from "hardhat"
 const { Order, Asset, sign } = require('../order');
 import { FakeContract, smock } from '@defi-wonderland/smock';
-import { AccountBalance, AccountBalanceMock, FundingRate, IndexPriceOracle, MarkPriceOracle, PositioningTest } from "../../typechain";
+import { AccountBalance, IndexPriceOracle, MarkPriceOracle } from "../../typechain";
 
 
 describe("Positioning", function () {
