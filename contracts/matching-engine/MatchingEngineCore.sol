@@ -10,6 +10,7 @@ import "./OrderValidator.sol";
 import "./AssetMatcher.sol";
 import "./TransferExecutor.sol";
 import "../helpers/OwnerPausable.sol";
+import "../interfaces/IMarkPriceOracle.sol";
 
 abstract contract MatchingEngineCore is
     Initializable,
@@ -21,6 +22,9 @@ abstract contract MatchingEngineCore is
     ITransferManager
 {
     uint256 private constant _UINT256_MAX = 2**256 - 1;
+    uint256 private constant _ORACLE_BASE = 1000000;
+
+    IMarkPriceOracle public markPriceOracle;
 
     //state of the orders
     mapping(bytes32 => uint256) public fills;
@@ -102,6 +106,12 @@ abstract contract MatchingEngineCore is
         address makeToken = orderLeft.isShort ? orderLeft.makeAsset.virtualToken : orderLeft.takeAsset.virtualToken;
         address takeToken = orderRight.isShort ? orderRight.makeAsset.virtualToken : orderRight.takeAsset.virtualToken;
 
+        bool isLeftBase = IVirtualToken(makeToken).isBase();
+
+        isLeftBase ? 
+            _updateObservation(newFill.rightValue, newFill.leftValue, makeToken) 
+            : _updateObservation(newFill.leftValue, newFill.rightValue, takeToken);
+
         dealData = _getDealData(orderLeft, orderRight);
         _doTransfers(
             LibDeal.DealSide(LibAsset.Asset(makeToken, newFill.leftValue), _proxy, orderLeft.trader),
@@ -110,6 +120,12 @@ abstract contract MatchingEngineCore is
         );
 
         emit Matched(newFill.leftValue, newFill.rightValue);
+    }
+
+    function _updateObservation(uint256 quoteValue, uint256 baseValue, address baseToken) internal {
+        uint256 cumulativePrice = ((quoteValue * _ORACLE_BASE) / baseValue);
+        uint64 index = markPriceOracle.indexByBaseToken(baseToken);
+        markPriceOracle.addObservation(cumulativePrice, index);
     }
 
     /**
@@ -122,7 +138,6 @@ abstract contract MatchingEngineCore is
         uint256 matchFees = _protocolFee;
         uint256 maxFee;
 
-        // TODO: This condition is always true since LibFeeSide.getFeeSide() always returns LibFeeSide.FeeSide.LEFT
         if (feeSide == LibFeeSide.FeeSide.LEFT) {
             maxFee = 1000;
         } else {
@@ -139,7 +154,6 @@ abstract contract MatchingEngineCore is
         returns (LibDeal.DealData memory dealData)
     {
         dealData.protocolFee = _getProtocolFee();
-        // TODO: Update code since LibFeeSide.getFeeSide() always returns LibFeeSide.FeeSide.LEFT
         dealData.feeSide = LibFeeSide.getFeeSide(orderLeft, orderRight);
         dealData.maxFeesBasePoint = _getMaxFee(dealData.feeSide, dealData.protocolFee);
     }

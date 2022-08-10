@@ -11,7 +11,8 @@ contract MatchingEngine is MatchingEngineCore, TransferManager {
         address erc20TransferProxy,
         uint256 newProtocolFee,
         address newDefaultFeeReceiver,
-        address owner
+        address owner,
+        IMarkPriceOracle _markPriceOracle
     ) public initializer {
         require(newDefaultFeeReceiver != address(0), "V_PERP_M: zero address");
 
@@ -21,6 +22,7 @@ contract MatchingEngine is MatchingEngineCore, TransferManager {
         __TransferManager_init_unchained(newProtocolFee, newDefaultFeeReceiver);
         __OrderValidator_init_unchained();
         __Pausable_init_unchained();
+        markPriceOracle = _markPriceOracle;
 
         _transferOwnership(owner);
     }

@@ -25,6 +25,8 @@ contract MarkPriceOracle is Initializable {
     // mapping to store index to the address of the baseToken
     mapping(uint64 => address) public baseTokenByIndex;
 
+    mapping(address => uint64) public indexByBaseToken;
+
     // mapping to store baseToken to Observations 
     mapping(uint64 => Observation[]) public observationsByIndex;
 
@@ -61,6 +63,32 @@ contract MarkPriceOracle is Initializable {
         for (uint index; index < priceCumulativeLength; index++) {
             observation = Observation({ timestamp: block.timestamp, priceCumulative: _priceCumulative[index] });
             baseTokenByIndex[indexCount] = _asset[index];
+            indexByBaseToken[_asset[index]] = indexCount;
+            Observation[] storage observations = observationsByIndex[indexCount];
+            observations.push(observation);
+            indexCount++;
+        }
+
+        _indexCount = indexCount;
+    }
+
+    function addObservations(uint256[] memory _priceCumulative, address[] memory _asset) external onlyExchange {
+        uint256 priceCumulativeLength = _priceCumulative.length;
+        uint256 assetLength = _asset.length;
+        require(priceCumulativeLength == assetLength, "MarkSMA: Unequal length of prices & assets");
+
+        for (uint index; index < priceCumulativeLength; index++) {
+            require(_priceCumulative[index] > 1000000, "MarkSMA: Not decimal precise");
+            require(_asset[index] != address(0), "MarkSMA: Asset address can't be 0");
+        }
+        
+        Observation memory observation;
+        uint64 indexCount = _indexCount;
+
+        for (uint index; index < priceCumulativeLength; index++) {
+            observation = Observation({ timestamp: block.timestamp, priceCumulative: _priceCumulative[index] });
+            baseTokenByIndex[indexCount] = _asset[index];
+            indexByBaseToken[_asset[index]] = indexCount;
             Observation[] storage observations = observationsByIndex[indexCount];
             observations.push(observation);
             indexCount++;

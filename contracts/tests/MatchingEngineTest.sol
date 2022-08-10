@@ -13,13 +13,15 @@ contract MatchingEngineTest is MatchingEngine
         address erc20TransferProxy,
         uint256 newProtocolFee,
         address newDefaultFeeReceiver,
-        address owner
+        address owner,
+        IMarkPriceOracle markPriceOracle
     ) external initializer {
         initialize(
             erc20TransferProxy,
             newProtocolFee,
             newDefaultFeeReceiver,
-            owner
+            owner,
+            markPriceOracle
         );
         __Ownable_init_unchained();
     }
