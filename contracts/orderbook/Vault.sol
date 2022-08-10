@@ -292,11 +292,6 @@ contract Vault is IVault, ReentrancyGuardUpgradeable, OwnerPausable, BaseRelayRe
         return super._msgSender();
     }
 
-    /// @inheritdoc BaseRelayRecipient
-    function _msgData() internal view override(BaseRelayRecipient, OwnerPausable) returns (bytes memory) {
-        return super._msgData();
-    }
-
     function _requireOnlyVaultController() internal view {
         // only VaultController
         require(_msgSender() == _vaultController, "V_OVC");

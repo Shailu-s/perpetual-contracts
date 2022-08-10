@@ -3,13 +3,13 @@ pragma solidity =0.8.12;
 
 import { OwnableUpgradeable } from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import { IPositioningConfig } from "../interfaces/IPositioningConfig.sol";
-import { PositioningConfigStorageV2 } from "../storage/PositioningConfigStorage.sol";
+import { PositioningConfigStorageV1 } from "../storage/PositioningConfigStorage.sol";
 
 // never inherit any new stateful contract. never change the orders of parent stateful contracts
 contract PositioningConfig is
     IPositioningConfig,
     OwnableUpgradeable,
-    PositioningConfigStorageV2
+    PositioningConfigStorageV1
 {
     //
     // EVENT
@@ -20,7 +20,6 @@ contract PositioningConfig is
     event MaxMarketsPerAccountChanged(uint8 maxMarketsPerAccount);
     event SettlementTokenBalanceCapChanged(uint256 cap);
     event MaxFundingRateChanged(uint24 rate);
-    event BackstopLiquidityProviderChanged(address indexed account, bool indexed isProvider);
 
     //
     // MODIFIER
@@ -89,11 +88,6 @@ contract PositioningConfig is
         emit MaxFundingRateChanged(rate);
     }
 
-    function setBackstopLiquidityProvider(address account, bool isProvider) external onlyOwner {
-        _backstopLiquidityProviderMap[account] = isProvider;
-        emit BackstopLiquidityProviderChanged(account, isProvider);
-    }
-
     //
     // EXTERNAL VIEW
     //
@@ -136,10 +130,5 @@ contract PositioningConfig is
     /// @inheritdoc IPositioningConfig
     function getMaxFundingRate() external view override returns (uint24) {
         return _maxFundingRate;
-    }
-
-    /// @inheritdoc IPositioningConfig
-    function isBackstopLiquidityProvider(address account) external view override returns (bool) {
-        return _backstopLiquidityProviderMap[account];
     }
 }

@@ -23,12 +23,8 @@ import { PositioningStorageV1 } from "../storage/PositioningStorage.sol";
 contract FundingRate is IFundingRate, BlockContext, PositioningCallee, FundingRateStorage, PositioningStorageV1 {
     using AddressUpgradeable for address;
     using LibPerpMath for uint256;
-    using LibPerpMath for uint160;
     using LibPerpMath for int256;
     using LibSafeCastUint for uint256;
-    using LibSafeCastInt for int256;
-    using LibSafeCastInt for int32;
-    using LibSafeCastUint for int32;
 
     function __FundingRate_init(
         address markPriceOracleArg,

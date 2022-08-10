@@ -25,7 +25,4 @@ interface IPositioningConfig {
 
     /// @return maxFundingRate Max value of funding rate
     function getMaxFundingRate() external view returns (uint24 maxFundingRate);
-
-    /// @return isBackstopLiquidityProvider is backstop liquidity provider
-    function isBackstopLiquidityProvider(address account) external view returns (bool isBackstopLiquidityProvider);
 }

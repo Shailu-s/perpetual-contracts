@@ -6,12 +6,6 @@ pragma solidity =0.8.12;
  * It is better to inherit the BaseRelayRecipient as its implementation.
  */
 abstract contract IRelayRecipient {
-    /**
-     * return if the forwarder is trusted to forward relayed transactions to us.
-     * the forwarder is required to verify the sender's signature, and verify
-     * the call is not a replay.
-     */
-    function isTrustedForwarder(address forwarder) public view virtual returns (bool);
 
     /**
      * return the sender of this call.
@@ -22,14 +16,4 @@ abstract contract IRelayRecipient {
      */
     function _msgSender() internal view virtual returns (address);
 
-    /**
-     * return the msg.data of this call.
-     * if the call came through our trusted forwarder, then the real sender was appended as the last 20 bytes
-     * of the msg.data - so this method will strip those 20 bytes off.
-     * otherwise (if the call was made directly and not through the forwarder), return `msg.data`
-     * should be used in the contract instead of msg.data, where this difference matters.
-     */
-    function _msgData() internal view virtual returns (bytes calldata);
-
-    function versionRecipient() external view virtual returns (string memory);
 }

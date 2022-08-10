@@ -14,7 +14,3 @@ abstract contract PositioningConfigStorageV1 {
     uint32 internal _twapInterval;
     uint256 internal _settlementTokenBalanceCap;
 }
-
-abstract contract PositioningConfigStorageV2 is PositioningConfigStorageV1 {
-    mapping(address => bool) internal _backstopLiquidityProviderMap;
-}

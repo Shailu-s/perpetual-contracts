@@ -148,8 +148,4 @@ contract VaultController is ReentrancyGuardUpgradeable, OwnerPausable, VaultCont
     function _msgSender() internal view override(OwnerPausable) returns (address) {
         return super._msgSender();
     }
-
-    function _msgData() internal view override(OwnerPausable) returns (bytes memory) {
-        return super._msgData();
-    }
 }

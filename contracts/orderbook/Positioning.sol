@@ -249,10 +249,6 @@ contract Positioning is
         return super._msgSender();
     }
 
-    function _msgData() internal view override(OwnerPausable, ContextUpgradeable) returns (bytes memory) {
-        return super._msgData();
-    }
-
     function _getFreeCollateralByRatio(address trader, uint24 ratio) internal view returns (int256) {
         return IVaultController(_vaultController).getFreeCollateralByRatio(trader, ratio);
     }

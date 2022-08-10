@@ -23,9 +23,5 @@ abstract contract OwnerPausable is OwnableUpgradeable, PausableUpgradeable {
         return super._msgSender();
     }
 
-    function _msgData() internal view virtual override returns (bytes memory) {
-        return super._msgData();
-    }
-
     uint256[50] private __gap;
 }

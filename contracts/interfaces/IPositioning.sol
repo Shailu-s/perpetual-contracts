@@ -47,11 +47,6 @@ interface IPositioning {
     /// @param fundingPayment The fundingPayment of trader on baseToken market, > 0: payment, < 0 : receipt
     event FundingPaymentSettled(address indexed trader, address indexed baseToken, int256 fundingPayment);
 
-    /// @notice Emitted when trusted forwarder address changed
-    /// @dev TrustedForward is only used for metaTx
-    /// @param forwarder The trusted forwarder address
-    event TrustedForwarderChanged(address indexed forwarder);
-
     /// @notice Settle all markets fundingPayment to owedRealized Pnl
     /// @param trader The address of trader
     function settleAllFunding(address trader) external;

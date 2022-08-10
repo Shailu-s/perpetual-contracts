@@ -9,11 +9,5 @@ abstract contract MarketRegistryStorageV1 {
 
     uint8 internal _maxOrdersPerMarket;
 
-    // key: baseToken, value: pool
-    mapping(address => address) internal _poolMap;
-
-    // key: baseToken, what insurance fund get = exchangeFee * insuranceFundFeeRatio
-    mapping(address => uint24) internal _insuranceFundFeeRatioMap;
-
     mapping(address => uint24) internal _exchangeFeeRatioMap;
 }
