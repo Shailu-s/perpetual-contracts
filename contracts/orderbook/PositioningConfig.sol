@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: BUSL - 1.1
 pragma solidity =0.8.12;
 
-import { SafeOwnable } from "../helpers/SafeOwnable.sol";
+import { OwnableUpgradeable } from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import { PositioningConfigStorageV2 } from "../storage/PositioningConfigStorage.sol";
 import { IPositioningConfig } from "../interfaces/IPositioningConfig.sol";
 
 // never inherit any new stateful contract. never change the orders of parent stateful contracts
 contract PositioningConfig is
     IPositioningConfig,
-    SafeOwnable,
+    OwnableUpgradeable,
     PositioningConfigStorageV2
 {
     //
@@ -37,7 +37,7 @@ contract PositioningConfig is
     //
 
     function initialize() external initializer {
-        __SafeOwnable_init();
+        __Ownable_init();
 
         _maxMarketsPerAccount = type(uint8).max;
         _imRatio = 0.1e6; // initial-margin ratio, 10% in decimal 6

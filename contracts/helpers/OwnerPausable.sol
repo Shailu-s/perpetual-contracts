@@ -2,12 +2,12 @@
 pragma solidity =0.8.12;
 
 import { PausableUpgradeable } from "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
-import { SafeOwnable } from "./SafeOwnable.sol";
+import { OwnableUpgradeable } from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
-abstract contract OwnerPausable is SafeOwnable, PausableUpgradeable {
+abstract contract OwnerPausable is OwnableUpgradeable, PausableUpgradeable {
     // solhint-disable-next-line func-order
     function __OwnerPausable_init() internal initializer {
-        __SafeOwnable_init();
+        __Ownable_init();
         __Pausable_init();
     }
 
