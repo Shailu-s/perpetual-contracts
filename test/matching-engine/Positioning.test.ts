@@ -5,7 +5,7 @@ import { FakeContract, smock } from '@defi-wonderland/smock';
 import { AccountBalance, AccountBalanceMock, FundingRate, IndexPriceOracle, MarkPriceOracle, PositioningTest } from "../../typechain";
 
 
-describe.only("Positioning", function () {
+describe("Positioning", function () {
     let MatchingEngine
     let matchingEngine
     let VirtualToken
@@ -49,7 +49,7 @@ describe.only("Positioning", function () {
     beforeEach(async () => {
         const [owner, account1, account2, account3, account4] = await ethers.getSigners()
 
-        markPriceFake = await smock.fake('MarkPriceOracle');
+        markPriceFake = await smock.fake('MarkPriceOracle')
         indexPriceFake = await smock.fake('IndexPriceOracle')
         accountBalance = await smock.fake("AccountBalance")
 
@@ -86,7 +86,7 @@ describe.only("Positioning", function () {
 
         vaultController = await upgrades.deployProxy(
             VaultController,
-            [positioningConfig.address, accountBalance.address, vault.address]
+            [positioningConfig.address, accountBalance.address]
         )
 
         accountBalance1 = await upgrades.deployProxy(
@@ -210,7 +210,6 @@ describe.only("Positioning", function () {
                 expect(await positioning.getVaultController()).to.be.equal(vaultController.address)           
                 expect(await positioning.getPositioningConfig()).to.be.equal(positioningConfig.address)           
                 expect(await positioning.getAccountBalance()).to.be.equal(accountBalance1.address)
-                console.log()           
             })
         })
     })

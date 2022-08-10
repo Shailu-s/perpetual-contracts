@@ -8,4 +8,10 @@ abstract contract BlockContext {
         // It may not actually correspond to a particular L1 block
         return block.timestamp;
     }
+
+    function _networkId() internal view virtual returns (uint256 networkId) {
+        assembly {
+            networkId := chainid()
+        }
+    }
 }

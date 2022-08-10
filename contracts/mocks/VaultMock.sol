@@ -7,20 +7,21 @@ import {
     SafeERC20Upgradeable,
     IERC20Upgradeable
 } from "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
-import { PerpSafeCast } from "../libs/PerpSafeCast.sol";
-import { SettlementTokenMath } from "../libs/SettlementTokenMath.sol";
-import { PerpMath } from "../libs/PerpMath.sol";
-import { SettlementTokenMath } from "../libs/SettlementTokenMath.sol";
+import { LibSettlementTokenMath } from "../libs/LibSettlementTokenMath.sol";
+import { LibPerpMath } from "../libs/LibPerpMath.sol";
+import { LibSettlementTokenMath } from "../libs/LibSettlementTokenMath.sol";
 import { AddressUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol";
+import { LibSafeCastInt } from "../libs/LibSafeCastInt.sol";
+import { LibSafeCastUint } from "../libs/LibSafeCastUint.sol";
 
 contract VaultMock is Vault {
-    using PerpSafeCast for uint256;
-    using PerpSafeCast for int256;
-    using SettlementTokenMath for uint256;
-    using SettlementTokenMath for int256;
-    using PerpMath for int256;
-    using PerpMath for uint256;
+    using LibSettlementTokenMath for uint256;
+    using LibSettlementTokenMath for int256;
+    using LibPerpMath for int256;
+    using LibPerpMath for uint256;
     using AddressUpgradeable for address;
+    using LibSafeCastUint for uint256;
+    using LibSafeCastInt for int256;
 
     int256 public fakeOwedRealisedPnlX10_18;
     int256 public fakeFundingPaymentX10_18;
@@ -65,14 +66,14 @@ contract VaultMock is Vault {
         // settle owedRealizedPnl in AccountBalance
         int256 owedRealizedPnlX10_18 = fakeOwedRealisedPnlX10_18;
 
-        // by this time there should be no owedRealizedPnl nor pending funding payment in free collateral
-        int256 freeCollateralByImRatioX10_D = getFreeCollateralByRatio(to, 75);
-        // V_NEFC: not enough freeCollateral
-        require(
-            freeCollateralByImRatioX10_D + (owedRealizedPnlX10_18.formatSettlementToken(_decimals)) >=
-                amountX10_D.toInt256(),
-            "V_NEFC"
-        );
+        // // by this time there should be no owedRealizedPnl nor pending funding payment in free collateral
+        // int256 freeCollateralByImRatioX10_D = getFreeCollateralByRatio(to, 75);
+        // // V_NEFC: not enough freeCollateral
+        // require(
+        //     freeCollateralByImRatioX10_D + (owedRealizedPnlX10_18.formatSettlementToken(_decimals)) >=
+        //         amountX10_D.toInt256(),
+        //     "V_NEFC"
+        // );
 
         // send available funds to trader if vault balance is not enough and emit LowBalance event
         uint256 vaultBalanceX10_D = IERC20Metadata(token).balanceOf(address(this));
@@ -94,25 +95,25 @@ contract VaultMock is Vault {
         emit Withdrawn(token, to, amountToTransferX10_D);
     }
 
-    function getFreeCollateralByRatio(address trader, uint24 ratio) public view override returns (int256) {
-        // conservative config: freeCollateral = min(collateral, accountValue) - margin requirement ratio
-        int256 fundingPaymentX10_18 = fakeFundingPaymentX10_18;
-        (int256 owedRealizedPnlX10_18, int256 unrealizedPnlX10_18, uint256 pendingFeeX10_18) =
-            (fakeOwedRealisedPnlX10_18, fakeUnrealizedPnlX10_18, fakePendingFeeX10_18);
-        int256 totalCollateralValueX10_D =
-            getBalance(trader) + (
-                owedRealizedPnlX10_18 - (fundingPaymentX10_18) + (pendingFeeX10_18.toInt256()).formatSettlementToken(
-                    _decimals
-                )
-            );
+    // function getFreeCollateralByRatio(address trader, uint24 ratio) public view override returns (int256) {
+    //     // conservative config: freeCollateral = min(collateral, accountValue) - margin requirement ratio
+    //     int256 fundingPaymentX10_18 = fakeFundingPaymentX10_18;
+    //     (int256 owedRealizedPnlX10_18, int256 unrealizedPnlX10_18, uint256 pendingFeeX10_18) =
+    //         (fakeOwedRealisedPnlX10_18, fakeUnrealizedPnlX10_18, fakePendingFeeX10_18);
+    //     int256 totalCollateralValueX10_D =
+    //         getBalance(trader) + (
+    //             owedRealizedPnlX10_18 - (fundingPaymentX10_18) + (pendingFeeX10_18.toInt256()).formatSettlementToken(
+    //                 _decimals
+    //             )
+    //         );
 
-        // accountValue = totalCollateralValue + totalUnrealizedPnl, in the settlement token's decimals
-        int256 accountValueX10_D = totalCollateralValueX10_D + (unrealizedPnlX10_18.formatSettlementToken(_decimals));
-        uint256 totalMarginRequirementX10_18 = _getTotalMarginRequirement(trader, ratio);
+    //     // accountValue = totalCollateralValue + totalUnrealizedPnl, in the settlement token's decimals
+    //     int256 accountValueX10_D = totalCollateralValueX10_D + (unrealizedPnlX10_18.formatSettlementToken(_decimals));
+    //     uint256 totalMarginRequirementX10_18 = _getTotalMarginRequirement(trader, ratio);
 
-        return
-            PerpMath.min(totalCollateralValueX10_D, accountValueX10_D) - (
-                totalMarginRequirementX10_18.toInt256().formatSettlementToken(_decimals)
-            );
-    }
+    //     return
+    //         LibPerpMath.min(totalCollateralValueX10_D, accountValueX10_D) - (
+    //             totalMarginRequirementX10_18.toInt256().formatSettlementToken(_decimals)
+    //         );
+    // }
 }

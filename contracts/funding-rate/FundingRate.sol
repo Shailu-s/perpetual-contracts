@@ -4,18 +4,21 @@ pragma abicoder v2;
 
 import { AddressUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol";
 import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+
 import { LibSafeCastInt } from "../libs/LibSafeCastInt.sol";
 import { LibSafeCastUint } from "../libs/LibSafeCastUint.sol";
 import { LibPerpMath } from "../libs/LibPerpMath.sol";
+
 import { IAccountBalance } from "../interfaces/IAccountBalance.sol";
 import { IIndexPriceOracle } from "../interfaces/IIndexPriceOracle.sol";
-import { IMarkPriceOracle } from "../interfaces/IMarkPriceOracle.sol";
 import { IFundingRate } from "../interfaces/IFundingRate.sol";
+import { IMarkPriceOracle } from "../interfaces/IMarkPriceOracle.sol";
 import { IPositioningConfig } from "../interfaces/IPositioningConfig.sol";
+
 import { BlockContext } from "../helpers/BlockContext.sol";
 import { FundingRateStorage } from "../storage/FundingRateStorage.sol";
-import { PositioningStorageV1 } from "../storage/PositioningStorage.sol";
 import { PositioningCallee } from "../helpers/PositioningCallee.sol";
+import { PositioningStorageV1 } from "../storage/PositioningStorage.sol";
 
 contract FundingRate is IFundingRate, BlockContext, PositioningCallee, FundingRateStorage, PositioningStorageV1 {
     using AddressUpgradeable for address;

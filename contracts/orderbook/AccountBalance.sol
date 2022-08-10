@@ -2,12 +2,15 @@
 pragma solidity =0.8.12;
 
 import { AddressUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol";
+
 import { LibAccountMarket } from "../libs/LibAccountMarket.sol";
 import { LibPerpMath } from "../libs/LibPerpMath.sol";
 import { LibSafeCastUint } from "../libs/LibSafeCastUint.sol";
+
 import { IAccountBalance } from "../interfaces/IAccountBalance.sol";
 import { IIndexPrice } from "../interfaces/IIndexPrice.sol";
 import { IPositioningConfig } from "../interfaces/IPositioningConfig.sol";
+
 import { AccountBalanceStorageV1 } from "../storage/AccountBalanceStorage.sol";
 import { BlockContext } from "../helpers/BlockContext.sol";
 import { PositioningCallee } from "../helpers/PositioningCallee.sol";
@@ -76,8 +79,6 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
 
     /// @inheritdoc IAccountBalance
     function settleOwedRealizedPnl(address trader) external override returns (int256) {
-        // only vault
-        require(_msgSender() == _vault, "AB_OV");
         int256 owedRealizedPnl = _owedRealizedPnlMap[trader];
         _owedRealizedPnlMap[trader] = 0;
 

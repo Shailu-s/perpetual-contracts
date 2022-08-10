@@ -2,8 +2,8 @@
 pragma solidity =0.8.12;
 
 import { OwnableUpgradeable } from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
-import { PositioningConfigStorageV2 } from "../storage/PositioningConfigStorage.sol";
 import { IPositioningConfig } from "../interfaces/IPositioningConfig.sol";
+import { PositioningConfigStorageV2 } from "../storage/PositioningConfigStorage.sol";
 
 // never inherit any new stateful contract. never change the orders of parent stateful contracts
 contract PositioningConfig is

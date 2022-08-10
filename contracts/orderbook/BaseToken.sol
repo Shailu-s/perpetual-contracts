@@ -2,10 +2,12 @@
 pragma solidity =0.8.12;
 
 import { IPriceFeed } from "@perp/perp-oracle-contract/contracts/interface/IPriceFeed.sol";
-import { IIndexPrice } from "../interfaces/IIndexPrice.sol";
-import { VirtualToken } from "../tokens/VirtualToken.sol";
-import { BaseTokenStorageV1 } from "../storage/BaseTokenStorage.sol";
+
 import { IBaseToken } from "../interfaces/IBaseToken.sol";
+import { IIndexPrice } from "../interfaces/IIndexPrice.sol";
+
+import { BaseTokenStorageV1 } from "../storage/BaseTokenStorage.sol";
+import { VirtualToken } from "../tokens/VirtualToken.sol";
 
 // never inherit any new stateful contract. never change the orders of parent stateful contracts
 contract BaseToken is IBaseToken, IIndexPrice, VirtualToken, BaseTokenStorageV1 {
