@@ -5,5 +5,5 @@ interface IMarkPriceOracle {
     function addObservation(uint256 _priceCumulative) external;
 
     function exchange() external view returns (address);
-    function getCumulativePrice(uint256 _twInterval) external view returns (uint256 priceCumulative);
+    function getCumulativePrice(uint256 _twInterval, uint64 _index) external view returns (uint256 priceCumulative);
 }

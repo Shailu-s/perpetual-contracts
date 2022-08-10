@@ -95,7 +95,8 @@ contract Positioning is
         address accountBalanceArg,
         address matchingEngineArg,
         address markPriceArg,
-        address indexPriceArg
+        address indexPriceArg,
+        uint64 underlyingPriceIndex
     ) public initializer {
         // CH_VANC: Vault address is not contract
         require(vaultArg.isContract(), "CH_VANC");
@@ -116,6 +117,7 @@ contract Positioning is
         _accountBalance = accountBalanceArg;
         _matchingEngine = matchingEngineArg;
         _settlementTokenDecimals = IVault(_vault).decimals();
+        _underlyingPriceIndex = underlyingPriceIndex;
     }
 
     /// @inheritdoc IPositioning

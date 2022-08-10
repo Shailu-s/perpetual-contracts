@@ -12,7 +12,8 @@ contract PositioningTest is Positioning {
         address accountBalance,
          address matchingEngine,
         address markPriceArg,
-        address indexPriceArg
+        address indexPriceArg,
+        uint64 _underlyingPriceIndex
     ) external initializer {
         initialize(
             positioningConfigArg,
@@ -20,7 +21,8 @@ contract PositioningTest is Positioning {
             accountBalance,
             matchingEngine,
             markPriceArg,
-            indexPriceArg
+            indexPriceArg,
+            _underlyingPriceIndex
         );
         __OwnerPausable_init();
         __FundingRate_init(markPriceArg, indexPriceArg);

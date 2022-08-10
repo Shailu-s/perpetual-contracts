@@ -7,6 +7,7 @@ pragma solidity =0.8.12;
 abstract contract FundingRateStorage {
     address internal _markPriceOracleArg;
     address internal _indexPriceOracleArg;
+    uint64 internal _underlyingPriceIndex;
 
     mapping(address => uint256) internal _lastSettledTimestampMap;
     // mapping basetoken => twpremium(time weighted)
