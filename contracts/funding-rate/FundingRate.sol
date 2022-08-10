@@ -3,8 +3,8 @@ pragma solidity =0.8.12;
 pragma abicoder v2;
 
 import { AddressUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol";
-import { PerpSafeCast } from "../libs/PerpSafeCast.sol";
-import { SwapMath } from "../libs/SwapMath.sol";
+import { LibSafeCastInt } from "../libs/LibSafeCastInt.sol";
+import { LibSafeCastUint } from "../libs/LibSafeCastUint.sol";
 import { PerpFixedPoint96 } from "../libs/PerpFixedPoint96.sol";
 import { PerpMath } from "../libs/PerpMath.sol";
 import { PositioningCallee } from "../helpers/PositioningCallee.sol";
@@ -23,8 +23,10 @@ contract FundingRate is IFundingRate, BlockContext, PositioningCallee, FundingRa
     using PerpMath for uint256;
     using PerpMath for uint160;
     using PerpMath for int256;
-    using PerpSafeCast for uint256;
-    using PerpSafeCast for int256;
+    using LibSafeCastUint for uint256;
+    using LibSafeCastInt for int256;
+    using LibSafeCastInt for int32;
+    using LibSafeCastUint for int32;
 
     function __FundingRate_init(
         address markPriceOracleArg,
@@ -93,12 +95,12 @@ contract FundingRate is IFundingRate, BlockContext, PositioningCallee, FundingRa
             uint256 indexTwap
         )
     {
-        uint32 twapInterval;
+        uint256 twapInterval;
         uint256 timestamp = _blockTimestamp();
         // shorten twapInterval if prior observations are not enough
         if (_firstTradedTimestampMap[baseToken] != 0) {
             twapInterval = IPositioningConfig(_PositioningConfig).getTwapInterval();
-            uint32 deltaTimestamp = (timestamp - _firstTradedTimestampMap[baseToken]).toUint32();
+            uint256 deltaTimestamp = (timestamp - _firstTradedTimestampMap[baseToken]);
             twapInterval = twapInterval > deltaTimestamp ? deltaTimestamp : twapInterval;
         }
 

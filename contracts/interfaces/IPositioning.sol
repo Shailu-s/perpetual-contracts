@@ -5,9 +5,19 @@ import "../libs/LibFill.sol";
 import "../libs/LibDeal.sol";
 
 interface IPositioning {
+    
     struct MatchResponse {
         LibFill.FillResult newFill;
         LibDeal.DealData dealData;
+    }
+
+    struct InternalData {
+        int256 leftExchangedPositionSize;
+        int256 leftExchangedPositionNotional;
+        int256 rightExchangedPositionSize;
+        int256 rightExchangedPositionNotional;
+        int256 leftPositionSize;
+        int256 rightPositionSize;
     }
 
     // TODO: Implement this event

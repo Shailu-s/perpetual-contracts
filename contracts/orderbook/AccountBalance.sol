@@ -3,9 +3,9 @@ pragma solidity =0.8.12;
 
 import { AddressUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol";
 import { PositioningCallee } from "../helpers/PositioningCallee.sol";
-import { PerpSafeCast } from "../libs/PerpSafeCast.sol";
 import { PerpMath } from "../libs/PerpMath.sol";
 import { IIndexPrice } from "../interfaces/IIndexPrice.sol";
+import { LibSafeCastUint } from "../libs/LibSafeCastUint.sol";
 import { IPositioningConfig } from "../interfaces/IPositioningConfig.sol";
 import { AccountBalanceStorageV1, AccountMarket } from "../storage/AccountBalanceStorage.sol";
 import { BlockContext } from "../helpers/BlockContext.sol";
@@ -14,8 +14,7 @@ import { IAccountBalance } from "../interfaces/IAccountBalance.sol";
 // never inherit any new stateful contract. never change the orders of parent stateful contracts
 contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, AccountBalanceStorageV1 {
     using AddressUpgradeable for address;
-    using PerpSafeCast for uint256;
-    using PerpSafeCast for int256;
+    using LibSafeCastUint for uint256;
     using PerpMath for uint256;
     using PerpMath for int256;
     using PerpMath for uint160;
