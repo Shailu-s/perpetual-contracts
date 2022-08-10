@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL - 1.1
 pragma solidity =0.8.12;
 
-import { AccountMarket } from "../libs/AccountMarket.sol";
+import { LibAccountMarket } from "../libs/LibAccountMarket.sol";
 
 interface IAccountBalance {
     /// @param vault The address of the vault contract
@@ -91,7 +91,7 @@ interface IAccountBalance {
     /// @param trader The address of trader
     /// @param baseToken The address of baseToken
     /// @return traderAccountInfo The baseToken account info of trader
-    function getAccountInfo(address trader, address baseToken) external view returns (AccountMarket.Info memory);
+    function getAccountInfo(address trader, address baseToken) external view returns (LibAccountMarket.Info memory);
 
     /// @notice Get taker cost of trader's baseToken
     /// @param trader The address of trader

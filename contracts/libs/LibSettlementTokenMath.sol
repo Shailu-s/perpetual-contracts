@@ -2,7 +2,7 @@
 pragma solidity =0.8.12;
 
 /// @dev decimals of settlementToken token MUST be less than 18
-library SettlementTokenMath {
+library LibSettlementTokenMath {
 
     // returns number with 18 decimals
     function parseSettlementToken(uint256 amount, uint8 decimals) internal pure returns (uint256) {

@@ -3,26 +3,25 @@ pragma solidity =0.8.12;
 pragma abicoder v2;
 
 import { AddressUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol";
+import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import { LibSafeCastInt } from "../libs/LibSafeCastInt.sol";
 import { LibSafeCastUint } from "../libs/LibSafeCastUint.sol";
-import { PerpFixedPoint96 } from "../libs/PerpFixedPoint96.sol";
-import { PerpMath } from "../libs/PerpMath.sol";
-import { PositioningCallee } from "../helpers/PositioningCallee.sol";
-import { BlockContext } from "../helpers/BlockContext.sol";
-import { FundingRateStorage } from "../storage/FundingRateStorage.sol";
-import { PositioningStorageV1 } from "../storage/PositioningStorage.sol";
-import { IPositioningConfig } from "../interfaces/IPositioningConfig.sol";
+import { LibPerpMath } from "../libs/LibPerpMath.sol";
+import { IAccountBalance } from "../interfaces/IAccountBalance.sol";
 import { IIndexPriceOracle } from "../interfaces/IIndexPriceOracle.sol";
 import { IMarkPriceOracle } from "../interfaces/IMarkPriceOracle.sol";
 import { IFundingRate } from "../interfaces/IFundingRate.sol";
-import { IAccountBalance } from "../interfaces/IAccountBalance.sol";
-import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import { IPositioningConfig } from "../interfaces/IPositioningConfig.sol";
+import { BlockContext } from "../helpers/BlockContext.sol";
+import { FundingRateStorage } from "../storage/FundingRateStorage.sol";
+import { PositioningStorageV1 } from "../storage/PositioningStorage.sol";
+import { PositioningCallee } from "../helpers/PositioningCallee.sol";
 
 contract FundingRate is IFundingRate, BlockContext, PositioningCallee, FundingRateStorage, PositioningStorageV1 {
     using AddressUpgradeable for address;
-    using PerpMath for uint256;
-    using PerpMath for uint160;
-    using PerpMath for int256;
+    using LibPerpMath for uint256;
+    using LibPerpMath for uint160;
+    using LibPerpMath for int256;
     using LibSafeCastUint for uint256;
     using LibSafeCastInt for int256;
     using LibSafeCastInt for int32;

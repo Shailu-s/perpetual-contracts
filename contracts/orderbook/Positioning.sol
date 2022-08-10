@@ -2,32 +2,31 @@
 pragma solidity =0.8.12;
 
 import { AddressUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol";
-import { AccountMarket } from "../libs/AccountMarket.sol";
-import { BlockContext } from "../helpers/BlockContext.sol";
 import { ContextUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol";
-import { FundingRate } from "../funding-rate/FundingRate.sol";
-import { IERC20Metadata } from "../interfaces/IERC20Metadata.sol";
-import { IVaultController } from "../interfaces/IVaultController.sol";
-import { IPositioningConfig } from "../interfaces/IPositioningConfig.sol";
-import { IAccountBalance } from "../interfaces/IAccountBalance.sol";
-import { IIndexPrice } from "../interfaces/IIndexPrice.sol";
-import { IBaseToken } from "../interfaces/IBaseToken.sol";
-import { IPositioning } from "../interfaces/IPositioning.sol";
-import { IMatchingEngine } from "../interfaces/IMatchingEngine.sol";
-import { IVirtualToken } from "../interfaces/IVirtualToken.sol";
-import { OpenOrder } from "../libs/OpenOrder.sol";
-import { OwnerPausable } from "../helpers/OwnerPausable.sol";
-import { PerpSafeCast } from "../libs/PerpSafeCast.sol";
-import { PerpMath } from "../libs/PerpMath.sol";
-import { PositioningStorageV1 } from "../storage/PositioningStorage.sol";
 import {
     ReentrancyGuardUpgradeable
 } from "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
-import { SettlementTokenMath } from "../libs/SettlementTokenMath.sol";
-import "../libs/LibOrder.sol";
-import "../libs/LibFill.sol";
-import "../libs/LibDeal.sol";
-import "../libs/LibAsset.sol";
+import { LibAccountMarket } from "../libs/LibAccountMarket.sol";
+import { LibOrder } from "../libs/LibOrder.sol";
+import { LibFill } from "../libs/LibFill.sol";
+import { LibDeal } from "../libs/LibDeal.sol";
+import { LibAsset } from "../libs/LibAsset.sol";
+import { LibPerpMath } from "../libs/LibPerpMath.sol";
+import { LibSafeCastInt } from "../libs/LibSafeCastInt.sol";
+import { LibSafeCastUint } from "../libs/LibSafeCastUint.sol";
+import { IAccountBalance } from "../interfaces/IAccountBalance.sol";
+import { IBaseToken } from "../interfaces/IBaseToken.sol";
+import { IERC20Metadata } from "../interfaces/IERC20Metadata.sol";
+import { IIndexPrice } from "../interfaces/IIndexPrice.sol";
+import { IMatchingEngine } from "../interfaces/IMatchingEngine.sol";
+import { IPositioning } from "../interfaces/IPositioning.sol";
+import { IPositioningConfig } from "../interfaces/IPositioningConfig.sol";
+import { IVirtualToken } from "../interfaces/IVirtualToken.sol";
+import { IVaultController } from "../interfaces/IVaultController.sol";
+import { BlockContext } from "../helpers/BlockContext.sol";
+import { FundingRate } from "../funding-rate/FundingRate.sol";
+import { OwnerPausable } from "../helpers/OwnerPausable.sol";
+import { PositioningStorageV1 } from "../storage/PositioningStorage.sol";
 
 // TODO : Create bulk match order for perp
 // never inherit any new stateful contract. never change the orders of parent stateful contracts
@@ -39,29 +38,12 @@ contract Positioning is
     PositioningStorageV1,
     FundingRate
 {
+
     using AddressUpgradeable for address;
-    using PerpSafeCast for uint256;
-    using PerpSafeCast for uint128;
-    using PerpSafeCast for int256;
-    using PerpMath for uint256;
-    using PerpMath for uint160;
-    using PerpMath for uint128;
-    using PerpMath for int256;
-    using SettlementTokenMath for uint256;
-    using SettlementTokenMath for int256;
-
-    //
-    // STRUCT
-    //
-
-    struct InternalData {
-        int256 leftExchangedPositionSize;
-        int256 leftExchangedPositionNotional;
-        int256 rightExchangedPositionSize;
-        int256 rightExchangedPositionNotional;
-        int256 leftPositionSize;
-        int256 rightPositionSize;
-    }
+    using LibSafeCastUint for uint256;
+    using LibSafeCastInt for int256;
+    using LibPerpMath for uint256;
+    using LibPerpMath for int256;
 
     /// @dev this function is public for testing
     // solhint-disable-next-line func-order

@@ -2,16 +2,16 @@
 pragma solidity =0.8.12;
 
 import { FixedPoint96 } from "@uniswap/v3-core/contracts/libraries/FixedPoint96.sol";
-import { FullMath } from "../libs/FullMath.sol";
+import { LibFullMath } from "../libs/LibFullMath.sol";
 import { LibSafeCastInt } from "./LibSafeCastInt.sol";
 import { LibSafeCastUint } from "./LibSafeCastUint.sol";
 
-library PerpMath {
+library LibPerpMath {
     using LibSafeCastInt for int256;
     using LibSafeCastUint for uint256;
 
     function formatX96ToX10_18(uint256 valueX96) internal pure returns (uint256) {
-        return FullMath.mulDiv(valueX96, 1 ether, FixedPoint96.Q96);
+        return LibFullMath.mulDiv(valueX96, 1 ether, FixedPoint96.Q96);
     }
 
     function max(int256 a, int256 b) internal pure returns (int256) {
@@ -27,7 +27,7 @@ library PerpMath {
     }
 
     function neg256(int256 a) internal pure returns (int256) {
-        require(a > -2**255, "PerpMath: inversion overflow");
+        require(a > -2**255, "LibPerpMath: inversion overflow");
         return -a;
     }
 
@@ -36,7 +36,7 @@ library PerpMath {
     }
 
     function neg128(int128 a) internal pure returns (int128) {
-        require(a > -2**127, "PerpMath: inversion overflow");
+        require(a > -2**127, "LibPerpMath: inversion overflow");
         return -a;
     }
 
@@ -45,10 +45,10 @@ library PerpMath {
     }
 
     function mulRatio(uint256 value, uint24 ratio) internal pure returns (uint256) {
-        return FullMath.mulDiv(value, ratio, 1e6);
+        return LibFullMath.mulDiv(value, ratio, 1e6);
     }
 
-    /// @param denominator cannot be 0 and is checked in FullMath.mulDiv()
+    /// @param denominator cannot be 0 and is checked in LibFullMath.mulDiv()
     function mulDiv(
         int256 a,
         int256 b,
@@ -58,7 +58,7 @@ library PerpMath {
         uint256 unsignedB = b < 0 ? uint256(neg256(b)) : uint256(b);
         bool negative = ((a < 0 && b > 0) || (a > 0 && b < 0)) ? true : false;
 
-        uint256 unsignedResult = FullMath.mulDiv(unsignedA, unsignedB, denominator);
+        uint256 unsignedResult = LibFullMath.mulDiv(unsignedA, unsignedB, denominator);
 
         result = negative ? neg256(unsignedResult) : LibSafeCastUint.toInt256(unsignedResult);
 

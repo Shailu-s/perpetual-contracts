@@ -2,23 +2,24 @@
 pragma solidity =0.8.12;
 
 import { AddressUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol";
-import { PositioningCallee } from "../helpers/PositioningCallee.sol";
-import { PerpMath } from "../libs/PerpMath.sol";
-import { IIndexPrice } from "../interfaces/IIndexPrice.sol";
+import { LibAccountMarket } from "../libs/LibAccountMarket.sol";
+import { LibPerpMath } from "../libs/LibPerpMath.sol";
 import { LibSafeCastUint } from "../libs/LibSafeCastUint.sol";
-import { IPositioningConfig } from "../interfaces/IPositioningConfig.sol";
-import { AccountBalanceStorageV1, AccountMarket } from "../storage/AccountBalanceStorage.sol";
-import { BlockContext } from "../helpers/BlockContext.sol";
 import { IAccountBalance } from "../interfaces/IAccountBalance.sol";
+import { IIndexPrice } from "../interfaces/IIndexPrice.sol";
+import { IPositioningConfig } from "../interfaces/IPositioningConfig.sol";
+import { AccountBalanceStorageV1 } from "../storage/AccountBalanceStorage.sol";
+import { BlockContext } from "../helpers/BlockContext.sol";
+import { PositioningCallee } from "../helpers/PositioningCallee.sol";
 
 // never inherit any new stateful contract. never change the orders of parent stateful contracts
 contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, AccountBalanceStorageV1 {
     using AddressUpgradeable for address;
     using LibSafeCastUint for uint256;
-    using PerpMath for uint256;
-    using PerpMath for int256;
-    using PerpMath for uint160;
-    using AccountMarket for AccountMarket.Info;
+    using LibPerpMath for uint256;
+    using LibPerpMath for int256;
+    using LibPerpMath for uint160;
+    using LibAccountMarket for LibAccountMarket.Info;
 
     //
     // CONSTANT
@@ -136,7 +137,7 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
         external
         view
         override
-        returns (AccountMarket.Info memory)
+        returns (LibAccountMarket.Info memory)
     {
         return _accountMarketMap[trader][baseToken];
     }
@@ -240,7 +241,7 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
         int256 base,
         int256 quote
     ) internal returns (int256, int256) {
-        AccountMarket.Info storage accountInfo = _accountMarketMap[trader][baseToken];
+        LibAccountMarket.Info storage accountInfo = _accountMarketMap[trader][baseToken];
         accountInfo.takerPositionSize = accountInfo.takerPositionSize + base;
         accountInfo.takerOpenNotional = accountInfo.takerOpenNotional + quote;
         return (accountInfo.takerPositionSize, accountInfo.takerOpenNotional);
@@ -258,14 +259,14 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
         address baseToken,
         int256 amount
     ) internal {
-        AccountMarket.Info storage accountInfo = _accountMarketMap[trader][baseToken];
+        LibAccountMarket.Info storage accountInfo = _accountMarketMap[trader][baseToken];
         accountInfo.takerOpenNotional = accountInfo.takerOpenNotional - amount;
         _modifyOwedRealizedPnl(trader, amount);
     }
 
     /// @dev this function is expensive
     function _deregisterBaseToken(address trader, address baseToken) internal {
-        AccountMarket.Info memory info = _accountMarketMap[trader][baseToken];
+        LibAccountMarket.Info memory info = _accountMarketMap[trader][baseToken];
         if (info.takerPositionSize.abs() >= _DUST || info.takerOpenNotional.abs() >= _DUST) {
             return;
         }
