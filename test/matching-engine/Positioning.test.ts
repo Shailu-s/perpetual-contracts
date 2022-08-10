@@ -28,6 +28,8 @@ describe("Positioning", function () {
     let indexPriceFake: FakeContract<IndexPriceOracle>
     let accountBalance: FakeContract<AccountBalance>
     let transferManagerTest
+    let ExchangeTest;
+    let exchangeTest;
 
     this.beforeAll(async () => {
         MatchingEngine = await ethers.getContractFactory("MatchingEngineTest")
@@ -39,6 +41,7 @@ describe("Positioning", function () {
         PositioningConfig = await ethers.getContractFactory("PositioningConfig")
         Vault = await ethers.getContractFactory("Vault")
         AccountBalance = await ethers.getContractFactory("AccountBalance")
+        ExchangeTest = await ethers.getContractFactory("ExchangeTest");
     })
 
     beforeEach(async () => {
@@ -50,6 +53,7 @@ describe("Positioning", function () {
         erc1271Test = await ERC1271Test.deploy()
         accountBalance = await smock.fake("AccountBalance")
         community = account4.address
+        exchangeTest = await ExchangeTest.deploy()
 
         positioningConfig = await upgrades.deployProxy(
             PositioningConfig,
@@ -79,7 +83,7 @@ describe("Positioning", function () {
         })
         positioning = await upgrades.deployProxy(
             Positioning,
-            [positioningConfig.address, vault.address, accountBalance.address,matchingEngine.address,markPriceFake.address, indexPriceFake.address],
+            [positioningConfig.address, vault.address, accountBalance.address,matchingEngine.address,markPriceFake.address, indexPriceFake.address, 0],
             {
                 initializer: "__PositioningTest_init",
             },
@@ -105,14 +109,16 @@ describe("Positioning", function () {
             it("should match orders & emit event", async () => {
                 const [owner, account1, account2] = await ethers.getSigners()
 
-                markPriceFake.getCumulativePrice.returns(0);
-                indexPriceFake.getIndexTwap.returns()
+                markPriceFake.getCumulativePrice.returns(10);
+                indexPriceFake.getIndexTwap.returns([1, 2, 3])
                 await virtualToken.mint(account1.address, 1000000000000000)
                 await virtualToken.mint(account2.address, 1000000000000000)
                 await virtualToken.addWhitelist(account1.address)
                 await virtualToken.addWhitelist(account2.address)
                 await virtualToken.connect(account1).approve(matchingEngine.address, 1000000000000000)
                 await virtualToken.connect(account2).approve(matchingEngine.address, 1000000000000000)
+                await virtualToken.connect(account1).approve(positioning.address, 1000000000000000)
+                await virtualToken.connect(account2).approve(positioning.address, 1000000000000000)
         
                 const orderLeft = Order(
                   account1.address,
