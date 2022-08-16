@@ -24,6 +24,14 @@ interface IMarketRegistry {
     /// @param maxOrdersPerMarketArg The max allowed orders per market
     function setMaxOrdersPerMarket(uint8 maxOrdersPerMarketArg) external;
 
+    function setMakerFeeRatio( uint24 makerFeeRatio) external;
+
+    function setTakerFeeRatio( uint24 takerFeeRatio) external;
+
+    function addBaseToken(address baseToken) external;
+
+    function checkBaseToken(address baseToken) external returns (bool);
+
     /// @notice Get the fee ratio of a given market
     /// @dev The ratio is in `1e6` format, that means `1% = 1e4`
     /// @param baseToken The address of the base token
@@ -34,6 +42,11 @@ interface IMarketRegistry {
     /// @param baseToken The address of the base token
     /// @return info The market info encoded as `MarketInfo`
     function getMarketInfo(address baseToken) external view returns (MarketInfo memory info);
+
+
+    function getMakerFeeRatio() external view returns (uint24);
+
+    function getTakerFeeRatio() external view returns (uint24);
 
     /// @notice Get the quote token address
     /// @return quoteToken The address of the quote token

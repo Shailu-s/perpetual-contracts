@@ -15,4 +15,8 @@ abstract contract PositioningStorageV1 {
     address internal _vaultController;
     address internal _accountBalance;
     address internal _matchingEngine;
+    address internal _marketRegistry;
+
+    address public defaultFeeReceiver;
+
 }

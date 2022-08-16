@@ -19,7 +19,7 @@ contract MarketRegistry is IMarketRegistry, PositioningCallee, MarketRegistrySto
     //
     // MODIFIER
     //
-
+    // As seen externally, ratio can not be greater than one
     modifier checkRatio(uint24 ratio) {
         // ratio overflow
         require(ratio <= 1e6, "MR_RO");
@@ -47,10 +47,28 @@ contract MarketRegistry is IMarketRegistry, PositioningCallee, MarketRegistrySto
         emit FeeRatioChanged(baseToken, feeRatio);
     }
 
+    function setMakerFeeRatio( uint24 makerFeeRatio) external override checkRatio(makerFeeRatio) onlyOwner {
+        _makerFeeRatio = makerFeeRatio;
+    }
+
+    function setTakerFeeRatio( uint24 takerFeeRatio) external override checkRatio(takerFeeRatio) onlyOwner {
+        _takerFeeRatio = takerFeeRatio;
+    }
+    
     /// @inheritdoc IMarketRegistry
     function setMaxOrdersPerMarket(uint8 maxOrdersPerMarketArg) external override onlyOwner {
         _maxOrdersPerMarket = maxOrdersPerMarketArg;
         emit MaxOrdersPerMarketChanged(maxOrdersPerMarketArg);
+    }
+
+    /// @inheritdoc IMarketRegistry
+    function addBaseToken(address baseToken) external override {
+        address[] storage tokensStorage = _baseTokensMarketMap;
+        if (_hasBaseToken(tokensStorage, baseToken)) {
+            return;
+        }
+
+        tokensStorage.push(baseToken);
     }
 
     //
@@ -72,8 +90,35 @@ contract MarketRegistry is IMarketRegistry, PositioningCallee, MarketRegistrySto
         return _exchangeFeeRatioMap[baseToken];
     }
 
+    function getMakerFeeRatio() external view override returns (uint24) {
+        return _makerFeeRatio;
+    }
+
+    function getTakerFeeRatio() external view override returns (uint24) {
+        return _takerFeeRatio;
+    }
+
     /// @inheritdoc IMarketRegistry
     function getMarketInfo(address baseToken) external view override returns (MarketInfo memory) {
         return MarketInfo({ exchangeFeeRatio: _exchangeFeeRatioMap[baseToken] });
+    }
+
+    /// @inheritdoc IMarketRegistry
+    function checkBaseToken(address baseToken) external view override returns (bool) {
+        address[] storage tokensStorage = _baseTokensMarketMap;
+        if (_hasBaseToken(tokensStorage, baseToken)) {
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+    function _hasBaseToken(address[] memory baseTokens, address baseToken) internal pure returns (bool) {
+        for (uint256 i = 0; i < baseTokens.length; i++) {
+            if (baseTokens[i] == baseToken) {
+                return true;
+            }
+        }
+        return false;
     }
 }

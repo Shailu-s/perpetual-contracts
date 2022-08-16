@@ -77,4 +77,6 @@ interface IPositioning {
     /// @notice Get AccountBalance address
     /// @return accountBalance `AccountBalance` address
     function getAccountBalance() external view returns (address accountBalance);
+
+    function getAccountValue(address trader) external view returns (int256);
 }

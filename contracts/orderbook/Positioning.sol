@@ -16,7 +16,7 @@ import { LibAsset } from "../libs/LibAsset.sol";
 import { LibPerpMath } from "../libs/LibPerpMath.sol";
 import { LibSafeCastInt } from "../libs/LibSafeCastInt.sol";
 import { LibSafeCastUint } from "../libs/LibSafeCastUint.sol";
-import { LibSignature } from  "../libs/LibSignature.sol";
+import { LibSignature } from "../libs/LibSignature.sol";
 
 import { IAccountBalance } from "../interfaces/IAccountBalance.sol";
 import { IBaseToken } from "../interfaces/IBaseToken.sol";
@@ -24,6 +24,7 @@ import { IERC1271 } from "../interfaces/IERC1271.sol";
 import { IERC20Metadata } from "../interfaces/IERC20Metadata.sol";
 import { IIndexPrice } from "../interfaces/IIndexPrice.sol";
 import { IMatchingEngine } from "../interfaces/IMatchingEngine.sol";
+import { IMarketRegistry } from "../interfaces/IMarketRegistry.sol";
 import { IPositioning } from "../interfaces/IPositioning.sol";
 import { IPositioningConfig } from "../interfaces/IPositioningConfig.sol";
 import { IVirtualToken } from "../interfaces/IVirtualToken.sol";
@@ -45,7 +46,6 @@ contract Positioning is
     FundingRate,
     EIP712Upgradeable
 {
-
     using AddressUpgradeable for address;
     using LibSafeCastUint for uint256;
     using LibSafeCastInt for int256;
@@ -53,7 +53,7 @@ contract Positioning is
     using LibPerpMath for int256;
     using LibSignature for bytes32;
 
-    bytes4 constant internal MAGICVALUE = 0x1626ba7e;
+    bytes4 internal constant MAGICVALUE = 0x1626ba7e;
 
     mapping(address => uint256) public makerMinSalt;
 
@@ -88,6 +88,12 @@ contract Positioning is
         // _settlementTokenDecimals = 0;
     }
 
+    function setMarketRegistry(address marketRegistryArg) external onlyOwner {
+        // V_VPMM: Positioning is not contract
+        require(marketRegistryArg.isContract(), "V_VPMM");
+        _marketRegistry = marketRegistryArg;
+    }
+
     /// @inheritdoc IPositioning
     function settleAllFunding(address trader) external virtual override {
         address[] memory baseTokens = IAccountBalance(_accountBalance).getBaseTokens(trader);
@@ -120,13 +126,7 @@ contract Positioning is
         bytes memory signatureLeft,
         LibOrder.Order memory orderRight,
         bytes memory signatureRight
-    )
-        public
-        override
-        whenNotPaused
-        nonReentrant
-        returns (MatchResponse memory response)
-    {
+    ) public override whenNotPaused nonReentrant returns (MatchResponse memory response) {
         _validateFull(orderLeft, signatureLeft);
         _validateFull(orderRight, signatureRight);
         address baseToken;
@@ -138,19 +138,16 @@ contract Positioning is
             baseToken = orderLeft.takeAsset.virtualToken;
         }
 
-        // register token if it's the first time
-        IAccountBalance(_accountBalance).registerBaseToken(orderLeft.trader, baseToken);
-        IAccountBalance(_accountBalance).registerBaseToken(orderRight.trader, baseToken);
+        require(
+            !IMarketRegistry(_marketRegistry).checkBaseToken(baseToken),
+            "V_PERP: Basetoken is not registered in market"
+        );
 
         // must settle funding first
         _settleFunding(orderLeft.trader, baseToken);
         _settleFunding(orderRight.trader, baseToken);
 
-        response = _openPosition(
-            orderLeft,
-            orderRight,
-            baseToken
-        );
+        response = _openPosition(orderLeft, orderRight, baseToken);
     }
 
     function _openPosition(
@@ -180,22 +177,46 @@ contract Positioning is
             internalData.leftExchangedPositionNotional = response.newFill.leftValue.neg256();
             internalData.rightExchangedPositionNotional = response.newFill.leftValue.toInt256();
         }
+
         int256 leftOpenNotional;
         int256 rightOpenNotional;
+        uint256 orderLeftFee;
+        uint256 orderRightFee;
+        bool isLeftMaker = true;
+
+        if (isLeftMaker) {
+            orderLeftFee = internalData.leftExchangedPositionNotional.abs().mulRatio(
+                IMarketRegistry(_marketRegistry).getMakerFeeRatio()
+            );
+
+            orderRightFee = internalData.rightExchangedPositionNotional.abs().mulRatio(
+                IMarketRegistry(_marketRegistry).getTakerFeeRatio()
+            );
+        } else {
+            orderLeftFee = internalData.leftExchangedPositionNotional.abs().mulRatio(
+                IMarketRegistry(_marketRegistry).getTakerFeeRatio()
+            );
+
+            orderRightFee = internalData.rightExchangedPositionNotional.abs().mulRatio(
+                IMarketRegistry(_marketRegistry).getMakerFeeRatio()
+            );
+        }
+
+        _modifyOwedRealizedPnl(_getFeeReceiver(), (orderLeftFee + orderRightFee).toInt256());
 
         // modifies positionSize and openNotional
         (internalData.leftPositionSize, leftOpenNotional) = IAccountBalance(_accountBalance).modifyTakerBalance(
             orderLeft.trader,
             baseToken,
             internalData.leftExchangedPositionSize,
-            internalData.leftExchangedPositionNotional
+            internalData.leftExchangedPositionNotional - orderLeftFee.toInt256()
         );
 
         (internalData.rightPositionSize, rightOpenNotional) = IAccountBalance(_accountBalance).modifyTakerBalance(
             orderRight.trader,
             baseToken,
             internalData.rightExchangedPositionSize,
-            internalData.rightExchangedPositionNotional
+            internalData.rightExchangedPositionNotional - orderRightFee.toInt256()
         );
 
         if (_firstTradedTimestampMap[baseToken] == 0) {
@@ -248,17 +269,14 @@ contract Positioning is
                 order.trader = _msgSender();
             }
         } else {
-            require(
-                (order.salt >= makerMinSalt[order.trader]),
-                "V_PERP_M: Order canceled"
-            );
+            require((order.salt >= makerMinSalt[order.trader]), "V_PERP_M: Order canceled");
             if (_msgSender() != order.trader) {
                 bytes32 hash = LibOrder.hash(order);
                 address signer;
                 if (signature.length == 65) {
                     signer = _hashTypedDataV4(hash).recover(signature);
                 }
-                if  (signer != order.trader) {
+                if (signer != order.trader) {
                     if (order.trader.isContract()) {
                         require(
                             IERC1271(order.trader).isValidSignature(_hashTypedDataV4(hash), signature) == MAGICVALUE,
@@ -268,7 +286,7 @@ contract Positioning is
                         revert("V_PERP_M: order signature verification error");
                     }
                 } else {
-                    require (order.trader != address(0), "V_PERP_M: no trader");
+                    require(order.trader != address(0), "V_PERP_M: no trader");
                 }
             }
         }
@@ -288,8 +306,20 @@ contract Positioning is
         return growthTwPremium;
     }
 
+    function _isLiquidatable(address trader) internal view returns (bool) {
+        return getAccountValue(trader) < IAccountBalance(_accountBalance).getMarginRequirementForLiquidation(trader);
+    }
+
+    function _modifyOwedRealizedPnl(address trader, int256 amount) internal {
+        IAccountBalance(_accountBalance).modifyOwedRealizedPnl(trader, amount);
+    }
+
     function setDefaultFeeReceiver(address payable newDefaultFeeReceiver) external onlyOwner {
         defaultFeeReceiver = newDefaultFeeReceiver;
+    }
+
+    function getAccountValue(address trader) public view override returns (int256) {
+        return IVaultController(_vaultController).getAccountValue(trader);
     }
 
     function _getFeeReceiver() internal view returns (address) {
