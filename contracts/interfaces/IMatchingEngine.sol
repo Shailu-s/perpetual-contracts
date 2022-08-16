@@ -12,14 +12,10 @@ interface IMatchingEngine {
     function cancelAllOrders(uint256 minSalt) external;
     function matchOrders(
         LibOrder.Order memory orderLeft,
-        bytes memory signatureLeft,
-        LibOrder.Order memory orderRight,
-        bytes memory signatureRight
+        LibOrder.Order memory orderRight
     )
         external
         returns (
-            address,
-            address,
             LibFill.FillResult memory,
             LibDeal.DealData memory
         );

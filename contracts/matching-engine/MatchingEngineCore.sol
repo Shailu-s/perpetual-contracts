@@ -6,7 +6,6 @@ import { PausableUpgradeable } from "@openzeppelin/contracts-upgradeable/securit
 
 import "../interfaces/ITransferManager.sol";
 import "../libs/LibFill.sol";
-import "./OrderValidator.sol";
 import "./AssetMatcher.sol";
 import "./TransferExecutor.sol";
 import "../helpers/OwnerPausable.sol";
@@ -17,10 +16,11 @@ abstract contract MatchingEngineCore is
     PausableUpgradeable,
     AssetMatcher,
     TransferExecutor,
-    OrderValidator,
     ITransferManager
 {
     uint256 private constant _UINT256_MAX = 2**256 - 1;
+
+    mapping(address => uint256) public makerMinSalt;
 
     //state of the orders
     mapping(bytes32 => uint256) public fills;
@@ -60,21 +60,15 @@ abstract contract MatchingEngineCore is
 
     function matchOrders(
         LibOrder.Order memory orderLeft,
-        bytes memory signatureLeft,
-        LibOrder.Order memory orderRight,
-        bytes memory signatureRight
+        LibOrder.Order memory orderRight
     )
         public
         whenNotPaused
         returns (
-            address,
-            address,
             LibFill.FillResult memory,
             LibDeal.DealData memory
         )
     {
-        _validateFull(orderLeft, signatureLeft);
-        _validateFull(orderRight, signatureRight);
         if (orderLeft.trader != address(0) && orderRight.trader != address(0)) {
             require(orderRight.trader != orderLeft.trader, "V_PERP_M: order verification failed");
         }
@@ -83,7 +77,7 @@ abstract contract MatchingEngineCore is
             orderRight
         );
 
-        return (orderLeft.makeAsset.virtualToken, orderRight.makeAsset.virtualToken, newFill, dealData);
+        return (newFill, dealData);
     }
 
     /**
@@ -191,11 +185,5 @@ abstract contract MatchingEngineCore is
         matchToken = _matchAssets(orderLeft.takeAsset.virtualToken, orderRight.makeAsset.virtualToken);
         require(matchToken != address(0), "V_PERP_M: left take assets don't match");
     }
-
-    function _validateFull(LibOrder.Order memory order, bytes memory signature) internal view {
-        LibOrder.validate(order);
-        _validate(order, signature);
-    }
-
     uint256[50] private __gap;
 }

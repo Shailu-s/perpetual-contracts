@@ -3,6 +3,7 @@ pragma solidity =0.8.12;
 
 import { AddressUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol";
 import { ContextUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol";
+import { EIP712Upgradeable } from "@openzeppelin/contracts-upgradeable/utils/cryptography/draft-EIP712Upgradeable.sol";
 import {
     ReentrancyGuardUpgradeable
 } from "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
@@ -15,9 +16,11 @@ import { LibAsset } from "../libs/LibAsset.sol";
 import { LibPerpMath } from "../libs/LibPerpMath.sol";
 import { LibSafeCastInt } from "../libs/LibSafeCastInt.sol";
 import { LibSafeCastUint } from "../libs/LibSafeCastUint.sol";
+import { LibSignature } from  "../libs/LibSignature.sol";
 
 import { IAccountBalance } from "../interfaces/IAccountBalance.sol";
 import { IBaseToken } from "../interfaces/IBaseToken.sol";
+import { IERC1271 } from "../interfaces/IERC1271.sol";
 import { IERC20Metadata } from "../interfaces/IERC20Metadata.sol";
 import { IIndexPrice } from "../interfaces/IIndexPrice.sol";
 import { IMatchingEngine } from "../interfaces/IMatchingEngine.sol";
@@ -39,7 +42,8 @@ contract Positioning is
     ReentrancyGuardUpgradeable,
     OwnerPausable,
     PositioningStorageV1,
-    FundingRate
+    FundingRate,
+    EIP712Upgradeable
 {
 
     using AddressUpgradeable for address;
@@ -47,6 +51,11 @@ contract Positioning is
     using LibSafeCastInt for int256;
     using LibPerpMath for uint256;
     using LibPerpMath for int256;
+    using LibSignature for bytes32;
+
+    bytes4 constant internal MAGICVALUE = 0x1626ba7e;
+
+    mapping(address => uint256) public makerMinSalt;
 
     /// @dev this function is public for testing
     // solhint-disable-next-line func-order
@@ -118,6 +127,8 @@ contract Positioning is
         nonReentrant
         returns (MatchResponse memory response)
     {
+        _validateFull(orderLeft, signatureLeft);
+        _validateFull(orderRight, signatureRight);
         address baseToken;
 
         // short = selling base token
@@ -137,25 +148,21 @@ contract Positioning is
 
         response = _openPosition(
             orderLeft,
-            signatureLeft,
             orderRight,
-            signatureRight,
             baseToken
         );
     }
 
     function _openPosition(
         LibOrder.Order memory orderLeft,
-        bytes memory signatureLeft,
         LibOrder.Order memory orderRight,
-        bytes memory signatureRight,
         address baseToken
     ) internal returns (MatchResponse memory response) {
         /**
         TODO: Matching Engine should update fee return values
          */
-        (, , LibFill.FillResult memory newFill, LibDeal.DealData memory dealData) =
-            IMatchingEngine(_matchingEngine).matchOrders(orderLeft, signatureLeft, orderRight, signatureRight);
+        (LibFill.FillResult memory newFill, LibDeal.DealData memory dealData) =
+            IMatchingEngine(_matchingEngine).matchOrders(orderLeft, orderRight);
 
         response = MatchResponse(newFill, dealData);
 
@@ -228,6 +235,45 @@ contract Positioning is
         return response;
     }
 
+    function _validateFull(LibOrder.Order memory order, bytes memory signature) internal view {
+        LibOrder.validate(order);
+        _validate(order, signature);
+    }
+
+    function _validate(LibOrder.Order memory order, bytes memory signature) internal view {
+        if (order.salt == 0) {
+            if (order.trader != address(0)) {
+                require(_msgSender() == order.trader, "V_PERP_M: maker is not tx sender");
+            } else {
+                order.trader = _msgSender();
+            }
+        } else {
+            require(
+                (order.salt >= makerMinSalt[order.trader]),
+                "V_PERP_M: Order canceled"
+            );
+            if (_msgSender() != order.trader) {
+                bytes32 hash = LibOrder.hash(order);
+                address signer;
+                if (signature.length == 65) {
+                    signer = _hashTypedDataV4(hash).recover(signature);
+                }
+                if  (signer != order.trader) {
+                    if (order.trader.isContract()) {
+                        require(
+                            IERC1271(order.trader).isValidSignature(_hashTypedDataV4(hash), signature) == MAGICVALUE,
+                            "V_PERP_M: contract order signature verification error"
+                        );
+                    } else {
+                        revert("V_PERP_M: order signature verification error");
+                    }
+                } else {
+                    require (order.trader != address(0), "V_PERP_M: no trader");
+                }
+            }
+        }
+    }
+
     /// @dev Settle trader's funding payment to his/her realized pnl.
     function _settleFunding(address trader, address baseToken) internal returns (int256 growthTwPremium) {
         int256 fundingPayment;
@@ -242,11 +288,12 @@ contract Positioning is
         return growthTwPremium;
     }
 
-    //
-    // INTERNAL VIEW
-    //
-    function _msgSender() internal view override(OwnerPausable, ContextUpgradeable) returns (address) {
-        return super._msgSender();
+    function setDefaultFeeReceiver(address payable newDefaultFeeReceiver) external onlyOwner {
+        defaultFeeReceiver = newDefaultFeeReceiver;
+    }
+
+    function _getFeeReceiver() internal view returns (address) {
+        return defaultFeeReceiver;
     }
 
     function _getFreeCollateralByRatio(address trader, uint24 ratio) internal view returns (int256) {
@@ -274,5 +321,9 @@ contract Positioning is
             _getFreeCollateralByRatio(trader, IPositioningConfig(_PositioningConfig).getImRatio()) >= 0,
             "CH_NEFCI"
         );
+    }
+
+    function _msgSender() internal view override(OwnerPausable, ContextUpgradeable) returns (address) {
+        return super._msgSender();
     }
 }
