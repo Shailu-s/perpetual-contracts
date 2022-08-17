@@ -4,13 +4,15 @@ pragma solidity =0.8.12;
 
 import { PausableUpgradeable } from "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
 
-import "../interfaces/ITransferManager.sol";
 import "../libs/LibFill.sol";
-import "./OrderValidator.sol";
-import "./AssetMatcher.sol";
-import "./TransferExecutor.sol";
-import "../helpers/OwnerPausable.sol";
+
 import "../interfaces/IMarkPriceOracle.sol";
+import "../interfaces/ITransferManager.sol";
+
+import "./AssetMatcher.sol";
+import "../helpers/OwnerPausable.sol";
+import "./OrderValidator.sol";
+import "./TransferExecutor.sol";
 
 abstract contract MatchingEngineCore is
     Initializable,
