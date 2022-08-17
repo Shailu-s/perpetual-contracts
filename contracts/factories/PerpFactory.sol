@@ -4,30 +4,19 @@ pragma solidity =0.8.12;
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts/proxy/Clones.sol";
 
-import "../tokens/VolmexBaseToken.sol";
-import "../tokens/VolmexQuoteToken.sol";
-import "../helpers/BlockContext.sol";
-import "../orderbook/Positioning.sol";
-import "../orderbook/VaultController.sol";
-import "../orderbook/AccountBalance.sol";
+import "../interfaces/IVault.sol";
 import "../interfaces/IVolmexBaseToken.sol";
 import "../interfaces/IVaultController.sol";
 import "../interfaces/IPositioning.sol";
+import "../interfaces/IAccountBalance.sol";
 import "../interfaces/IVolmexQuoteToken.sol";
+import "../interfaces/IPerpFactory.sol";
 
 /**
  * @title Factory Contract
  * @author volmex.finance [security@volmexlabs.com]
  */
-contract PerpFactory is Initializable, BlockContext {
-    event PerpSystemCreated(
-        uint256 indexed perpIndex,
-        address positioning,
-        address vaultController,
-        address accountBalance
-    );
-    event VaultCreated(address indexed vault, address indexed token);
-    event TokenCreated(uint256 indexed tokenIndex, address indexed token);
+contract PerpFactory is Initializable, IPerpFactory {
 
     // Volatility token implementation contract for factory
     address public tokenImplementation;
@@ -71,9 +60,6 @@ contract PerpFactory is Initializable, BlockContext {
     // Used to store the address of vault at a particular _index (incremental state of 1)
     uint256 public vaultIndexCount;
 
-    // Used to store a boolean value if blockchain is ZkSync
-    bool public isZkSync;
-
     /**
      * @notice Intializes the Factory and stores the implementations
      */
@@ -89,12 +75,6 @@ contract PerpFactory is Initializable, BlockContext {
         vaultImplementation = _vaultImplementation;
         positioningImplementation = _positioningImplementation;
         accountBalanceImplementation = _accountBalanceImplementation;
-
-        // Get networkId & check for ZkSync
-        uint256 networkId = _networkId();
-
-        // TODO: Add check for zkSync mainnet as well
-        isZkSync = (networkId == 280) ? true : false;
     }
 
     /**
@@ -113,12 +93,8 @@ contract PerpFactory is Initializable, BlockContext {
         string memory _symbol,
         address _priceFeed
     ) external returns (IVolmexBaseToken volmexBaseToken) {
-        if (isZkSync) {
-            volmexBaseToken = new VolmexBaseToken();
-        } else {
-            bytes32 salt = keccak256(abi.encodePacked(baseTokenIndexCount, _name, _symbol));
-            volmexBaseToken = VolmexBaseToken(Clones.cloneDeterministic(tokenImplementation, salt));
-        }
+        bytes32 salt = keccak256(abi.encodePacked(baseTokenIndexCount, _name, _symbol));
+        volmexBaseToken = IVolmexBaseToken(Clones.cloneDeterministic(tokenImplementation, salt));
         volmexBaseToken.initialize(_name, _symbol, _priceFeed, true);
         baseTokenByIndex[baseTokenIndexCount] = volmexBaseToken;
         emit TokenCreated(baseTokenIndexCount, address(volmexBaseToken));
@@ -140,12 +116,8 @@ contract PerpFactory is Initializable, BlockContext {
         string memory _name,
         string memory _symbol
     ) external returns (IVolmexQuoteToken volmexQuoteToken) {
-        if (isZkSync) {
-            volmexQuoteToken = new VolmexQuoteToken();
-        } else {
-            bytes32 salt = keccak256(abi.encodePacked(quoteTokenIndexCount, _name, _symbol));
-            volmexQuoteToken = IVolmexQuoteToken(Clones.cloneDeterministic(tokenImplementation, salt));
-        }
+        bytes32 salt = keccak256(abi.encodePacked(quoteTokenIndexCount, _name, _symbol));
+        volmexQuoteToken = IVolmexQuoteToken(Clones.cloneDeterministic(tokenImplementation, salt));
         volmexQuoteToken.initialize(_name, _symbol, false);
         quoteTokenByIndex[quoteTokenIndexCount] = volmexQuoteToken;
         emit TokenCreated(quoteTokenIndexCount, address(volmexQuoteToken));
@@ -167,12 +139,8 @@ contract PerpFactory is Initializable, BlockContext {
         IVaultController vaultController = vaultControllersByIndex[_vaultControllerIndex];
         require(address(vaultController) != address(0), "PerpFactory: Vault Controller Not Found");
 
-        if (isZkSync) {
-            vault = new Vault();
-        } else {
-            bytes32 salt = keccak256(abi.encodePacked(_token, vaultIndexCount));
-            vault = Vault(Clones.cloneDeterministic(_vaultImplementation, salt));
-        }
+        bytes32 salt = keccak256(abi.encodePacked(_token, vaultIndexCount));
+        vault = IVault(Clones.cloneDeterministic(_vaultImplementation, salt));
         vault.initialize(_positioningConfig, _accountBalance, _token, address(vaultController), isEthVault);
         vaultIndexCount++;
 
