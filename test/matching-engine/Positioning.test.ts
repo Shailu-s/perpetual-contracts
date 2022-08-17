@@ -63,7 +63,7 @@ describe("Positioning", function () {
         accountBalance
         matchingEngine = await upgrades.deployProxy(
             MatchingEngine,
-            [erc20TransferProxy.address, 300, community, owner.address],
+            [erc20TransferProxy.address, 300, community, owner.address, indexPriceFake.address],
             {
                 initializer: "__MatchingEngineTest_init",
             },

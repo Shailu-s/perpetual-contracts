@@ -15,11 +15,20 @@ describe("MatchingEngine", function () {
   let ERC1271Test
   let erc1271Test
   let asset
+  let MarkPriceOracle
+  let markPriceOracle
+  let VolmexBaseToken
+  let volmexBaseToken
+  let IndexPriceOracle
+  let indexPriceOracle
 
   let transferManagerTest
 
   this.beforeAll(async () => {
     MatchingEngine = await ethers.getContractFactory("MatchingEngineTest")
+    MarkPriceOracle = await ethers.getContractFactory("MarkPriceOracle")
+    VolmexBaseToken = await ethers.getContractFactory("VolmexBaseToken")
+    IndexPriceOracle = await ethers.getContractFactory("IndexPriceOracle")
     VirtualToken = await ethers.getContractFactory("VirtualToken")
     ERC20TransferProxyTest = await ethers.getContractFactory("ERC20TransferProxyTest")
     TransferManagerTest = await ethers.getContractFactory("TransferManagerTest")
@@ -32,14 +41,56 @@ describe("MatchingEngine", function () {
     erc20TransferProxy = await ERC20TransferProxyTest.deploy()
     community = account4.address
 
+    indexPriceOracle = await upgrades.deployProxy(
+      IndexPriceOracle,
+      [
+        owner.address,
+      ],
+      { 
+        initializer: "initialize",
+      }
+    );
+
+    volmexBaseToken = await upgrades.deployProxy(
+      VolmexBaseToken,
+      [
+        "VolmexBaseToken",
+        "VBT",
+        true,
+        indexPriceOracle.address,
+      ],
+      {
+        initializer: "initialize",
+      }
+    );
+
+    markPriceOracle = await upgrades.deployProxy(
+      MarkPriceOracle,
+      [
+        [10000000],
+        [volmexBaseToken.address],
+      ],
+      { 
+        initializer: "initialize",
+      }
+    );
+
     matchingEngine = await upgrades.deployProxy(
       MatchingEngine,
-      [erc20TransferProxy.address, 300, community, owner.address],
+      [
+        erc20TransferProxy.address, 
+        300, 
+        community, 
+        owner.address,
+        markPriceOracle.address,
+      ],
       {
         initializer: "__MatchingEngineTest_init",
       },
-    )
-    virtualToken = await upgrades.deployProxy(VirtualToken, ["Virtual Ethereum", "VETH", true], {
+    );
+    await markPriceOracle.setMatchingEngine(matchingEngine.address);
+
+    virtualToken = await upgrades.deployProxy(VirtualToken, ["Virtual Ethereum", "VETH", false], {
       initializer: "__VirtualToken_init",
     })
     asset = Asset(virtualToken.address, "10")
@@ -90,7 +141,7 @@ describe("MatchingEngine", function () {
       await expect(matchingEngine.cancelOrder(order1)).to.be.revertedWith("V_PERP_M: 0 salt can't be used")
     })
 
-    // Need to check for event or something else
+    // TODO: Need to check for event or something else
     it("should cancel multiple orders", async () => {
       const [owner, account1] = await ethers.getSigners()
       const order1 = Order(account1.address, 10, true, asset, asset, 1)
@@ -350,7 +401,7 @@ describe("MatchingEngine", function () {
         await expect(
           upgrades.deployProxy(
             MatchingEngine,
-            [erc20TransferProxy.address, 300, "0x0000000000000000000000000000000000000000", owner.address],
+            [erc20TransferProxy.address, 300, "0x0000000000000000000000000000000000000000", owner.address, markPriceOracle.address],
             {
               initializer: "__MatchingEngineTest_init",
             },
@@ -411,8 +462,8 @@ describe("MatchingEngine", function () {
           account1.address,
           87654321987654,
           true,
-          Asset(virtualToken.address, "20"),
-          Asset(virtualToken.address, "20"),
+          Asset(virtualToken.address, "2000000000000000000"),
+          Asset(volmexBaseToken.address, "100000000000000000"),
           1
         )
 
@@ -420,8 +471,8 @@ describe("MatchingEngine", function () {
           account2.address,
           87654321987654,
           false,
-          Asset(virtualToken.address, "20"),
-          Asset(virtualToken.address, "20"),
+          Asset(volmexBaseToken.address, "100000000000000000"),
+          Asset(virtualToken.address, "2000000000000000000"),
           1,
         )
 
@@ -447,8 +498,8 @@ describe("MatchingEngine", function () {
           "0x0000000000000000000000000000000000000000",
           87654321987654,
           true,
-          Asset(virtualToken.address, "20"),
-          Asset(virtualToken.address, "20"),
+          Asset(virtualToken.address, "2000000000000000000"),
+          Asset(volmexBaseToken.address, "100000000000000000"),
           0,
         )
 
@@ -456,8 +507,8 @@ describe("MatchingEngine", function () {
           account2.address,
           87654321987654,
           false,
-          Asset(virtualToken.address, "20"),
-          Asset(virtualToken.address, "20"),
+          Asset(volmexBaseToken.address, "100000000000000000"),
+          Asset(virtualToken.address, "2000000000000000000"),
           1,
         )
 
@@ -483,8 +534,8 @@ describe("MatchingEngine", function () {
           account1.address,
           87654321987654,
           true,
-          Asset(virtualToken.address, "20"),
-          Asset(virtualToken.address, "20"),
+          Asset(virtualToken.address, "2000000000000000000"),
+          Asset(volmexBaseToken.address, "100000000000000000"),
           0,
         )
 
@@ -492,8 +543,8 @@ describe("MatchingEngine", function () {
           account2.address,
           87654321987654,
           false,
-          Asset(virtualToken.address, "20"),
-          Asset(virtualToken.address, "20"),
+          Asset(volmexBaseToken.address, "100000000000000000"),
+          Asset(virtualToken.address, "2000000000000000000"),
           1,
         )
 
@@ -520,8 +571,8 @@ describe("MatchingEngine", function () {
           account1.address,
           87654321987654,
           true,
-          Asset(virtualToken.address, "20"),
-          Asset(virtualToken.address, "20"),
+          Asset(virtualToken.address, "2000000000000000000"),
+          Asset(volmexBaseToken.address, "100000000000000000"),
           0,
         )
 
@@ -529,8 +580,8 @@ describe("MatchingEngine", function () {
           account2.address,
           87654321987654,
           false,
-          Asset(virtualToken.address, "20"),
-          Asset(virtualToken.address, "20"),
+          Asset(volmexBaseToken.address, "100000000000000000"),
+          Asset(virtualToken.address, "2000000000000000000"),
           1,
         )
 
@@ -554,8 +605,8 @@ describe("MatchingEngine", function () {
           account1.address,
           87654321987654,
           true,
-          Asset(virtualToken.address, "20"),
-          Asset(virtualToken.address, "20"),
+          Asset(virtualToken.address, "2000000000000000000"),
+          Asset(volmexBaseToken.address, "100000000000000000"),
           0,
         )
 
@@ -563,8 +614,8 @@ describe("MatchingEngine", function () {
           account2.address,
           87654321987654,
           false,
-          Asset(virtualToken.address, "20"),
-          Asset(virtualToken.address, "20"),
+          Asset(volmexBaseToken.address, "100000000000000000"),
+          Asset(virtualToken.address, "2000000000000000000"),
           1,
         )
 
@@ -588,8 +639,8 @@ describe("MatchingEngine", function () {
           account1.address,
           87654321987654,
           true,
-          Asset(virtualToken.address, "20"),
-          Asset(virtualToken.address, "20"),
+          Asset(virtualToken.address, "2000000000000000000"),
+          Asset(volmexBaseToken.address, "100000000000000000"),
           1,
         )
 
@@ -597,8 +648,8 @@ describe("MatchingEngine", function () {
           account2.address,
           87654321987654,
           false,
-          Asset(virtualToken.address, "20"),
-          Asset(virtualToken.address, "20"),
+          Asset(volmexBaseToken.address, "100000000000000000"),
+          Asset(virtualToken.address, "2000000000000000000"),
           0,
         )
 
@@ -625,8 +676,8 @@ describe("MatchingEngine", function () {
           account1.address,
           87654321987654,
           true,
-          Asset(virtualToken.address, "20"),
-          Asset(virtualToken.address, "20"),
+          Asset(virtualToken.address, "2000000000000000000"),
+          Asset(volmexBaseToken.address, "100000000000000000"),
           1,
         )
 
@@ -634,8 +685,8 @@ describe("MatchingEngine", function () {
           erc1271Test.address,
           87654321987654,
           false,
-          Asset(virtualToken.address, "20"),
-          Asset(virtualToken.address, "20"),
+          Asset(volmexBaseToken.address, "100000000000000000"),
+          Asset(virtualToken.address, "2000000000000000000"),
           1,
         )
 

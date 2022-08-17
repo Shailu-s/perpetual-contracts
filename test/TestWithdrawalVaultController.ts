@@ -38,7 +38,7 @@ describe("Vault Controller tests for withdrawal", function () {
         const accountBalanceMockFactory = await ethers.getContractFactory("AccountBalanceMock")
         const accountBalanceMock1 = await accountBalanceMockFactory.deploy()
         accountBalanceMock = await accountBalanceMock1.deployed()
-        await accountBalanceMock.initialize(positioningConfig.address, positioningConfig.address)
+        await accountBalanceMock.initialize(positioningConfig.address)
 
         vaultFactory = await ethers.getContractFactory("Vault")
         const vault1 = await vaultFactory.deploy()
