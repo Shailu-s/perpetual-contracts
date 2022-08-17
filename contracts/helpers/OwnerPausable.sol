@@ -7,7 +7,7 @@ import { OwnableUpgradeable } from "@openzeppelin/contracts-upgradeable/access/O
 abstract contract OwnerPausable is OwnableUpgradeable, PausableUpgradeable {
     // solhint-disable-next-line func-order
     function __OwnerPausable_init() internal onlyInitializing {
-        __SafeOwnable_init();
+        __Ownable_init();
         __Pausable_init();
     }
 

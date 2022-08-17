@@ -12,7 +12,7 @@ interface IAccountBalance {
     /// @param amount The amount changed
     event PnlRealized(address indexed trader, int256 amount);
 
-    function initialize(address positioningConfigArg, address orderBookArg) external;
+    function initialize(address positioningConfigArg) external;
 
     /// @notice Modify trader account balance
     /// @dev Only used by `Positioning` contract

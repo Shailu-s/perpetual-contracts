@@ -55,10 +55,11 @@ interface IPositioning {
     /// @dev this function is public for testing
     function initialize(
         address PositioningConfigArg,
-        address quoteTokenArg,
-        address exchangeArg,
+        address vaultControllerArg,
         address accountBalanceArg,
-        address insuranceFundArg
+        address matchingEngineArg,
+        address markPriceArg,
+        address indexPriceArg
     ) external;
 
     /// @notice Settle all markets fundingPayment to owedRealized Pnl

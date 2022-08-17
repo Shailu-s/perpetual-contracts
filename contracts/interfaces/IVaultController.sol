@@ -14,6 +14,8 @@ interface IVaultController{
 
     function registerVault(address _vault, address _token) external;
 
+    function setPositioning(address PositioningArg) external;
+
     function getAccountValue(address trader)  external view returns (int256);
 
     function getFreeCollateralByRatio(address trader, uint24 ratio) external view returns (int256);

@@ -83,13 +83,11 @@ abstract contract MatchingEngineCore is
 
     function matchOrderInBatch(
         LibOrder.Order[] memory ordersLeft,
-        bytes[] memory signaturesLeft,
-        LibOrder.Order[] memory ordersRight,
-        bytes[] memory signaturesRight
+        LibOrder.Order[] memory ordersRight
     ) external whenNotPaused {
         uint256 ordersLength = ordersLeft.length;
         for (uint256 index = 0; index < ordersLength; index++) {
-            matchOrders(ordersLeft[index], signaturesLeft[index], ordersRight[index], signaturesRight[index]);
+            matchOrders(ordersLeft[index], ordersRight[index]);
         }
     }
 
