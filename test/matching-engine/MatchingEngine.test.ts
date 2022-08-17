@@ -26,7 +26,7 @@ describe("MatchingEngine", function () {
     ERC1271Test = await ethers.getContractFactory("ERC1271Test")
   })
 
-  beforeEach(async () => {
+  this.beforeEach(async () => {
     const [owner, account1, account2, account3, account4] = await ethers.getSigners()
 
     erc20TransferProxy = await ERC20TransferProxyTest.deploy()
@@ -34,7 +34,7 @@ describe("MatchingEngine", function () {
 
     matchingEngine = await upgrades.deployProxy(
       MatchingEngine,
-      [erc20TransferProxy.address, 300, community, owner.address],
+      [erc20TransferProxy.address, owner.address],
       {
         initializer: "__MatchingEngineTest_init",
       },
@@ -44,7 +44,7 @@ describe("MatchingEngine", function () {
     })
     asset = Asset(virtualToken.address, "10")
 
-    transferManagerTest = await upgrades.deployProxy(TransferManagerTest, [1, community], {
+    transferManagerTest = await upgrades.deployProxy(TransferManagerTest, [], {
       initializer: "__TransferManager_init",
     })
   })
@@ -276,7 +276,7 @@ describe("MatchingEngine", function () {
         ).to.be.revertedWith("V_PERP_M: contract order signature verification error")
       })
 
-      xit("should fail to match orders as left order assets don't match", async () => {
+      it("should fail to match orders as left order assets don't match", async () => {
         const [owner, account1, account2] = await ethers.getSigners()
 
         await virtualToken.addWhitelist(account1.address)
@@ -297,8 +297,8 @@ describe("MatchingEngine", function () {
           account2.address,
           87654321987654,
           false,
+          Asset(virtualToken.address, "20"),
           Asset("0x0000000000000000000000000000000000000000", "20"),
-          Asset(virtualToken.address, "20"),
           1,
         )
 
@@ -307,55 +307,7 @@ describe("MatchingEngine", function () {
 
         await expect(
           matchingEngine.matchOrders(orderLeft, signatureLeft, orderRight, signatureRight),
-        ).to.be.revertedWith("V_PERP_M: make assets don't match")
-      })
-
-      xit("should fail to match orders as right order assets don't match", async () => {
-        const [owner, account1, account2] = await ethers.getSigners()
-
-        await virtualToken.addWhitelist(account1.address)
-        await virtualToken.addWhitelist(account2.address)
-        await virtualToken.connect(account1).approve(matchingEngine.address, 1000000000000000)
-        await virtualToken.connect(account2).approve(matchingEngine.address, 1000000000000000)
-
-        const orderLeft = Order(
-          account1.address,
-          87654321987654,
-          true,
-          Asset(virtualToken.address, "20"),
-          Asset(virtualToken.address, "20"),
-          1,
-        )
-
-        const orderRight = Order(
-          account2.address,
-          87654321987654,
-          false,
-          Asset(virtualToken.address, "20"),
-          Asset(virtualToken.address, "20"),
-          1,
-        )
-
-        let signatureLeft = await getSignature(orderLeft, account1.address)
-        let signatureRight = await getSignature(orderRight, account2.address)
-
-        await expect(
-          matchingEngine.matchOrders(orderLeft, signatureLeft, orderRight, signatureRight),
-        ).to.be.revertedWith("V_PERP_M: assets don't match")
-      })
-
-      it("should fail to match orders & revert when default fee receiver is address(0)", async () => {
-        const [owner, account1, account2] = await ethers.getSigners()
-
-        await expect(
-          upgrades.deployProxy(
-            MatchingEngine,
-            [erc20TransferProxy.address, 300, "0x0000000000000000000000000000000000000000", owner.address],
-            {
-              initializer: "__MatchingEngineTest_init",
-            },
-          ),
-        ).to.be.revertedWith("V_PERP_M: zero address")
+        ).to.be.revertedWith("V_PERP_M: not found")
       })
 
       it("should fail to match orders & revert as order is cancelled", async () => {
@@ -657,20 +609,6 @@ describe("MatchingEngine", function () {
         .withArgs(erc20TransferProxy.address)
     })
 
-    it("should set protocol fee & emit event with old & new protocol fee", async () => {
-      await expect(transferManagerTest.setProtocolFee(100))
-        .to.emit(transferManagerTest, "ProtocolFeeChanged")
-        .withArgs(1, 100)
-    })
-
-    it("should set and get fee receiver", async () => {
-      const [owner, account1] = await ethers.getSigners()
-      await transferManagerTest.setDefaultFeeReceiver(account1.address)
-
-      const receiver = await transferManagerTest.getFeeReceiverTest()
-      expect(receiver).to.equal(account1.address)
-    })
-
     it("should call do transfer with fee > 0", async () => {
       const [owner, account1, account2, account3, account4] = await ethers.getSigners()
 
@@ -685,13 +623,7 @@ describe("MatchingEngine", function () {
 
       const right = libDeal.DealSide(asset, erc20TransferProxy.address, account2.address)
 
-      const dealData = libDeal.DealData(
-        50000,
-        20,
-        0, // 0 -> LibFeeSide.LEFT
-      )
-
-      await transferManagerTest.checkDoTransfers(left, right, dealData)
+      await transferManagerTest.checkDoTransfers(left, right)
     })
 
     it("should call do transfer where DealData.maxFeeBasePoint is 0", async () => {
@@ -708,22 +640,11 @@ describe("MatchingEngine", function () {
 
       const right = libDeal.DealSide(asset, erc20TransferProxy.address, account2.address)
 
-      const dealData = libDeal.DealData(
-        20,
-        0,
-        0, // 0 -> LibFeeSide.LEFT
-      )
-
-      await transferManagerTest.checkDoTransfers(left, right, dealData)
-    })
-
-    it("should set default fee receiver", async () => {
-      const [owner, account1, account2, account3, account4, account5] = await ethers.getSigners()
-      await transferManagerTest.setDefaultFeeReceiver(account5.address)
+      await transferManagerTest.checkDoTransfers(left, right)
     })
   })
 
-  describe.only("Bulk Methods:", function () {
+  describe("Bulk Methods:", function () {
     it("should match orders & emit event", async () => {
       const [owner, account1, account2] = await ethers.getSigners()
 
