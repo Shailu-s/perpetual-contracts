@@ -3,6 +3,10 @@ import { Signer } from "ethers";
 import { ethers, upgrades } from "hardhat";
 
 describe('PerpFactory', function () {
+  let MatchingEngine;
+  let matchingEngine;
+  let MarkPriceOracle;
+  let markPriceOracle;
   let VolmexBaseToken;
   let volmexBaseToken;
   let VirtualTokenTest;
@@ -26,9 +30,11 @@ describe('PerpFactory', function () {
   const ZERO_ADDR = '0x0000000000000000000000000000000000000000';
 
   this.beforeAll(async () => {
+    MatchingEngine = await ethers.getContractFactory("MatchingEngine");
     PerpFactory = await ethers.getContractFactory("PerpFactory");
     VolmexBaseToken = await ethers.getContractFactory("VolmexBaseToken");
     VirtualTokenTest = await ethers.getContractFactory("VirtualTokenTest");
+    MarkPriceOracle = await ethers.getContractFactory("MarkPriceOracle");
     IndexPriceOracle = await ethers.getContractFactory("IndexPriceOracle");
     VaultController = await ethers.getContractFactory("VaultController");
     PositioningConfig = await ethers.getContractFactory("PositioningConfig");
@@ -56,10 +62,23 @@ describe('PerpFactory', function () {
     await volmexBaseToken.deployed();
 
     USDC = await TestERC20.deploy()
-    await USDC.__TestERC20_init("TestUSDC", "USDC", 6)
+    await USDC.usdcInit("TestUSDC", "USDC", 6)
     await USDC.deployed();
 
-    positioningConfig = await PositioningConfig.deploy()
+    matchingEngine = await upgrades.deployProxy(MatchingEngine, [
+      USDC.address,
+      0,
+      owner.address,
+      owner.address
+    ]);
+    await matchingEngine.deployed();
+    markPriceOracle = await upgrades.deployProxy(MarkPriceOracle, [
+      matchingEngine.address,
+      "100000000"
+    ])
+    await markPriceOracle.deployed();
+
+    positioningConfig = await upgrades.deployProxy(PositioningConfig, []);
     await positioningConfig.deployed();
 
     accountBalance = await AccountBalance.deploy()
@@ -78,7 +97,10 @@ describe('PerpFactory', function () {
       PerpFactory,
       [
         volmexBaseToken.address,
-        vaultController.address
+        vaultController.address,
+        vault.address,
+        positioning.address,
+        accountBalance.address
       ],
       {
         initializer: "initialize"
@@ -88,7 +110,7 @@ describe('PerpFactory', function () {
 
     virtualTokenTest = await upgrades.deployProxy(
       VirtualTokenTest,
-      ["VirtualToken", "VTK"],
+      ["VirtualToken", "VTK", true],
       {
         initializer: "initialize"
       }
@@ -96,22 +118,9 @@ describe('PerpFactory', function () {
     await virtualTokenTest.deployed();
   });
 
-  describe('Deployment:', function() {
-    it("PerpFactory deployed confirm", async () => {
-      factory = await upgrades.deployProxy(
-        PerpFactory,
-        [
-          volmexBaseToken.address,
-          vaultController.address
-        ],
-        {
-          initializer: "initialize"
-        }
-      );
-
-      let receipt = await factory.deployed();
-      expect(receipt.confirmations).not.equal(0);
-    });
+  it ("Should deploy the PerpFactory", async () => {
+    const receipt = await factory.deployed();
+    expect(receipt.confirmations).not.equal(0);
   });
 
   describe('Clone:', function() {
@@ -128,99 +137,18 @@ describe('PerpFactory', function () {
 
     it("Should clone base token", async () => {
       await factory.cloneBaseToken("MyTestToken", "MTK", indexPriceOracle.address);
-      const cloneTokenAddress = await factory.tokenByIndex(0);
+      const cloneTokenAddress = await factory.baseTokenByIndex(0);
       expect(cloneTokenAddress).not.equal(ZERO_ADDR);
     });
 
-    it("Should clone vault controller", async () => {
-      USDC = await TestERC20.deploy();
-      await USDC.__TestERC20_init("TestUSDC", "USDC", 6);
-
-      positioningConfig = await PositioningConfig.deploy();
-      accountBalance = await AccountBalance.deploy();
-      positioning = await Positioning.deploy();
-      vault = await Vault.deploy();
-      let vaultController = await factory.vaultControllersByIndex(0);
-      expect(vaultController).to.equal(ZERO_ADDR);
-
-      await factory.cloneVaultController(
-        positioning.address,
+    it.only("Should deploy the complete perp ecosystem", async () => {
+      const index = (await factory.perpIndexCount()).toString();
+      await (await factory.clonePerpEcosystem(
         positioningConfig.address,
-        accountBalance.address,
-        vault.address,
-      );
-      vaultController = await factory.vaultControllersByIndex(0);
-      expect(vaultController).not.equal(ZERO_ADDR);
-    });
-
-    it("Should deploy a new vault", async () => {
-      await factory.cloneVaultController(
-        positioning.address,
-        positioningConfig.address,
-        accountBalance.address,
-        vault.address,
-      );
-
-      const vaultControllerAddr = await factory.vaultControllersByIndex(0);
-      expect(vaultControllerAddr).not.equal(ZERO_ADDR);
-
-      expect(
-        await factory.cloneVault(
-          USDC.address,
-          true,
-          positioning.address,
-          accountBalance.address,
-          vault.address,
-          0
-        ),
-      ).to.emit(factory, "NewVaultCreated");
-      
-      let controllerInstance = await VaultController.attach(vaultControllerAddr);
-      let newVault = await controllerInstance.getVault(USDC.address);
-      expect(newVault).not.equal(ZERO_ADDR);
-    });
-
-    it("Should increment indexCount when cloning a new token", async () => {
-      await factory.cloneBaseToken("MyTestToken", "MTK", indexPriceOracle.address);
-      let cloneTokenIndexCount = await factory.tokenIndexCount();
-      expect(cloneTokenIndexCount).equal(1);
-
-      await factory.cloneBaseToken("AnotherToken", "ATK", indexPriceOracle.address);
-      cloneTokenIndexCount = await factory.tokenIndexCount();
-      expect(cloneTokenIndexCount).equal(2);
-    });
-
-    it("Should increment vaultControllerIndexCount when cloning a new vault controller", async () => {
-      USDC = await TestERC20.deploy();
-      await USDC.__TestERC20_init("TestUSDC", "USDC", 6);
-
-      positioningConfig = await PositioningConfig.deploy();
-      await positioningConfig.initialize();
-      accountBalance = await AccountBalance.deploy();
-      positioning = await Positioning.deploy();
-      vault = await Vault.deploy();
-      await vault.initialize(positioningConfig.address, accountBalance.address, USDC.address, USDC.address, true);
-
-      await factory.cloneVaultController(
-        positioning.address,
-        positioningConfig.address,
-        accountBalance.address,
-        vault.address,
-      );
-      const cloneVaultControllerAddr = await factory.vaultControllersByIndex(0);
-      expect(cloneVaultControllerAddr).not.equal(ZERO_ADDR);
-
-      let cloneVaultControllerIndexCount = await factory.vaultControllerIndexCount();
-      expect(cloneVaultControllerIndexCount).equal(1);
-
-      await factory.cloneVaultController(
-        positioning.address,
-        positioningConfig.address,
-        accountBalance.address,
-        vault.address,
-      );
-      cloneVaultControllerIndexCount = await factory.vaultControllerIndexCount();
-      expect(cloneVaultControllerIndexCount).equal(2);
+        matchingEngine.address,
+        markPriceOracle.address,
+        indexPriceOracle.address
+      )).wait();
     });
   });
 
@@ -266,6 +194,7 @@ describe('PerpFactory', function () {
           "VolmexBaseToken", // nameArg
           "VBT", // symbolArg,
           indexPriceOracle.address, // priceFeedArg
+          true
         ],
         {
           initializer: "initialize",
@@ -283,7 +212,7 @@ describe('PerpFactory', function () {
       it("Should deploy VirtualToken", async () => {
         virtualTokenTest = await upgrades.deployProxy(
           VirtualTokenTest,
-          ["VirtualToken", "VTK"],
+          ["VirtualToken", "VTK", true],
           {
             initializer: "initialize"
           }
