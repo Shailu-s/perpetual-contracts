@@ -185,10 +185,9 @@ contract PerpFactory is Initializable, BlockContext {
      */
     function clonePerpEcosystem(
         address _positioningConfig,
-        address _quoteToken,
-        address _exchange,
-        address _insuranceFund,
-        address _orderBook
+        address _matchingEngine,
+        address _markPriceOracle,
+        address _indexPriceOracle
     )
         external
         returns (
@@ -197,64 +196,53 @@ contract PerpFactory is Initializable, BlockContext {
             IAccountBalance accountBalance
         )
     {
-        accountBalance = _cloneAccountBalance(_positioningConfig, _orderBook);
+        accountBalance = _cloneAccountBalance(_positioningConfig);
+        vaultController = _cloneVaultController(_positioningConfig, address(accountBalance));
         positioning = _clonePositioning(
             _positioningConfig,
-            _quoteToken,
-            _exchange,
+            vaultController,
+            _matchingEngine,
             address(accountBalance),
-            _insuranceFund
+            _markPriceOracle,
+            _indexPriceOracle
         );
-        vaultController = _cloneVaultController(address(positioning), _positioningConfig, address(accountBalance));
 
         emit PerpSystemCreated(perpIndexCount, address(positioning), address(vaultController), address(accountBalance));
         perpIndexCount++;
     }
 
     function _cloneVaultController(
-        address _positioning,
         address _positioningConfig,
         address _accountBalance
     ) private returns (IVaultController vaultController) {
-        if (isZkSync) {
-            vaultController = new VaultController();
-        } else {
-            bytes32 salt = keccak256(abi.encodePacked(perpIndexCount, vaultImplementation));
-            vaultController = IVaultController(Clones.cloneDeterministic(vaultControllerImplementation, salt));
-        }
-
-        vaultController.initialize(_positioning, _positioningConfig, _accountBalance, vaultImplementation);
+        bytes32 salt = keccak256(abi.encodePacked(perpIndexCount, vaultImplementation));
+        vaultController = IVaultController(Clones.cloneDeterministic(vaultControllerImplementation, salt));
+        vaultController.initialize(_positioningConfig, _accountBalance);
         vaultControllersByIndex[perpIndexCount] = vaultController;
     }
 
     function _clonePositioning(
         address _positioningConfig,
-        address _quoteToken,
-        address _exchange,
+        IVaultController _vaultController,
+        address _matchingEngine,
         address _accountBalance,
-        address _insuranceFund
+        address _markPriceOracle,
+        address _indexPriceOracle
     ) private returns (IPositioning positioning) {
-        if (isZkSync) {
-            positioning = new Positioning();
-        } else {
-            bytes32 salt = keccak256(abi.encodePacked(perpIndexCount, _positioningConfig));
-            positioning = IPositioning(Clones.cloneDeterministic(positioningImplementation, salt));
-        }
-        positioning.initialize(_positioningConfig, _quoteToken, _exchange, _accountBalance, _insuranceFund);
+        bytes32 salt = keccak256(abi.encodePacked(perpIndexCount, _positioningConfig));
+        positioning = IPositioning(Clones.cloneDeterministic(positioningImplementation, salt));
+        positioning.initialize(_positioningConfig, address(_vaultController), _matchingEngine, _accountBalance, _markPriceOracle, _indexPriceOracle);
+        _vaultController.setPositioning(address(positioning));
         positioningByIndex[perpIndexCount] = positioning;
     }
 
-    function _cloneAccountBalance(address _positioningConfig, address _orderBook)
+    function _cloneAccountBalance(address _positioningConfig)
         private
         returns (IAccountBalance accountBalance)
     {
-        if (isZkSync) {
-            accountBalance = new AccountBalance();
-        } else {
-            bytes32 salt = keccak256(abi.encodePacked(perpIndexCount, _positioningConfig));
-            accountBalance = IAccountBalance(Clones.cloneDeterministic(accountBalanceImplementation, salt));
-        }
-        accountBalance.initialize(_positioningConfig, _orderBook);
+        bytes32 salt = keccak256(abi.encodePacked(perpIndexCount, _positioningConfig));
+        accountBalance = IAccountBalance(Clones.cloneDeterministic(accountBalanceImplementation, salt));
+        accountBalance.initialize(_positioningConfig);
         accountBalanceByIndex[perpIndexCount] = address(accountBalance);
     }
 }
