@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: BUSL - 1.1
 pragma solidity =0.8.12;
 
-import { SafeOwnable } from "./SafeOwnable.sol";
+import { OwnableUpgradeable } from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
-abstract contract PositioningCallee is SafeOwnable {
+abstract contract PositioningCallee is OwnableUpgradeable {
     //
     // STATE
     //
@@ -19,8 +19,8 @@ abstract contract PositioningCallee is SafeOwnable {
     //
 
     // solhint-disable-next-line func-order
-    function __PositioningCallee_init() internal onlyInitializing {
-        __SafeOwnable_init();
+    function __PositioningCallee_init() internal initializer {
+        __Ownable_init();
     }
 
     function setPositioning(address PositioningArg) external onlyOwner {

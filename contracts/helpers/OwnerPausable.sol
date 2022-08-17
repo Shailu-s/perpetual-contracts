@@ -2,9 +2,9 @@
 pragma solidity =0.8.12;
 
 import { PausableUpgradeable } from "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
-import { SafeOwnable } from "./SafeOwnable.sol";
+import { OwnableUpgradeable } from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
-abstract contract OwnerPausable is SafeOwnable, PausableUpgradeable {
+abstract contract OwnerPausable is OwnableUpgradeable, PausableUpgradeable {
     // solhint-disable-next-line func-order
     function __OwnerPausable_init() internal onlyInitializing {
         __SafeOwnable_init();
@@ -21,10 +21,6 @@ abstract contract OwnerPausable is SafeOwnable, PausableUpgradeable {
 
     function _msgSender() internal view virtual override returns (address) {
         return super._msgSender();
-    }
-
-    function _msgData() internal view virtual override returns (bytes memory) {
-        return super._msgData();
     }
 
     uint256[50] private __gap;

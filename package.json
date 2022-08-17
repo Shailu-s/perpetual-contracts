@@ -105,6 +105,7 @@
     ]
   },
   "dependencies": {
+    "@defi-wonderland/smock": "^2.2.0",
     "eth-sig-util": "3.0.1"
   }
 }

@@ -14,6 +14,10 @@ interface IVault {
     /// @param amount The amount of token that was withdrawn
     event Withdrawn(address indexed collateralToken, address indexed trader, uint256 amount);
 
+    event LowBalance(uint256 amount);
+    event BorrowFund(address from, uint256 amount);
+    event DebtRepayed(address to, uint256 amount);
+    
     function initialize(
         address PositioningConfigArg,
         address accountBalanceArg,
@@ -61,23 +65,6 @@ interface IVault {
     /// @notice Get the balance in vault of specified account
     /// @return balance The balance amount
     function getBalance(address account) external view returns (int256 balance);
-
-    /// @notice Get free collateral amount of specified trader
-    /// @param trader The address of the trader
-    /// @return freeCollateral Max(0, amount of collateral available for withdraw or opening new positions or orders)
-    function getFreeCollateral(address trader) external view returns (uint256 freeCollateral);
-
-    /// @notice Get free collateral amount of specified trader and collateral ratio
-    /// @dev There are three configurations for different insolvency risk tolerances: **conservative, moderate,
-    /// aggressive**, we will start with the **conservative** one and gradually move to aggressive to
-    /// increase capital efficiency
-    /// @param trader The address of the trader
-    /// @param ratio The margin requirement ratio, imRatio or mmRatio
-    /// @return freeCollateralByRatio freeCollateral, by using the input margin requirement ratio; can be negative
-    function getFreeCollateralByRatio(address trader, uint24 ratio)
-        external
-        view
-        returns (int256 freeCollateralByRatio);
 
     /// @notice Get settlement token address
     /// @return settlementToken The address of settlement token

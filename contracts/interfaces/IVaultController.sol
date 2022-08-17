@@ -1,24 +1,24 @@
-// SPDX-License-Identifier: GPL-3.0-or-later
+// SPDX-License-Identifier: BUSL - 1.1
 pragma solidity =0.8.12;
 
-interface IVaultController {
+interface IVaultController{
 
-    function initialize(
-        address positioningArg,
+     function initialize(
         address positioningConfig,
-        address accountBalanceArg,
-        address vaultImplementationArg
+        address accountBalanceArg
     ) external;
-
-    function deployVault(address _token, bool isEthVault) external returns (address);
 
     function deposit(address token, uint256 amount) external payable;
 
     function withdraw(address token, uint256 amount) external;
 
-    function registerVault(address vault, address token) external;
+    function registerVault(address _vault, address _token) external;
 
-    function getVault(address _token) external view returns (address vault);
+    function getAccountValue(address trader)  external view returns (int256);
 
-    function getAccountValue(address trader) external view returns (int256);
-}
+    function getFreeCollateralByRatio(address trader, uint24 ratio) external view returns (int256);
+
+    function getVault(address _token) external view returns (address);
+
+    function getBalance(address trader) external view returns (int256);
+} 

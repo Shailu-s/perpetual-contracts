@@ -2,41 +2,38 @@
 pragma solidity =0.8.12;
 
 import { AddressUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol";
-import { SafeMathUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/math/SafeMathUpgradeable.sol";
-import { SignedSafeMathUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/math/SignedSafeMathUpgradeable.sol";
-import { ReentrancyGuardUpgradeable } from "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
+import {
+    ReentrancyGuardUpgradeable
+} from "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 import {
     SafeERC20Upgradeable,
     IERC20Upgradeable
 } from "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
-import { PerpSafeCast } from "../libs/PerpSafeCast.sol";
-import { SettlementTokenMath } from "../libs/SettlementTokenMath.sol";
-import { PerpMath } from "../libs/PerpMath.sol";
-import { IERC20Metadata } from "../interfaces/IERC20Metadata.sol";
-import { IExchange } from "../interfaces/IExchange.sol";
+
+import { LibPerpMath } from "../libs/LibPerpMath.sol";
+import { LibSettlementTokenMath } from "../libs/LibSettlementTokenMath.sol";
+import { LibSafeCastInt } from "../libs/LibSafeCastInt.sol";
+import { LibSafeCastUint } from "../libs/LibSafeCastUint.sol";
+
 import { IAccountBalance } from "../interfaces/IAccountBalance.sol";
-import { IPositioningConfig } from "../interfaces/IPositioningConfig.sol";
+import { IERC20Metadata } from "../interfaces/IERC20Metadata.sol";
 import { IPositioning } from "../interfaces/IPositioning.sol";
+import { IPositioningConfig } from "../interfaces/IPositioningConfig.sol";
+import { IVault } from "../interfaces/IVault.sol";
+
 import { BaseRelayRecipient } from "../gsn/BaseRelayRecipient.sol";
 import { OwnerPausable } from "../helpers/OwnerPausable.sol";
 import { VaultStorageV1 } from "../storage/VaultStorage.sol";
-import { IVault } from "../interfaces/IVault.sol";
 
 // never inherit any new stateful contract. never change the orders of parent stateful contracts
 contract Vault is IVault, ReentrancyGuardUpgradeable, OwnerPausable, BaseRelayRecipient, VaultStorageV1 {
-    using SafeMathUpgradeable for uint256;
-    using PerpSafeCast for uint256;
-    using PerpSafeCast for int256;
-    using SignedSafeMathUpgradeable for int256;
-    using SettlementTokenMath for uint256;
-    using SettlementTokenMath for int256;
-    using PerpMath for int256;
-    using PerpMath for uint256;
     using AddressUpgradeable for address;
-
-    event LowBalance(uint256 amount);
-    event BorrowFund(address from, uint256 amount);
-    event DebtRepayed(address to, uint256 amount);
+    using LibSafeCastUint for uint256;
+    using LibSafeCastInt for int256;
+    using LibSettlementTokenMath for uint256;
+    using LibSettlementTokenMath for int256;
+    using LibPerpMath for int256;
+    using LibPerpMath for uint256;
 
     //
     // MODIFIER
@@ -60,7 +57,7 @@ contract Vault is IVault, ReentrancyGuardUpgradeable, OwnerPausable, BaseRelayRe
         bool isEthVaultArg
     ) external override initializer {
         uint8 decimalsArg = 0;
-        if (isEthVaultArg){
+        if (isEthVaultArg) {
             decimalsArg = 18;
         } else {
             decimalsArg = IERC20Metadata(tokenArg).decimals();
@@ -118,17 +115,18 @@ contract Vault is IVault, ReentrancyGuardUpgradeable, OwnerPausable, BaseRelayRe
         //   amount: here
         _modifyBalance(from, token, amount.toInt256());
         uint256 _vaultBalance;
-
         if (_isEthVault) {
             // amount not equal
             require(msg.value == amount, "V_ANE");
             _vaultBalance = address(this).balance;
         } else {
+            //amount not accepted
+            require(msg.value == 0, "V_ANA");
             // check for deflationary tokens by assuring balances before and after transferring to be the same
             uint256 balanceBefore = IERC20Metadata(token).balanceOf(address(this));
             SafeERC20Upgradeable.safeTransferFrom(IERC20Upgradeable(token), from, address(this), amount);
             // V_BAI: inconsistent balance amount, to prevent from deflationary tokens
-            require((IERC20Metadata(token).balanceOf(address(this)).sub(balanceBefore)) == amount, "V_IBA");
+            require((IERC20Metadata(token).balanceOf(address(this)) - balanceBefore) == amount, "V_IBA");
             _vaultBalance = IERC20Metadata(token).balanceOf(address(this));
         }
 
@@ -156,46 +154,33 @@ contract Vault is IVault, ReentrancyGuardUpgradeable, OwnerPausable, BaseRelayRe
         // 4. settle pnl to trader balance in Vault
         // 5. transfer the amount to trader
 
-        // settle all funding payments owedRealizedPnl
-        // pending fee can be withdraw but won't be settled
-        IPositioning(_Positioning).settleAllFunding(to);
-
         // settle owedRealizedPnl in AccountBalance
         int256 owedRealizedPnlX10_18 = IAccountBalance(_accountBalance).settleOwedRealizedPnl(to);
 
-        // by this time there should be no owedRealizedPnl nor pending funding payment in free collateral
-        int256 freeCollateralByImRatio =
-            getFreeCollateralByRatio(to, IPositioningConfig(_PositioningConfig).getImRatio());
-        
-        // V_NEFC: not enough freeCollateral
-        require(
-            freeCollateralByImRatio.add(owedRealizedPnlX10_18.formatSettlementToken(_decimals)) >= amount.toInt256(),
-            "V_NEFC"
-        );
-
-        uint256 amountToTransfer = amount;
+        uint256 amountToTransfer = amount.formatSettlementToken(_decimals);
         if (_isEthVault) {
             // not enough balance
-            require( address(this).balance >= amount, "V_NEB");
-            to.transfer(amount);
+            require(address(this).balance >= amountToTransfer, "V_NEB");
+            to.transfer(amountToTransfer);
         } else {
             // send available funds to trader if vault balance is not enough and emit LowBalance event
             uint256 vaultBalance = IERC20Metadata(token).balanceOf(address(this));
             uint256 remainingAmount = 0;
-            if (vaultBalance < amount) {
-                remainingAmount = amount.sub(vaultBalance);
+            if (vaultBalance < amountToTransfer) {
+                remainingAmount = amountToTransfer - vaultBalance;
                 emit LowBalance(remainingAmount);
             }
-            amountToTransfer = amount.sub(remainingAmount);
+            amountToTransfer = amountToTransfer - remainingAmount;
 
             SafeERC20Upgradeable.safeTransfer(IERC20Upgradeable(token), to, amountToTransfer);
         }
 
         // settle withdrawn amount and owedRealizedPnl to collateral
+        // TODO: Remove it from vault
         _modifyBalance(
             to,
             token,
-            (amountToTransfer.toInt256().sub(owedRealizedPnlX10_18.formatSettlementToken(_decimals))).neg256()
+            (amountToTransfer.toInt256() - (owedRealizedPnlX10_18.formatSettlementToken(_decimals))).neg256()
         );
 
         emit Withdrawn(token, to, amountToTransfer);
@@ -276,14 +261,6 @@ contract Vault is IVault, ReentrancyGuardUpgradeable, OwnerPausable, BaseRelayRe
         return _vaultController;
     }
 
-    /// @inheritdoc IVault
-    function getFreeCollateral(address trader) external view override returns (uint256) {
-        return
-            PerpMath
-                .max(getFreeCollateralByRatio(trader, IPositioningConfig(_PositioningConfig).getImRatio()), 0)
-                .toUint256();
-    }
-
     //
     // PUBLIC VIEW
     //
@@ -291,38 +268,6 @@ contract Vault is IVault, ReentrancyGuardUpgradeable, OwnerPausable, BaseRelayRe
     // @inheritdoc IVault
     function getBalance(address trader) public view override returns (int256) {
         return _balance[trader][_settlementToken];
-    }
-
-    /// @inheritdoc IVault
-    function getFreeCollateralByRatio(address trader, uint24 ratio) public view virtual override returns (int256) {
-        // conservative config: freeCollateral = min(collateral, accountValue) - margin requirement ratio
-        int256 fundingPaymentX10_18 = IPositioning(_Positioning).getAllPendingFundingPayment(trader);
-        (int256 owedRealizedPnlX10_18, int256 unrealizedPnlX10_18, uint256 pendingFeeX10_18) =
-            IAccountBalance(_accountBalance).getPnlAndPendingFee(trader);
-        int256 totalCollateralValue =
-            getBalance(trader).add(
-                owedRealizedPnlX10_18.sub(fundingPaymentX10_18).add(pendingFeeX10_18.toInt256()).formatSettlementToken(
-                    _decimals
-                )
-            );
-
-        // accountValue = totalCollateralValue + totalUnrealizedPnl, in the settlement token's decimals
-        int256 accountValue = totalCollateralValue.add(unrealizedPnlX10_18.formatSettlementToken(_decimals));
-        uint256 totalMarginRequirementX10_18 = _getTotalMarginRequirement(trader, ratio);
-
-        return
-            PerpMath.min(totalCollateralValue, accountValue).sub(
-                totalMarginRequirementX10_18.toInt256().formatSettlementToken(_decimals)
-            );
-
-        // moderate config: freeCollateral = min(collateral, accountValue - imReq)
-        // return PerpMath.min(collateralValue, accountValue.subS(totalImReq.formatSettlementToken(_decimals));
-
-        // aggressive config: freeCollateral = accountValue - imReq
-        // note that the aggressive model depends entirely on unrealizedPnl, which depends on the index price
-        //      we should implement some sort of safety check before using this model; otherwise,
-        //      a trader could drain the entire vault if the index price deviates significantly.
-        // return accountValue.subS(totalImReq.formatSettlementToken(_decimals));
     }
 
     //
@@ -335,27 +280,16 @@ contract Vault is IVault, ReentrancyGuardUpgradeable, OwnerPausable, BaseRelayRe
         address token,
         int256 amount
     ) internal {
-        _balance[trader][token] = _balance[trader][token].add(amount);
+        _balance[trader][token] = _balance[trader][token] + amount;
     }
 
     //
     // INTERNAL VIEW
     //
 
-    /// @return totalMarginRequirement with decimals == 18, for freeCollateral calculation
-    function _getTotalMarginRequirement(address trader, uint24 ratio) internal view returns (uint256) {
-        uint256 totalDebtValue = IAccountBalance(_accountBalance).getTotalDebtValue(trader);
-        return totalDebtValue.mulRatio(ratio);
-    }
-
     /// @inheritdoc BaseRelayRecipient
     function _msgSender() internal view override(BaseRelayRecipient, OwnerPausable) returns (address) {
         return super._msgSender();
-    }
-
-    /// @inheritdoc BaseRelayRecipient
-    function _msgData() internal view override(BaseRelayRecipient, OwnerPausable) returns (bytes memory) {
-        return super._msgData();
     }
 
     function _requireOnlyVaultController() internal view {

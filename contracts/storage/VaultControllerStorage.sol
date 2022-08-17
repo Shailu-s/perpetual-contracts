@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-3.0-or-later
+// SPDX-License-Identifier: BUSL - 1.1
 pragma solidity =0.8.12;
 
 
@@ -12,5 +12,6 @@ abstract contract VaultControllerStorage {
     address internal _positioning;
     address internal _positioningConfig;
     address internal _accountBalance;
-    address internal _vaultImplementation;
+
+    mapping(address =>  int256) internal _balance;
 }

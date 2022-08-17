@@ -26,11 +26,9 @@ contract MatchingEngineTest is MatchingEngine
 
     function matchOrdersTest(
         LibOrder.Order memory orderLeft,
-        bytes memory signatureLeft,
-        LibOrder.Order memory orderRight,
-        bytes memory signatureRight
+        LibOrder.Order memory orderRight
     ) external payable {
-        matchOrders(orderLeft, signatureLeft, orderRight, signatureRight);
+        matchOrders(orderLeft, orderRight);
     }
 
     function getProtocolFeeTest() public view virtual returns (uint256) {

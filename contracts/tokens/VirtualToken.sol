@@ -19,6 +19,9 @@ contract VirtualToken is IVirtualToken, OwnableUpgradeable, ERC20Upgradeable {
         __ERC20_init(nameArg, symbolArg);
     }
 
+    /**
+    TODO: we cannot mint tokens here as _beforeTokenTransfer will fail
+     */
     function mint(address recipient, uint256 amount) external override {
         _mint(recipient, amount);
     }
