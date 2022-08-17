@@ -70,8 +70,7 @@ abstract contract MatchingEngineCore is
         returns (
             address,
             address,
-            LibFill.FillResult memory,
-            LibDeal.DealData memory
+            LibFill.FillResult memory
         )
     {
         _validateFull(orderLeft, signatureLeft);
@@ -79,12 +78,12 @@ abstract contract MatchingEngineCore is
         if (orderLeft.trader != address(0) && orderRight.trader != address(0)) {
             require(orderRight.trader != orderLeft.trader, "V_PERP_M: order verification failed");
         }
-        (LibFill.FillResult memory newFill, LibDeal.DealData memory dealData) = _matchAndTransfer(
+        (LibFill.FillResult memory newFill) = _matchAndTransfer(
             orderLeft,
             orderRight
         );
 
-        return (orderLeft.makeAsset.virtualToken, orderRight.makeAsset.virtualToken, newFill, dealData);
+        return (orderLeft.makeAsset.virtualToken, orderRight.makeAsset.virtualToken, newFill);
     }
 
     function matchOrderInBatch(
@@ -106,7 +105,7 @@ abstract contract MatchingEngineCore is
     */
     function _matchAndTransfer(LibOrder.Order memory orderLeft, LibOrder.Order memory orderRight)
         internal
-        returns (LibFill.FillResult memory newFill, LibDeal.DealData memory dealData)
+        returns (LibFill.FillResult memory newFill)
     {
         _matchAssets(orderLeft, orderRight);
 
@@ -115,46 +114,12 @@ abstract contract MatchingEngineCore is
         address makeToken = orderLeft.isShort ? orderLeft.makeAsset.virtualToken : orderLeft.takeAsset.virtualToken;
         address takeToken = orderRight.isShort ? orderRight.makeAsset.virtualToken : orderRight.takeAsset.virtualToken;
 
-        dealData = _getDealData(orderLeft, orderRight);
         _doTransfers(
             LibDeal.DealSide(LibAsset.Asset(makeToken, newFill.leftValue), _proxy, orderLeft.trader),
-            LibDeal.DealSide(LibAsset.Asset(takeToken, newFill.rightValue), _proxy, orderRight.trader),
-            dealData
+            LibDeal.DealSide(LibAsset.Asset(takeToken, newFill.rightValue), _proxy, orderRight.trader)
         );
 
         emit Matched(newFill.leftValue, newFill.rightValue);
-    }
-
-    /**
-        @notice determines the max amount of fees for the match
-        @param feeSide fee side of the match
-        @param _protocolFee protocol fee of the match
-        @return max fee amount in base points
-    */
-    function _getMaxFee(LibFeeSide.FeeSide feeSide, uint256 _protocolFee) internal pure returns (uint256) {
-        uint256 matchFees = _protocolFee;
-        uint256 maxFee;
-
-        // TODO: This condition is always true since LibFeeSide.getFeeSide() always returns LibFeeSide.FeeSide.LEFT
-        if (feeSide == LibFeeSide.FeeSide.LEFT) {
-            maxFee = 1000;
-        } else {
-            return 0;
-        }
-        require(maxFee > 0 && maxFee >= matchFees && maxFee <= 1000, "V_PERP_M: wrong maxFee");
-
-        return maxFee;
-    }
-
-    function _getDealData(LibOrder.Order memory orderLeft, LibOrder.Order memory orderRight)
-        internal
-        view
-        returns (LibDeal.DealData memory dealData)
-    {
-        dealData.protocolFee = _getProtocolFee();
-        // TODO: Update code since LibFeeSide.getFeeSide() always returns LibFeeSide.FeeSide.LEFT
-        dealData.feeSide = LibFeeSide.getFeeSide(orderLeft, orderRight);
-        dealData.maxFeesBasePoint = _getMaxFee(dealData.feeSide, dealData.protocolFee);
     }
 
     /**
