@@ -127,16 +127,8 @@ contract Positioning is
         LibOrder.Order memory orderRight,
         bytes memory signatureRight
     ) public override whenNotPaused nonReentrant returns (MatchResponse memory response) {
-        _validateFull(orderLeft, signatureLeft);
-        _validateFull(orderRight, signatureRight);
-        address baseToken;
-
         // short = selling base token
-        if (orderLeft.isShort) {
-            baseToken = orderLeft.makeAsset.virtualToken;
-        } else {
-            baseToken = orderLeft.takeAsset.virtualToken;
-        }
+        address baseToken = orderLeft.isShort ? orderLeft.makeAsset.virtualToken : orderLeft.takeAsset.virtualToken;
 
         require(
             !IMarketRegistry(_marketRegistry).checkBaseToken(baseToken),
@@ -147,20 +139,43 @@ contract Positioning is
         _settleFunding(orderLeft.trader, baseToken);
         _settleFunding(orderRight.trader, baseToken);
 
-        response = _openPosition(orderLeft, orderRight, baseToken);
+        bool isLeftLiquidation = _isAccountLiquidatable(orderLeft.trader);
+        isLeftLiquidation ? _isOrderLiquidatable(orderLeft, baseToken) : _validateFull(orderLeft, signatureLeft);
+            
+        bool isRightLiquidation = _isAccountLiquidatable(orderRight.trader);
+        isRightLiquidation ? _isOrderLiquidatable(orderRight, baseToken) : _validateFull(orderRight, signatureRight);
+
+        response = _openPosition(orderLeft, orderRight,isLeftLiquidation, isRightLiquidation, baseToken);
+    }
+
+    function _isOrderLiquidatable(LibOrder.Order memory order, address baseToken) internal view {
+        int256 positionSize = _getTakerPosition(order.trader, baseToken);
+
+        // P_PSZ: position size is zero
+        require(positionSize != 0, "P_PSZ");
+
+        // P_WAP: wrong argument passed
+        require(positionSize > 0 == order.isShort, "P_WAP");
+
+        uint24 partialCloseRatio = IPositioningConfig(_PositioningConfig).getPartialLiquidationRatio();
+
+        uint256 amount = positionSize.abs().mulRatio(partialCloseRatio);
+
+        order.isShort
+            ? require(order.makeAsset.value == amount, "P_WAP")
+            : require(order.takeAsset.value == amount, "P_WAP");
     }
 
     function _openPosition(
         LibOrder.Order memory orderLeft,
         LibOrder.Order memory orderRight,
+        bool isLeftLiquidation,
+        bool isRightLiquidation,
         address baseToken
     ) internal returns (MatchResponse memory response) {
-        /**
-        TODO: Matching Engine should update fee return values
-         */
         (LibFill.FillResult memory newFill, LibDeal.DealData memory dealData) =
             IMatchingEngine(_matchingEngine).matchOrders(orderLeft, orderRight);
-
+            
         response = MatchResponse(newFill, dealData);
 
         InternalData memory internalData;
@@ -223,6 +238,52 @@ contract Positioning is
             _firstTradedTimestampMap[baseToken] = _blockTimestamp();
         }
 
+        if (isLeftLiquidation) {
+            // trader's pnl-- as liquidation penalty
+            uint256 liquidationFee =
+                internalData.leftExchangedPositionNotional.abs().mulRatio(
+                    IPositioningConfig(_PositioningConfig).getLiquidationPenaltyRatio()
+                );
+
+            _modifyOwedRealizedPnl(orderLeft.trader, liquidationFee.neg256());
+
+            // increase liquidator's pnl liquidation reward
+            address liquidator = _msgSender();
+            _modifyOwedRealizedPnl(liquidator, liquidationFee.toInt256());
+
+            emit PositionLiquidated(
+                orderLeft.trader,
+                baseToken,
+                internalData.leftExchangedPositionNotional.abs(),
+                internalData.leftExchangedPositionSize,
+                liquidationFee,
+                liquidator
+            );
+        }
+
+        if (isRightLiquidation) {
+            // trader's pnl-- as liquidation penalty
+            uint256 liquidationFee =
+                internalData.rightExchangedPositionNotional.abs().mulRatio(
+                    IPositioningConfig(_PositioningConfig).getLiquidationPenaltyRatio()
+                );
+
+            _modifyOwedRealizedPnl(orderRight.trader, liquidationFee.neg256());
+
+            // increase liquidator's pnl liquidation reward
+            address liquidator = _msgSender();
+            _modifyOwedRealizedPnl(liquidator, liquidationFee.toInt256());
+
+            emit PositionLiquidated(
+                orderRight.trader,
+                baseToken,
+                internalData.rightExchangedPositionNotional.abs(),
+                internalData.rightExchangedPositionSize,
+                liquidationFee,
+                liquidator
+            );
+        }
+
         // if not closing a position, check margin ratio after swap
         if (internalData.leftPositionSize != 0) {
             _requireEnoughFreeCollateral(orderLeft.trader);
@@ -249,9 +310,6 @@ contract Positioning is
             response.dealData.protocolFee,
             rightOpenNotional
         );
-
-        IAccountBalance(_accountBalance).deregisterBaseToken(orderRight.trader, baseToken);
-        IAccountBalance(_accountBalance).deregisterBaseToken(orderLeft.trader, baseToken);
 
         return response;
     }
@@ -306,12 +364,24 @@ contract Positioning is
         return growthTwPremium;
     }
 
-    function _isLiquidatable(address trader) internal view returns (bool) {
+    function _isAccountLiquidatable(address trader) internal view returns (bool) {
         return getAccountValue(trader) < IAccountBalance(_accountBalance).getMarginRequirementForLiquidation(trader);
     }
 
     function _modifyOwedRealizedPnl(address trader, int256 amount) internal {
         IAccountBalance(_accountBalance).modifyOwedRealizedPnl(trader, amount);
+    }
+
+    function _getTakerPosition(address trader, address baseToken) internal view returns (int256) {
+        return IAccountBalance(_accountBalance).getTakerPositionSize(trader, baseToken);
+    }
+
+    function _requireEnoughFreeCollateral(address trader) internal view {
+        // CH_NEFCI: not enough free collateral by imRatio
+        require(
+            _getFreeCollateralByRatio(trader, IPositioningConfig(_PositioningConfig).getImRatio()) >= 0,
+            "CH_NEFCI"
+        );
     }
 
     function setDefaultFeeReceiver(address payable newDefaultFeeReceiver) external onlyOwner {
@@ -343,14 +413,6 @@ contract Positioning is
     /// @inheritdoc IPositioning
     function getAccountBalance() public view override returns (address) {
         return _accountBalance;
-    }
-
-    function _requireEnoughFreeCollateral(address trader) internal view {
-        // CH_NEFCI: not enough free collateral by imRatio
-        require(
-            _getFreeCollateralByRatio(trader, IPositioningConfig(_PositioningConfig).getImRatio()) >= 0,
-            "CH_NEFCI"
-        );
     }
 
     function _msgSender() internal view override(OwnerPausable, ContextUpgradeable) returns (address) {
