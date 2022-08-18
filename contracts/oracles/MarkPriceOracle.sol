@@ -31,6 +31,9 @@ contract MarkPriceOracle is Initializable {
     // mapping to store baseToken to Observations 
     mapping(uint64 => Observation[]) public observationsByIndex;
 
+    /// @param matchingEngine The address of the MatchingEngine contract
+    event MatchingEngineChanged(address indexed matchingEngine);
+
     // Used to check the caller is Exchange contract
     modifier onlyMatchingEngine() {
         require(msg.sender == matchingEngine, "MarkSMA: Not MatchingEngine");
@@ -71,9 +74,10 @@ contract MarkPriceOracle is Initializable {
     function setMatchingEngine(address _matchingEngine) external {
         require(_matchingEngine != address(0), "V_PERP_M: Can't be 0 address");
         matchingEngine = _matchingEngine;
+        emit MatchingEngineChanged(_matchingEngine);
     }
 
-    function addObservations(uint256[] memory _priceCumulative, address[] memory _asset) external onlyMatchingEngine {
+    function addAssets(uint256[] memory _priceCumulative, address[] memory _asset) external onlyMatchingEngine {
         uint256 priceCumulativeLength = _priceCumulative.length;
         uint256 assetLength = _asset.length;
         require(priceCumulativeLength == assetLength, "MarkSMA: Unequal length of prices & assets");

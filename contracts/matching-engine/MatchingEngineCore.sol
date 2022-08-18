@@ -36,6 +36,10 @@ abstract contract MatchingEngineCore is
     event CanceledAll(address indexed trader, uint256 minSalt);
     event Matched(uint256 newLeftFill, uint256 newRightFill);
 
+    /**
+        @notice Cancels a given order
+        @param order the order to be cancelled
+     */
     function cancelOrder(LibOrder.Order memory order) public {
         require(_msgSender() == order.trader, "V_PERP_M: not a maker");
         require(order.salt != 0, "V_PERP_M: 0 salt can't be used");
@@ -51,12 +55,20 @@ abstract contract MatchingEngineCore is
         );
     }
 
+    /**
+        @notice Cancels multiple orders in batch
+        @param orders Array or orders to be cancelled
+     */
     function cancelOrdersInBatch(LibOrder.Order[] memory orders) external {
         for (uint256 index = 0; index < orders.length; index++) {
             cancelOrder(orders[index]);
         }
     }
 
+    /**
+        @notice Cancels all orders
+        @param minSalt salt in minimum of all orders
+     */
     function cancelAllOrders(uint256 minSalt) external {
         require(minSalt > makerMinSalt[_msgSender()], "V_PERP_M: salt too low");
         makerMinSalt[_msgSender()] = minSalt;
@@ -64,6 +76,13 @@ abstract contract MatchingEngineCore is
         emit CanceledAll(_msgSender(), minSalt);
     }
 
+    /** 
+        @notice Will match two orders & transfers assets
+        @param orderLeft the left side of order
+        @param signatureLeft the signature of the left order
+        @param orderRight the right side of order
+        @param signatureRight the signature of right order
+     */
     function matchOrders(
         LibOrder.Order memory orderLeft,
         bytes memory signatureLeft,

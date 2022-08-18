@@ -50,4 +50,12 @@ contract MatchingEngineTest is MatchingEngine
     function setMakerMinSalt(uint256 _val) external {
         makerMinSalt[_msgSender()] = _val;
     }
+
+    function addAssets(uint256[] memory _priceCumulative, address[] memory _asset) public {
+        markPriceOracle.addAssets(_priceCumulative, _asset);
+    }
+
+    function addObservation(uint256 _priceCumulative, uint64 _index) public {
+        markPriceOracle.addObservation(_priceCumulative, _index);
+    }
 }
