@@ -339,6 +339,8 @@ contract Positioning is
                             IERC1271(order.trader).isValidSignature(_hashTypedDataV4(hash), signature) == MAGICVALUE,
                             "V_PERP_M: contract order signature verification error"
                         );
+                    } else {
+                        revert("V_PERP_M: order signature verification error");
                     }
                 } else {
                     require(order.trader != address(0), "V_PERP_M: no trader");
