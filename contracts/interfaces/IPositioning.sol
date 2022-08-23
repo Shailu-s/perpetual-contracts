@@ -18,6 +18,8 @@ interface IPositioning {
         int256 rightExchangedPositionNotional;
         int256 leftPositionSize;
         int256 rightPositionSize;
+        int256 leftOpenNotional;
+        int256 rightOpenNotional;
     }
 
     /// @notice Emitted when taker position is being liquidated

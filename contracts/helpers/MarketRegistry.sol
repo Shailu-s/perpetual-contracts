@@ -62,7 +62,7 @@ contract MarketRegistry is IMarketRegistry, PositioningCallee, MarketRegistrySto
     }
 
     /// @inheritdoc IMarketRegistry
-    function addBaseToken(address baseToken) external override {
+    function addBaseToken(address baseToken) external override onlyOwner {
         address[] storage tokensStorage = _baseTokensMarketMap;
         if (_hasBaseToken(tokensStorage, baseToken)) {
             return;

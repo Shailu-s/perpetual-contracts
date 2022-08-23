@@ -39,8 +39,8 @@ contract PositioningConfig is
         __Ownable_init();
 
         _maxMarketsPerAccount = type(uint8).max;
-        _imRatio = 0.1e6; // initial-margin ratio, 10% in decimal 6
-        _mmRatio = 0.0625e6; // minimum-margin ratio, 6.25% in decimal 6
+        _imRatio = 0.4e6; // initial-margin ratio, 40% in decimal 6
+        _mmRatio = 0.2e6; // minimum-margin ratio, 20% in decimal 6
         _liquidationPenaltyRatio = 0.025e6; // initial penalty ratio, 2.5% in decimal 6
         _partialCloseRatio = 0.25e6; // partial close ratio, 25% in decimal 6
         _partialLiquidationRatio = 0.1e6; // partial liquidation ratio, 10% in decimal 6
