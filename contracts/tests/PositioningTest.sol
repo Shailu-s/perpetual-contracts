@@ -34,4 +34,8 @@ contract PositioningTest is Positioning {
         ) external {
             openPosition(orderLeft, signatureLeft, orderRight, signatureRight);
         }
+
+    function setMakerMinSalt(uint256 _val) external {
+        makerMinSalt[_msgSender()] = _val;
+    }
 }

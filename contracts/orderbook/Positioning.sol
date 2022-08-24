@@ -245,11 +245,14 @@ contract Positioning is
                 IPositioningConfig(_PositioningConfig).getLiquidationPenaltyRatio()
             );
 
-            _modifyOwedRealizedPnl(orderLeft.trader, liquidationFee.neg256());
+            //2.5 % liquidation fees to fee receiver
+            _modifyOwedRealizedPnl(_getFeeReceiver(), liquidationFee.toInt256());
 
-            // increase liquidator's pnl liquidation reward
+            //2.5 % liquidation fees to liquidator, increase liquidator's pnl liquidation reward
             liquidator = _msgSender();
             _modifyOwedRealizedPnl(liquidator, liquidationFee.toInt256());
+
+            _modifyOwedRealizedPnl(orderLeft.trader, (liquidationFee * 2).neg256());
 
             emit PositionLiquidated(
                 orderLeft.trader,
@@ -267,11 +270,15 @@ contract Positioning is
                 IPositioningConfig(_PositioningConfig).getLiquidationPenaltyRatio()
             );
 
-            _modifyOwedRealizedPnl(orderRight.trader, liquidationFee.neg256());
 
-            // increase liquidator's pnl liquidation reward
+            //2.5 % liquidation fees to fee receiver
+            _modifyOwedRealizedPnl(_getFeeReceiver(), liquidationFee.toInt256());
+
+            //2.5 % liquidation fees to liquidator, increase liquidator's pnl liquidation reward
             liquidator = _msgSender();
             _modifyOwedRealizedPnl(liquidator, liquidationFee.toInt256());
+
+            _modifyOwedRealizedPnl(orderRight.trader, (liquidationFee * 2).neg256());
 
             emit PositionLiquidated(
                 orderRight.trader,
