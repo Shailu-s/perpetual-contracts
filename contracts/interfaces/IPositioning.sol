@@ -69,6 +69,9 @@ interface IPositioning {
     /// @param trader The address of trader
     function settleAllFunding(address trader) external;
 
+    /// @notice Function to set fee receiver
+    function setDefaultFeeReceiver(address newDefaultFeeReceiver) external;
+
     /// @notice Trader can call `openPosition` to long/short on baseToken market
     /// @param orderLeft PositionParams struct
     /// @param orderRight PositionParams struct
@@ -95,6 +98,4 @@ interface IPositioning {
     /// @notice Get AccountBalance address
     /// @return accountBalance `AccountBalance` address
     function getAccountBalance() external view returns (address accountBalance);
-
-    function getAccountValue(address trader) external view returns (int256);
 }

@@ -54,7 +54,7 @@ contract Vault is IVault, ReentrancyGuardUpgradeable, OwnerPausable, VaultStorag
         address tokenArg,
         address vaultControllerArg,
         bool isEthVaultArg
-    ) external override initializer {
+    ) external initializer {
         uint8 decimalsArg = 0;
         if (isEthVaultArg) {
             decimalsArg = 18;
@@ -81,12 +81,14 @@ contract Vault is IVault, ReentrancyGuardUpgradeable, OwnerPausable, VaultStorag
         _isEthVault = isEthVaultArg;
     }
 
+    /// @inheritdoc IVault
     function setPositioning(address PositioningArg) external onlyOwner{
         // V_VPMM: Positioning is not contract
         require(PositioningArg.isContract(), "V_VPMM");
         _Positioning = PositioningArg;
     }
 
+    /// @inheritdoc IVault
     function setVaultController(address vaultControllerArg) external onlyOwner {
         // V_VPMM: Vault controller is not contract
         require(vaultControllerArg.isContract(), "V_VPMM");
@@ -258,7 +260,8 @@ contract Vault is IVault, ReentrancyGuardUpgradeable, OwnerPausable, VaultStorag
         return _Positioning;
     }
 
-    function getVaultController() external view returns (address) {
+    /// @inheritdoc IVault
+    function getVaultController() external view override returns (address) {
         return _vaultController;
     }
 
@@ -272,6 +275,19 @@ contract Vault is IVault, ReentrancyGuardUpgradeable, OwnerPausable, VaultStorag
     }
 
     //
+    // INTERNAL VIEW
+    //
+
+    function _requireOnlyVaultController() internal view {
+        // only VaultController
+        require(_msgSender() == _vaultController, "V_OVC");
+    }
+
+    function _msgSender() internal view override(OwnerPausable) returns (address) {
+        return super._msgSender();
+    }
+
+    //
     // INTERNAL NON-VIEW
     //
 
@@ -282,18 +298,5 @@ contract Vault is IVault, ReentrancyGuardUpgradeable, OwnerPausable, VaultStorag
         int256 amount
     ) internal {
         _balance[trader][token] = _balance[trader][token] + amount;
-    }
-
-    //
-    // INTERNAL VIEW
-    //
-
-    function _msgSender() internal view override(OwnerPausable) returns (address) {
-        return super._msgSender();
-    }
-
-    function _requireOnlyVaultController() internal view {
-        // only VaultController
-        require(_msgSender() == _vaultController, "V_OVC");
     }
 }
