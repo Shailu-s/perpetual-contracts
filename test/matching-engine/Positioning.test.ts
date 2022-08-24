@@ -106,26 +106,25 @@ describe("Positioning", function () {
         initializer: "__PositioningTest_init",
       },
     )
-
     marketRegistry = await upgrades.deployProxy(MarketRegistry, [virtualToken.address])
-
+    
+    await marketRegistry.connect(owner).addBaseToken(baseToken.address)
     await marketRegistry.connect(owner).setMakerFeeRatio(0.0004e6)
     await marketRegistry.connect(owner).setTakerFeeRatio(0.0009e6)
 
     await accountBalance1.connect(owner).setPositioning(positioning.address)
-    await vaultController.connect(owner).setPositioning(positioning.address)
 
-    await positioning.connect(owner).setPositioning(positioning.address)
     await vault.connect(owner).setPositioning(positioning.address)
     await vault.connect(owner).setVaultController(vaultController.address)
     await vaultController.registerVault(vault.address, virtualToken.address)
+    await vaultController.connect(owner).setPositioning(positioning.address)
 
     await positioningConfig.connect(owner).setMaxMarketsPerAccount(5)
-    await positioningConfig.setSettlementTokenBalanceCap(1000000)
+    await positioningConfig.connect(owner).setSettlementTokenBalanceCap(1000000)
+
     await positioning.connect(owner).setMarketRegistry(marketRegistry.address)
     await positioning.connect(owner).setDefaultFeeReceiver(owner.address)
-
-    await marketRegistry.connect(owner).addBaseToken(baseToken.address)
+    await positioning.connect(owner).setPositioning(positioning.address)
   })
 
   describe("Deployment", function () {
@@ -281,12 +280,10 @@ describe("Positioning", function () {
         let signatureLeft = await getSignature(orderLeft, account1.address)
         let signatureRight = await getSignature(orderRight, account2.address)
 
-        // opening the position here
         await expect(positioning.openPosition(orderLeft, signatureLeft, orderRight, signatureRight)).to.emit(
           positioning,
           "PositionChanged",
         )
-
         const positionSize = await accountBalance1.getTakerPositionSize(
           account1.address,
           orderLeft.makeAsset.virtualToken,
@@ -818,6 +815,34 @@ describe("Positioning", function () {
         await expect(positioning.openPosition(orderLeft, signatureLeft, orderRight, signatureRight)).to.be.revertedWith(
           "CH_NEFCI",
         )
+        it("should fail to match orders as signer is not order maker & order maker is not a contract", async () => {
+          const [owner, account1, account2] = await ethers.getSigners()
+  
+          const orderLeft = Order(
+            account1.address,
+            87654321987654,
+            true,
+            Asset(baseToken.address, "20"),
+            Asset(virtualToken.address, "20"),
+            1
+          )
+  
+          const orderRight = Order(
+            account2.address,
+            87654321987654,
+            false,
+            Asset(virtualToken.address, "20"),
+            Asset(baseToken.address, "20"),
+            1
+          )
+  
+          let signatureLeft = await getSignature(orderLeft, owner.address)
+          let signatureRight = await getSignature(orderRight, account2.address)
+  
+          await expect(
+            matchingEngine.matchOrdersTest(orderLeft, signatureLeft, orderRight, signatureRight),
+          ).to.be.revertedWith("V_PERP_M: order signature verification error")
+        })
       })
       it("should fail to match orders as deadline has expired", async () => {
         const [owner, account1, account2] = await ethers.getSigners()

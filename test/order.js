@@ -22,7 +22,7 @@ const Types = {
   ],
   Order: [
     { name: "trader", type: "address" },
-    { name: "deadline", type: "uint256" },
+    { name: "deadline", type: "uint64" },
     { name: "isShort", type: "bool" },
     { name: "makeAsset", type: "Asset" },
     { name: "takeAsset", type: "Asset" },

@@ -33,6 +33,7 @@ import { IVaultController } from "../interfaces/IVaultController.sol";
 import { BlockContext } from "../helpers/BlockContext.sol";
 import { FundingRate } from "../funding-rate/FundingRate.sol";
 import { OwnerPausable } from "../helpers/OwnerPausable.sol";
+import { OrderValidator } from "./OrderValidator.sol";
 import { PositioningStorageV1 } from "../storage/PositioningStorage.sol";
 
 // TODO : Create bulk match order for perp
@@ -44,7 +45,8 @@ contract Positioning is
     OwnerPausable,
     PositioningStorageV1,
     FundingRate,
-    EIP712Upgradeable
+    EIP712Upgradeable,
+    OrderValidator
 {
     using AddressUpgradeable for address;
     using LibSafeCastUint for uint256;
@@ -52,10 +54,6 @@ contract Positioning is
     using LibPerpMath for uint256;
     using LibPerpMath for int256;
     using LibSignature for bytes32;
-
-    bytes4 internal constant MAGICVALUE = 0x1626ba7e;
-
-    mapping(address => uint256) public makerMinSalt;
 
     /// @dev this function is public for testing
     // solhint-disable-next-line func-order
@@ -79,6 +77,7 @@ contract Positioning is
         __ReentrancyGuard_init();
         __OwnerPausable_init();
         __FundingRate_init(markPriceArg, indexPriceArg);
+        __OrderValidator_init_unchained();
 
         _PositioningConfig = PositioningConfigArg;
         _vaultController = vaultControllerArg;
@@ -103,6 +102,61 @@ contract Positioning is
         }
     }
 
+    /// @inheritdoc IPositioning
+    function setDefaultFeeReceiver(address newDefaultFeeReceiver) external onlyOwner {
+        defaultFeeReceiver = newDefaultFeeReceiver;
+    }
+
+    /// @inheritdoc IPositioning
+    function openPosition(
+        LibOrder.Order memory orderLeft,
+        bytes memory signatureLeft,
+        LibOrder.Order memory orderRight,
+        bytes memory signatureRight
+    ) public override whenNotPaused nonReentrant returns (MatchResponse memory response) {
+        // short = selling base token
+        address baseToken = orderLeft.isShort ? orderLeft.makeAsset.virtualToken : orderLeft.takeAsset.virtualToken;
+
+        // register base token for account balance calculations
+        IAccountBalance(_accountBalance).registerBaseToken(orderLeft.trader, baseToken);
+        IAccountBalance(_accountBalance).registerBaseToken(orderRight.trader, baseToken);
+
+        require(
+            IMarketRegistry(_marketRegistry).checkBaseToken(baseToken),
+            "V_PERP: Basetoken is not registered in market"
+        );
+
+        // must settle funding first
+        _settleFunding(orderLeft.trader, baseToken);
+        _settleFunding(orderRight.trader, baseToken);
+
+        // check if order is eligible for liquidation
+        bool isLeftLiquidation = _isAccountLiquidatable(orderLeft.trader);
+
+        // if order is liquidatable, no need to validate signature of order
+        isLeftLiquidation ? _isOrderLiquidatable(orderLeft, baseToken) : _validateFull(orderLeft, signatureLeft);
+
+        bool isRightLiquidation = _isAccountLiquidatable(orderRight.trader);
+        isRightLiquidation ? _isOrderLiquidatable(orderRight, baseToken) : _validateFull(orderRight, signatureRight);
+
+        response = _openPosition(orderLeft, orderRight, isLeftLiquidation, isRightLiquidation, baseToken);
+    }
+
+    /// @inheritdoc IPositioning
+    function getPositioningConfig() public view override returns (address) {
+        return _PositioningConfig;
+    }
+
+    /// @inheritdoc IPositioning
+    function getVaultController() public view override returns (address) {
+        return _vaultController;
+    }
+
+    /// @inheritdoc IPositioning
+    function getAccountBalance() public view override returns (address) {
+        return _accountBalance;
+    }
+
     ///@dev this function calculates total pending funding payment of a trader
     function getAllPendingFundingPayment(address trader)
         public
@@ -120,53 +174,30 @@ contract Positioning is
         return pendingFundingPayment;
     }
 
-    /// @inheritdoc IPositioning
-    function openPosition(
-        LibOrder.Order memory orderLeft,
-        bytes memory signatureLeft,
-        LibOrder.Order memory orderRight,
-        bytes memory signatureRight
-    ) public override whenNotPaused nonReentrant returns (MatchResponse memory response) {
-        // short = selling base token
-        address baseToken = orderLeft.isShort ? orderLeft.makeAsset.virtualToken : orderLeft.takeAsset.virtualToken;
-        
-        IAccountBalance(_accountBalance).registerBaseToken(orderLeft.trader, baseToken);
-        IAccountBalance(_accountBalance).registerBaseToken(orderRight.trader, baseToken);
-        require(
-            IMarketRegistry(_marketRegistry).checkBaseToken(baseToken),
-            "V_PERP: Basetoken is not registered in market"
-        );
+    //
+    // INTERNAL NON-VIEW
+    //
 
-        // must settle funding first
-        _settleFunding(orderLeft.trader, baseToken);
-        _settleFunding(orderRight.trader, baseToken);
+    /// @dev Settle trader's funding payment to his/her realized pnl.
+    function _settleFunding(address trader, address baseToken) internal returns (int256 growthTwPremium) {
+        int256 fundingPayment;
+        (fundingPayment, growthTwPremium) = settleFunding(trader, baseToken);
 
-        bool isLeftLiquidation = _isAccountLiquidatable(orderLeft.trader);
-        isLeftLiquidation ? _isOrderLiquidatable(orderLeft, baseToken) : _validateFull(orderLeft, signatureLeft);
+        if (fundingPayment != 0) {
+            IAccountBalance(_accountBalance).modifyOwedRealizedPnl(trader, fundingPayment.neg256());
+            emit FundingPaymentSettled(trader, baseToken, fundingPayment);
+        }
 
-        bool isRightLiquidation = _isAccountLiquidatable(orderRight.trader);
-        isRightLiquidation ? _isOrderLiquidatable(orderRight, baseToken) : _validateFull(orderRight, signatureRight);
-
-        response = _openPosition(orderLeft, orderRight, isLeftLiquidation, isRightLiquidation, baseToken);
+        IAccountBalance(_accountBalance).updateTwPremiumGrowthGlobal(trader, baseToken, growthTwPremium);
+        return growthTwPremium;
     }
 
-    function _isOrderLiquidatable(LibOrder.Order memory order, address baseToken) internal view {
-        int256 positionSize = _getTakerPosition(order.trader, baseToken);
-
-        // P_PSZ: position size is zero
-        require(positionSize != 0, "P_PSZ");
-
-        // P_WAP: wrong argument passed
-        require(positionSize > 0 == order.isShort, "P_WAP");
-
-        uint24 partialCloseRatio = IPositioningConfig(_PositioningConfig).getPartialLiquidationRatio();
-
-        uint256 amount = positionSize.abs().mulRatio(partialCloseRatio);
-        order.isShort
-            ? require(order.makeAsset.value == amount, "P_WMV")
-            : require(order.takeAsset.value == amount, "P_WTV");
+    /// @dev Add given amount to PnL of the address provided
+    function _modifyOwedRealizedPnl(address trader, int256 amount) internal {
+        IAccountBalance(_accountBalance).modifyOwedRealizedPnl(trader, amount);
     }
 
+    /// @dev this function matches the both orders and opens the position
     function _openPosition(
         LibOrder.Order memory orderLeft,
         LibOrder.Order memory orderRight,
@@ -198,6 +229,8 @@ contract Positioning is
         uint256 _orderRightFee;
         uint256 liquidationFee;
         address liquidator;
+
+        // TODO: This is hardcoded right now but changes it during relayer development
         bool isLeftMaker = true;
 
         if (isLeftMaker) {
@@ -217,6 +250,7 @@ contract Positioning is
                 IMarketRegistry(_marketRegistry).getMakerFeeRatio()
             );
         }
+        // modifies PnL of fee receiver
         _modifyOwedRealizedPnl(_getFeeReceiver(), (_orderLeftFee + _orderRightFee).toInt256());
 
         // modifies positionSize and openNotional
@@ -270,7 +304,6 @@ contract Positioning is
                 IPositioningConfig(_PositioningConfig).getLiquidationPenaltyRatio()
             );
 
-
             //2.5 % liquidation fees to fee receiver
             _modifyOwedRealizedPnl(_getFeeReceiver(), liquidationFee.toInt256());
 
@@ -317,108 +350,68 @@ contract Positioning is
             internalData.rightOpenNotional
         );
 
+        IAccountBalance(_accountBalance).deregisterBaseToken(orderLeft.trader, baseToken);
+        IAccountBalance(_accountBalance).deregisterBaseToken(orderRight.trader, baseToken);
         return response;
     }
 
+    //
+    // INTERNAL VIEW
+    //
+
+    /// @dev this function validate the signature of order
     function _validateFull(LibOrder.Order memory order, bytes memory signature) internal view {
         LibOrder.validate(order);
         _validate(order, signature);
     }
 
-    function _validate(LibOrder.Order memory order, bytes memory signature) internal view {
-        if (order.salt == 0) {
-            if (order.trader != address(0)) {
-                require(_msgSender() == order.trader, "V_PERP_M: maker is not tx sender");
-            } else {
-                order.trader = _msgSender();
-            }
-        } else {
-            require((order.salt >= makerMinSalt[order.trader]), "V_PERP_M: Order canceled");
-            if (_msgSender() != order.trader) {
-                bytes32 hash = LibOrder.hash(order);
-                address signer;
-                if (signature.length == 65) {
-                    signer = _hashTypedDataV4(hash).recover(signature);
-                }
-                if (signer != order.trader) {
-                    if (order.trader.isContract()) {
-                        require(
-                            IERC1271(order.trader).isValidSignature(_hashTypedDataV4(hash), signature) == MAGICVALUE,
-                            "V_PERP_M: contract order signature verification error"
-                        );
-                    } else {
-                        revert("V_PERP_M: order signature verification error");
-                    }
-                } else {
-                    require(order.trader != address(0), "V_PERP_M: no trader");
-                }
-            }
-        }
+    /// @dev this function checks if correct order is received for liquidation
+    function _isOrderLiquidatable(LibOrder.Order memory order, address baseToken) internal view {
+        int256 positionSize = _getTakerPosition(order.trader, baseToken);
+
+        // P_PSZ: position size is zero
+        require(positionSize != 0, "P_PSZ");
+
+        // P_WAP: wrong argument passed
+        require(positionSize > 0 == order.isShort, "P_WAP");
+
+        uint24 partialCloseRatio = IPositioningConfig(_PositioningConfig).getPartialLiquidationRatio();
+
+        uint256 amount = positionSize.abs().mulRatio(partialCloseRatio);
+        order.isShort
+            ? require(order.makeAsset.value == amount, "P_WMV")
+            : require(order.takeAsset.value == amount, "P_WTV");
     }
 
-    /// @dev Settle trader's funding payment to his/her realized pnl.
-    function _settleFunding(address trader, address baseToken) internal returns (int256 growthTwPremium) {
-        int256 fundingPayment;
-        (fundingPayment, growthTwPremium) = settleFunding(trader, baseToken);
-
-        if (fundingPayment != 0) {
-            IAccountBalance(_accountBalance).modifyOwedRealizedPnl(trader, fundingPayment.neg256());
-            emit FundingPaymentSettled(trader, baseToken, fundingPayment);
-        }
-
-        IAccountBalance(_accountBalance).updateTwPremiumGrowthGlobal(trader, baseToken, growthTwPremium);
-        return growthTwPremium;
-    }
-
+    /// @dev This function checks if account of trader is eligible for liquidation
     function _isAccountLiquidatable(address trader) internal view returns (bool) {
-        return getAccountValue(trader) < IAccountBalance(_accountBalance).getMarginRequirementForLiquidation(trader);
+        return _getAccountValue(trader) < IAccountBalance(_accountBalance).getMarginRequirementForLiquidation(trader);
     }
 
-    function _modifyOwedRealizedPnl(address trader, int256 amount) internal {
-        IAccountBalance(_accountBalance).modifyOwedRealizedPnl(trader, amount);
-    }
-
+    /// @dev This function returns position size of trader
     function _getTakerPosition(address trader, address baseToken) internal view returns (int256) {
         return IAccountBalance(_accountBalance).getTakerPositionSize(trader, baseToken);
     }
 
+    /// @dev This function checks if free collateral of trader is available
     function _requireEnoughFreeCollateral(address trader) internal view {
         // CH_NEFCI: not enough free collateral by imRatio
-        require(
-            _getFreeCollateralByRatio(trader, IPositioningConfig(_PositioningConfig).getImRatio()) > 0,
-            "CH_NEFCI"
-        );
+        require(_getFreeCollateralByRatio(trader, IPositioningConfig(_PositioningConfig).getImRatio()) > 0, "CH_NEFCI");
     }
 
-    function setDefaultFeeReceiver(address newDefaultFeeReceiver) external onlyOwner {
-        defaultFeeReceiver = newDefaultFeeReceiver;
-    }
-
-    function getAccountValue(address trader) public view override returns (int256) {
-        return IVaultController(_vaultController).getAccountValue(trader);
-    }
-
+    /// @dev this function returns address of the fee receiver
     function _getFeeReceiver() internal view returns (address) {
         return defaultFeeReceiver;
     }
 
+    /// @dev this function returns total account value of the trader
+    function _getAccountValue(address trader) internal view returns (int256) {
+        return IVaultController(_vaultController).getAccountValue(trader);
+    }
+
+    /// @dev this function returns total free collateral available of trader
     function _getFreeCollateralByRatio(address trader, uint24 ratio) internal view returns (int256) {
         return IVaultController(_vaultController).getFreeCollateralByRatio(trader, ratio);
-    }
-
-    /// @inheritdoc IPositioning
-    function getPositioningConfig() public view override returns (address) {
-        return _PositioningConfig;
-    }
-
-    /// @inheritdoc IPositioning
-    function getVaultController() public view override returns (address) {
-        return _vaultController;
-    }
-
-    /// @inheritdoc IPositioning
-    function getAccountBalance() public view override returns (address) {
-        return _accountBalance;
     }
 
     function _msgSender() internal view override(OwnerPausable, ContextUpgradeable) returns (address) {

@@ -106,7 +106,7 @@ describe("MatchingEngine", function () {
 
       var ordersList: any[] = [order1, order2]
 
-      const receipt = matchingEngine.cancelOrdersInBatch(ordersList)
+      const receipt = matchingEngine.connect(account1.address).cancelOrdersInBatch(ordersList)
       expect(receipt.confirmations).not.equal(0)
     })
 
