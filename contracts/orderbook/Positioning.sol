@@ -33,6 +33,7 @@ import { IVaultController } from "../interfaces/IVaultController.sol";
 import { BlockContext } from "../helpers/BlockContext.sol";
 import { FundingRate } from "../funding-rate/FundingRate.sol";
 import { OwnerPausable } from "../helpers/OwnerPausable.sol";
+import { OrderValidator } from "./OrderValidator.sol";
 import { PositioningStorageV1 } from "../storage/PositioningStorage.sol";
 
 // TODO : Create bulk match order for perp
@@ -44,7 +45,8 @@ contract Positioning is
     OwnerPausable,
     PositioningStorageV1,
     FundingRate,
-    EIP712Upgradeable
+    EIP712Upgradeable,
+    OrderValidator
 {
     using AddressUpgradeable for address;
     using LibSafeCastUint for uint256;
@@ -52,10 +54,6 @@ contract Positioning is
     using LibPerpMath for uint256;
     using LibPerpMath for int256;
     using LibSignature for bytes32;
-
-    bytes4 internal constant MAGICVALUE = 0x1626ba7e;
-
-    mapping(address => uint256) public makerMinSalt;
 
     /// @dev this function is public for testing
     // solhint-disable-next-line func-order
@@ -79,6 +77,7 @@ contract Positioning is
         __ReentrancyGuard_init();
         __OwnerPausable_init();
         __FundingRate_init(markPriceArg, indexPriceArg);
+        __OrderValidator_init_unchained();
 
         _PositioningConfig = PositioningConfigArg;
         _vaultController = vaultControllerArg;
@@ -139,7 +138,7 @@ contract Positioning is
         }
 
         require(
-            !IMarketRegistry(_marketRegistry).checkBaseToken(baseToken),
+            IMarketRegistry(_marketRegistry).checkBaseToken(baseToken),
             "V_PERP: Basetoken is not registered in market"
         );
 
@@ -259,37 +258,6 @@ contract Positioning is
     function _validateFull(LibOrder.Order memory order, bytes memory signature) internal view {
         LibOrder.validate(order);
         _validate(order, signature);
-    }
-
-    function _validate(LibOrder.Order memory order, bytes memory signature) internal view {
-        if (order.salt == 0) {
-            if (order.trader != address(0)) {
-                require(_msgSender() == order.trader, "V_PERP_M: maker is not tx sender");
-            } else {
-                order.trader = _msgSender();
-            }
-        } else {
-            require((order.salt >= makerMinSalt[order.trader]), "V_PERP_M: Order canceled");
-            if (_msgSender() != order.trader) {
-                bytes32 hash = LibOrder.hash(order);
-                address signer;
-                if (signature.length == 65) {
-                    signer = _hashTypedDataV4(hash).recover(signature);
-                }
-                if (signer != order.trader) {
-                    if (order.trader.isContract()) {
-                        require(
-                            IERC1271(order.trader).isValidSignature(_hashTypedDataV4(hash), signature) == MAGICVALUE,
-                            "V_PERP_M: contract order signature verification error"
-                        );
-                    } else {
-                        revert("V_PERP_M: order signature verification error");
-                    }
-                } else {
-                    require(order.trader != address(0), "V_PERP_M: no trader");
-                }
-            }
-        }
     }
 
     /// @dev Settle trader's funding payment to his/her realized pnl.

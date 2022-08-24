@@ -21,12 +21,11 @@ import { IPositioning } from "../interfaces/IPositioning.sol";
 import { IPositioningConfig } from "../interfaces/IPositioningConfig.sol";
 import { IVault } from "../interfaces/IVault.sol";
 
-import { BaseRelayRecipient } from "../gsn/BaseRelayRecipient.sol";
 import { OwnerPausable } from "../helpers/OwnerPausable.sol";
 import { VaultStorageV1 } from "../storage/VaultStorage.sol";
 
 // never inherit any new stateful contract. never change the orders of parent stateful contracts
-contract Vault is IVault, ReentrancyGuardUpgradeable, OwnerPausable, BaseRelayRecipient, VaultStorageV1 {
+contract Vault is IVault, ReentrancyGuardUpgradeable, OwnerPausable, VaultStorageV1 {
     using AddressUpgradeable for address;
     using LibSafeCastUint for uint256;
     using LibSafeCastInt for int256;
@@ -287,8 +286,7 @@ contract Vault is IVault, ReentrancyGuardUpgradeable, OwnerPausable, BaseRelayRe
     // INTERNAL VIEW
     //
 
-    /// @inheritdoc BaseRelayRecipient
-    function _msgSender() internal view override(BaseRelayRecipient, OwnerPausable) returns (address) {
+    function _msgSender() internal view override(OwnerPausable) returns (address) {
         return super._msgSender();
     }
 
