@@ -19,7 +19,7 @@ abstract contract PositioningCallee is OwnableUpgradeable {
     //
 
     // solhint-disable-next-line func-order
-    function __PositioningCallee_init() internal initializer {
+    function __PositioningCallee_init() internal onlyInitializing {
         __Ownable_init();
     }
 

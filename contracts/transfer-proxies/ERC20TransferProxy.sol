@@ -27,7 +27,7 @@ contract ERC20TransferProxy is
     ) external override onlyOperator {
         require(
             token.transferFrom(from, to, value),
-            "NFT_IO: failure while transferring"
+            "ERC20TransferProxy: failure while transferring"
         );
     }
 }

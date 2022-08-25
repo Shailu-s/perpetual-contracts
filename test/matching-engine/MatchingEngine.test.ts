@@ -1,6 +1,6 @@
 import { expect } from "chai"
 import { ethers, upgrades } from "hardhat"
-const { Order, Asset, sign } = require('../order');
+const { Order, Asset, sign } = require("../order")
 const libDeal = require("../libDeal")
 
 describe("MatchingEngine", function () {
@@ -20,7 +20,7 @@ describe("MatchingEngine", function () {
 
   this.beforeAll(async () => {
     MatchingEngine = await ethers.getContractFactory("MatchingEngineTest")
-    VirtualToken = await ethers.getContractFactory("VirtualToken")
+    VirtualToken = await ethers.getContractFactory("VirtualTokenTest")
     ERC20TransferProxyTest = await ethers.getContractFactory("ERC20TransferProxyTest")
     TransferManagerTest = await ethers.getContractFactory("TransferManagerTest")
     ERC1271Test = await ethers.getContractFactory("ERC1271Test")
@@ -39,9 +39,8 @@ describe("MatchingEngine", function () {
         initializer: "__MatchingEngineTest_init",
       },
     )
-    virtualToken = await upgrades.deployProxy(VirtualToken, ["Virtual Ethereum", "VETH", true], {
-      initializer: "__VirtualToken_init",
-    })
+    virtualToken = await upgrades.deployProxy(VirtualToken, ["Virtual Ethereum", "VETH", true])
+    await virtualToken.deployed();
     asset = Asset(virtualToken.address, "10")
 
     transferManagerTest = await upgrades.deployProxy(TransferManagerTest, [], {
@@ -153,9 +152,9 @@ describe("MatchingEngine", function () {
         let signatureLeft = await getSignature(orderLeft, account1.address)
         let signatureRight = await getSignature(orderRight, account2.address)
 
-        await expect(
-          matchingEngine.matchOrders(orderLeft, orderRight,),
-        ).to.be.revertedWith("V_PERP_M: make assets don't match")
+        await expect(matchingEngine.matchOrders(orderLeft, orderRight)).to.be.revertedWith(
+          "V_PERP_M: make assets don't match",
+        )
       })
 
       xit("should fail to match orders as right order assets don't match", async () => {
@@ -187,9 +186,9 @@ describe("MatchingEngine", function () {
         let signatureLeft = await getSignature(orderLeft, account1.address)
         let signatureRight = await getSignature(orderRight, account2.address)
 
-        await expect(
-          matchingEngine.matchOrders(orderLeft, orderRight,),
-        ).to.be.revertedWith("V_PERP_M: assets don't match")
+        await expect(matchingEngine.matchOrders(orderLeft, orderRight)).to.be.revertedWith(
+          "V_PERP_M: assets don't match",
+        )
       })
 
       it("should fail to match orders & revert when default fee receiver is address(0)", async () => {
@@ -224,7 +223,7 @@ describe("MatchingEngine", function () {
           true,
           Asset(virtualToken.address, "20"),
           Asset(virtualToken.address, "20"),
-          1
+          1,
         )
 
         const orderRight = Order(
@@ -238,7 +237,7 @@ describe("MatchingEngine", function () {
 
         let signatureLeft = await getSignature(orderLeft, account1.address)
         let signatureRight = await getSignature(orderRight, account2.address)
-        await expect(matchingEngine.connect(owner).matchOrders(orderLeft, orderRight,)).to.emit(
+        await expect(matchingEngine.connect(owner).matchOrders(orderLeft, orderRight)).to.emit(
           matchingEngine,
           "Matched",
         )
@@ -275,9 +274,10 @@ describe("MatchingEngine", function () {
         let signatureLeft = await getSignature(orderLeft, account1.address)
         let signatureRight = await getSignature(orderRight, account2.address)
 
-        await expect(
-          matchingEngine.connect(account1).matchOrders(orderLeft, orderRight,),
-        ).to.emit(matchingEngine, "Matched")
+        await expect(matchingEngine.connect(account1).matchOrders(orderLeft, orderRight)).to.emit(
+          matchingEngine,
+          "Matched",
+        )
       })
 
       it("should match orders & emit event when taker address is 0", async () => {
@@ -311,9 +311,10 @@ describe("MatchingEngine", function () {
         let signatureLeft = await getSignature(orderLeft, account1.address)
         let signatureRight = await getSignature(orderRight, account2.address)
 
-        await expect(
-          matchingEngine.connect(account1).matchOrders(orderLeft, orderRight,),
-        ).to.emit(matchingEngine, "Matched")
+        await expect(matchingEngine.connect(account1).matchOrders(orderLeft, orderRight)).to.emit(
+          matchingEngine,
+          "Matched",
+        )
       })
 
       it("should match orders & emit event when Virtual token balance of order maker is less than the amount to be transferred", async () => {
@@ -348,9 +349,10 @@ describe("MatchingEngine", function () {
         let signatureLeft = await getSignature(orderLeft, account1.address)
         let signatureRight = await getSignature(orderRight, account2.address)
 
-        await expect(
-          matchingEngine.connect(account1).matchOrders(orderLeft, orderRight,),
-        ).to.emit(matchingEngine, "Matched")
+        await expect(matchingEngine.connect(account1).matchOrders(orderLeft, orderRight)).to.emit(
+          matchingEngine,
+          "Matched",
+        )
       })
 
       it("should match orders & emit event when Virtual token balance of order maker is 0", async () => {
@@ -382,9 +384,10 @@ describe("MatchingEngine", function () {
         let signatureLeft = await getSignature(orderLeft, account1.address)
         let signatureRight = await getSignature(orderRight, account2.address)
 
-        await expect(
-          matchingEngine.connect(account1).matchOrders(orderLeft, orderRight,),
-        ).to.emit(matchingEngine, "Matched")
+        await expect(matchingEngine.connect(account1).matchOrders(orderLeft, orderRight)).to.emit(
+          matchingEngine,
+          "Matched",
+        )
       })
 
       it("should match orders & emit event when orderRight salt is 0", async () => {
@@ -416,9 +419,10 @@ describe("MatchingEngine", function () {
         let signatureLeft = await getSignature(orderLeft, account1.address)
         let signatureRight = await getSignature(orderRight, account2.address)
 
-        await expect(
-          matchingEngine.connect(account2).matchOrders(orderLeft, orderRight,),
-        ).to.emit(matchingEngine, "Matched")
+        await expect(matchingEngine.connect(account2).matchOrders(orderLeft, orderRight)).to.emit(
+          matchingEngine,
+          "Matched",
+        )
       })
 
       it("should match orders & order maker is contract", async () => {
@@ -453,10 +457,7 @@ describe("MatchingEngine", function () {
         let signatureLeft = await getSignature(orderLeft, account1.address)
         let signatureRight = await getSignature(orderRight, account2.address)
 
-        await expect(matchingEngine.matchOrders(orderLeft, orderRight,)).to.emit(
-          matchingEngine,
-          "Matched",
-        )
+        await expect(matchingEngine.matchOrders(orderLeft, orderRight)).to.emit(matchingEngine, "Matched")
       })
     })
   })

@@ -29,7 +29,7 @@ contract FundingRate is IFundingRate, BlockContext, PositioningCallee, FundingRa
     function __FundingRate_init(
         address markPriceOracleArg,
         address indexPriceOracleArg
-    ) internal initializer {
+    ) internal onlyInitializing {
         __PositioningCallee_init();
         _markPriceOracleArg = markPriceOracleArg;
         _indexPriceOracleArg = indexPriceOracleArg;

@@ -92,6 +92,16 @@ abstract contract MatchingEngineCore is
         }
     }
 
+    function matchOrderInBatch(
+        LibOrder.Order[] memory ordersLeft,
+        LibOrder.Order[] memory ordersRight
+    ) external whenNotPaused {
+        uint256 ordersLength = ordersLeft.length;
+        for (uint256 index = 0; index < ordersLength; index++) {
+            matchOrders(ordersLeft[index], ordersRight[index]);
+        }
+    }
+
     /**
         @notice matches valid orders and transfers their assets
         @param orderLeft the left order of the match
