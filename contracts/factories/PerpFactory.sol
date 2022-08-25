@@ -17,7 +17,6 @@ import "../interfaces/IPerpFactory.sol";
  * @author volmex.finance [security@volmexlabs.com]
  */
 contract PerpFactory is Initializable, IPerpFactory {
-
     // Volatility token implementation contract for factory
     address public tokenImplementation;
 
@@ -112,10 +111,10 @@ contract PerpFactory is Initializable, IPerpFactory {
      * @param _name is the name of quote token
      * @param _symbol is the symbol of quote token
      */
-    function cloneQuoteToken(
-        string memory _name,
-        string memory _symbol
-    ) external returns (IVolmexQuoteToken volmexQuoteToken) {
+    function cloneQuoteToken(string memory _name, string memory _symbol)
+        external
+        returns (IVolmexQuoteToken volmexQuoteToken)
+    {
         bytes32 salt = keccak256(abi.encodePacked(quoteTokenIndexCount, _name, _symbol));
         volmexQuoteToken = IVolmexQuoteToken(Clones.cloneDeterministic(tokenImplementation, salt));
         volmexQuoteToken.initialize(_name, _symbol, false);
@@ -155,7 +154,8 @@ contract PerpFactory is Initializable, IPerpFactory {
         address _positioningConfig,
         address _matchingEngine,
         address _markPriceOracle,
-        address _indexPriceOracle
+        address _indexPriceOracle,
+        uint64 _underlyingPriceIndex
     )
         external
         returns (
@@ -172,17 +172,18 @@ contract PerpFactory is Initializable, IPerpFactory {
             _matchingEngine,
             address(accountBalance),
             _markPriceOracle,
-            _indexPriceOracle
+            _indexPriceOracle,
+            _underlyingPriceIndex
         );
 
         emit PerpSystemCreated(perpIndexCount, address(positioning), address(vaultController), address(accountBalance));
         perpIndexCount++;
     }
 
-    function _cloneVaultController(
-        address _positioningConfig,
-        address _accountBalance
-    ) private returns (IVaultController vaultController) {
+    function _cloneVaultController(address _positioningConfig, address _accountBalance)
+        private
+        returns (IVaultController vaultController)
+    {
         bytes32 salt = keccak256(abi.encodePacked(perpIndexCount, vaultImplementation));
         vaultController = IVaultController(Clones.cloneDeterministic(vaultControllerImplementation, salt));
         vaultController.initialize(_positioningConfig, _accountBalance);
@@ -195,19 +196,25 @@ contract PerpFactory is Initializable, IPerpFactory {
         address _matchingEngine,
         address _accountBalance,
         address _markPriceOracle,
-        address _indexPriceOracle
+        address _indexPriceOracle,
+        uint64 _underlyingPriceIndex
     ) private returns (IPositioning positioning) {
         bytes32 salt = keccak256(abi.encodePacked(perpIndexCount, _positioningConfig));
         positioning = IPositioning(Clones.cloneDeterministic(positioningImplementation, salt));
-        positioning.initialize(_positioningConfig, address(_vaultController), _matchingEngine, _accountBalance, _markPriceOracle, _indexPriceOracle);
+        positioning.initialize(
+            _positioningConfig,
+            address(_vaultController),
+            _matchingEngine,
+            _accountBalance,
+            _markPriceOracle,
+            _indexPriceOracle,
+            _underlyingPriceIndex
+        );
         _vaultController.setPositioning(address(positioning));
         positioningByIndex[perpIndexCount] = positioning;
     }
 
-    function _cloneAccountBalance(address _positioningConfig)
-        private
-        returns (IAccountBalance accountBalance)
-    {
+    function _cloneAccountBalance(address _positioningConfig) private returns (IAccountBalance accountBalance) {
         bytes32 salt = keccak256(abi.encodePacked(perpIndexCount, _positioningConfig));
         accountBalance = IAccountBalance(Clones.cloneDeterministic(accountBalanceImplementation, salt));
         accountBalance.initialize(_positioningConfig);

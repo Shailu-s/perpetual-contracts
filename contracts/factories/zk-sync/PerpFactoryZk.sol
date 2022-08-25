@@ -59,7 +59,8 @@ contract PerpFactoryZk is IPerpFactory, Initializable {
         address _positioningConfig,
         address _matchingEngine,
         address _markPriceOracle,
-        address _indexPriceOracle
+        address _indexPriceOracle,
+        uint64 _underlyingPriceIndex
     )
         external
         returns (
@@ -76,17 +77,18 @@ contract PerpFactoryZk is IPerpFactory, Initializable {
             _matchingEngine,
             address(accountBalance),
             _markPriceOracle,
-            _indexPriceOracle
+            _indexPriceOracle,
+            _underlyingPriceIndex
         );
 
         emit PerpSystemCreated(perpIndexCount, address(positioning), address(vaultController), address(accountBalance));
         perpIndexCount++;
     }
 
-    function _cloneVaultController(
-        address _positioningConfig,
-        address _accountBalance
-    ) private returns (IVaultController vaultController) {
+    function _cloneVaultController(address _positioningConfig, address _accountBalance)
+        private
+        returns (IVaultController vaultController)
+    {
         vaultController = new VaultController();
         vaultController.initialize(_positioningConfig, _accountBalance);
         vaultControllersByIndex[perpIndexCount] = vaultController;
@@ -98,18 +100,24 @@ contract PerpFactoryZk is IPerpFactory, Initializable {
         address _matchingEngine,
         address _accountBalance,
         address _markPriceOracle,
-        address _indexPriceOracle
+        address _indexPriceOracle,
+        uint64 _underlyingPriceIndex
     ) private returns (IPositioning positioning) {
         positioning = new Positioning();
-        positioning.initialize(_positioningConfig, address(_vaultController), _matchingEngine, _accountBalance, _markPriceOracle, _indexPriceOracle);
+        positioning.initialize(
+            _positioningConfig,
+            address(_vaultController),
+            _matchingEngine,
+            _accountBalance,
+            _markPriceOracle,
+            _indexPriceOracle,
+            _underlyingPriceIndex
+        );
         _vaultController.setPositioning(address(positioning));
         positioningByIndex[perpIndexCount] = positioning;
     }
 
-    function _cloneAccountBalance(address _positioningConfig)
-        private
-        returns (IAccountBalance accountBalance)
-    {
+    function _cloneAccountBalance(address _positioningConfig) private returns (IAccountBalance accountBalance) {
         accountBalance = new AccountBalance();
         accountBalance.initialize(_positioningConfig);
         accountBalanceByIndex[perpIndexCount] = address(accountBalance);
