@@ -44,6 +44,9 @@ const config: HardhatUserConfig = {
     },
     gasReporter: {
         excludeContracts: ["test"],
+        enabled: true,
+        currency: 'USD',
+        gasPrice: 21
     },
     mocha: {
         require: ["ts-node/register/files"],

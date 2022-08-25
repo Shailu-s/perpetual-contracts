@@ -11,14 +11,10 @@ contract MatchingEngineTest is MatchingEngine
 
     function __MatchingEngineTest_init(
         address erc20TransferProxy,
-        uint256 newProtocolFee,
-        address newDefaultFeeReceiver,
         address owner
     ) external initializer {
         initialize(
             erc20TransferProxy,
-            newProtocolFee,
-            newDefaultFeeReceiver,
             owner
         );
         __Ownable_init_unchained();
@@ -31,16 +27,11 @@ contract MatchingEngineTest is MatchingEngine
         matchOrders(orderLeft, orderRight);
     }
 
-    function getProtocolFeeTest() public view virtual returns (uint256) {
-        return _getProtocolFee();
-    }
-
     function doTransfersTest(
         LibDeal.DealSide memory left,
-        LibDeal.DealSide memory right,
-        LibDeal.DealData memory dealData
+        LibDeal.DealSide memory right
     ) public virtual returns (uint totalMakeValue, uint totalTakeValue) {
-        return _doTransfers(left, right, dealData);
+        return _doTransfers(left, right);
     }
 
     function setMakerMinSalt(uint256 _val) external {
