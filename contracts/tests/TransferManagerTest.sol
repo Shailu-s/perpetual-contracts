@@ -9,7 +9,7 @@ import "contracts/libs/LibFill.sol";
 import "contracts/libs/LibOrder.sol";
 import "contracts/libs/LibAsset.sol";
 
-contract TransferManagerTest is TransferManager, TransferExecutor, OrderValidator {
+contract TransferManagerTest is TransferManager, TransferExecutor {
     function checkDoTransfers(LibDeal.DealSide memory left, LibDeal.DealSide memory right) external payable {
         _doTransfers(left, right);
     }
@@ -18,6 +18,5 @@ contract TransferManagerTest is TransferManager, TransferExecutor, OrderValidato
         __Context_init_unchained();
         __Ownable_init_unchained();
         __TransferManager_init_unchained();
-        __OrderValidator_init_unchained();
     }
 }
