@@ -59,7 +59,8 @@ interface IPositioning {
         address accountBalanceArg,
         address matchingEngineArg,
         address markPriceArg,
-        address indexPriceArg
+        address indexPriceArg,
+        uint64 underlyingPriceIndex
     ) external;
 
     /// @notice Settle all markets fundingPayment to owedRealized Pnl

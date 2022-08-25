@@ -4,8 +4,11 @@ pragma solidity =0.8.12;
 
 import { PausableUpgradeable } from "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
 
-import "../interfaces/ITransferManager.sol";
 import "../libs/LibFill.sol";
+
+import "../interfaces/IMarkPriceOracle.sol";
+import "../interfaces/ITransferManager.sol";
+
 import "./AssetMatcher.sol";
 import "./TransferExecutor.sol";
 import "../helpers/OwnerPausable.sol";
@@ -19,6 +22,9 @@ abstract contract MatchingEngineCore is
     ITransferManager
 {
     uint256 private constant _UINT256_MAX = 2**256 - 1;
+    uint256 private constant _ORACLE_BASE = 1000000;
+
+    IMarkPriceOracle public markPriceOracle;
 
     mapping(address => uint256) public makerMinSalt;
 
@@ -30,6 +36,10 @@ abstract contract MatchingEngineCore is
     event CanceledAll(address indexed trader, uint256 minSalt);
     event Matched(uint256 newLeftFill, uint256 newRightFill);
 
+    /**
+        @notice Cancels a given order
+        @param order the order to be cancelled
+     */
     function cancelOrder(LibOrder.Order memory order) public {
         require(_msgSender() == order.trader, "V_PERP_M: not a maker");
         require(order.salt != 0, "V_PERP_M: 0 salt can't be used");
@@ -45,6 +55,10 @@ abstract contract MatchingEngineCore is
         );
     }
 
+    /**
+        @notice Cancels multiple orders in batch
+        @param orders Array or orders to be cancelled
+     */
     function cancelOrdersInBatch(LibOrder.Order[] memory orders) external {
         uint256 orderlength = orders.length;
         for (uint256 index = 0; index < orderlength; index++) {
@@ -52,6 +66,10 @@ abstract contract MatchingEngineCore is
         }
     }
 
+    /**
+        @notice Cancels all orders
+        @param minSalt salt in minimum of all orders
+     */
     function cancelAllOrders(uint256 minSalt) external {
         require(minSalt > makerMinSalt[_msgSender()], "V_PERP_M: salt too low");
         makerMinSalt[_msgSender()] = minSalt;
@@ -59,10 +77,12 @@ abstract contract MatchingEngineCore is
         emit CanceledAll(_msgSender(), minSalt);
     }
 
-    function matchOrders(
-        LibOrder.Order memory orderLeft,
-        LibOrder.Order memory orderRight
-    )
+    /** 
+        @notice Will match two orders & transfers assets
+        @param orderLeft the left side of order
+        @param orderRight the right side of order
+     */
+    function matchOrders(LibOrder.Order memory orderLeft, LibOrder.Order memory orderRight)
         public
         whenNotPaused
         returns (
@@ -74,18 +94,15 @@ abstract contract MatchingEngineCore is
         if (orderLeft.trader != address(0) && orderRight.trader != address(0)) {
             require(orderRight.trader != orderLeft.trader, "V_PERP_M: order verification failed");
         }
-        (LibFill.FillResult memory newFill) = _matchAndTransfer(
-            orderLeft,
-            orderRight
-        );
+        LibFill.FillResult memory newFill = _matchAndTransfer(orderLeft, orderRight);
 
         return (orderLeft.makeAsset.virtualToken, orderRight.makeAsset.virtualToken, newFill);
     }
 
-    function matchOrderInBatch(
-        LibOrder.Order[] memory ordersLeft,
-        LibOrder.Order[] memory ordersRight
-    ) external whenNotPaused {
+    function matchOrderInBatch(LibOrder.Order[] memory ordersLeft, LibOrder.Order[] memory ordersRight)
+        external
+        whenNotPaused
+    {
         uint256 ordersLength = ordersLeft.length;
         for (uint256 index = 0; index < ordersLength; index++) {
             matchOrders(ordersLeft[index], ordersRight[index]);
@@ -108,12 +125,28 @@ abstract contract MatchingEngineCore is
         address makeToken = orderLeft.isShort ? orderLeft.makeAsset.virtualToken : orderLeft.takeAsset.virtualToken;
         address takeToken = orderRight.isShort ? orderRight.makeAsset.virtualToken : orderRight.takeAsset.virtualToken;
 
+        bool isLeftBase = IVirtualToken(makeToken).isBase();
+
+        isLeftBase
+            ? _updateObservation(newFill.rightValue, newFill.leftValue, makeToken)
+            : _updateObservation(newFill.leftValue, newFill.rightValue, takeToken);
+
         _doTransfers(
             LibDeal.DealSide(LibAsset.Asset(makeToken, newFill.leftValue), _proxy, orderLeft.trader),
             LibDeal.DealSide(LibAsset.Asset(takeToken, newFill.rightValue), _proxy, orderRight.trader)
         );
 
         emit Matched(newFill.leftValue, newFill.rightValue);
+    }
+
+    function _updateObservation(
+        uint256 quoteValue,
+        uint256 baseValue,
+        address baseToken
+    ) internal {
+        uint256 cumulativePrice = ((quoteValue * _ORACLE_BASE) / baseValue);
+        uint64 index = markPriceOracle.indexByBaseToken(baseToken);
+        markPriceOracle.addObservation(cumulativePrice, index);
     }
 
     /**
@@ -163,5 +196,6 @@ abstract contract MatchingEngineCore is
         matchToken = _matchAssets(orderLeft.takeAsset.virtualToken, orderRight.makeAsset.virtualToken);
         require(matchToken != address(0), "V_PERP_M: left take assets don't match");
     }
+
     uint256[50] private __gap;
 }

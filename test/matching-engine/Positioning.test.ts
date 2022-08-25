@@ -29,6 +29,8 @@ describe.only("Positioning", function () {
   let indexPriceFake: FakeContract<IndexPriceOracle>
   let accountBalance: FakeContract<AccountBalance>
   let transferManagerTest
+    let ExchangeTest;
+    let exchangeTest;
   let accountBalance1
   let MarketRegistry
   let marketRegistry
@@ -66,7 +68,7 @@ describe.only("Positioning", function () {
 
     matchingEngine = await upgrades.deployProxy(
       MatchingEngine,
-      [erc20TransferProxy.address, 300, community, owner.address],
+      [erc20TransferProxy.address, 300, community, owner.address, indexPriceFake.address],
       {
         initializer: "__MatchingEngineTest_init",
       },

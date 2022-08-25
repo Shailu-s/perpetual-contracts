@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-3.0-or-later
+// SPDX-License-Identifier: BUSL-1.1
 pragma solidity =0.8.12;
 
 import { ContextUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol";
@@ -25,7 +25,7 @@ abstract contract SafeOwnable is ContextUpgradeable {
      * @dev Initializes the contract setting the deployer as the initial owner.
      */
 
-    function __SafeOwnable_init() internal onlyInitializing {
+    function __SafeOwnable_init() internal initializer {
         __Context_init();
         address msgSender = _msgSender();
         _owner = msgSender;

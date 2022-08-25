@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-3.0-or-later
+// SPDX-License-Identifier: BUSL-1.1
 pragma solidity =0.8.12;
 
 import "../tokens/VirtualToken.sol";
@@ -7,9 +7,9 @@ contract VirtualTokenTest is VirtualToken {
   function initialize(
     string memory nameArg,
     string memory symbolArg,
-    bool isBaseArg
+    bool isBase
   ) external initializer {
-    __VirtualToken_init(nameArg, symbolArg, isBaseArg);
+    __VirtualToken_init(nameArg, symbolArg, isBase);
   }
 
   function beforeTokenTransfer(

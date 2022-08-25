@@ -19,7 +19,6 @@ import { LibSafeCastUint } from "../libs/LibSafeCastUint.sol";
 import { LibSignature } from "../libs/LibSignature.sol";
 
 import { IAccountBalance } from "../interfaces/IAccountBalance.sol";
-import { IBaseToken } from "../interfaces/IBaseToken.sol";
 import { IERC1271 } from "../interfaces/IERC1271.sol";
 import { IERC20Metadata } from "../interfaces/IERC20Metadata.sol";
 import { IIndexPrice } from "../interfaces/IIndexPrice.sol";
@@ -63,7 +62,8 @@ contract Positioning is
         address accountBalanceArg,
         address matchingEngineArg,
         address markPriceArg,
-        address indexPriceArg
+        address indexPriceArg,
+        uint64 underlyingPriceIndex
     ) public initializer {
         // CH_VANC: Vault address is not contract
         require(vaultControllerArg.isContract(), "CH_VANC");
@@ -83,9 +83,11 @@ contract Positioning is
         _vaultController = vaultControllerArg;
         _accountBalance = accountBalanceArg;
         _matchingEngine = matchingEngineArg;
+        _underlyingPriceIndex = underlyingPriceIndex;
         // TODO: Set settlement token
         // _settlementTokenDecimals = 0;
     }
+
 
     function setMarketRegistry(address marketRegistryArg) external onlyOwner {
         // V_VPMM: Positioning is not contract
