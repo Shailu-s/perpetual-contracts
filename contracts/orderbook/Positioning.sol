@@ -17,6 +17,7 @@ import { LibPerpMath } from "../libs/LibPerpMath.sol";
 import { LibSafeCastInt } from "../libs/LibSafeCastInt.sol";
 import { LibSafeCastUint } from "../libs/LibSafeCastUint.sol";
 import { LibSignature } from "../libs/LibSignature.sol";
+import { LibSettlementTokenMath } from "../libs/LibSettlementTokenMath.sol";
 
 import { IAccountBalance } from "../interfaces/IAccountBalance.sol";
 import { IBaseToken } from "../interfaces/IBaseToken.sol";
@@ -54,6 +55,8 @@ contract Positioning is
     using LibPerpMath for uint256;
     using LibPerpMath for int256;
     using LibSignature for bytes32;
+    using LibSettlementTokenMath for int256;
+    using LibSettlementTokenMath for uint256;
 
     /// @dev this function is public for testing
     // solhint-disable-next-line func-order
@@ -157,6 +160,10 @@ contract Positioning is
         return _accountBalance;
     }
 
+    function getMaxLiquidationAmount(address trader) public view returns (int256) {
+        return IAccountBalance(_accountBalance).getMarginRequirementForLiquidation(trader) - _getAccountValue(trader);
+    }
+
     ///@dev this function calculates total pending funding payment of a trader
     function getAllPendingFundingPayment(address trader)
         public
@@ -212,17 +219,41 @@ contract Positioning is
 
         InternalData memory internalData;
         if (orderLeft.isShort) {
-            internalData.leftExchangedPositionSize = response.newFill.leftValue.neg256();
-            internalData.rightExchangedPositionSize = response.newFill.leftValue.toInt256();
+            internalData.leftExchangedPositionSize = LibSettlementTokenMath.parseSettlementToken(
+                response.newFill.leftValue.neg256(),
+                0
+            );
+            internalData.rightExchangedPositionSize = LibSettlementTokenMath.parseSettlementToken(
+                response.newFill.leftValue.toInt256(),
+                0
+            );
 
-            internalData.leftExchangedPositionNotional = response.newFill.rightValue.toInt256();
-            internalData.rightExchangedPositionNotional = response.newFill.rightValue.neg256();
+            internalData.leftExchangedPositionNotional = LibSettlementTokenMath.parseSettlementToken(
+                response.newFill.rightValue.toInt256(),
+                0
+            );
+            internalData.rightExchangedPositionNotional = LibSettlementTokenMath.parseSettlementToken(
+                response.newFill.rightValue.neg256(),
+                0
+            );
         } else {
-            internalData.leftExchangedPositionSize = response.newFill.rightValue.toInt256();
-            internalData.rightExchangedPositionSize = response.newFill.rightValue.neg256();
+            internalData.leftExchangedPositionSize = LibSettlementTokenMath.parseSettlementToken(
+                response.newFill.rightValue.toInt256(),
+                0
+            );
+            internalData.rightExchangedPositionSize = LibSettlementTokenMath.parseSettlementToken(
+                response.newFill.rightValue.neg256(),
+                0
+            );
 
-            internalData.leftExchangedPositionNotional = response.newFill.leftValue.neg256();
-            internalData.rightExchangedPositionNotional = response.newFill.leftValue.toInt256();
+            internalData.leftExchangedPositionNotional = LibSettlementTokenMath.parseSettlementToken(
+                response.newFill.leftValue.neg256(),
+                0
+            );
+            internalData.rightExchangedPositionNotional = LibSettlementTokenMath.parseSettlementToken(
+                response.newFill.leftValue.toInt256(),
+                0
+            );
         }
 
         uint256 _orderLeftFee;
@@ -378,9 +409,15 @@ contract Positioning is
         uint24 partialCloseRatio = IPositioningConfig(_PositioningConfig).getPartialLiquidationRatio();
 
         uint256 amount = positionSize.abs().mulRatio(partialCloseRatio);
-        order.isShort
-            ? require(order.makeAsset.value == amount, "P_WMV")
-            : require(order.takeAsset.value == amount, "P_WTV");
+
+        int256 maxLiquidation = getMaxLiquidationAmount(order.trader);
+
+        uint256 orderAmount =
+            order.isShort
+                ? LibSettlementTokenMath.parseSettlementToken(order.makeAsset.value, 0)
+                : LibSettlementTokenMath.parseSettlementToken(order.takeAsset.value, 0);
+
+        require(orderAmount >= amount || orderAmount <= maxLiquidation.abs(), "P_WTV");
     }
 
     /// @dev This function checks if account of trader is eligible for liquidation
