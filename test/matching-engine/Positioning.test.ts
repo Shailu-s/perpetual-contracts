@@ -47,7 +47,7 @@ describe.only("Positioning", function () {
     VaultController = await ethers.getContractFactory("VaultController")
     MarketRegistry = await ethers.getContractFactory("MarketRegistry")
     AccountBalance = await ethers.getContractFactory("AccountBalance")
-    BaseToken = await ethers.getContractFactory("BaseToken")
+    BaseToken = await ethers.getContractFactory("VolmexBaseToken")
   })
 
   beforeEach(async () => {
@@ -56,7 +56,7 @@ describe.only("Positioning", function () {
     markPriceFake = await smock.fake("MarkPriceOracle")
     indexPriceFake = await smock.fake("IndexPriceOracle")
     accountBalance = await smock.fake("AccountBalance")
-    baseToken = await smock.fake("BaseToken")
+    baseToken = await smock.fake("VolmexBaseToken")
 
     erc20TransferProxy = await ERC20TransferProxyTest.deploy()
     erc1271Test = await ERC1271Test.deploy()
