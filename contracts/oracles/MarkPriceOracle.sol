@@ -1,15 +1,17 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity =0.8.12;
 
+import { AccessControl } from "@openzeppelin/contracts/access/AccessControl.sol";
 import { SafeMathUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/math/SafeMathUpgradeable.sol";
 import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "../interfaces/IMatchingEngine.sol";
+import "../helpers/RoleManager.sol";
 
 /**
  * @title Volmex Oracle Mark SMA
  * @author volmex.finance [security@volmexlabs.com]
  */
-contract MarkPriceOracle is Initializable {
+contract MarkPriceOracle is Initializable, RoleManager {
     using SafeMathUpgradeable for uint256;
 
     struct Observation {
@@ -74,6 +76,8 @@ contract MarkPriceOracle is Initializable {
     function setMatchingEngine(address _matchingEngine) external {
         require(_matchingEngine != address(0), "V_PERP_M: Can't be 0 address");
         matchingEngine = _matchingEngine;
+        _grantRole(CAN_ADD_OBSERVATION, _matchingEngine);
+        _grantRole(CAN_CANCEL_ALL_ORDERS, _matchingEngine);
         emit MatchingEngineChanged(_matchingEngine);
     }
 
@@ -107,7 +111,8 @@ contract MarkPriceOracle is Initializable {
      *
      * @param _priceCumulative Price of the asset
      */    
-    function addObservation(uint256 _priceCumulative, uint64 _index) external onlyMatchingEngine {
+    function addObservation(uint256 _priceCumulative, uint64 _index) external {
+        _requireCanAddObservation();
         require(_priceCumulative > 1000000, "MarkSMA: Not decimal precise");
         Observation memory observation = Observation({ timestamp: block.timestamp, priceCumulative: _priceCumulative });
         Observation[] storage observations = observationsByIndex[_index];
@@ -131,5 +136,10 @@ contract MarkPriceOracle is Initializable {
             }
         }
         priceCumulative = priceCumulative.div(observations.length.sub(index));
+    }
+
+    function _requireCanAddObservation() internal view {
+        // MarkPriceOracle: Not Can Add Observation
+        require(hasRole(CAN_ADD_OBSERVATION, _msgSender()), "MPO_NCAO");
     }
 }
