@@ -12,6 +12,7 @@ import "../interfaces/ITransferManager.sol";
 import "./AssetMatcher.sol";
 import "./TransferExecutor.sol";
 import "../helpers/OwnerPausable.sol";
+import "../helpers/RoleManager.sol";
 
 abstract contract MatchingEngineCore is
     Initializable,
@@ -19,7 +20,8 @@ abstract contract MatchingEngineCore is
     PausableUpgradeable,
     AssetMatcher,
     TransferExecutor,
-    ITransferManager
+    ITransferManager,
+    RoleManager
 {
     uint256 private constant _UINT256_MAX = 2**256 - 1;
     uint256 private constant _ORACLE_BASE = 1000000;
@@ -71,6 +73,7 @@ abstract contract MatchingEngineCore is
         @param minSalt salt in minimum of all orders
      */
     function cancelAllOrders(uint256 minSalt) external {
+        _requireCanCancelAllOrders();
         require(minSalt > makerMinSalt[_msgSender()], "V_PERP_M: salt too low");
         makerMinSalt[_msgSender()] = minSalt;
 
@@ -91,6 +94,7 @@ abstract contract MatchingEngineCore is
             LibFill.FillResult memory
         )
     {
+        _requireCanMatchOrders();
         if (orderLeft.trader != address(0) && orderRight.trader != address(0)) {
             require(orderRight.trader != orderLeft.trader, "V_PERP_M: order verification failed");
         }
@@ -103,6 +107,7 @@ abstract contract MatchingEngineCore is
         external
         whenNotPaused
     {
+        _requireCanMatchOrders();
         uint256 ordersLength = ordersLeft.length;
         for (uint256 index = 0; index < ordersLength; index++) {
             matchOrders(ordersLeft[index], ordersRight[index]);
@@ -195,6 +200,24 @@ abstract contract MatchingEngineCore is
         require(matchToken != address(0), "V_PERP_M: left make assets don't match");
         matchToken = _matchAssets(orderLeft.takeAsset.virtualToken, orderRight.makeAsset.virtualToken);
         require(matchToken != address(0), "V_PERP_M: left take assets don't match");
+    }
+
+    function _msgSender() internal view virtual override(Context, ContextUpgradeable) returns (address) {
+        return super._msgSender();
+    }
+
+    function _msgData() internal view virtual override(Context, ContextUpgradeable) returns (bytes calldata) {
+        return msg.data;
+    }
+
+    function _requireCanCancelAllOrders() internal view {
+        // MatchingEngineCore: Not Can Cancel All Orders
+        require(hasRole(CAN_CANCEL_ALL_ORDERS, _msgSender()), "MEC_NCCAO");
+    }
+
+    function _requireCanMatchOrders() internal view {
+        // MatchingEngineCore: Not Can Match Orders
+        require(hasRole(CAN_MATCH_ORDERS, _msgSender()), "MEC_NCMO");
     }
 
     uint256[50] private __gap;

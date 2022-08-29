@@ -4,6 +4,7 @@ pragma solidity =0.8.12;
 
 import "./MatchingEngineCore.sol";
 import "./TransferManager.sol";
+import "../helpers/RoleManager.sol";
 
 contract MatchingEngine is MatchingEngineCore, TransferManager {
     /**
@@ -24,7 +25,28 @@ contract MatchingEngine is MatchingEngineCore, TransferManager {
         __TransferManager_init_unchained();
         __Pausable_init_unchained();
         markPriceOracle = _markPriceOracle;
+        // TODO: Verify whether we should use address(this) or _msgSender()
+        _grantRole(CAN_ADD_OBSERVATION, address(this));
+        _grantRole(CAN_CANCEL_ALL_ORDERS, address(this));
 
         _transferOwnership(_owner);
+    }
+
+    function _msgSender() 
+    internal 
+    view 
+    virtual 
+    override(MatchingEngineCore, ContextUpgradeable) 
+    returns (address) {
+        return super._msgSender();
+    }
+
+    function _msgData() 
+    internal 
+    view 
+    virtual 
+    override(MatchingEngineCore, ContextUpgradeable) 
+    returns (bytes calldata) {
+        return msg.data;
     }
 }
