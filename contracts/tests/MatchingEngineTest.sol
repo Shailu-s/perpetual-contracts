@@ -20,6 +20,9 @@ contract MatchingEngineTest is MatchingEngine
             markPriceOracle
         );
         __Ownable_init_unchained();
+        _grantRole(CAN_CANCEL_ALL_ORDERS, address(this));
+        _grantRole(CAN_CANCEL_ALL_ORDERS, _msgSender());
+        _grantRole(CAN_MATCH_ORDERS, _msgSender());
     }
 
     function matchOrdersTest(
