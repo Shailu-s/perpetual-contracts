@@ -12,11 +12,13 @@ import "../interfaces/IAccountBalance.sol";
 import "../interfaces/IVolmexQuoteToken.sol";
 import "../interfaces/IPerpFactory.sol";
 
+import "../helpers/RoleManager.sol";
+
 /**
  * @title Factory Contract
  * @author volmex.finance [security@volmexlabs.com]
  */
-contract PerpFactory is Initializable, IPerpFactory {
+contract PerpFactory is Initializable, IPerpFactory, RoleManager {
     // Volatility token implementation contract for factory
     address public tokenImplementation;
 
@@ -74,6 +76,7 @@ contract PerpFactory is Initializable, IPerpFactory {
         vaultImplementation = _vaultImplementation;
         positioningImplementation = _positioningImplementation;
         accountBalanceImplementation = _accountBalanceImplementation;
+        _setupRole(CLONES_DEPLOYER, _msgSender());
     }
 
     /**
@@ -92,6 +95,7 @@ contract PerpFactory is Initializable, IPerpFactory {
         string memory _symbol,
         address _priceFeed
     ) external returns (IVolmexBaseToken volmexBaseToken) {
+        _requireClonesDeployer();
         bytes32 salt = keccak256(abi.encodePacked(baseTokenIndexCount, _name, _symbol));
         volmexBaseToken = IVolmexBaseToken(Clones.cloneDeterministic(tokenImplementation, salt));
         volmexBaseToken.initialize(_name, _symbol, _priceFeed, true);
@@ -115,6 +119,7 @@ contract PerpFactory is Initializable, IPerpFactory {
         external
         returns (IVolmexQuoteToken volmexQuoteToken)
     {
+        _requireClonesDeployer();
         bytes32 salt = keccak256(abi.encodePacked(quoteTokenIndexCount, _name, _symbol));
         volmexQuoteToken = IVolmexQuoteToken(Clones.cloneDeterministic(tokenImplementation, salt));
         volmexQuoteToken.initialize(_name, _symbol, false);
@@ -135,6 +140,7 @@ contract PerpFactory is Initializable, IPerpFactory {
         address _vaultImplementation,
         uint256 _vaultControllerIndex
     ) external returns (IVault vault) {
+        _requireClonesDeployer();
         IVaultController vaultController = vaultControllersByIndex[_vaultControllerIndex];
         require(address(vaultController) != address(0), "PerpFactory: Vault Controller Not Found");
 
@@ -164,6 +170,7 @@ contract PerpFactory is Initializable, IPerpFactory {
             IAccountBalance accountBalance
         )
     {
+        _requireClonesDeployer();
         accountBalance = _cloneAccountBalance(_positioningConfig);
         vaultController = _cloneVaultController(_positioningConfig, address(accountBalance));
         positioning = _clonePositioning(
@@ -219,5 +226,10 @@ contract PerpFactory is Initializable, IPerpFactory {
         accountBalance = IAccountBalance(Clones.cloneDeterministic(accountBalanceImplementation, salt));
         accountBalance.initialize(_positioningConfig);
         accountBalanceByIndex[perpIndexCount] = address(accountBalance);
+    }
+
+    function _requireClonesDeployer() internal view {
+        // PerpFactory: Not CLONES_DEPLOYER
+        require(hasRole(CLONES_DEPLOYER, _msgSender()), "PF_NCD");
     }
 }
