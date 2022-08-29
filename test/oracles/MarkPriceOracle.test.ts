@@ -7,7 +7,7 @@ describe('MarkPriceOracle', function () {
   let ExchangeTest;
   let exchangeTest;
   let factory;
-  let Factory;
+  let PerpFactory;
   let volmexBaseToken;
   let newToken;
   let VolmexBaseToken;
@@ -18,15 +18,31 @@ describe('MarkPriceOracle', function () {
   let erc20TransferProxy;
   let ERC20TransferProxyTest;
   let community;
+  let VaultController;
+  let vaultController;
+  let Vault;
+  let vault;
+  let Positioning;
+  let positioning;
+  let AccountBalance;
+  let accountBalance;
+  let TestERC20;
+  let USDC;
 
   this.beforeAll(async () => {
     MarkPriceOracle = await ethers.getContractFactory("MarkPriceOracle");
     MatchingEngine = await ethers.getContractFactory("MatchingEngineTest")
     ExchangeTest = await ethers.getContractFactory("ExchangeTest");
-    Factory = await ethers.getContractFactory("Factory");
+    PerpFactory = await ethers.getContractFactory("PerpFactory");
     VolmexBaseToken = await ethers.getContractFactory("VolmexBaseToken");
     IndexPriceOracle = await ethers.getContractFactory("IndexPriceOracle");
     ERC20TransferProxyTest = await ethers.getContractFactory("ERC20TransferProxyTest");
+    VaultController = await ethers.getContractFactory("VaultController");
+    Vault = await ethers.getContractFactory("Vault");
+    Positioning = await ethers.getContractFactory("Positioning");
+    AccountBalance = await ethers.getContractFactory("AccountBalance");
+    TestERC20 = await ethers.getContractFactory("TestERC20");
+
   });
 
   beforeEach(async () => {
@@ -47,67 +63,58 @@ describe('MarkPriceOracle', function () {
       }
     );
 
-    volmexBaseToken = await upgrades.deployProxy(
-      VolmexBaseToken,
-      [
-        "VolmexBaseToken", // nameArg
-        "VBT", // symbolArg,
-        true, // isBase
-        indexPriceOracle.address, // priceFeedArg
-      ],
-      {
-        initializer: "initialize",
-      }
-    );
+    volmexBaseToken = await VolmexBaseToken.deploy();
+    await volmexBaseToken.deployed();
 
+    newToken = await VolmexBaseToken.deploy();
+    await newToken.deployed();
 
-    newToken = await upgrades.deployProxy(
-      VolmexBaseToken,
-      [
-        "NewToken", // nameArg
-        "NTK", // symbolArg,
-        true, // isBase
-        indexPriceOracle.address, // priceFeedArg
-      ],
-      {
-        initializer: "initialize",
-      }
-    );
+    positioning = await Positioning.deploy()    
+    await positioning.deployed();
+
+    accountBalance = await AccountBalance.deploy()
+    await accountBalance.deployed();
+
+    vault = await Vault.deploy()
+    await vault.deployed();
+
+    vaultController = await VaultController.deploy();
+    await vaultController.deployed();
 
     factory = await upgrades.deployProxy(
-      Factory,
+      PerpFactory,
       [
-        volmexBaseToken.address, // implementation
+        volmexBaseToken.address,
+        vaultController.address,
+        vault.address,
+        positioning.address,
+        accountBalance.address
       ],
       {
         initializer: "initialize"
       }
     );
+    await factory.deployed();
 
-    markPriceOracle = await upgrades.deployProxy(
-      MarkPriceOracle,
-      [
-        [10000000],
-        [volmexBaseToken.address],
-      ],
-      { 
-        initializer: "initialize",
-      }
-    );
+    markPriceOracle = await MarkPriceOracle.deploy()
+    await markPriceOracle.deployed();
 
-    matchingEngine = await upgrades.deployProxy(
-      MatchingEngine,
+    USDC = await TestERC20.deploy()
+    await USDC.__TestERC20_init("TestUSDC", "USDC", 6)
+    await USDC.deployed();
+
+    matchingEngine = await upgrades.deployProxy(MatchingEngine, 
       [
-        erc20TransferProxy.address, 
-        300, 
-        community, 
+        USDC.address,
         owner.address,
         markPriceOracle.address,
       ],
       {
-        initializer: "__MatchingEngineTest_init",
-      },
+        initializer: "__MatchingEngineTest_init"
+      }
     );
+    
+    await matchingEngine.deployed();
     await markPriceOracle.setMatchingEngine(matchingEngine.address);
 
     await exchangeTest.setMarkPriceOracle(markPriceOracle.address);
@@ -190,7 +197,7 @@ describe('MarkPriceOracle', function () {
     });
 
     it("Should add multiple observations", async () => {
-      await matchingEngine.addAssets([10000000, 20000000], [volmexBaseToken.address, newToken.address]);
+      await matchingEngine.addAssets([10000000, 20000000], [volmexBaseToken.address, USDC.address]);
 
       const txn = await markPriceOracle.getCumulativePrice(10000000, 0);
       expect(Number(txn)).equal(10000000);
@@ -199,7 +206,7 @@ describe('MarkPriceOracle', function () {
     it("Should fail to add observation when caller is not exchange", async () => {
       await expect(
         markPriceOracle.addObservation(1000000, 0)
-      ).to.be.revertedWith("MarkSMA: Not MatchingEngine");
+      ).to.be.revertedWith("MPO_NCAO");
     });
 
     it("Should fail to add observation when cumulative price is <= 1000000", async () => {
@@ -209,6 +216,7 @@ describe('MarkPriceOracle', function () {
     });
 
     it("Should get cumulative price", async () => {
+      await matchingEngine.addAssets([10000000, 20000000], [volmexBaseToken.address, USDC.address]);
       const txn = await markPriceOracle.getCumulativePrice(1000000, 0);
       expect(Number(txn)).equal(10000000);
     });

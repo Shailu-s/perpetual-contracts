@@ -62,23 +62,20 @@ describe('PerpFactory', function () {
     await volmexBaseToken.deployed();
 
     USDC = await TestERC20.deploy()
-    await USDC.usdcInit("TestUSDC", "USDC", 6)
+    await USDC.__TestERC20_init("TestUSDC", "USDC", 6)
     await USDC.deployed();
 
     matchingEngine = await upgrades.deployProxy(MatchingEngine, [
       USDC.address,
-      0,
       owner.address,
-      owner.address
+      markPriceOracle.address,
     ]);
     await matchingEngine.deployed();
-    markPriceOracle = await upgrades.deployProxy(MarkPriceOracle, [
-      matchingEngine.address,
-      "100000000"
-    ])
+    
+    markPriceOracle = await MarkPriceOracle.deploy()
     await markPriceOracle.deployed();
 
-    positioningConfig = await upgrades.deployProxy(PositioningConfig, []);
+    positioningConfig = await PositioningConfig.deploy()
     await positioningConfig.deployed();
 
     accountBalance = await AccountBalance.deploy()
@@ -118,7 +115,7 @@ describe('PerpFactory', function () {
     await virtualTokenTest.deployed();
   });
 
-  it ("Should deploy the PerpFactory", async () => {
+  it("Should deploy the PerpFactory", async () => {
     const receipt = await factory.deployed();
     expect(receipt.confirmations).not.equal(0);
   });
@@ -141,13 +138,14 @@ describe('PerpFactory', function () {
       expect(cloneTokenAddress).not.equal(ZERO_ADDR);
     });
 
-    it.only("Should deploy the complete perp ecosystem", async () => {
+    it("Should deploy the complete perp ecosystem", async () => {
       const index = (await factory.perpIndexCount()).toString();
       await (await factory.clonePerpEcosystem(
         positioningConfig.address,
         matchingEngine.address,
         markPriceOracle.address,
-        indexPriceOracle.address
+        indexPriceOracle.address,
+        0
       )).wait();
     });
   });
