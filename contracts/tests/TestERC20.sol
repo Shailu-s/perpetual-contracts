@@ -8,7 +8,7 @@ contract TestERC20 is ERC20PresetMinterPauserUpgradeable {
     uint256 _transferFeeRatio;
     uint8 _decimal;
 
-    function usdcInit(
+    function __TestERC20_init(
         string memory name,
         string memory symbol,
         uint8 decimal
