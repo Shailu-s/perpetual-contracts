@@ -2,6 +2,8 @@
 pragma solidity =0.8.12;
 
 import { AddressUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol";
+import { Context } from "@openzeppelin/contracts/utils/Context.sol";
+import { ContextUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol";
 
 import { LibAccountMarket } from "../libs/LibAccountMarket.sol";
 import { LibPerpMath } from "../libs/LibPerpMath.sol";
@@ -13,10 +15,11 @@ import { IPositioningConfig } from "../interfaces/IPositioningConfig.sol";
 
 import { AccountBalanceStorageV1 } from "../storage/AccountBalanceStorage.sol";
 import { BlockContext } from "../helpers/BlockContext.sol";
+import { RoleManager } from "../helpers/RoleManager.sol";
 import { PositioningCallee } from "../helpers/PositioningCallee.sol";
 
 // never inherit any new stateful contract. never change the orders of parent stateful contracts
-contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, AccountBalanceStorageV1 {
+contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, AccountBalanceStorageV1, RoleManager {
     using AddressUpgradeable for address;
     using LibSafeCastUint for uint256;
     using LibPerpMath for uint256;
@@ -79,6 +82,8 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
 
     /// @inheritdoc IAccountBalance
     function settleOwedRealizedPnl(address trader) external override returns (int256) {
+        // Account Balance: Not CAN_SETTLE_REALIZED_PNL
+        require(hasRole(CAN_SETTLE_REALIZED_PNL, _msgSender()), "AB_NCSRPNL");
         int256 owedRealizedPnl = _owedRealizedPnlMap[trader];
         _owedRealizedPnlMap[trader] = 0;
 
@@ -309,6 +314,24 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
         netQuoteBalance = totalTakerQuoteBalance;
 
         return (netQuoteBalance);
+    }
+
+    function _msgSender() 
+    internal 
+    view 
+    virtual 
+    override(Context, ContextUpgradeable) 
+    returns (address) {
+        return super._msgSender();
+    }
+
+    function _msgData() 
+    internal 
+    view 
+    virtual 
+    override(Context, ContextUpgradeable) 
+    returns (bytes calldata) {
+        return msg.data;
     }
 
     function _hasBaseToken(address[] memory baseTokens, address baseToken) internal pure returns (bool) {
