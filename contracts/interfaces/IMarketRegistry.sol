@@ -2,50 +2,35 @@
 pragma solidity =0.8.12;
 
 interface IMarketRegistry {
-    struct MarketInfo {
-        uint24 exchangeFeeRatio;
-    }
-
-    /// @notice Emitted when the fee ratio of a market is updated.
-    /// @param baseToken The address of the base token
-    /// @param feeRatio Fee ratio of the market
-    event FeeRatioChanged(address baseToken, uint24 feeRatio);
 
     /// @notice Emitted when the max orders per market is updated.
     /// @param maxOrdersPerMarket Max orders per market
     event MaxOrdersPerMarketChanged(uint8 maxOrdersPerMarket);
 
-    /// @dev Set the fee ratio for a pool
-    /// @param baseToken The token address of the pool.
-    /// @param feeRatio The fee ratio for the pool.
-    function setFeeRatio(address baseToken, uint24 feeRatio) external;
-
     /// @dev Set max allowed orders per market
     /// @param maxOrdersPerMarketArg The max allowed orders per market
     function setMaxOrdersPerMarket(uint8 maxOrdersPerMarketArg) external;
 
+    /// @dev Set maker fee ratio
+    /// @param makerFeeRatio The maker fee ratio
     function setMakerFeeRatio( uint24 makerFeeRatio) external;
 
+    /// @dev Set taker fee ratio
+    /// @param takerFeeRatio The taker fee ratio
     function setTakerFeeRatio( uint24 takerFeeRatio) external;
 
+    /// @dev Function to add base token in the market
+    /// @param baseToken address of the baseToken
     function addBaseToken(address baseToken) external;
 
+    /// @dev Function to check base token in the market
+    /// @param baseToken address of the baseToken
     function checkBaseToken(address baseToken) external returns (bool);
 
-    /// @notice Get the fee ratio of a given market
-    /// @dev The ratio is in `1e6` format, that means `1% = 1e4`
-    /// @param baseToken The address of the base token
-    /// @return feeRatio The fee ratio of the market, it is a decimal in `1e6`
-    function getFeeRatio(address baseToken) external view returns (uint24 feeRatio);
-
-    /// @notice Get the market info by given base token address
-    /// @param baseToken The address of the base token
-    /// @return info The market info encoded as `MarketInfo`
-    function getMarketInfo(address baseToken) external view returns (MarketInfo memory info);
-
-
+    /// @notice Get the maker fee ration
     function getMakerFeeRatio() external view returns (uint24);
 
+    /// @notice Get the taker fee ration
     function getTakerFeeRatio() external view returns (uint24);
 
     /// @notice Get the quote token address

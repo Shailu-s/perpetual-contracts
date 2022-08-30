@@ -25,4 +25,7 @@ interface IPositioningConfig {
 
     /// @return maxFundingRate Max value of funding rate
     function getMaxFundingRate() external view returns (uint24 maxFundingRate);
+
+    /// @return partial liquidation ratio
+    function getPartialLiquidationRatio() external view returns (uint24);
 }

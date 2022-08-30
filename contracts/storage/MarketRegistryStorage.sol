@@ -9,8 +9,6 @@ abstract contract MarketRegistryStorageV1 {
 
     uint8 internal _maxOrdersPerMarket;
 
-    mapping(address => uint24) internal _exchangeFeeRatioMap;
-
     address[] internal _baseTokensMarketMap;
 
     uint24 internal _makerFeeRatio;

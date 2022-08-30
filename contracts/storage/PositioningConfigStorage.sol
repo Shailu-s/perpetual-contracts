@@ -9,6 +9,7 @@ abstract contract PositioningConfigStorageV1 {
     uint24 internal _imRatio;
     uint24 internal _mmRatio;
     uint24 internal _liquidationPenaltyRatio;
+    uint24 internal _partialLiquidationRatio;
     uint24 internal _partialCloseRatio;
     uint24 internal _maxFundingRate;
     uint32 internal _twapInterval;

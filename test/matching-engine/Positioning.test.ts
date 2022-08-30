@@ -138,10 +138,157 @@ describe.only("Positioning", function () {
       let receipt = await positioning.deployed()
       expect(receipt.confirmations).not.equal(0)
     })
+
+    describe("Failure in deployment", function () {
+      it("wrong position config", async () => {
+        const [owner, account1, account2] = await ethers.getSigners()
+
+        await expect(
+          upgrades.deployProxy(
+            Positioning,
+            [
+              account1.address,
+              vaultController.address,
+              accountBalance1.address,
+              matchingEngine.address,
+              markPriceFake.address,
+              indexPriceFake.address,
+            ],
+            {
+              initializer: "__PositioningTest_init",
+            },
+          ),
+        ).to.be.revertedWith("CH_CCNC")
+      })
+
+      it("wrong vault controller", async () => {
+        const [owner, account1, account2] = await ethers.getSigners()
+
+        await expect(
+          upgrades.deployProxy(
+            Positioning,
+            [
+              positioningConfig.address,
+              account1.address,
+              accountBalance1.address,
+              matchingEngine.address,
+              markPriceFake.address,
+              indexPriceFake.address,
+            ],
+            {
+              initializer: "__PositioningTest_init",
+            },
+          ),
+        ).to.be.revertedWith("CH_VANC")
+      })
+
+      it("wrong account balance", async () => {
+        const [owner, account1, account2] = await ethers.getSigners()
+
+        await expect(
+          upgrades.deployProxy(
+            Positioning,
+            [
+              positioningConfig.address,
+              vaultController.address,
+              account1.address,
+              matchingEngine.address,
+              markPriceFake.address,
+              indexPriceFake.address,
+            ],
+            {
+              initializer: "__PositioningTest_init",
+            },
+          ),
+        ).to.be.revertedWith("CH_ABNC")
+      })
+
+      it("wrong matching engine", async () => {
+        const [owner, account1, account2] = await ethers.getSigners()
+
+        await expect(
+          upgrades.deployProxy(
+            Positioning,
+            [
+              positioningConfig.address,
+              vaultController.address,
+              accountBalance1.address,
+              account1.address,
+              markPriceFake.address,
+              indexPriceFake.address,
+            ],
+            {
+              initializer: "__PositioningTest_init",
+            },
+          ),
+        ).to.be.revertedWith("CH_MENC")
+      })
+    })
   })
 
   describe("Match orders:", function () {
     describe("Success:", function () {
+      it("should liquidate left trader", async () => {
+        const [owner, account1, account2] = await ethers.getSigners()
+
+        markPriceFake.getCumulativePrice.returns(10)
+        await baseToken.getIndexPrice.returns(2)
+        await virtualToken.mint(account1.address, 1000000000000000)
+        await virtualToken.mint(account2.address, 1000000000000000)
+        await virtualToken.addWhitelist(account1.address)
+        await virtualToken.addWhitelist(account2.address)
+        await virtualToken.connect(account1).approve(vault.address, 1000000000000000)
+        await virtualToken.connect(account2).approve(vault.address, 1000000000000000)
+
+        await vaultController.connect(account1).deposit(virtualToken.address, 25000)
+        await vaultController.connect(account2).deposit(virtualToken.address, 25000)
+
+        const orderLeft = Order(
+          account1.address,
+          87654321987654,
+          true,
+          Asset(baseToken.address, "20000"),
+          Asset(virtualToken.address, "20000"),
+          1,
+        )
+
+        const orderRight = Order(
+          account2.address,
+          87654321987654,
+          false,
+          Asset(virtualToken.address, "20000"),
+          Asset(baseToken.address, "20000"),
+          1,
+        )
+
+        let signatureLeft = await getSignature(orderLeft, account1.address)
+        let signatureRight = await getSignature(orderRight, account2.address)
+
+        await expect(positioning.openPosition(orderLeft, signatureLeft, orderRight, signatureRight)).to.emit(
+          positioning,
+          "PositionChanged",
+        )
+
+        const positionSize = await accountBalance1.getTakerPositionSize(account1.address, baseToken.address)
+        const positionSize1 = await accountBalance1.getTakerPositionSize(account2.address, baseToken.address)
+
+        await expect(positionSize.toNumber()).to.be.equal(20000)
+        await expect(positionSize1.toNumber()).to.be.equal(-20000)
+
+        let signatureLeft1 = await getSignature(orderLeft, account1.address)
+        let signatureRight1 = await getSignature(orderRight, account2.address)
+
+        await expect(positioning.openPosition(orderLeft, signatureLeft1, orderRight, signatureRight1)).to.emit(
+          positioning,
+          "PositionLiquidated",
+        )
+        const positionSizeAfter = await accountBalance1.getTakerPositionSize(account1.address, baseToken.address)
+        const positionSizeAfter1 = await accountBalance1.getTakerPositionSize(account2.address, baseToken.address)
+
+        await expect(positionSizeAfter1.toNumber()).to.be.equal(-18000)
+        await expect(positionSizeAfter.toNumber()).to.be.equal(18000)
+      })
+
       it("should match orders and open position", async () => {
         const [owner, account1, account2] = await ethers.getSigners()
 
@@ -367,7 +514,6 @@ describe.only("Positioning", function () {
         await expect(positionSizeAfter.toNumber()).to.be.equal(0)
         await expect(positionSizeAfter1.toNumber()).to.be.equal(0)
       })
-
       it("test for get all funding payment", async () => {
         const [owner, account1, account2] = await ethers.getSigners()
         markPriceFake.getCumulativePrice.returns(25)
@@ -380,8 +526,223 @@ describe.only("Positioning", function () {
         expect(await positioning.getPositioningConfig()).to.be.equal(positioningConfig.address)
         expect(await positioning.getAccountBalance()).to.be.equal(accountBalance1.address)
       })
+      it("test for settle all funding", async () => {
+        const [owner, account1, account2] = await ethers.getSigners()
+        await positioning.settleAllFunding(account1.address)
+      })
     })
     describe("failure", function () {
+      it("failure for wrong basetoken given", async () => {
+        const [owner, account1, account2] = await ethers.getSigners()
+
+        markPriceFake.getCumulativePrice.returns(10)
+        await baseToken.getIndexPrice.returns(2)
+        await virtualToken.mint(account1.address, 1000000000000000)
+        await virtualToken.mint(account2.address, 1000000000000000)
+        await virtualToken.addWhitelist(account1.address)
+        await virtualToken.addWhitelist(account2.address)
+        await virtualToken.connect(account1).approve(vault.address, 1000000000000000)
+        await virtualToken.connect(account2).approve(vault.address, 1000000000000000)
+
+        const orderLeft = Order(
+          account1.address,
+          87654321987654,
+          true,
+          Asset(virtualToken.address, "20000"),
+          Asset(baseToken.address, "20000"),
+          1,
+        )
+
+        const orderRight = Order(
+          account2.address,
+          87654321987654,
+          false,
+          Asset(baseToken.address, "20000"),
+          Asset(virtualToken.address, "20000"),
+          1,
+        )
+
+        let signatureLeft = await getSignature(orderLeft, account1.address)
+        let signatureRight = await getSignature(orderRight, account2.address)
+
+        // opening the position here
+        await expect(positioning.openPosition(orderLeft, signatureLeft, orderRight, signatureRight)).to.be.revertedWith(
+          " V_PERP: Basetoken is not registered in market",
+        )
+      })
+
+      it("failure for opening with zero amount", async () => {
+        const [owner, account1, account2] = await ethers.getSigners()
+
+        markPriceFake.getCumulativePrice.returns(10)
+        await baseToken.getIndexPrice.returns(2)
+        await virtualToken.mint(account1.address, 1000000000000000)
+        await virtualToken.mint(account2.address, 1000000000000000)
+        await virtualToken.addWhitelist(account1.address)
+        await virtualToken.addWhitelist(account2.address)
+        await virtualToken.connect(account1).approve(vault.address, 1000000000000000)
+        await virtualToken.connect(account2).approve(vault.address, 1000000000000000)
+
+        const orderLeft = Order(
+          account1.address,
+          87654321987654,
+          true,
+          Asset(baseToken.address, "0"),
+          Asset(virtualToken.address, "0"),
+          1,
+        )
+
+        const orderRight = Order(
+          account2.address,
+          87654321987654,
+          false,
+          Asset(virtualToken.address, "0"),
+          Asset(baseToken.address, "0"),
+          1,
+        )
+
+        let signatureLeft = await getSignature(orderLeft, account1.address)
+        let signatureRight = await getSignature(orderRight, account2.address)
+
+        // opening the position here
+        await expect(positioning.openPosition(orderLeft, signatureLeft, orderRight, signatureRight)).to.be.revertedWith(
+          "division by zero",
+        )
+      })
+
+      it("failure for liquidation with wrong amount", async () => {
+        const [owner, account1, account2] = await ethers.getSigners()
+
+        markPriceFake.getCumulativePrice.returns(10)
+        await baseToken.getIndexPrice.returns(2)
+        await virtualToken.mint(account1.address, 1000000000000000)
+        await virtualToken.mint(account2.address, 1000000000000000)
+        await virtualToken.addWhitelist(account1.address)
+        await virtualToken.addWhitelist(account2.address)
+        await virtualToken.connect(account1).approve(vault.address, 1000000000000000)
+        await virtualToken.connect(account2).approve(vault.address, 1000000000000000)
+
+        await vaultController.connect(account1).deposit(virtualToken.address, 12000)
+        await vaultController.connect(account2).deposit(virtualToken.address, 12000)
+
+        const orderLeft = Order(
+          account1.address,
+          87654321987654,
+          true,
+          Asset(baseToken.address, "10000"),
+          Asset(virtualToken.address, "10000"),
+          1,
+        )
+
+        const orderRight = Order(
+          account2.address,
+          87654321987654,
+          false,
+          Asset(virtualToken.address, "10000"),
+          Asset(baseToken.address, "10000"),
+          1,
+        )
+
+        const orderLeft1 = Order(
+          account1.address,
+          87654321987654,
+          false,
+          Asset(virtualToken.address, "10000"),
+          Asset(baseToken.address, "10000"),
+          1,
+        )
+
+        const orderRight1 = Order(
+          account2.address,
+          87654321987654,
+          true,
+          Asset(baseToken.address, "10000"),
+          Asset(virtualToken.address, "10000"),
+          1,
+        )
+
+        let signatureLeft = await getSignature(orderLeft, account1.address)
+        let signatureRight = await getSignature(orderRight, account2.address)
+
+        // opening the position here
+        await expect(positioning.openPosition(orderLeft, signatureLeft, orderRight, signatureRight)).to.emit(
+          positioning,
+          "PositionChanged",
+        )
+
+        let signatureLeft1 = await getSignature(orderLeft1, account1.address)
+        let signatureRight1 = await getSignature(orderRight1, account2.address)
+
+        // trying to liquidate here
+        await expect(
+          positioning.openPosition(orderLeft1, signatureLeft1, orderRight1, signatureRight1),
+        ).to.be.revertedWith("P_WTV")
+      })
+      it("failure not enough free collateral", async () => {
+        const [owner, account1, account2] = await ethers.getSigners()
+
+        markPriceFake.getCumulativePrice.returns(10)
+        await baseToken.getIndexPrice.returns(2)
+        await virtualToken.mint(account1.address, 1000000000000000)
+        await virtualToken.mint(account2.address, 1000000000000000)
+        await virtualToken.addWhitelist(account1.address)
+        await virtualToken.addWhitelist(account2.address)
+        await virtualToken.connect(account1).approve(vault.address, 1000000000000000)
+        await virtualToken.connect(account2).approve(vault.address, 1000000000000000)
+
+        const orderLeft = Order(
+          account1.address,
+          87654321987654,
+          false,
+          Asset(virtualToken.address, "20000"),
+          Asset(baseToken.address, "20000"),
+          1,
+        )
+
+        const orderRight = Order(
+          account2.address,
+          87654321987654,
+          true,
+          Asset(baseToken.address, "20000"),
+          Asset(virtualToken.address, "20000"),
+          1,
+        )
+
+        let signatureLeft = await getSignature(orderLeft, account1.address)
+        let signatureRight = await getSignature(orderRight, account2.address)
+
+        await expect(positioning.openPosition(orderLeft, signatureLeft, orderRight, signatureRight)).to.be.revertedWith(
+          "CH_NEFCI",
+        )
+        it("should fail to match orders as signer is not order maker & order maker is not a contract", async () => {
+          const [owner, account1, account2] = await ethers.getSigners()
+  
+          const orderLeft = Order(
+            account1.address,
+            87654321987654,
+            true,
+            Asset(baseToken.address, "20"),
+            Asset(virtualToken.address, "20"),
+            1
+          )
+  
+          const orderRight = Order(
+            account2.address,
+            87654321987654,
+            false,
+            Asset(virtualToken.address, "20"),
+            Asset(baseToken.address, "20"),
+            1
+          )
+  
+          let signatureLeft = await getSignature(orderLeft, owner.address)
+          let signatureRight = await getSignature(orderRight, account2.address)
+  
+          await expect(
+            matchingEngine.matchOrdersTest(orderLeft, signatureLeft, orderRight, signatureRight),
+          ).to.be.revertedWith("V_PERP_M: order signature verification error")
+        })
+      })
       it("should fail to match orders as deadline has expired", async () => {
         const [owner, account1, account2] = await ethers.getSigners()
 
@@ -389,7 +750,7 @@ describe.only("Positioning", function () {
           account1.address,
           10,
           true,
-          Asset(virtualToken.address, "20"),
+          Asset(baseToken.address, "20"),
           Asset(virtualToken.address, "20"),
           1,
         )
@@ -399,7 +760,7 @@ describe.only("Positioning", function () {
           10,
           false,
           Asset(virtualToken.address, "20"),
-          Asset(virtualToken.address, "20"),
+          Asset(baseToken.address, "20"),
           1,
         )
 
@@ -417,7 +778,7 @@ describe.only("Positioning", function () {
           account1.address,
           87654321987654,
           true,
-          Asset(virtualToken.address, "20"),
+          Asset(baseToken.address, "20"),
           Asset(virtualToken.address, "20"),
           0,
         )
@@ -427,7 +788,7 @@ describe.only("Positioning", function () {
           87654321987654,
           false,
           Asset(virtualToken.address, "20"),
-          Asset(virtualToken.address, "20"),
+          Asset(baseToken.address, "20"),
           0,
         )
 
@@ -438,34 +799,34 @@ describe.only("Positioning", function () {
           "V_PERP_M: maker is not tx sender",
         )
       })
-      it("should fail to match orders as signer is not order maker & order maker is not a contract", async () => {
-        const [owner, account1, account2] = await ethers.getSigners()
+      // it("should fail to match orders as signer is not order maker & order maker is not a contract", async () => {
+      //   const [owner, account1, account2] = await ethers.getSigners()
 
-        const orderLeft = Order(
-          account1.address,
-          87654321987654,
-          true,
-          Asset(virtualToken.address, "20"),
-          Asset(virtualToken.address, "20"),
-          1,
-        )
+      //   const orderLeft = Order(
+      //     account1.address,
+      //     87654321987654,
+      //     true,
+      //     Asset(baseToken.address, "20"),
+      //     Asset(virtualToken.address, "20"),
+      //     1,
+      //   )
 
-        const orderRight = Order(
-          account2.address,
-          87654321987654,
-          false,
-          Asset(virtualToken.address, "20"),
-          Asset(virtualToken.address, "20"),
-          1,
-        )
+      //   const orderRight = Order(
+      //     account2.address,
+      //     87654321987654,
+      //     false,
+      //     Asset(virtualToken.address, "20"),
+      //     Asset(baseToken.address, "20"),
+      //     1,
+      //   )
 
-        let signatureLeft = await getSignature(orderLeft, owner.address)
-        let signatureRight = await getSignature(orderRight, account2.address)
+      //   let signatureLeft = await getSignature(orderLeft, owner.address)
+      //   let signatureRight = await getSignature(orderRight, account2.address)
 
-        await expect(positioning.openPosition(orderLeft, signatureLeft, orderRight, signatureRight)).to.be.revertedWith(
-          "V_PERP_M: order signature verification error",
-        )
-      })
+      //   await expect(positioning.openPosition(orderLeft, signatureLeft, orderRight, signatureRight)).to.be.revertedWith(
+      //     "V_PERP_M: order signature verification error",
+      //   )
+      // })
 
       it("should fail to match orders as leftOrder taker is not equal to rightOrder maker", async () => {
         const [owner, account1, account2, account3] = await ethers.getSigners()
@@ -491,9 +852,9 @@ describe.only("Positioning", function () {
         let signatureLeft = await getSignature(orderLeft, account1.address)
         let signatureRight = await getSignature(orderRight, account3.address)
 
-        await expect(positioning.connect(account1).openPosition(orderLeft, signatureLeft, orderRight, signatureRight)).to.be.revertedWith(
-          "V_PERP_M: order verification failed",
-        )
+        await expect(
+          positioning.connect(account1).openPosition(orderLeft, signatureLeft, orderRight, signatureRight),
+        ).to.be.revertedWith("V_PERP_M: order verification failed")
       })
 
       it("should fail to match orders as order maker is contract but signature cannot be verified", async () => {
@@ -510,7 +871,7 @@ describe.only("Positioning", function () {
           account1.address,
           87654321987654,
           true,
-          Asset(virtualToken.address, "20"),
+          Asset(baseToken.address, "20"),
           Asset(virtualToken.address, "20"),
           1,
         )
@@ -520,16 +881,16 @@ describe.only("Positioning", function () {
           87654321987654,
           false,
           Asset(virtualToken.address, "20"),
-          Asset(virtualToken.address, "20"),
+          Asset(baseToken.address, "20"),
           1,
         )
 
         let signatureLeft = await getSignature(orderLeft, account1.address)
         let signatureRight = await getSignature(orderRight, account2.address)
 
-        await expect(positioning.connect(account1).openPosition(orderLeft, signatureLeft, orderRight, signatureRight)).to.be.revertedWith(
-          "V_PERP_M: contract order signature verification error",
-        )
+        await expect(
+          positioning.connect(account1).openPosition(orderLeft, signatureLeft, orderRight, signatureRight),
+        ).to.be.revertedWith("V_PERP_M: contract order signature verification error")
       })
       it("should fail to match orders & revert as order is cancelled", async () => {
         const [owner, account1, account2] = await ethers.getSigners()
@@ -541,11 +902,13 @@ describe.only("Positioning", function () {
         await virtualToken.connect(account1).approve(matchingEngine.address, 1000000000000000)
         await virtualToken.connect(account2).approve(matchingEngine.address, 1000000000000000)
 
+        await positioning.connect(account1).setMakerMinSalt(100)
+
         const orderLeft = Order(
           account1.address,
           87654321987654,
           true,
-          Asset(virtualToken.address, "20"),
+          Asset(baseToken.address, "20"),
           Asset(virtualToken.address, "20"),
           1,
         )
@@ -555,15 +918,20 @@ describe.only("Positioning", function () {
           87654321987654,
           false,
           Asset(virtualToken.address, "20"),
-          Asset(virtualToken.address, "20"),
+          Asset(baseToken.address, "20"),
           1,
         )
 
         let signatureLeft = await getSignature(orderLeft, account1.address)
         let signatureRight = await getSignature(orderRight, account2.address)
 
-        await positioning.connect(account1).setMakerMinSalt(100)
-        await expect(positioning.openPosition(orderLeft, signatureLeft, orderRight, signatureRight)).to.be.revertedWith("V_PERP_M: Order canceled")
+        await expect(positioning.openPosition(orderLeft, signatureLeft, orderRight, signatureRight)).to.be.revertedWith(
+          "V_PERP_M: Order canceled",
+        )
+      })
+      it("wrong market registry", async () => {
+        const [owner, account1, account2, account3] = await ethers.getSigners()
+        await expect(positioning.connect(owner).setMarketRegistry(account1.address)).to.be.revertedWith("V_VPMM")
       })
     })
   })
