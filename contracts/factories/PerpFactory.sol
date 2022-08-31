@@ -11,6 +11,7 @@ import "../interfaces/IPositioning.sol";
 import "../interfaces/IAccountBalance.sol";
 import "../interfaces/IVolmexQuoteToken.sol";
 import "../interfaces/IPerpFactory.sol";
+import "../interfaces/IMatchingEngine.sol";
 
 import "../helpers/RoleManager.sol";
 
@@ -76,7 +77,7 @@ contract PerpFactory is Initializable, IPerpFactory, RoleManager {
         vaultImplementation = _vaultImplementation;
         positioningImplementation = _positioningImplementation;
         accountBalanceImplementation = _accountBalanceImplementation;
-        _setupRole(CLONES_DEPLOYER, _msgSender());
+        _grantRole(CLONES_DEPLOYER, _msgSender());
     }
 
     /**

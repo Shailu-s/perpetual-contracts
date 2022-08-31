@@ -5,6 +5,7 @@ pragma solidity =0.8.12;
  * @title Volmex Oracle TWAP library
  * @author volmex.finance [security@volmexlabs.com]
  */
+
 contract IndexTWAP {
     // Max datapoints allowed to store in
     uint256 private _MAX_DATAPOINTS;
@@ -56,6 +57,8 @@ contract IndexTWAP {
         uint256 _datapointsSum;
 
         uint256 _datapointsLen = _datapoints[_index].length;
+        // No datapoints
+        require(_datapointsLen != 0, "IndexTWAP: No datapoints");
 
         for (uint256 i = 0; i < _datapointsLen; i++) {
             _datapointsSum += _datapoints[_index][i];

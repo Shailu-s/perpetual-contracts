@@ -3,6 +3,7 @@ pragma solidity =0.8.12;
 
 import "@openzeppelin/contracts/proxy/Clones.sol";
 import { AddressUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol";
+import { ContextUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol";
 import {
     ReentrancyGuardUpgradeable
 } from "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
@@ -20,11 +21,12 @@ import { IVault } from "../interfaces/IVault.sol";
 import { IVaultController } from "../interfaces/IVaultController.sol";
 
 import { OwnerPausable } from "../helpers/OwnerPausable.sol";
+import { RoleManager } from "../helpers/RoleManager.sol";
 import { TestERC20 } from "../tests/TestERC20.sol";
 import { Vault } from "./Vault.sol";
 import { VaultControllerStorage } from "../storage/VaultControllerStorage.sol";
 
-contract VaultController is ReentrancyGuardUpgradeable, OwnerPausable, VaultControllerStorage, IVaultController {
+contract VaultController is ReentrancyGuardUpgradeable, OwnerPausable, VaultControllerStorage, IVaultController, RoleManager {
     using AddressUpgradeable for address;
     using LibSafeCastUint for uint256;
     using LibPerpMath for uint256;
@@ -37,6 +39,7 @@ contract VaultController is ReentrancyGuardUpgradeable, OwnerPausable, VaultCont
 
         _positioningConfig = positioningConfig;
         _accountBalance = accountBalanceArg;
+        _grantRole(VAULT_CONTROLLER_ADMIN, _msgSender());
     }
 
     function registerVault(address _vault, address _token) external override {
@@ -135,7 +138,8 @@ contract VaultController is ReentrancyGuardUpgradeable, OwnerPausable, VaultCont
         require(_msgSender() == _positioning, "CHD_OCH");
     }
 
-    function setPositioning(address PositioningArg) external onlyOwner {
+    function setPositioning(address PositioningArg) external {
+        require(hasRole(VAULT_CONTROLLER_ADMIN, _msgSender()), "VaultController: Not admin");
         // V_VPMM: Positioning is not contract
         require(PositioningArg.isContract(), "V_VPMM");
         _positioning = PositioningArg;
@@ -145,7 +149,7 @@ contract VaultController is ReentrancyGuardUpgradeable, OwnerPausable, VaultCont
         _balance[trader] = _balance[trader] + amount;
     }
 
-    function _msgSender() internal view override(OwnerPausable) returns (address) {
+    function _msgSender() internal view override(OwnerPausable, ContextUpgradeable) returns (address) {
         return super._msgSender();
     }
 }

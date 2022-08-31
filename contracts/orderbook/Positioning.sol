@@ -34,6 +34,7 @@ import { FundingRate } from "../funding-rate/FundingRate.sol";
 import { OwnerPausable } from "../helpers/OwnerPausable.sol";
 import { OrderValidator } from "./OrderValidator.sol";
 import { PositioningStorageV1 } from "../storage/PositioningStorage.sol";
+import { PositioningCallee } from "../helpers/PositioningCallee.sol";
 
 // TODO : Create bulk match order for perp
 // never inherit any new stateful contract. never change the orders of parent stateful contracts
@@ -86,10 +87,13 @@ contract Positioning is
         _underlyingPriceIndex = underlyingPriceIndex;
         // TODO: Set settlement token
         // _settlementTokenDecimals = 0;
+        setPositioning(address(this));
+        _grantRole(POSITIONING_ADMIN, _msgSender());
     }
 
 
-    function setMarketRegistry(address marketRegistryArg) external onlyOwner {
+    function setMarketRegistry(address marketRegistryArg) external {
+        _requirePositioningAdmin();
         // V_VPMM: Positioning is not contract
         require(marketRegistryArg.isContract(), "V_VPMM");
         _marketRegistry = marketRegistryArg;
@@ -151,6 +155,10 @@ contract Positioning is
         response = _openPosition(orderLeft, orderRight, baseToken);
     }
 
+    function setPositioning(address PositioningArg) public override(PositioningCallee, IPositioning) {
+        _Positioning = PositioningArg;
+    }
+
     function _openPosition(
         LibOrder.Order memory orderLeft,
         LibOrder.Order memory orderRight,
@@ -159,10 +167,10 @@ contract Positioning is
         /**
         TODO: Matching Engine should update fee return values
          */
-        (LibFill.FillResult memory newFill, LibDeal.DealData memory dealData) =
+        (LibFill.FillResult memory newFill) =
             IMatchingEngine(_matchingEngine).matchOrders(orderLeft, orderRight);
 
-        response = MatchResponse(newFill, dealData);
+        response = MatchResponse(newFill);
 
         InternalData memory internalData;
         if (orderLeft.isShort) {
@@ -238,7 +246,7 @@ contract Positioning is
             baseToken,
             internalData.leftExchangedPositionSize,
             internalData.leftExchangedPositionNotional,
-            response.dealData.protocolFee,
+            orderLeftFee,
             leftOpenNotional
         );
 
@@ -247,7 +255,7 @@ contract Positioning is
             baseToken,
             internalData.rightExchangedPositionSize,
             internalData.rightExchangedPositionNotional,
-            response.dealData.protocolFee,
+            orderRightFee,
             rightOpenNotional
         );
 
@@ -284,7 +292,8 @@ contract Positioning is
         IAccountBalance(_accountBalance).modifyOwedRealizedPnl(trader, amount);
     }
 
-    function setDefaultFeeReceiver(address payable newDefaultFeeReceiver) external onlyOwner {
+    function setDefaultFeeReceiver(address payable newDefaultFeeReceiver) external {
+        _requirePositioningAdmin();
         defaultFeeReceiver = newDefaultFeeReceiver;
     }
 
@@ -323,7 +332,21 @@ contract Positioning is
         );
     }
 
-    function _msgSender() internal view override(OwnerPausable, ContextUpgradeable) returns (address) {
+    function _msgSender() internal view override(OwnerPausable, ContextUpgradeable) 
+    returns (address) {
         return super._msgSender();
+    }
+
+    function _msgData() 
+    internal 
+    view 
+    virtual 
+    override(ContextUpgradeable)
+    returns (bytes calldata) {
+        return msg.data;
+    }
+
+    function _requirePositioningAdmin() internal view {
+        require(hasRole(POSITIONING_ADMIN, _msgSender()), "Positioning: Not admin");
     }
 }

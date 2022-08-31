@@ -10,13 +10,10 @@ interface IMatchingEngine {
     function cancelOrder(LibOrder.Order memory order) external;
     function cancelOrdersInBatch(LibOrder.Order[] memory orders) external;
     function cancelAllOrders(uint256 minSalt) external;
-    function matchOrders(
-        LibOrder.Order memory orderLeft,
-        LibOrder.Order memory orderRight
-    )
+    function matchOrders(LibOrder.Order memory orderLeft, LibOrder.Order memory orderRight)
         external
         returns (
-            LibFill.FillResult memory,
-            LibDeal.DealData memory
+            LibFill.FillResult memory
         );
+    function grantMatchOrders(address account) external;
 }

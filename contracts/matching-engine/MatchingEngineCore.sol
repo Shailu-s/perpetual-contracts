@@ -8,20 +8,16 @@ import "../libs/LibFill.sol";
 
 import "../interfaces/IMarkPriceOracle.sol";
 import "../interfaces/ITransferManager.sol";
+import "../interfaces/IMatchingEngine.sol";
 
 import "./AssetMatcher.sol";
-import "./TransferExecutor.sol";
+import "./TransferManager.sol";
 import "../helpers/OwnerPausable.sol";
-import "../helpers/RoleManager.sol";
 
 abstract contract MatchingEngineCore is
-    Initializable,
-    OwnableUpgradeable,
     PausableUpgradeable,
     AssetMatcher,
-    TransferExecutor,
-    ITransferManager,
-    RoleManager
+    TransferManager
 {
     uint256 private constant _UINT256_MAX = 2**256 - 1;
     uint256 private constant _ORACLE_BASE = 1000000;
@@ -57,6 +53,11 @@ abstract contract MatchingEngineCore is
         );
     }
 
+    function grantMatchOrders(address account) public {
+        require(hasRole(MATCHING_ENGINE_CORE_ADMIN, _msgSender()), "MatchingEngineCore: Not admin");
+        _grantRole(CAN_MATCH_ORDERS, account);
+    }
+
     /**
         @notice Cancels multiple orders in batch
         @param orders Array or orders to be cancelled
@@ -89,8 +90,6 @@ abstract contract MatchingEngineCore is
         public
         whenNotPaused
         returns (
-            address,
-            address,
             LibFill.FillResult memory
         )
     {
@@ -100,7 +99,7 @@ abstract contract MatchingEngineCore is
         }
         LibFill.FillResult memory newFill = _matchAndTransfer(orderLeft, orderRight);
 
-        return (orderLeft.makeAsset.virtualToken, orderRight.makeAsset.virtualToken, newFill);
+        return (newFill);
     }
 
     function matchOrderInBatch(LibOrder.Order[] memory ordersLeft, LibOrder.Order[] memory ordersRight)
@@ -200,14 +199,6 @@ abstract contract MatchingEngineCore is
         require(matchToken != address(0), "V_PERP_M: left make assets don't match");
         matchToken = _matchAssets(orderLeft.takeAsset.virtualToken, orderRight.makeAsset.virtualToken);
         require(matchToken != address(0), "V_PERP_M: left take assets don't match");
-    }
-
-    function _msgSender() internal view virtual override(Context, ContextUpgradeable) returns (address) {
-        return super._msgSender();
-    }
-
-    function _msgData() internal view virtual override(Context, ContextUpgradeable) returns (bytes calldata) {
-        return msg.data;
     }
 
     function _requireCanCancelAllOrders() internal view {

@@ -3,9 +3,8 @@
 pragma solidity =0.8.12;
 
 import "../libs/LibDeal.sol";
-import "./ITransferExecutor.sol";
 
-abstract contract ITransferManager is ITransferExecutor {
+abstract contract ITransferManager {
 
     function _doTransfers(
         LibDeal.DealSide memory left,

@@ -26,6 +26,8 @@ contract PositioningTest is Positioning {
         );
         __OwnerPausable_init();
         __FundingRate_init(markPriceArg, indexPriceArg);
+        _grantRole(CAN_MATCH_ORDERS, address(this));
+        _grantRole(CAN_MATCH_ORDERS, _msgSender());
     }
 
     function openPositionTest( 

@@ -8,7 +8,6 @@ interface IPositioning {
     
     struct MatchResponse {
         LibFill.FillResult newFill;
-        LibDeal.DealData dealData;
     }
 
     struct InternalData {
@@ -76,6 +75,9 @@ interface IPositioning {
         LibOrder.Order memory orderRight,
         bytes memory signatureRight
     ) external returns (MatchResponse memory);
+
+    /// @notice Set Positioning address
+    function setPositioning(address positioning) external;
 
     /// @notice Get PositioningConfig address
     /// @return PositioningConfig PositioningConfig address

@@ -19,7 +19,7 @@ import { RoleManager } from "../helpers/RoleManager.sol";
 import { PositioningCallee } from "../helpers/PositioningCallee.sol";
 
 // never inherit any new stateful contract. never change the orders of parent stateful contracts
-contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, AccountBalanceStorageV1, RoleManager {
+contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, AccountBalanceStorageV1 {
     using AddressUpgradeable for address;
     using LibSafeCastUint for uint256;
     using LibPerpMath for uint256;
@@ -44,13 +44,20 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
         __PositioningCallee_init();
 
         _PositioningConfig = PositioningConfigArg;
+        _grantRole(ACCOUNT_BALANCE_ADMIN, _msgSender());
     }
 
-    function setVault(address vaultArg) external onlyOwner {
+    function setVault(address vaultArg) external {
+        _requireAccountBalanceAdmin();
         // vault address is not contract
         require(vaultArg.isContract(), "AB_VNC");
         _vault = vaultArg;
         emit VaultChanged(vaultArg);
+    }
+
+    function grantSettleRealizedPnlRole(address account) external {
+        _requireAccountBalanceAdmin();
+        _grantRole(CAN_SETTLE_REALIZED_PNL, account);
     }
 
     /// @inheritdoc IAccountBalance
@@ -83,7 +90,7 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
     /// @inheritdoc IAccountBalance
     function settleOwedRealizedPnl(address trader) external override returns (int256) {
         // Account Balance: Not CAN_SETTLE_REALIZED_PNL
-        require(hasRole(CAN_SETTLE_REALIZED_PNL, _msgSender()), "AB_NCSRPNL");
+        require(hasRole(CAN_SETTLE_REALIZED_PNL, _msgSender()), "AccountBalance: Not role settle PNL");
         int256 owedRealizedPnl = _owedRealizedPnlMap[trader];
         _owedRealizedPnlMap[trader] = 0;
 
@@ -316,22 +323,8 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
         return (netQuoteBalance);
     }
 
-    function _msgSender() 
-    internal 
-    view 
-    virtual 
-    override(Context, ContextUpgradeable) 
-    returns (address) {
-        return super._msgSender();
-    }
-
-    function _msgData() 
-    internal 
-    view 
-    virtual 
-    override(Context, ContextUpgradeable) 
-    returns (bytes calldata) {
-        return msg.data;
+    function _requireAccountBalanceAdmin() internal view {
+        require(hasRole(ACCOUNT_BALANCE_ADMIN, _msgSender()), "AccountBalance: Not admin");
     }
 
     function _hasBaseToken(address[] memory baseTokens, address baseToken) internal pure returns (bool) {

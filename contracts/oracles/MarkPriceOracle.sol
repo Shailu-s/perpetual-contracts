@@ -54,7 +54,7 @@ contract MarkPriceOracle is Initializable, RoleManager {
         require(priceCumulativeLength == assetLength, "MarkSMA: Unequal length of prices & assets");
 
         for (uint index; index < priceCumulativeLength; index++) {
-            require(_priceCumulative[index] > 1000000, "MarkSMA: Not decimal precise");
+            require(_priceCumulative[index] >= 1000000, "MarkSMA: Not decimal precise");
             require(_asset[index] != address(0), "MarkSMA: Asset address can't be 0");
         }
 
@@ -71,9 +71,11 @@ contract MarkPriceOracle is Initializable, RoleManager {
         }
 
         _indexCount = indexCount;
+        _grantRole(MARK_PRICE_ORACLE_ADMIN, _msgSender());
     }
 
     function setMatchingEngine(address _matchingEngine) external {
+        require(hasRole(MARK_PRICE_ORACLE_ADMIN, _msgSender()), "MarkPriceOracle: Not admin");
         require(_matchingEngine != address(0), "V_PERP_M: Can't be 0 address");
         matchingEngine = _matchingEngine;
         _grantRole(CAN_ADD_OBSERVATION, _matchingEngine);
@@ -87,7 +89,7 @@ contract MarkPriceOracle is Initializable, RoleManager {
         require(priceCumulativeLength == assetLength, "MarkSMA: Unequal length of prices & assets");
 
         for (uint index; index < priceCumulativeLength; index++) {
-            require(_priceCumulative[index] > 1000000, "MarkSMA: Not decimal precise");
+            require(_priceCumulative[index] >= 1000000, "MarkSMA: Not decimal precise");
             require(_asset[index] != address(0), "MarkSMA: Asset address can't be 0");
         }
         
@@ -113,7 +115,7 @@ contract MarkPriceOracle is Initializable, RoleManager {
      */    
     function addObservation(uint256 _priceCumulative, uint64 _index) external {
         _requireCanAddObservation();
-        require(_priceCumulative > 1000000, "MarkSMA: Not decimal precise");
+        require(_priceCumulative >= 1000000, "MarkSMA: Not decimal precise");
         Observation memory observation = Observation({ timestamp: block.timestamp, priceCumulative: _priceCumulative });
         Observation[] storage observations = observationsByIndex[_index];
         observations.push(observation);

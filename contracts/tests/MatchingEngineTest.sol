@@ -23,6 +23,8 @@ contract MatchingEngineTest is MatchingEngine
         _grantRole(CAN_CANCEL_ALL_ORDERS, address(this));
         _grantRole(CAN_CANCEL_ALL_ORDERS, _msgSender());
         _grantRole(CAN_MATCH_ORDERS, _msgSender());
+        _grantRole(CAN_MATCH_ORDERS, address(this));
+        _grantRole(CAN_ADD_OBSERVATION, address(this));
     }
 
     function matchOrdersTest(
@@ -48,6 +50,7 @@ contract MatchingEngineTest is MatchingEngine
     }
 
     function addObservation(uint256 _priceCumulative, uint64 _index) public {
+        _grantRole(CAN_ADD_OBSERVATION, address(this));
         markPriceOracle.addObservation(_priceCumulative, _index);
     }
 }

@@ -6,17 +6,20 @@ pragma abicoder v2;
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
 import "../interfaces/ITransferManager.sol";
+import "../matching-engine/TransferExecutor.sol";
 
-abstract contract TransferManager is OwnableUpgradeable, ITransferManager {
+abstract contract TransferManager is OwnableUpgradeable, TransferExecutor {
     uint256 private constant _BASE = 10000;
 
     /// @dev event that's emitted when protocolFee changes
     event ProtocolFeeChanged(uint256 oldValue, uint256 newValue);
 
-    function __TransferManager_init_unchained()
+    function __TransferManager_init_unchained(address _erc20Proxy, address _owner)
         internal
         initializer
-    {}
+    {
+        __TransferExecutor_init_unchained(_erc20Proxy, _owner);
+    }
 
     /**
         @notice executes transfers for 2 matched orders
@@ -28,7 +31,7 @@ abstract contract TransferManager is OwnableUpgradeable, ITransferManager {
     function _doTransfers(
         LibDeal.DealSide memory left,
         LibDeal.DealSide memory right
-    ) internal virtual override returns (uint256 totalLeftValue, uint256 totalRightValue) {
+    ) internal virtual returns (uint256 totalLeftValue, uint256 totalRightValue) {
         totalLeftValue = left.asset.value;
         totalRightValue = right.asset.value;
 

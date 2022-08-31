@@ -39,24 +39,29 @@ contract MarketRegistry is IMarketRegistry, PositioningCallee, MarketRegistrySto
         // update states
         _quoteToken = quoteTokenArg;
         _maxOrdersPerMarket = type(uint8).max;
+        _grantRole(MARKET_REGISTRY_ADMIN, _msgSender());
     }
 
     /// @inheritdoc IMarketRegistry
-    function setFeeRatio(address baseToken, uint24 feeRatio) external override checkRatio(feeRatio) onlyOwner {
+    function setFeeRatio(address baseToken, uint24 feeRatio) external override checkRatio(feeRatio) {
+        _requireMarketRegistryAdmin();
         _exchangeFeeRatioMap[baseToken] = feeRatio;
         emit FeeRatioChanged(baseToken, feeRatio);
     }
 
-    function setMakerFeeRatio( uint24 makerFeeRatio) external override checkRatio(makerFeeRatio) onlyOwner {
+    function setMakerFeeRatio( uint24 makerFeeRatio) external override checkRatio(makerFeeRatio) {
+        _requireMarketRegistryAdmin();
         _makerFeeRatio = makerFeeRatio;
     }
 
-    function setTakerFeeRatio( uint24 takerFeeRatio) external override checkRatio(takerFeeRatio) onlyOwner {
+    function setTakerFeeRatio( uint24 takerFeeRatio) external override checkRatio(takerFeeRatio) {
+        _requireMarketRegistryAdmin();
         _takerFeeRatio = takerFeeRatio;
     }
     
     /// @inheritdoc IMarketRegistry
-    function setMaxOrdersPerMarket(uint8 maxOrdersPerMarketArg) external override onlyOwner {
+    function setMaxOrdersPerMarket(uint8 maxOrdersPerMarketArg) external override {
+        _requireMarketRegistryAdmin();
         _maxOrdersPerMarket = maxOrdersPerMarketArg;
         emit MaxOrdersPerMarketChanged(maxOrdersPerMarketArg);
     }
@@ -111,6 +116,10 @@ contract MarketRegistry is IMarketRegistry, PositioningCallee, MarketRegistrySto
         } else {
             return false;
         }
+    }
+
+    function _requireMarketRegistryAdmin() internal view {
+        require(hasRole(MARKET_REGISTRY_ADMIN, _msgSender()), "MarketRegistry: Not admin");
     }
 
     function _hasBaseToken(address[] memory baseTokens, address baseToken) internal pure returns (bool) {

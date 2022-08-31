@@ -2,11 +2,11 @@
 pragma solidity =0.8.12;
 
 import { ERC20Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
-import { OwnableUpgradeable } from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
 import { IVirtualToken } from "../interfaces/IVirtualToken.sol";
+import { RoleManager } from "../helpers/RoleManager.sol";
 
-contract VirtualToken is IVirtualToken, OwnableUpgradeable, ERC20Upgradeable {
+contract VirtualToken is IVirtualToken, ERC20Upgradeable, RoleManager {
     mapping(address => bool) internal _whitelistMap;
     bool public isBase;
 
@@ -15,8 +15,8 @@ contract VirtualToken is IVirtualToken, OwnableUpgradeable, ERC20Upgradeable {
 
     function __VirtualToken_init(string memory nameArg, string memory symbolArg, bool isBaseArg) public onlyInitializing {
         isBase = isBaseArg;
-        __Ownable_init();
         __ERC20_init(nameArg, symbolArg);
+        _grantRole(VIRTUAL_TOKEN_ADMIN, _msgSender());
     }
 
     /**
@@ -26,20 +26,24 @@ contract VirtualToken is IVirtualToken, OwnableUpgradeable, ERC20Upgradeable {
         _mint(recipient, amount);
     }
 
-    function burn(address recipient, uint256 amount) external override onlyOwner {
+    function burn(address recipient, uint256 amount) external override {
+        _requireVirtualTokenAdmin();
         _burn(recipient, amount);
     }
 
-    function mintMaximumTo(address recipient) external override onlyOwner {
+    function mintMaximumTo(address recipient) external override {
+        _requireVirtualTokenAdmin();
         _mint(recipient, type(uint256).max);
     }
 
-    function addWhitelist(address account) external override onlyOwner {
+    function addWhitelist(address account) external override {
+        _requireVirtualTokenAdmin();
         _whitelistMap[account] = true;
         emit WhitelistAdded(account);
     }
 
-    function removeWhitelist(address account) external override onlyOwner {
+    function removeWhitelist(address account) external override {
+        _requireVirtualTokenAdmin();
         // VT_BNZ: balance is not zero
         require(balanceOf(account) == 0, "VT_BNZ");
         delete _whitelistMap[account];
@@ -64,6 +68,10 @@ contract VirtualToken is IVirtualToken, OwnableUpgradeable, ERC20Upgradeable {
             // not whitelisted
             require(_whitelistMap[from], "VT_NW");
         }
+    }
+
+    function _requireVirtualTokenAdmin() internal view {
+        require(hasRole(VIRTUAL_TOKEN_ADMIN, _msgSender()), "VirtualToken: Not admin");
     }
 
     uint256[50] private __gap;
