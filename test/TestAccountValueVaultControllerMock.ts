@@ -14,6 +14,7 @@ describe("Vault Controller Mock tests for account value", function () {
     let DAI;
     let markPriceFake: FakeContract<MarkPriceOracle>
     let indexPriceFake: FakeContract<IndexPriceOracle>
+    let matchingEngineFake: FakeContract<MarkPriceOracle>
     let Positioning
     let positioning
 
@@ -23,6 +24,7 @@ describe("Vault Controller Mock tests for account value", function () {
         
         markPriceFake = await smock.fake('MarkPriceOracle')
         indexPriceFake = await smock.fake('IndexPriceOracle')
+        matchingEngineFake = await smock.fake('MatchingEngine')
 
         const tokenFactory = await ethers.getContractFactory("TestERC20")
         const USDC1 = await tokenFactory.deploy()
@@ -61,9 +63,17 @@ describe("Vault Controller Mock tests for account value", function () {
         Positioning = await ethers.getContractFactory("PositioningTest")
         positioning = await upgrades.deployProxy(
             Positioning,
-            [positioningConfig.address, vaultController.address, accountBalance.address,accountBalance.address,markPriceFake.address, indexPriceFake.address],
+            [
+              positioningConfig.address,
+              vaultController.address,
+              accountBalance.address,
+              matchingEngineFake.address,
+              markPriceFake.address,
+              indexPriceFake.address,
+              0
+            ],
             {
-                initializer: "__PositioningTest_init",
+              initializer: "initialize",
             },
         )
         await vaultController.connect(owner).setPositioning(positioning.address)

@@ -64,7 +64,15 @@ describe("MatchingEngine", function () {
     volmexBaseToken = await VolmexBaseToken.deploy();
     await volmexBaseToken.deployed();
 
-    markPriceOracle = await MarkPriceOracle.deploy()
+    markPriceOracle = await upgrades.deployProxy(MarkPriceOracle, 
+      [
+        [1000000],
+        [volmexBaseToken.address]
+      ],
+      { 
+        initializer: "initialize",
+      }
+    );
     await markPriceOracle.deployed();
 
     USDC = await TestERC20.deploy()
@@ -83,7 +91,7 @@ describe("MatchingEngine", function () {
     );
     await markPriceOracle.setMatchingEngine(matchingEngine.address);
 
-    transferManagerTest = await upgrades.deployProxy(TransferManagerTest, [], {
+    transferManagerTest = await upgrades.deployProxy(TransferManagerTest, [erc20TransferProxy.address, owner.address], {
       initializer: "__TransferManager_init",
     })
 
@@ -327,7 +335,6 @@ describe("MatchingEngine", function () {
         salt++;
       }
       const receipt = await (await matchingEngine.matchOrderInBatch(ordersLeft, ordersRight)).wait();
-      console.log("match gas used", (receipt.gasUsed).toString());
       // await expect(matchingEngine.connect(owner).matchOrderInBatch(ordersLeft, signaturesLeft, ordersRight, signaturesRight)).to.emit(
       //   matchingEngine,
       //   "Matched",

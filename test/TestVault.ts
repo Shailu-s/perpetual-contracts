@@ -15,6 +15,7 @@ describe("Vault tests", function () {
   let DAI
   let markPriceFake: FakeContract<MarkPriceOracle>
   let indexPriceFake: FakeContract<IndexPriceOracle>
+  let matchingEngineFake: FakeContract<MarkPriceOracle>
   let Positioning
   let positioning
 
@@ -22,6 +23,7 @@ describe("Vault tests", function () {
     const [owner, alice] = await ethers.getSigners()
     markPriceFake = await smock.fake("MarkPriceOracle")
     indexPriceFake = await smock.fake("IndexPriceOracle")
+    matchingEngineFake = await smock.fake('MatchingEngine')
 
     const tokenFactory = await ethers.getContractFactory("TestERC20")
     const USDC1 = await tokenFactory.deploy()
@@ -68,12 +70,13 @@ describe("Vault tests", function () {
         positioningConfig.address,
         vaultController.address,
         accountBalance.address,
-        accountBalance.address,
+        matchingEngineFake.address,
         markPriceFake.address,
         indexPriceFake.address,
+        0
       ],
       {
-        initializer: "__PositioningTest_init",
+        initializer: "initialize",
       },
     )
 
@@ -182,7 +185,7 @@ describe("Vault tests", function () {
       await USDC.connect(owner).approve(vault.address, amount)
 
       // caller not owner
-      await expect(vault.connect(alice).transferFundToVault(USDC.address, amount)).to.be.revertedWith("Ownable: caller is not the owner")
+      await expect(vault.connect(alice).transferFundToVault(USDC.address, amount)).to.be.revertedWith("Vault: Not admin")
     })
 
     it("Check for set position address", async () => {
@@ -238,7 +241,7 @@ describe("Vault tests", function () {
       await USDC.connect(owner).approve(vault.address, amount)
 
       // caller not owner
-      await expect(vault.connect(alice).repayDebtToOwner(USDC.address, amount)).to.be.revertedWith(" Ownable: caller is not the owner")
+      await expect(vault.connect(alice).repayDebtToOwner(USDC.address, amount)).to.be.revertedWith("Vault: Not admin")
     })
 
     it("Force error, amount is more that debt", async () => {

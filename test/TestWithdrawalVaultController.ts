@@ -15,6 +15,7 @@ describe("Vault Controller tests for withdrawal", function () {
   let DAI
   let markPriceFake: FakeContract<MarkPriceOracle>
   let indexPriceFake: FakeContract<IndexPriceOracle>
+  let matchingEngineFake: FakeContract<MarkPriceOracle>
   let Positioning
   let positioning
 
@@ -22,6 +23,7 @@ describe("Vault Controller tests for withdrawal", function () {
     const [owner, alice] = await ethers.getSigners()
     markPriceFake = await smock.fake("MarkPriceOracle")
     indexPriceFake = await smock.fake("IndexPriceOracle")
+    matchingEngineFake = await smock.fake('MatchingEngine')
 
     const tokenFactory = await ethers.getContractFactory("TestERC20")
     const USDC1 = await tokenFactory.deploy()
@@ -50,6 +52,9 @@ describe("Vault Controller tests for withdrawal", function () {
         vaultFactory,
         [positioningConfig.address, accountBalance.address, USDC.address, vaultController.address, false]
     )
+    await accountBalance.grantSettleRealizedPnlRole(vaultController.address);
+    await accountBalance.grantSettleRealizedPnlRole(vault.address);
+
     DAIVault = await upgrades.deployProxy(
       vaultFactory,
       [positioningConfig.address, accountBalance.address, DAI.address, vaultController.address, false]
@@ -62,12 +67,13 @@ describe("Vault Controller tests for withdrawal", function () {
         positioningConfig.address,
         vaultController.address,
         accountBalance.address,
-        accountBalance.address,
+        matchingEngineFake.address,
         markPriceFake.address,
         indexPriceFake.address,
+        0
       ],
       {
-        initializer: "__PositioningTest_init",
+        initializer: "initialize",
       },
     )
 

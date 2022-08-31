@@ -13,16 +13,22 @@ describe("AssetMatcher", function () {
 
     this.beforeAll(async () => {
         AssetMatcher = await ethers.getContractFactory("AssetMatcherTest")
-        VirtualToken = await ethers.getContractFactory("VirtualToken")
+        VirtualToken = await ethers.getContractFactory("VirtualTokenTest")
     })
 
     beforeEach(async () => {
         assetMatcher = await upgrades.deployProxy(AssetMatcher, [], {
             initializer: "__AssetMatcherTest_init",
         })
-        virtualToken = await upgrades.deployProxy(VirtualToken, ["Virtual Ethereum", "VETH", true], {
-            initializer: "__VirtualToken_init",
-        })
+        await assetMatcher.deployed();
+        virtualToken = await upgrades.deployProxy(
+            VirtualToken,
+            ["VirtualToken", "VTK", true],
+            {
+              initializer: "initialize"
+            }
+        );
+        await virtualToken.deployed();
         leftBaseToken = virtualToken.address
         rightBaseToken = virtualToken.address
     })

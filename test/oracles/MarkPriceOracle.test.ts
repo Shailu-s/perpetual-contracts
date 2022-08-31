@@ -96,7 +96,15 @@ describe('MarkPriceOracle', function () {
     );
     await factory.deployed();
 
-    markPriceOracle = await MarkPriceOracle.deploy()
+    markPriceOracle = await upgrades.deployProxy(MarkPriceOracle, 
+      [
+        [1000000],
+        [volmexBaseToken.address]
+      ],
+      { 
+        initializer: "initialize",
+      }
+    );
     await markPriceOracle.deployed();
 
     USDC = await TestERC20.deploy()
@@ -150,7 +158,7 @@ describe('MarkPriceOracle', function () {
       ).to.be.revertedWith("MarkSMA: Unequal length of prices & assets");
     });
 
-    it("Should fail to deploy when price is <= 1000000", async () => {
+    it("Should fail to deploy when price is < 1000000", async () => {
       await expect(
         upgrades.deployProxy(
           MarkPriceOracle,
@@ -188,19 +196,14 @@ describe('MarkPriceOracle', function () {
       }
 
       const txn = await markPriceOracle.getCumulativePrice(10000000, 0);
-      // Total cumulative = 100000000 (One added while MarkPriceOracle deployment & rest 9 using loop)
-      // Total observations = 10
-      // Cumulative = (Total cumulative / Total observations) 
-      //            = (100000000 / 10) 
-      //            = 10000000
-      expect(Number(txn)).equal(10000000);
+      expect(Number(txn)).equal(9100000);
     });
 
     it("Should add multiple observations", async () => {
       await matchingEngine.addAssets([10000000, 20000000], [volmexBaseToken.address, USDC.address]);
 
       const txn = await markPriceOracle.getCumulativePrice(10000000, 0);
-      expect(Number(txn)).equal(10000000);
+      expect(Number(txn)).equal(1000000);
     });
 
     it("Should fail to add observation when caller is not exchange", async () => {
@@ -209,16 +212,16 @@ describe('MarkPriceOracle', function () {
       ).to.be.revertedWith("MPO_NCAO");
     });
 
-    it("Should fail to add observation when cumulative price is <= 1000000", async () => {
+    it("Should fail to add observation when cumulative price is < 1000000", async () => {
       await expect(
-        matchingEngine.addObservation(1000000, 0)
+        matchingEngine.addObservation(999999, 0)
       ).to.be.revertedWith("MarkSMA: Not decimal precise");
     });
 
     it("Should get cumulative price", async () => {
       await matchingEngine.addAssets([10000000, 20000000], [volmexBaseToken.address, USDC.address]);
       const txn = await markPriceOracle.getCumulativePrice(1000000, 0);
-      expect(Number(txn)).equal(10000000);
+      expect(Number(txn)).equal(1000000);
     });
   });
 });

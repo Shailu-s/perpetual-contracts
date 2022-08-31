@@ -65,15 +65,23 @@ describe('PerpFactory', function () {
     await USDC.__TestERC20_init("TestUSDC", "USDC", 6)
     await USDC.deployed();
 
+    markPriceOracle = await upgrades.deployProxy(MarkPriceOracle, 
+      [
+        [1000000],
+        [volmexBaseToken.address]
+      ],
+      { 
+        initializer: "initialize",
+      }
+    );
+    await markPriceOracle.deployed();
+
     matchingEngine = await upgrades.deployProxy(MatchingEngine, [
       USDC.address,
       owner.address,
       markPriceOracle.address,
     ]);
     await matchingEngine.deployed();
-    
-    markPriceOracle = await MarkPriceOracle.deploy()
-    await markPriceOracle.deployed();
 
     positioningConfig = await PositioningConfig.deploy()
     await positioningConfig.deployed();
@@ -83,6 +91,7 @@ describe('PerpFactory', function () {
 
     positioning = await Positioning.deploy()    
     await positioning.deployed();
+    await positioning.setPositioning(positioning.address);
 
     vault = await Vault.deploy()
     await vault.deployed();
@@ -145,7 +154,7 @@ describe('PerpFactory', function () {
         matchingEngine.address,
         markPriceOracle.address,
         indexPriceOracle.address,
-        0
+        index
       )).wait();
     });
   });
@@ -186,6 +195,7 @@ describe('PerpFactory', function () {
 
   describe('Index Price', () => {
     it("Should return the current index price", async () => {
+      await indexPriceOracle.addIndexDataPoint(0, 250000000);
       const newVolmexBaseToken = await upgrades.deployProxy(
         VolmexBaseToken,
         [
