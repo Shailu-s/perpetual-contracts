@@ -4,6 +4,7 @@ pragma solidity =0.8.12;
 /// @notice For future upgrades, do not change ExchangeStorageV1. Create a new
 /// contract which implements ExchangeStorageV1 and following the naming convention
 /// ExchangeStorageVX.
+// TODO: add gap in storage
 abstract contract FundingRateStorage {
     address internal _markPriceOracleArg;
     address internal _indexPriceOracleArg;

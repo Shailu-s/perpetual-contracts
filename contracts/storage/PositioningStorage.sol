@@ -4,6 +4,7 @@ pragma solidity =0.8.12;
 /// @notice For future upgrades, do not change PositioningStorageV1. Create a new
 /// contract which implements PositioningStorageV1 and following the naming convention
 /// PositioningStorageVX.
+// TODO: include gap in storage
 abstract contract PositioningStorageV1 {
     // --------- IMMUTABLE ---------
 
