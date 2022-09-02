@@ -109,6 +109,6 @@ describe("Vault Controller Mock tests for account value", function () {
 
         // update sender's balance
         expect(await USDCVaultContract.getBalance(alice.address)).to.eq(parseUnits("100", await USDC.decimals()))
-        expect((await vaultController.connect(positioning.address).getAccountValue(alice.address)).toString()).to.be.equal("100000000000000000000")
+        expect((await vaultController.connect(positioning.address).getAccountValue(alice.address)).toString()).to.be.equal("100000000000000000000000000")
     })
 })

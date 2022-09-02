@@ -43,13 +43,6 @@ contract MarketRegistry is IMarketRegistry, PositioningCallee, MarketRegistrySto
     }
 
     /// @inheritdoc IMarketRegistry
-    function setFeeRatio(address baseToken, uint24 feeRatio) external override checkRatio(feeRatio) {
-        _requireMarketRegistryAdmin();
-        _exchangeFeeRatioMap[baseToken] = feeRatio;
-        emit FeeRatioChanged(baseToken, feeRatio);
-    }
-
-    /// @inheritdoc IMarketRegistry
     function setMakerFeeRatio( uint24 makerFeeRatio) external override checkRatio(makerFeeRatio) {
         _requireMarketRegistryAdmin();
         _makerFeeRatio = makerFeeRatio;
@@ -68,8 +61,9 @@ contract MarketRegistry is IMarketRegistry, PositioningCallee, MarketRegistrySto
         emit MaxOrdersPerMarketChanged(maxOrdersPerMarketArg);
     }
 
+    ///TODO_V: Add something as you removed onlyOwner
     /// @inheritdoc IMarketRegistry
-    function addBaseToken(address baseToken) external override onlyOwner {
+    function addBaseToken(address baseToken) external override {
         address[] storage tokensStorage = _baseTokensMarketMap;
         if (_hasBaseToken(tokensStorage, baseToken)) {
             return;

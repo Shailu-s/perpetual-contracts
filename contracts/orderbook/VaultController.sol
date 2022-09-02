@@ -26,7 +26,13 @@ import { TestERC20 } from "../tests/TestERC20.sol";
 import { Vault } from "./Vault.sol";
 import { VaultControllerStorage } from "../storage/VaultControllerStorage.sol";
 
-contract VaultController is ReentrancyGuardUpgradeable, OwnerPausable, VaultControllerStorage, IVaultController, RoleManager {
+contract VaultController is
+    ReentrancyGuardUpgradeable,
+    OwnerPausable,
+    VaultControllerStorage,
+    IVaultController,
+    RoleManager
+{
     using AddressUpgradeable for address;
     using LibSafeCastUint for uint256;
     using LibPerpMath for uint256;
@@ -146,11 +152,12 @@ contract VaultController is ReentrancyGuardUpgradeable, OwnerPausable, VaultCont
         // only Positioning
         require(_msgSender() == _positioning, "CHD_OCH");
     }
-    
+
     /// @return totalMarginRequirement with decimals == 18, for freeCollateral calculation
     function _getTotalMarginRequirement(address trader, uint24 ratio) internal view returns (uint256) {
         uint256 totalDebtValue = IAccountBalance(_accountBalance).getTotalDebtValue(trader);
         return totalDebtValue.mulRatio(ratio);
+    }
 
     function _modifyBalance(address trader, int256 amount) internal {
         _balance[trader] = _balance[trader] + amount;

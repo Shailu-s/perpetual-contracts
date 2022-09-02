@@ -73,7 +73,7 @@ contract Positioning is
         // CH_VANC: Vault address is not contract
         require(vaultControllerArg.isContract(), "CH_VANC");
         // PositioningConfig address is not contract
-        require(PositioningConfigArg.isContract(), "CH_CCNC");
+        require(PositioningConfigArg.isContract(), "CH_PCNC");
         // AccountBalance is not contract
         require(accountBalanceArg.isContract(), "CH_ABNC");
         // CH_MENC: Matching Engine is not contract
@@ -382,8 +382,8 @@ contract Positioning is
             baseToken,
             internalData.leftExchangedPositionSize,
             internalData.leftExchangedPositionNotional,
-            orderLeftFee,
-            leftOpenNotional
+            _orderLeftFee,
+            internalData.leftOpenNotional
         );
 
         emit PositionChanged(
@@ -391,8 +391,8 @@ contract Positioning is
             baseToken,
             internalData.rightExchangedPositionSize,
             internalData.rightExchangedPositionNotional,
-            orderRightFee,
-            rightOpenNotional
+            _orderRightFee,
+            internalData.rightOpenNotional
         );
 
         IAccountBalance(_accountBalance).deregisterBaseToken(orderLeft.trader, baseToken);
@@ -431,7 +431,7 @@ contract Positioning is
                 ? LibSettlementTokenMath.parseSettlementToken(order.makeAsset.value, 0)
                 : LibSettlementTokenMath.parseSettlementToken(order.takeAsset.value, 0);
 
-        require(orderAmount >= amount || orderAmount <= maxLiquidation.abs(), "P_WTV");
+        require(orderAmount >= amount && orderAmount <= maxLiquidation.abs(), "P_WTV");
     }
 
     /// @dev This function checks if account of trader is eligible for liquidation
