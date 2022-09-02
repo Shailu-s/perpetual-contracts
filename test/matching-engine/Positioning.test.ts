@@ -293,8 +293,8 @@ describe("Positioning", function () {
           orderLeft.makeAsset.virtualToken,
         )
 
-        await expect(positionSize.toNumber()).to.be.equal(-20000)
-        await expect(positionSize1.toNumber()).to.be.equal(20000)
+        await expect(positionSize.toString()).to.be.equal("-20000000000000000000000")
+        await expect(positionSize1.toString()).to.be.equal("20000000000000000000000")
 
         let signatureLeft1 = await getSignature(orderLeft1, account1.address)
         let signatureRight1 = await getSignature(orderRight1, account2.address)
@@ -309,7 +309,7 @@ describe("Positioning", function () {
           orderLeft.makeAsset.virtualToken,
         )
 
-        await expect(positionSizeAfter.toNumber()).to.be.equal(-18000)
+        await expect(positionSizeAfter.toString()).to.be.equal("-18000000000000000000000")
       })
 
       it("should liquidate right order", async () => {
@@ -374,8 +374,8 @@ describe("Positioning", function () {
         const positionSize = await accountBalance1.getTakerPositionSize(account1.address, baseToken.address)
         const positionSize1 = await accountBalance1.getTakerPositionSize(account2.address, baseToken.address)
 
-        await expect(positionSize.toNumber()).to.be.equal(20000)
-        await expect(positionSize1.toNumber()).to.be.equal(-20000)
+        await expect(positionSize.toString()).to.be.equal("20000000000000000000000")
+        await expect(positionSize1.toString()).to.be.equal("-20000000000000000000000")
 
         let signatureLeft1 = await getSignature(orderLeft1, account1.address)
         let signatureRight1 = await getSignature(orderRight1, account2.address)
@@ -387,8 +387,8 @@ describe("Positioning", function () {
         const positionSizeAfter = await accountBalance1.getTakerPositionSize(account1.address, baseToken.address)
         const positionSizeAfter1 = await accountBalance1.getTakerPositionSize(account2.address, baseToken.address)
 
-        await expect(positionSizeAfter1.toNumber()).to.be.equal(-18000)
-        await expect(positionSizeAfter.toNumber()).to.be.equal(18000)
+        await expect(positionSizeAfter1.toString()).to.be.equal("-18000000000000000000000")
+        await expect(positionSizeAfter.toString()).to.be.equal("18000000000000000000000")
       })
 
       it("should match orders and open position", async () => {
@@ -442,8 +442,8 @@ describe("Positioning", function () {
           orderLeft.makeAsset.virtualToken,
         )
 
-        await expect(positionSize.toNumber()).to.be.equal(-20000)
-        await expect(positionSize1.toNumber()).to.be.equal(20000)
+        await expect(positionSize.toString()).to.be.equal("-20000000000000000000000")
+        await expect(positionSize1.toString()).to.be.equal("20000000000000000000000")
       })
 
       it("should reduce position of both traders", async () => {
@@ -515,8 +515,8 @@ describe("Positioning", function () {
           orderLeft.makeAsset.virtualToken,
         )
 
-        await expect(positionSize.toNumber()).to.be.equal(-10000)
-        await expect(positionSize1.toNumber()).to.be.equal(10000)
+        await expect(positionSize.toString()).to.be.equal("-10000000000000000000000")
+        await expect(positionSize1.toString()).to.be.equal("10000000000000000000000")
 
         let signatureLeft1 = await getSignature(orderLeft1, account1.address)
         let signatureRight1 = await getSignature(orderRight1, account2.address)
@@ -528,7 +528,7 @@ describe("Positioning", function () {
         )
         const positionSizeAfter = await accountBalance1.getTakerPositionSize(account1.address, baseToken.address)
 
-        await expect(positionSizeAfter.toNumber()).to.be.equal(-8000)
+        await expect(positionSizeAfter.toString()).to.be.equal("-8000000000000000000000")
       })
 
       it("should close the whole position", async () => {
@@ -600,8 +600,8 @@ describe("Positioning", function () {
           orderLeft.makeAsset.virtualToken,
         )
 
-        await expect(positionSize.toNumber()).to.be.equal(-10000)
-        await expect(positionSize1.toNumber()).to.be.equal(10000)
+        await expect(positionSize.toString()).to.be.equal("-10000000000000000000000")
+        await expect(positionSize1.toString()).to.be.equal("10000000000000000000000")
 
         let signatureLeft1 = await getSignature(orderLeft1, account1.address)
         let signatureRight1 = await getSignature(orderRight1, account2.address)
@@ -613,8 +613,8 @@ describe("Positioning", function () {
         )
         const positionSizeAfter = await accountBalance1.getTakerPositionSize(account1.address, baseToken.address)
         const positionSizeAfter1 = await accountBalance1.getTakerPositionSize(account2.address, baseToken.address)
-        await expect(positionSizeAfter.toNumber()).to.be.equal(0)
-        await expect(positionSizeAfter1.toNumber()).to.be.equal(0)
+        await expect(positionSizeAfter.toString()).to.be.equal("0")
+        await expect(positionSizeAfter1.toString()).to.be.equal("0")
       })
       it("test for get all funding payment", async () => {
         const [owner, account1, account2] = await ethers.getSigners()

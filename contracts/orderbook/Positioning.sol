@@ -417,7 +417,7 @@ contract Positioning is
                 ? LibSettlementTokenMath.parseSettlementToken(order.makeAsset.value, 0)
                 : LibSettlementTokenMath.parseSettlementToken(order.takeAsset.value, 0);
 
-        require(orderAmount >= amount || orderAmount <= maxLiquidation.abs(), "P_WTV");
+        require(orderAmount >= amount && orderAmount <= maxLiquidation.toUint256(), "P_WTV");
     }
 
     /// @dev This function checks if account of trader is eligible for liquidation

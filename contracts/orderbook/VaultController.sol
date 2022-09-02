@@ -61,7 +61,7 @@ contract VaultController is ReentrancyGuardUpgradeable, OwnerPausable, VaultCont
             _vaultList.push(_vault);
         }
         IVault(_vault).deposit{ value: msg.value }(token, amount, from);
-        uint256 amountX10_18 = LibSettlementTokenMath.parseSettlementToken(amount, IVault(_vault).decimals());
+        uint256 amountX10_18 = LibSettlementTokenMath.parseSettlementToken(amount, 0);
         _modifyBalance(from, amountX10_18.toInt256());
     }
 
