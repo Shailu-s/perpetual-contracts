@@ -17,7 +17,25 @@ interface IPositioning {
         int256 rightExchangedPositionNotional;
         int256 leftPositionSize;
         int256 rightPositionSize;
+        int256 leftOpenNotional;
+        int256 rightOpenNotional;
     }
+
+    /// @notice Emitted when taker position is being liquidated
+    /// @param trader The trader who has been liquidated
+    /// @param baseToken Virtual base token(ETH, BTC, etc...) address
+    /// @param positionNotional The cost of position
+    /// @param positionSize The size of position
+    /// @param liquidationFee The fee of liquidate
+    /// @param liquidator The address of liquidator
+    event PositionLiquidated(
+        address indexed trader,
+        address indexed baseToken,
+        uint256 positionNotional,
+        int256 positionSize,
+        uint256 liquidationFee,
+        address liquidator
+    );
 
     // TODO: Implement this event
     /// @notice Emitted when open position with non-zero referral code
@@ -66,6 +84,9 @@ interface IPositioning {
     /// @param trader The address of trader
     function settleAllFunding(address trader) external;
 
+    /// @notice Function to set fee receiver
+    function setDefaultFeeReceiver(address newDefaultFeeReceiver) external;
+
     /// @notice Trader can call `openPosition` to long/short on baseToken market
     /// @param orderLeft PositionParams struct
     /// @param orderRight PositionParams struct
@@ -95,6 +116,4 @@ interface IPositioning {
     /// @notice Get AccountBalance address
     /// @return accountBalance `AccountBalance` address
     function getAccountBalance() external view returns (address accountBalance);
-
-    function getAccountValue(address trader) external view returns (int256);
 }

@@ -49,11 +49,13 @@ contract MarketRegistry is IMarketRegistry, PositioningCallee, MarketRegistrySto
         emit FeeRatioChanged(baseToken, feeRatio);
     }
 
+    /// @inheritdoc IMarketRegistry
     function setMakerFeeRatio( uint24 makerFeeRatio) external override checkRatio(makerFeeRatio) {
         _requireMarketRegistryAdmin();
         _makerFeeRatio = makerFeeRatio;
     }
 
+    /// @inheritdoc IMarketRegistry
     function setTakerFeeRatio( uint24 takerFeeRatio) external override checkRatio(takerFeeRatio) {
         _requireMarketRegistryAdmin();
         _takerFeeRatio = takerFeeRatio;
@@ -67,7 +69,7 @@ contract MarketRegistry is IMarketRegistry, PositioningCallee, MarketRegistrySto
     }
 
     /// @inheritdoc IMarketRegistry
-    function addBaseToken(address baseToken) external override {
+    function addBaseToken(address baseToken) external override onlyOwner {
         address[] storage tokensStorage = _baseTokensMarketMap;
         if (_hasBaseToken(tokensStorage, baseToken)) {
             return;
@@ -91,22 +93,15 @@ contract MarketRegistry is IMarketRegistry, PositioningCallee, MarketRegistrySto
     }
 
     /// @inheritdoc IMarketRegistry
-    function getFeeRatio(address baseToken) external view override returns (uint24) {
-        return _exchangeFeeRatioMap[baseToken];
-    }
-
     function getMakerFeeRatio() external view override returns (uint24) {
         return _makerFeeRatio;
     }
 
+    /// @inheritdoc IMarketRegistry
     function getTakerFeeRatio() external view override returns (uint24) {
         return _takerFeeRatio;
     }
 
-    /// @inheritdoc IMarketRegistry
-    function getMarketInfo(address baseToken) external view override returns (MarketInfo memory) {
-        return MarketInfo({ exchangeFeeRatio: _exchangeFeeRatioMap[baseToken] });
-    }
 
     /// @inheritdoc IMarketRegistry
     function checkBaseToken(address baseToken) external view override returns (bool) {

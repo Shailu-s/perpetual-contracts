@@ -12,4 +12,6 @@ abstract contract FundingRateStorage {
     mapping(address => uint256) internal _lastSettledTimestampMap;
     // mapping basetoken => twpremium(time weighted)
     mapping(address => int256) internal _globalFundingGrowthMap;
+    
+    uint256[50] private __gap;
 }

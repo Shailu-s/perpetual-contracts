@@ -57,7 +57,7 @@ contract Vault is IVault, ReentrancyGuardUpgradeable, OwnerPausable, VaultStorag
         address tokenArg,
         address vaultControllerArg,
         bool isEthVaultArg
-    ) external override initializer {
+    ) external initializer {
         uint8 decimalsArg = 0;
         if (isEthVaultArg) {
             decimalsArg = 18;
@@ -85,15 +85,19 @@ contract Vault is IVault, ReentrancyGuardUpgradeable, OwnerPausable, VaultStorag
         _grantRole(VAULT_ADMIN, _msgSender());
     }
 
-    function setPositioning(address PositioningArg) external {
+    /// @inheritdoc IVault
+    function setPositioning(address PositioningArg) external onlyOwner{
         // V_VPMM: Positioning is not contract
         require(PositioningArg.isContract(), "V_VPMM");
         _grantRole(CAN_MATCH_ORDERS, PositioningArg);
         _Positioning = PositioningArg;
     }
 
+    /// @inheritdoc IVault
     function setVaultController(address vaultControllerArg) external {
         _requireVaultAdmin();
+        // V_VPMM: Vault controller is not contract
+        require(vaultControllerArg.isContract(), "V_VPMM");
         _vaultController = vaultControllerArg;
     }
 
@@ -263,7 +267,8 @@ contract Vault is IVault, ReentrancyGuardUpgradeable, OwnerPausable, VaultStorag
         return _Positioning;
     }
 
-    function getVaultController() external view returns (address) {
+    /// @inheritdoc IVault
+    function getVaultController() external view override returns (address) {
         return _vaultController;
     }
 

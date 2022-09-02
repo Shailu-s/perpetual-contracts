@@ -33,7 +33,7 @@ contract VaultController is ReentrancyGuardUpgradeable, OwnerPausable, VaultCont
     using LibPerpMath for int256;
     using LibSettlementTokenMath for uint256;
 
-    function initialize(address positioningConfig, address accountBalanceArg) external override initializer {
+    function initialize(address positioningConfig, address accountBalanceArg) external initializer {
         __ReentrancyGuard_init();
         __OwnerPausable_init();
 
@@ -42,11 +42,13 @@ contract VaultController is ReentrancyGuardUpgradeable, OwnerPausable, VaultCont
         _grantRole(VAULT_CONTROLLER_ADMIN, _msgSender());
     }
 
+    /// @inheritdoc IVaultController
     function registerVault(address _vault, address _token) external override {
         // TODO: _requireOnlyFactory();
         _vaultAddress[_token] = _vault;
     }
 
+    /// @inheritdoc IVaultController
     function deposit(address token, uint256 amount) external payable override whenNotPaused nonReentrant {
         address _vault = getVault(token);
         // vault of token is not available
@@ -62,10 +64,11 @@ contract VaultController is ReentrancyGuardUpgradeable, OwnerPausable, VaultCont
             _vaultList.push(_vault);
         }
         IVault(_vault).deposit{ value: msg.value }(token, amount, from);
-        uint256 amountX10_18 = LibSettlementTokenMath.parseSettlementToken(amount, IVault(_vault).decimals());
+        uint256 amountX10_18 = LibSettlementTokenMath.parseSettlementToken(amount, 0);
         _modifyBalance(from, amountX10_18.toInt256());
     }
 
+    /// @inheritdoc IVaultController
     function withdraw(address token, uint256 amount) external override whenNotPaused nonReentrant {
         address _vault = getVault(token);
         // vault of token is not available
@@ -95,8 +98,9 @@ contract VaultController is ReentrancyGuardUpgradeable, OwnerPausable, VaultCont
         _modifyBalance(to, amountX10_18.neg256());
     }
 
+    /// @inheritdoc IVaultController
     function getAccountValue(address trader) external view override whenNotPaused returns (int256) {
-        // _requireOnlyPositioning();
+        _requireOnlyPositioning();
         int256 fundingPayment = IPositioning(_positioning).getAllPendingFundingPayment(trader);
         (int256 owedRealizedPnl, int256 unrealizedPnl) = IAccountBalance(_accountBalance).getPnlAndPendingFee(trader);
 
@@ -106,6 +110,7 @@ contract VaultController is ReentrancyGuardUpgradeable, OwnerPausable, VaultCont
         return balanceX10_18 + (owedRealizedPnl - fundingPayment) + unrealizedPnl;
     }
 
+    /// @inheritdoc IVaultController
     function getFreeCollateralByRatio(address trader, uint24 ratio) public view override returns (int256) {
         // conservative config: freeCollateral = min(collateral, accountValue) - margin requirement ratio
         int256 fundingPayment = IPositioning(_positioning).getAllPendingFundingPayment(trader);
@@ -119,31 +124,33 @@ contract VaultController is ReentrancyGuardUpgradeable, OwnerPausable, VaultCont
         return LibPerpMath.min(totalCollateralValue, accountValue) - (totalMarginRequirementX10_18.toInt256());
     }
 
-    /// @return totalMarginRequirement with decimals == 18, for freeCollateral calculation
-    function _getTotalMarginRequirement(address trader, uint24 ratio) internal view returns (uint256) {
-        uint256 totalDebtValue = IAccountBalance(_accountBalance).getTotalDebtValue(trader);
-        return totalDebtValue.mulRatio(ratio);
-    }
-
-    function getVault(address _token) public view override returns (address vault) {
-        vault = _vaultAddress[_token];
-    }
-
+    /// @inheritdoc IVaultController
     function getBalance(address trader) public view override returns (int256) {
         return _balance[trader];
     }
 
-    function _requireOnlyPositioning() internal view {
-        // only Positioning
-        require(_msgSender() == _positioning, "CHD_OCH");
-    }
-
+    /// @inheritdoc IVaultController
     function setPositioning(address PositioningArg) external {
         require(hasRole(VAULT_CONTROLLER_ADMIN, _msgSender()), "VaultController: Not admin");
         // V_VPMM: Positioning is not contract
         require(PositioningArg.isContract(), "V_VPMM");
         _positioning = PositioningArg;
     }
+
+    /// @inheritdoc IVaultController
+    function getVault(address _token) public view override returns (address vault) {
+        vault = _vaultAddress[_token];
+    }
+
+    function _requireOnlyPositioning() internal view {
+        // only Positioning
+        require(_msgSender() == _positioning, "CHD_OCH");
+    }
+    
+    /// @return totalMarginRequirement with decimals == 18, for freeCollateral calculation
+    function _getTotalMarginRequirement(address trader, uint24 ratio) internal view returns (uint256) {
+        uint256 totalDebtValue = IAccountBalance(_accountBalance).getTotalDebtValue(trader);
+        return totalDebtValue.mulRatio(ratio);
 
     function _modifyBalance(address trader, int256 amount) internal {
         _balance[trader] = _balance[trader] + amount;
