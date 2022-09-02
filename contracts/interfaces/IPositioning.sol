@@ -5,11 +5,6 @@ import "../libs/LibFill.sol";
 import "../libs/LibDeal.sol";
 
 interface IPositioning {
-    
-    struct MatchResponse {
-        LibFill.FillResult newFill;
-    }
-
     struct InternalData {
         int256 leftExchangedPositionSize;
         int256 leftExchangedPositionNotional;
@@ -95,7 +90,7 @@ interface IPositioning {
         bytes memory signatureLeft,
         LibOrder.Order memory orderRight,
         bytes memory signatureRight
-    ) external returns (MatchResponse memory);
+    ) external returns (LibFill.FillResult memory);
 
     /// @notice Set Positioning address
     function setPositioning(address positioning) external;

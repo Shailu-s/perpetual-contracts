@@ -123,7 +123,7 @@ contract Positioning is
         bytes memory signatureLeft,
         LibOrder.Order memory orderRight,
         bytes memory signatureRight
-    ) public override whenNotPaused nonReentrant returns (MatchResponse memory response) {
+    ) public override whenNotPaused nonReentrant returns (LibFill.FillResult memory newFill) {
         // short = selling base token
         address baseToken = orderLeft.isShort ? orderLeft.makeAsset.virtualToken : orderLeft.takeAsset.virtualToken;
 
@@ -149,7 +149,7 @@ contract Positioning is
         bool isRightLiquidation = _isAccountLiquidatable(orderRight.trader);
         isRightLiquidation ? _isOrderLiquidatable(orderRight, baseToken) : _validateFull(orderRight, signatureRight);
 
-        response = _openPosition(orderLeft, orderRight, isLeftLiquidation, isRightLiquidation, baseToken);
+        newFill = _openPosition(orderLeft, orderRight, isLeftLiquidation, isRightLiquidation, baseToken);
     }
 
     /// @inheritdoc IPositioning
@@ -222,58 +222,51 @@ contract Positioning is
         bool isLeftLiquidation,
         bool isRightLiquidation,
         address baseToken
-    ) internal returns (MatchResponse memory response) {
-        (LibFill.FillResult memory newFill) =
+    ) internal returns (LibFill.FillResult memory newFill) {
+        newFill =
             IMatchingEngine(_matchingEngine).matchOrders(orderLeft, orderRight);
-
-        //TODO: no need to increase memory here, newFill and dealData can be directly used
-        response = MatchResponse(newFill);
 
         InternalData memory internalData;
         if (orderLeft.isShort) {
             internalData.leftExchangedPositionSize = LibSettlementTokenMath.parseSettlementToken(
-                response.newFill.leftValue.neg256(),
+                newFill.leftValue.neg256(),
                 0
             );
             internalData.rightExchangedPositionSize = LibSettlementTokenMath.parseSettlementToken(
-                response.newFill.leftValue.toInt256(),
+                newFill.leftValue.toInt256(),
                 0
             );
 
             internalData.leftExchangedPositionNotional = LibSettlementTokenMath.parseSettlementToken(
-                response.newFill.rightValue.toInt256(),
+                newFill.rightValue.toInt256(),
                 0
             );
             internalData.rightExchangedPositionNotional = LibSettlementTokenMath.parseSettlementToken(
-                response.newFill.rightValue.neg256(),
+                newFill.rightValue.neg256(),
                 0
             );
         } else {
             internalData.leftExchangedPositionSize = LibSettlementTokenMath.parseSettlementToken(
-                response.newFill.rightValue.toInt256(),
+                newFill.rightValue.toInt256(),
                 0
             );
             internalData.rightExchangedPositionSize = LibSettlementTokenMath.parseSettlementToken(
-                response.newFill.rightValue.neg256(),
+                newFill.rightValue.neg256(),
                 0
             );
 
             internalData.leftExchangedPositionNotional = LibSettlementTokenMath.parseSettlementToken(
-                response.newFill.leftValue.neg256(),
+                newFill.leftValue.neg256(),
                 0
             );
             internalData.rightExchangedPositionNotional = LibSettlementTokenMath.parseSettlementToken(
-                response.newFill.leftValue.toInt256(),
+                newFill.leftValue.toInt256(),
                 0
             );
         }
 
         uint256 _orderLeftFee;
         uint256 _orderRightFee;
-        
-        //TODO: no need to declare it here, it can be done inside if, thus saving gas for non liquidation txns
-        uint256 liquidationFee;
-        address liquidator;
 
         // TODO: This is hardcoded right now but changes it during relayer development
         bool isLeftMaker = true;
@@ -319,6 +312,8 @@ contract Positioning is
         }
 
         if (isLeftLiquidation) {
+            uint256 liquidationFee;
+            address liquidator;
             // trader's pnl-- as liquidation penalty
             liquidationFee = internalData.leftExchangedPositionNotional.abs().mulRatio(
                 IPositioningConfig(_PositioningConfig).getLiquidationPenaltyRatio()
@@ -344,6 +339,8 @@ contract Positioning is
         }
 
         if (isRightLiquidation) {
+            uint256 liquidationFee;
+            address liquidator;
             // trader's pnl-- as liquidation penalty
             liquidationFee = internalData.rightExchangedPositionNotional.abs().mulRatio(
                 IPositioningConfig(_PositioningConfig).getLiquidationPenaltyRatio()
@@ -397,7 +394,7 @@ contract Positioning is
 
         IAccountBalance(_accountBalance).deregisterBaseToken(orderLeft.trader, baseToken);
         IAccountBalance(_accountBalance).deregisterBaseToken(orderRight.trader, baseToken);
-        return response;
+        return newFill;
     }
 
     //
