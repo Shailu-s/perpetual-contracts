@@ -19,4 +19,5 @@ abstract contract PositioningStorageV1 {
 
     address public defaultFeeReceiver;
 
+    uint256[50] private __gap;
 }

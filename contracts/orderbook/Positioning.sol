@@ -215,6 +215,7 @@ contract Positioning is
         (LibFill.FillResult memory newFill, LibDeal.DealData memory dealData) =
             IMatchingEngine(_matchingEngine).matchOrders(orderLeft, orderRight);
 
+        //TODO: no need to increase memory here, newFill and dealData can be directly used
         response = MatchResponse(newFill, dealData);
 
         InternalData memory internalData;
@@ -258,6 +259,8 @@ contract Positioning is
 
         uint256 _orderLeftFee;
         uint256 _orderRightFee;
+        
+        //TODO: no need to declare it here, it can be done inside if, thus saving gas for non liquidation txns
         uint256 liquidationFee;
         address liquidator;
 
@@ -417,7 +420,7 @@ contract Positioning is
                 ? LibSettlementTokenMath.parseSettlementToken(order.makeAsset.value, 0)
                 : LibSettlementTokenMath.parseSettlementToken(order.takeAsset.value, 0);
 
-        require(orderAmount >= amount && orderAmount <= maxLiquidation.toUint256(), "P_WTV");
+        require(orderAmount >= amount || orderAmount <= maxLiquidation.abs(), "P_WTV");
     }
 
     /// @dev This function checks if account of trader is eligible for liquidation
