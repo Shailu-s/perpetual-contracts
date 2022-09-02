@@ -12,12 +12,13 @@ import "../libs/LibSignature.sol";
 abstract contract OrderValidator is Initializable, ContextUpgradeable, EIP712Upgradeable {
     using LibSignature for bytes32;
     using AddressUpgradeable for address;
-    
+
     bytes4 constant internal MAGICVALUE = 0x1626ba7e;
 
     mapping(address => uint256) public makerMinSalt;
 
-    function __OrderValidator_init_unchained() internal initializer {
+
+    function __OrderValidator_init_unchained() internal onlyInitializing {
         __EIP712_init_unchained("V_PERP", "1");
     }
 
@@ -57,3 +58,5 @@ abstract contract OrderValidator is Initializable, ContextUpgradeable, EIP712Upg
 
     uint256[50] private __gap;
 }
+
+

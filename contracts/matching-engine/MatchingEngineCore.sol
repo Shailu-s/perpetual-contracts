@@ -4,21 +4,25 @@ pragma solidity =0.8.12;
 
 import { PausableUpgradeable } from "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
 
-import "../interfaces/ITransferManager.sol";
 import "../libs/LibFill.sol";
+
+import "../interfaces/IMarkPriceOracle.sol";
+import "../interfaces/ITransferManager.sol";
+import "../interfaces/IMatchingEngine.sol";
+
 import "./AssetMatcher.sol";
-import "./TransferExecutor.sol";
+import "./TransferManager.sol";
 import "../helpers/OwnerPausable.sol";
 
 abstract contract MatchingEngineCore is
-    Initializable,
-    OwnableUpgradeable,
     PausableUpgradeable,
     AssetMatcher,
-    TransferExecutor,
-    ITransferManager
+    TransferManager
 {
     uint256 private constant _UINT256_MAX = 2**256 - 1;
+    uint256 private constant _ORACLE_BASE = 1000000;
+
+    IMarkPriceOracle public markPriceOracle;
 
     mapping(address => uint256) public makerMinSalt;
 
@@ -30,6 +34,10 @@ abstract contract MatchingEngineCore is
     event CanceledAll(address indexed trader, uint256 minSalt);
     event Matched(uint256 newLeftFill, uint256 newRightFill);
 
+    /**
+        @notice Cancels a given order
+        @param order the order to be cancelled
+     */
     function cancelOrder(LibOrder.Order memory order) public {
         require(_msgSender() == order.trader, "V_PERP_M: not a maker");
         require(order.salt != 0, "V_PERP_M: 0 salt can't be used");
@@ -45,39 +53,64 @@ abstract contract MatchingEngineCore is
         );
     }
 
+    function grantMatchOrders(address account) public {
+        require(hasRole(MATCHING_ENGINE_CORE_ADMIN, _msgSender()), "MatchingEngineCore: Not admin");
+        _grantRole(CAN_MATCH_ORDERS, account);
+    }
+
+    /**
+        @notice Cancels multiple orders in batch
+        @param orders Array or orders to be cancelled
+     */
     function cancelOrdersInBatch(LibOrder.Order[] memory orders) external {
-        for (uint256 index = 0; index < orders.length; index++) {
+        uint256 orderlength = orders.length;
+        for (uint256 index = 0; index < orderlength; index++) {
             cancelOrder(orders[index]);
         }
     }
 
+    /**
+        @notice Cancels all orders
+        @param minSalt salt in minimum of all orders
+     */
     function cancelAllOrders(uint256 minSalt) external {
+        _requireCanCancelAllOrders();
         require(minSalt > makerMinSalt[_msgSender()], "V_PERP_M: salt too low");
         makerMinSalt[_msgSender()] = minSalt;
 
         emit CanceledAll(_msgSender(), minSalt);
     }
 
-    function matchOrders(
-        LibOrder.Order memory orderLeft,
-        LibOrder.Order memory orderRight
-    )
+    /** 
+        @notice Will match two orders & transfers assets
+        @param orderLeft the left side of order
+        @param orderRight the right side of order
+     */
+    function matchOrders(LibOrder.Order memory orderLeft, LibOrder.Order memory orderRight)
         public
         whenNotPaused
         returns (
-            LibFill.FillResult memory,
-            LibDeal.DealData memory
+            LibFill.FillResult memory
         )
     {
+        _requireCanMatchOrders();
         if (orderLeft.trader != address(0) && orderRight.trader != address(0)) {
             require(orderRight.trader != orderLeft.trader, "V_PERP_M: order verification failed");
         }
-        (LibFill.FillResult memory newFill, LibDeal.DealData memory dealData) = _matchAndTransfer(
-            orderLeft,
-            orderRight
-        );
+        LibFill.FillResult memory newFill = _matchAndTransfer(orderLeft, orderRight);
 
-        return (newFill, dealData);
+        return (newFill);
+    }
+
+    function matchOrderInBatch(LibOrder.Order[] memory ordersLeft, LibOrder.Order[] memory ordersRight)
+        external
+        whenNotPaused
+    {
+        _requireCanMatchOrders();
+        uint256 ordersLength = ordersLeft.length;
+        for (uint256 index = 0; index < ordersLength; index++) {
+            matchOrders(ordersLeft[index], ordersRight[index]);
+        }
     }
 
     /**
@@ -87,7 +120,7 @@ abstract contract MatchingEngineCore is
     */
     function _matchAndTransfer(LibOrder.Order memory orderLeft, LibOrder.Order memory orderRight)
         internal
-        returns (LibFill.FillResult memory newFill, LibDeal.DealData memory dealData)
+        returns (LibFill.FillResult memory newFill)
     {
         _matchAssets(orderLeft, orderRight);
 
@@ -96,46 +129,28 @@ abstract contract MatchingEngineCore is
         address makeToken = orderLeft.isShort ? orderLeft.makeAsset.virtualToken : orderLeft.takeAsset.virtualToken;
         address takeToken = orderRight.isShort ? orderRight.makeAsset.virtualToken : orderRight.takeAsset.virtualToken;
 
-        dealData = _getDealData(orderLeft, orderRight);
+        bool isLeftBase = IVirtualToken(makeToken).isBase();
+
+        isLeftBase
+            ? _updateObservation(newFill.rightValue, newFill.leftValue, makeToken)
+            : _updateObservation(newFill.leftValue, newFill.rightValue, takeToken);
+
         _doTransfers(
             LibDeal.DealSide(LibAsset.Asset(makeToken, newFill.leftValue), _proxy, orderLeft.trader),
-            LibDeal.DealSide(LibAsset.Asset(takeToken, newFill.rightValue), _proxy, orderRight.trader),
-            dealData
+            LibDeal.DealSide(LibAsset.Asset(takeToken, newFill.rightValue), _proxy, orderRight.trader)
         );
 
         emit Matched(newFill.leftValue, newFill.rightValue);
     }
 
-    /**
-        @notice determines the max amount of fees for the match
-        @param feeSide fee side of the match
-        @param _protocolFee protocol fee of the match
-        @return max fee amount in base points
-    */
-    function _getMaxFee(LibFeeSide.FeeSide feeSide, uint256 _protocolFee) internal pure returns (uint256) {
-        uint256 matchFees = _protocolFee;
-        uint256 maxFee;
-
-        // TODO: This condition is always true since LibFeeSide.getFeeSide() always returns LibFeeSide.FeeSide.LEFT
-        if (feeSide == LibFeeSide.FeeSide.LEFT) {
-            maxFee = 1000;
-        } else {
-            return 0;
-        }
-        require(maxFee > 0 && maxFee >= matchFees && maxFee <= 1000, "V_PERP_M: wrong maxFee");
-
-        return maxFee;
-    }
-
-    function _getDealData(LibOrder.Order memory orderLeft, LibOrder.Order memory orderRight)
-        internal
-        view
-        returns (LibDeal.DealData memory dealData)
-    {
-        dealData.protocolFee = _getProtocolFee();
-        // TODO: Update code since LibFeeSide.getFeeSide() always returns LibFeeSide.FeeSide.LEFT
-        dealData.feeSide = LibFeeSide.getFeeSide(orderLeft, orderRight);
-        dealData.maxFeesBasePoint = _getMaxFee(dealData.feeSide, dealData.protocolFee);
+    function _updateObservation(
+        uint256 quoteValue,
+        uint256 baseValue,
+        address baseToken
+    ) internal {
+        uint256 cumulativePrice = ((quoteValue * _ORACLE_BASE) / baseValue);
+        uint64 index = markPriceOracle.indexByBaseToken(baseToken);
+        markPriceOracle.addObservation(cumulativePrice, index);
     }
 
     /**
@@ -185,5 +200,16 @@ abstract contract MatchingEngineCore is
         matchToken = _matchAssets(orderLeft.takeAsset.virtualToken, orderRight.makeAsset.virtualToken);
         require(matchToken != address(0), "V_PERP_M: left take assets don't match");
     }
+
+    function _requireCanCancelAllOrders() internal view {
+        // MatchingEngineCore: Not Can Cancel All Orders
+        require(hasRole(CAN_CANCEL_ALL_ORDERS, _msgSender()), "MEC_NCCAO");
+    }
+
+    function _requireCanMatchOrders() internal view {
+        // MatchingEngineCore: Not Can Match Orders
+        require(hasRole(CAN_MATCH_ORDERS, _msgSender()), "MEC_NCMO");
+    }
+
     uint256[50] private __gap;
 }

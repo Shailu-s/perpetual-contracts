@@ -2,10 +2,9 @@
 
 pragma solidity =0.8.12;
 
-import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
-abstract contract AssetMatcher is Initializable, OwnableUpgradeable {
+abstract contract AssetMatcher is OwnableUpgradeable {
     function _matchAssets(address leftBaseToken, address rightBaseToken)
         internal
         pure

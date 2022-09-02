@@ -3,15 +3,11 @@
 pragma solidity =0.8.12;
 
 import "../libs/LibDeal.sol";
-import "./ITransferExecutor.sol";
 
-abstract contract ITransferManager is ITransferExecutor {
+abstract contract ITransferManager {
 
     function _doTransfers(
         LibDeal.DealSide memory left,
-        LibDeal.DealSide memory right,
-        LibDeal.DealData memory dealData
+        LibDeal.DealSide memory right
     ) internal virtual returns (uint totalMakeValue, uint totalTakeValue);
-
-    function _getProtocolFee() internal virtual view returns (uint256);
 }

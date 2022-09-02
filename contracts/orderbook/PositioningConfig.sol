@@ -1,15 +1,17 @@
 // SPDX-License-Identifier: BUSL - 1.1
 pragma solidity =0.8.12;
 
-import { OwnableUpgradeable } from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import { IPositioningConfig } from "../interfaces/IPositioningConfig.sol";
 import { PositioningConfigStorageV1 } from "../storage/PositioningConfigStorage.sol";
+import { RoleManager } from "../helpers/RoleManager.sol";
 
 // never inherit any new stateful contract. never change the orders of parent stateful contracts
 contract PositioningConfig is
     IPositioningConfig,
-    OwnableUpgradeable,
-    PositioningConfigStorageV1
+    Initializable,
+    PositioningConfigStorageV1,
+    RoleManager
 {
     //
     // EVENT
@@ -36,7 +38,6 @@ contract PositioningConfig is
     //
 
     function initialize() external initializer {
-        __Ownable_init();
 
         _maxMarketsPerAccount = type(uint8).max;
         _imRatio = 0.4e6; // initial-margin ratio, 40% in decimal 6
@@ -47,18 +48,20 @@ contract PositioningConfig is
         _maxFundingRate = 0.1e6; // max funding rate, 10% in decimal 6
         _twapInterval = 60 minutes;
         _settlementTokenBalanceCap = 0;
+        _grantRole(POSITIONING_CONFIG_ADMIN, _msgSender());
     }
 
     function setLiquidationPenaltyRatio(uint24 liquidationPenaltyRatioArg)
         external
         checkRatio(liquidationPenaltyRatioArg)
-        onlyOwner
     {
+        _requirePositioningConfigAdmin();
         _liquidationPenaltyRatio = liquidationPenaltyRatioArg;
         emit LiquidationPenaltyRatioChanged(liquidationPenaltyRatioArg);
     }
 
-    function setPartialCloseRatio(uint24 partialCloseRatioArg) external checkRatio(partialCloseRatioArg) onlyOwner {
+    function setPartialCloseRatio(uint24 partialCloseRatioArg) external checkRatio(partialCloseRatioArg) {
+        _requirePositioningConfigAdmin();
         // CHC_IPCR: invalid partialCloseRatio
         require(partialCloseRatioArg > 0, "CHC_IPCR");
 
@@ -66,7 +69,8 @@ contract PositioningConfig is
         emit PartialCloseRatioChanged(partialCloseRatioArg);
     }
 
-    function setTwapInterval(uint32 twapIntervalArg) external onlyOwner {
+    function setTwapInterval(uint32 twapIntervalArg) external {
+        _requirePositioningConfigAdmin();
         // CHC_ITI: invalid twapInterval
         require(twapIntervalArg != 0, "CHC_ITI");
 
@@ -74,17 +78,20 @@ contract PositioningConfig is
         emit TwapIntervalChanged(twapIntervalArg);
     }
 
-    function setMaxMarketsPerAccount(uint8 maxMarketsPerAccountArg) external onlyOwner {
+    function setMaxMarketsPerAccount(uint8 maxMarketsPerAccountArg) external {
+        _requirePositioningConfigAdmin();
         _maxMarketsPerAccount = maxMarketsPerAccountArg;
         emit MaxMarketsPerAccountChanged(maxMarketsPerAccountArg);
     }
 
-    function setSettlementTokenBalanceCap(uint256 cap) external onlyOwner {
+    function setSettlementTokenBalanceCap(uint256 cap) external {
+        _requirePositioningConfigAdmin();
         _settlementTokenBalanceCap = cap;
         emit SettlementTokenBalanceCapChanged(cap);
     }
 
-    function setMaxFundingRate(uint24 rate) external onlyOwner {
+    function setMaxFundingRate(uint24 rate) external {
+        _requirePositioningConfigAdmin();
         _maxFundingRate = rate;
         emit MaxFundingRateChanged(rate);
     }
@@ -136,5 +143,9 @@ contract PositioningConfig is
     /// @inheritdoc IPositioningConfig
     function getMaxFundingRate() external view override returns (uint24) {
         return _maxFundingRate;
+    }
+
+    function _requirePositioningConfigAdmin() internal view {
+        require(hasRole(POSITIONING_CONFIG_ADMIN, _msgSender()), "PositioningConfig: Not admin");
     }
 }

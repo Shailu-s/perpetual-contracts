@@ -11,17 +11,20 @@ contract MatchingEngineTest is MatchingEngine
 
     function __MatchingEngineTest_init(
         address erc20TransferProxy,
-        uint256 newProtocolFee,
-        address newDefaultFeeReceiver,
-        address owner
+        address owner,
+        IMarkPriceOracle markPriceOracle
     ) external initializer {
         initialize(
             erc20TransferProxy,
-            newProtocolFee,
-            newDefaultFeeReceiver,
-            owner
+            owner,
+            markPriceOracle
         );
         __Ownable_init_unchained();
+        _grantRole(CAN_CANCEL_ALL_ORDERS, address(this));
+        _grantRole(CAN_CANCEL_ALL_ORDERS, _msgSender());
+        _grantRole(CAN_MATCH_ORDERS, _msgSender());
+        _grantRole(CAN_MATCH_ORDERS, address(this));
+        _grantRole(CAN_ADD_OBSERVATION, address(this));
     }
 
     function matchOrdersTest(
@@ -31,19 +34,23 @@ contract MatchingEngineTest is MatchingEngine
         matchOrders(orderLeft, orderRight);
     }
 
-    function getProtocolFeeTest() public view virtual returns (uint256) {
-        return _getProtocolFee();
-    }
-
     function doTransfersTest(
         LibDeal.DealSide memory left,
-        LibDeal.DealSide memory right,
-        LibDeal.DealData memory dealData
+        LibDeal.DealSide memory right
     ) public virtual returns (uint totalMakeValue, uint totalTakeValue) {
-        return _doTransfers(left, right, dealData);
+        return _doTransfers(left, right);
     }
 
     function setMakerMinSalt(uint256 _val) external {
         makerMinSalt[_msgSender()] = _val;
+    }
+
+    function addAssets(uint256[] memory _priceCumulative, address[] memory _asset) public {
+        markPriceOracle.addAssets(_priceCumulative, _asset);
+    }
+
+    function addObservation(uint256 _priceCumulative, uint64 _index) public {
+        _grantRole(CAN_ADD_OBSERVATION, address(this));
+        markPriceOracle.addObservation(_priceCumulative, _index);
     }
 }

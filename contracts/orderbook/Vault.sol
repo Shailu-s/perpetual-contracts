@@ -9,6 +9,8 @@ import {
     SafeERC20Upgradeable,
     IERC20Upgradeable
 } from "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
+import { Context } from "@openzeppelin/contracts/utils/Context.sol";
+import { ContextUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol";
 
 import { LibPerpMath } from "../libs/LibPerpMath.sol";
 import { LibSettlementTokenMath } from "../libs/LibSettlementTokenMath.sol";
@@ -22,10 +24,11 @@ import { IPositioningConfig } from "../interfaces/IPositioningConfig.sol";
 import { IVault } from "../interfaces/IVault.sol";
 
 import { OwnerPausable } from "../helpers/OwnerPausable.sol";
+import { RoleManager } from "../helpers/RoleManager.sol";
 import { VaultStorageV1 } from "../storage/VaultStorage.sol";
 
 // never inherit any new stateful contract. never change the orders of parent stateful contracts
-contract Vault is IVault, ReentrancyGuardUpgradeable, OwnerPausable, VaultStorageV1 {
+contract Vault is IVault, ReentrancyGuardUpgradeable, OwnerPausable, VaultStorageV1, RoleManager {
     using AddressUpgradeable for address;
     using LibSafeCastUint for uint256;
     using LibSafeCastInt for int256;
@@ -79,17 +82,20 @@ contract Vault is IVault, ReentrancyGuardUpgradeable, OwnerPausable, VaultStorag
         _accountBalance = accountBalanceArg;
         _vaultController = vaultControllerArg;
         _isEthVault = isEthVaultArg;
+        _grantRole(VAULT_ADMIN, _msgSender());
     }
 
     /// @inheritdoc IVault
     function setPositioning(address PositioningArg) external onlyOwner{
         // V_VPMM: Positioning is not contract
         require(PositioningArg.isContract(), "V_VPMM");
+        _grantRole(CAN_MATCH_ORDERS, PositioningArg);
         _Positioning = PositioningArg;
     }
 
     /// @inheritdoc IVault
-    function setVaultController(address vaultControllerArg) external onlyOwner {
+    function setVaultController(address vaultControllerArg) external {
+        _requireVaultAdmin();
         // V_VPMM: Vault controller is not contract
         require(vaultControllerArg.isContract(), "V_VPMM");
         _vaultController = vaultControllerArg;
@@ -196,8 +202,8 @@ contract Vault is IVault, ReentrancyGuardUpgradeable, OwnerPausable, VaultStorag
         whenNotPaused
         nonReentrant
         onlySettlementToken(token)
-        onlyOwner
     {
+        _requireVaultAdmin();
         address from = _msgSender();
         SafeERC20Upgradeable.safeTransferFrom(IERC20Upgradeable(token), from, address(this), amount);
         _totalDebt += amount;
@@ -211,8 +217,8 @@ contract Vault is IVault, ReentrancyGuardUpgradeable, OwnerPausable, VaultStorag
         whenNotPaused
         nonReentrant
         onlySettlementToken(token)
-        onlyOwner
     {
+        _requireVaultAdmin();
         address to = _msgSender();
         //V_AIMTD: amount is more that debt
         require(_totalDebt >= amount, "V_AIMTD");
@@ -222,7 +228,8 @@ contract Vault is IVault, ReentrancyGuardUpgradeable, OwnerPausable, VaultStorag
     }
 
     /// @inheritdoc IVault
-    function setSettlementToken(address newTokenArg) external override onlyOwner {
+    function setSettlementToken(address newTokenArg) external override {
+        _requireVaultAdmin();
         _settlementToken = newTokenArg;
     }
 
@@ -275,19 +282,6 @@ contract Vault is IVault, ReentrancyGuardUpgradeable, OwnerPausable, VaultStorag
     }
 
     //
-    // INTERNAL VIEW
-    //
-
-    function _requireOnlyVaultController() internal view {
-        // only VaultController
-        require(_msgSender() == _vaultController, "V_OVC");
-    }
-
-    function _msgSender() internal view override(OwnerPausable) returns (address) {
-        return super._msgSender();
-    }
-
-    //
     // INTERNAL NON-VIEW
     //
 
@@ -298,5 +292,31 @@ contract Vault is IVault, ReentrancyGuardUpgradeable, OwnerPausable, VaultStorag
         int256 amount
     ) internal {
         _balance[trader][token] = _balance[trader][token] + amount;
+    }
+
+    //
+    // INTERNAL VIEW
+    //
+
+    function _msgSender() internal view override(ContextUpgradeable, OwnerPausable) returns (address) {
+        return super._msgSender();
+    }
+
+    function _requireOnlyVaultController() internal view {
+        // only VaultController
+        require(_msgSender() == _vaultController, "V_OVC");
+    }
+
+    function _msgData() 
+    internal 
+    view 
+    virtual 
+    override(ContextUpgradeable)
+    returns (bytes calldata) {
+        return msg.data;
+    }
+
+    function _requireVaultAdmin() internal view {
+        require(hasRole(VAULT_ADMIN, _msgSender()), "Vault: Not admin");
     }
 }

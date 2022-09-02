@@ -8,7 +8,6 @@ interface IPositioning {
     
     struct MatchResponse {
         LibFill.FillResult newFill;
-        LibDeal.DealData dealData;
     }
 
     struct InternalData {
@@ -65,6 +64,22 @@ interface IPositioning {
     /// @param fundingPayment The fundingPayment of trader on baseToken market, > 0: payment, < 0 : receipt
     event FundingPaymentSettled(address indexed trader, address indexed baseToken, int256 fundingPayment);
 
+    /// @notice Emitted when trusted forwarder address changed
+    /// @dev TrustedForward is only used for metaTx
+    /// @param forwarder The trusted forwarder address
+    event TrustedForwarderChanged(address indexed forwarder);
+
+    /// @dev this function is public for testing
+    function initialize(
+        address PositioningConfigArg,
+        address vaultControllerArg,
+        address accountBalanceArg,
+        address matchingEngineArg,
+        address markPriceArg,
+        address indexPriceArg,
+        uint64 underlyingPriceIndex
+    ) external;
+
     /// @notice Settle all markets fundingPayment to owedRealized Pnl
     /// @param trader The address of trader
     function settleAllFunding(address trader) external;
@@ -81,6 +96,9 @@ interface IPositioning {
         LibOrder.Order memory orderRight,
         bytes memory signatureRight
     ) external returns (MatchResponse memory);
+
+    /// @notice Set Positioning address
+    function setPositioning(address positioning) external;
 
     /// @notice Get PositioningConfig address
     /// @return PositioningConfig PositioningConfig address

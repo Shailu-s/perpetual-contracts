@@ -1,9 +1,11 @@
 // SPDX-License-Identifier: BUSL - 1.1
 pragma solidity =0.8.12;
 
-import { OwnableUpgradeable } from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import { Context } from "@openzeppelin/contracts/utils/Context.sol";
+import { ContextUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol";
+import "./RoleManager.sol";
 
-abstract contract PositioningCallee is OwnableUpgradeable {
+abstract contract PositioningCallee is RoleManager {
     //
     // STATE
     //
@@ -19,12 +21,14 @@ abstract contract PositioningCallee is OwnableUpgradeable {
     //
 
     // solhint-disable-next-line func-order
-    function __PositioningCallee_init() internal initializer {
-        __Ownable_init();
+    function __PositioningCallee_init() internal onlyInitializing {
+        _grantRole(POSITIONING_CALLEE_ADMIN, _msgSender());
     }
 
-    function setPositioning(address PositioningArg) external onlyOwner {
+    function setPositioning(address PositioningArg) external virtual {
+        require(hasRole(POSITIONING_CALLEE_ADMIN, _msgSender()), "PositioningCallee: Not admin");
         _Positioning = PositioningArg;
+        _grantRole(CAN_MATCH_ORDERS, PositioningArg);
         emit PositioningCalleeChanged(PositioningArg);
     }
 

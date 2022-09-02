@@ -20,7 +20,6 @@ import { LibSignature } from "../libs/LibSignature.sol";
 import { LibSettlementTokenMath } from "../libs/LibSettlementTokenMath.sol";
 
 import { IAccountBalance } from "../interfaces/IAccountBalance.sol";
-import { IBaseToken } from "../interfaces/IBaseToken.sol";
 import { IERC1271 } from "../interfaces/IERC1271.sol";
 import { IERC20Metadata } from "../interfaces/IERC20Metadata.sol";
 import { IIndexPrice } from "../interfaces/IIndexPrice.sol";
@@ -36,6 +35,7 @@ import { FundingRate } from "../funding-rate/FundingRate.sol";
 import { OwnerPausable } from "../helpers/OwnerPausable.sol";
 import { OrderValidator } from "./OrderValidator.sol";
 import { PositioningStorageV1 } from "../storage/PositioningStorage.sol";
+import { PositioningCallee } from "../helpers/PositioningCallee.sol";
 
 // TODO : Create bulk match order for perp
 // never inherit any new stateful contract. never change the orders of parent stateful contracts
@@ -55,8 +55,9 @@ contract Positioning is
     using LibPerpMath for uint256;
     using LibPerpMath for int256;
     using LibSignature for bytes32;
-    using LibSettlementTokenMath for int256;
+      using LibSettlementTokenMath for int256;
     using LibSettlementTokenMath for uint256;
+
 
     /// @dev this function is public for testing
     // solhint-disable-next-line func-order
@@ -66,7 +67,8 @@ contract Positioning is
         address accountBalanceArg,
         address matchingEngineArg,
         address markPriceArg,
-        address indexPriceArg
+        address indexPriceArg,
+        uint64 underlyingPriceIndex
     ) public initializer {
         // CH_VANC: Vault address is not contract
         require(vaultControllerArg.isContract(), "CH_VANC");
@@ -86,11 +88,16 @@ contract Positioning is
         _vaultController = vaultControllerArg;
         _accountBalance = accountBalanceArg;
         _matchingEngine = matchingEngineArg;
+        _underlyingPriceIndex = underlyingPriceIndex;
         // TODO: Set settlement token
         // _settlementTokenDecimals = 0;
+        setPositioning(address(this));
+        _grantRole(POSITIONING_ADMIN, _msgSender());
     }
 
-    function setMarketRegistry(address marketRegistryArg) external onlyOwner {
+
+    function setMarketRegistry(address marketRegistryArg) external {
+        _requirePositioningAdmin();
         // V_VPMM: Positioning is not contract
         require(marketRegistryArg.isContract(), "V_VPMM");
         _marketRegistry = marketRegistryArg;
@@ -204,6 +211,10 @@ contract Positioning is
         IAccountBalance(_accountBalance).modifyOwedRealizedPnl(trader, amount);
     }
 
+    function setPositioning(address PositioningArg) public override(PositioningCallee, IPositioning) {
+        _Positioning = PositioningArg;
+    }
+
     /// @dev this function matches the both orders and opens the position
     function _openPosition(
         LibOrder.Order memory orderLeft,
@@ -212,11 +223,11 @@ contract Positioning is
         bool isRightLiquidation,
         address baseToken
     ) internal returns (MatchResponse memory response) {
-        (LibFill.FillResult memory newFill, LibDeal.DealData memory dealData) =
+        (LibFill.FillResult memory newFill) =
             IMatchingEngine(_matchingEngine).matchOrders(orderLeft, orderRight);
 
         //TODO: no need to increase memory here, newFill and dealData can be directly used
-        response = MatchResponse(newFill, dealData);
+        response = MatchResponse(newFill);
 
         InternalData memory internalData;
         if (orderLeft.isShort) {
@@ -371,8 +382,8 @@ contract Positioning is
             baseToken,
             internalData.leftExchangedPositionSize,
             internalData.leftExchangedPositionNotional,
-            response.dealData.protocolFee,
-            internalData.leftOpenNotional
+            orderLeftFee,
+            leftOpenNotional
         );
 
         emit PositionChanged(
@@ -380,8 +391,8 @@ contract Positioning is
             baseToken,
             internalData.rightExchangedPositionSize,
             internalData.rightExchangedPositionNotional,
-            response.dealData.protocolFee,
-            internalData.rightOpenNotional
+            orderRightFee,
+            rightOpenNotional
         );
 
         IAccountBalance(_accountBalance).deregisterBaseToken(orderLeft.trader, baseToken);
@@ -454,7 +465,21 @@ contract Positioning is
         return IVaultController(_vaultController).getFreeCollateralByRatio(trader, ratio);
     }
 
-    function _msgSender() internal view override(OwnerPausable, ContextUpgradeable) returns (address) {
+    function _msgSender() internal view override(OwnerPausable, ContextUpgradeable) 
+    returns (address) {
         return super._msgSender();
+    }
+
+    function _msgData() 
+    internal 
+    view 
+    virtual 
+    override(ContextUpgradeable)
+    returns (bytes calldata) {
+        return msg.data;
+    }
+
+    function _requirePositioningAdmin() internal view {
+        require(hasRole(POSITIONING_ADMIN, _msgSender()), "Positioning: Not admin");
     }
 }
