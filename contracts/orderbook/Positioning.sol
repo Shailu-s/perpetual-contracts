@@ -84,7 +84,7 @@ contract Positioning is
         __FundingRate_init(markPriceArg, indexPriceArg);
         __OrderValidator_init_unchained();
 
-        _PositioningConfig = PositioningConfigArg;
+        _positioningConfig = PositioningConfigArg;
         _vaultController = vaultControllerArg;
         _accountBalance = accountBalanceArg;
         _matchingEngine = matchingEngineArg;
@@ -113,8 +113,11 @@ contract Positioning is
     }
 
     /// @inheritdoc IPositioning
-    function setDefaultFeeReceiver(address newDefaultFeeReceiver) external onlyOwner {
-        defaultFeeReceiver = newDefaultFeeReceiver;
+    function setDefaultFeeReceiver(address _newDefaultFeeReceiver) external onlyOwner {
+        // Default Fee Receiver is zero
+        require(_newDefaultFeeReceiver != address(0), "PC_DFRZ");
+        defaultFeeReceiver = _newDefaultFeeReceiver;
+        emit DefaultFeeReceiverChanged(defaultFeeReceiver);
     }
 
     /// @inheritdoc IPositioning
@@ -154,7 +157,7 @@ contract Positioning is
 
     /// @inheritdoc IPositioning
     function getPositioningConfig() public view override returns (address) {
-        return _PositioningConfig;
+        return _positioningConfig;
     }
 
     /// @inheritdoc IPositioning
@@ -316,7 +319,7 @@ contract Positioning is
             address liquidator;
             // trader's pnl-- as liquidation penalty
             liquidationFee = internalData.leftExchangedPositionNotional.abs().mulRatio(
-                IPositioningConfig(_PositioningConfig).getLiquidationPenaltyRatio()
+                IPositioningConfig(_positioningConfig).getLiquidationPenaltyRatio()
             );
 
             //2.5 % liquidation fees to fee receiver
@@ -343,7 +346,7 @@ contract Positioning is
             address liquidator;
             // trader's pnl-- as liquidation penalty
             liquidationFee = internalData.rightExchangedPositionNotional.abs().mulRatio(
-                IPositioningConfig(_PositioningConfig).getLiquidationPenaltyRatio()
+                IPositioningConfig(_positioningConfig).getLiquidationPenaltyRatio()
             );
 
             //2.5 % liquidation fees to fee receiver
@@ -417,7 +420,7 @@ contract Positioning is
         // P_WAP: wrong argument passed
         require(positionSize > 0 == order.isShort, "P_WAP");
 
-        uint24 partialCloseRatio = IPositioningConfig(_PositioningConfig).getPartialLiquidationRatio();
+        uint24 partialCloseRatio = IPositioningConfig(_positioningConfig).getPartialLiquidationRatio();
 
         uint256 amount = positionSize.abs().mulRatio(partialCloseRatio);
 
@@ -444,7 +447,7 @@ contract Positioning is
     /// @dev This function checks if free collateral of trader is available
     function _requireEnoughFreeCollateral(address trader) internal view {
         // CH_NEFCI: not enough free collateral by imRatio
-        require(_getFreeCollateralByRatio(trader, IPositioningConfig(_PositioningConfig).getImRatio()) > 0, "CH_NEFCI");
+        require(_getFreeCollateralByRatio(trader, IPositioningConfig(_positioningConfig).getImRatio()) > 0, "CH_NEFCI");
     }
 
     /// @dev this function returns address of the fee receiver

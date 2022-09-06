@@ -43,7 +43,7 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
 
         __PositioningCallee_init();
 
-        _PositioningConfig = PositioningConfigArg;
+        _positioningConfig = PositioningConfigArg;
         _grantRole(ACCOUNT_BALANCE_ADMIN, _msgSender());
     }
 
@@ -107,7 +107,7 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
 
         tokensStorage.push(baseToken);
         // AB_MNE: markets number exceeds
-        require(tokensStorage.length <= IPositioningConfig(_PositioningConfig).getMaxMarketsPerAccount(), "AB_MNE");
+        require(tokensStorage.length <= IPositioningConfig(_positioningConfig).getMaxMarketsPerAccount(), "AB_MNE");
     }
 
     /// @inheritdoc IAccountBalance
@@ -132,7 +132,7 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
 
     /// @inheritdoc IAccountBalance
     function getPositioningConfig() external view override returns (address) {
-        return _PositioningConfig;
+        return _positioningConfig;
     }
 
     /// @inheritdoc IAccountBalance
@@ -191,7 +191,7 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
     /// @inheritdoc IAccountBalance
     function getMarginRequirementForLiquidation(address trader) external view override returns (int256) {
         return
-            getTotalAbsPositionValue(trader).mulRatio(IPositioningConfig(_PositioningConfig).getMmRatio()).toInt256();
+            getTotalAbsPositionValue(trader).mulRatio(IPositioningConfig(_positioningConfig).getMmRatio()).toInt256();
     }
 
     /// @inheritdoc IAccountBalance
@@ -308,7 +308,7 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
     //
 
     function _getIndexPrice(address baseToken) internal view returns (uint256) {
-        return IIndexPrice(baseToken).getIndexPrice(IPositioningConfig(_PositioningConfig).getTwapInterval());
+        return IIndexPrice(baseToken).getIndexPrice(IPositioningConfig(_positioningConfig).getTwapInterval());
     }
 
     /// @return netQuoteBalance = quote.balance

@@ -37,6 +37,9 @@ interface IPositioning {
     /// @param referralCode The referral code by partners
     event ReferredPositionChanged(bytes32 indexed referralCode);
 
+    /// @notice Emitted when defualt fee receiver is changed
+    event DefaultFeeReceiverChanged(address defaultFeeReceiver);
+
     /// @notice Emitted when taker's position is being changed
     /// @param trader Trader address
     /// @param baseToken The address of virtual base token(ETH, BTC, etc...)
