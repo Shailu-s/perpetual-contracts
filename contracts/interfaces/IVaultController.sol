@@ -8,9 +8,9 @@ interface IVaultController{
         address accountBalanceArg
     ) external;
 
-    function deposit(address token, uint256 amount) external payable;
+    function deposit(address token, address from, uint256 amount) external payable;
 
-    function withdraw(address token, uint256 amount) external;
+    function withdraw(address token, address payable to, uint256 amount) external;
 
     function registerVault(address _vault, address _token) external;
 

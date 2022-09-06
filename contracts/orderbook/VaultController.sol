@@ -4,9 +4,7 @@ pragma solidity =0.8.12;
 import "@openzeppelin/contracts/proxy/Clones.sol";
 import { AddressUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol";
 import { ContextUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol";
-import {
-    ReentrancyGuardUpgradeable
-} from "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
+import { ReentrancyGuardUpgradeable } from "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 
 import { LibPerpMath } from "../libs/LibPerpMath.sol";
 import { LibSafeCastInt } from "../libs/LibSafeCastInt.sol";
@@ -26,7 +24,13 @@ import { TestERC20 } from "../tests/TestERC20.sol";
 import { Vault } from "./Vault.sol";
 import { VaultControllerStorage } from "../storage/VaultControllerStorage.sol";
 
-contract VaultController is ReentrancyGuardUpgradeable, OwnerPausable, VaultControllerStorage, IVaultController, RoleManager {
+contract VaultController is
+    ReentrancyGuardUpgradeable,
+    OwnerPausable,
+    VaultControllerStorage,
+    IVaultController,
+    RoleManager
+{
     using AddressUpgradeable for address;
     using LibSafeCastUint for uint256;
     using LibPerpMath for uint256;
@@ -47,14 +51,19 @@ contract VaultController is ReentrancyGuardUpgradeable, OwnerPausable, VaultCont
         _vaultAddress[_token] = _vault;
     }
 
-    function deposit(address token, uint256 amount) external payable override whenNotPaused nonReentrant {
+    function deposit(
+        address token,
+        address from,
+        uint256 amount
+    ) external payable override whenNotPaused nonReentrant {
         address _vault = getVault(token);
         // vault of token is not available
         require(_vault != address(0), "VC_VOTNA");
 
         // positioning not set
         require(_positioning != address(0), "VC_PNS");
-        address from = _msgSender();
+        // TODO From should be external user not periphery
+        // address from = _msgSender();
 
         address[] storage _vaultList = _tradersVaultMap[from];
 
@@ -66,7 +75,11 @@ contract VaultController is ReentrancyGuardUpgradeable, OwnerPausable, VaultCont
         _modifyBalance(from, amountX10_18.toInt256());
     }
 
-    function withdraw(address token, uint256 amount) external override whenNotPaused nonReentrant {
+    function withdraw(
+        address token,
+        address payable to,
+        uint256 amount
+    ) external override whenNotPaused nonReentrant {
         address _vault = getVault(token);
         // vault of token is not available
         require(_vault != address(0), "VC_VOTNA");
@@ -74,7 +87,8 @@ contract VaultController is ReentrancyGuardUpgradeable, OwnerPausable, VaultCont
         // positioning not set
         require(_positioning != address(0), "VC_PNS");
 
-        address payable to = payable(_msgSender());
+        // TODO: Get from the periphery contract
+        // address payable to = payable(_msgSender());
 
         // settle all funding payments owedRealizedPnl
         IPositioning(_positioning).settleAllFunding(to);
@@ -83,8 +97,10 @@ contract VaultController is ReentrancyGuardUpgradeable, OwnerPausable, VaultCont
         int256 owedRealizedPnlX10_18 = IAccountBalance(_accountBalance).settleOwedRealizedPnl(to);
 
         // by this time there should be no owedRealizedPnl nor pending funding payment in free collateral
-        int256 freeCollateralByImRatio =
-            getFreeCollateralByRatio(to, IPositioningConfig(_positioningConfig).getImRatio());
+        int256 freeCollateralByImRatio = getFreeCollateralByRatio(
+            to,
+            IPositioningConfig(_positioningConfig).getImRatio()
+        );
 
         // V_NEFC: not enough freeCollateral
         require(freeCollateralByImRatio + owedRealizedPnlX10_18 >= amount.toInt256(), "V_NEFC");
