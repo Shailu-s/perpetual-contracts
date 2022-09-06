@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: BUSL - 1.1
 pragma solidity =0.8.12;
 
+import { IVolmexPerpPeriphery } from "./IVolmexPerpPeriphery.sol";
+
 interface IVault {
     /// @notice Emitted when trader deposit collateral into vault
     /// @param collateralToken The address of token that was deposited
@@ -23,7 +25,8 @@ interface IVault {
         address accountBalanceArg,
         address tokenArg,
         address vaultControllerArg,
-        bool isEthVaultArg
+        bool isEthVaultArg,
+        IVolmexPerpPeriphery peripheryArg
     ) external;
 
     /// @notice Deposit collateral into vault
@@ -90,4 +93,5 @@ interface IVault {
     /// @notice Get `Positioning` contract address
     /// @return Positioning The address of `Positioning` contract
     function getPositioning() external view returns (address);
+    function isEthVault() external view returns (bool);
 }

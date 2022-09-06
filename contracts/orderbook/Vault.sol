@@ -2,13 +2,8 @@
 pragma solidity =0.8.12;
 
 import { AddressUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol";
-import {
-    ReentrancyGuardUpgradeable
-} from "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
-import {
-    SafeERC20Upgradeable,
-    IERC20Upgradeable
-} from "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
+import { ReentrancyGuardUpgradeable } from "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
+import { SafeERC20Upgradeable, IERC20Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 import { Context } from "@openzeppelin/contracts/utils/Context.sol";
 import { ContextUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol";
 
@@ -22,6 +17,7 @@ import { IERC20Metadata } from "../interfaces/IERC20Metadata.sol";
 import { IPositioning } from "../interfaces/IPositioning.sol";
 import { IPositioningConfig } from "../interfaces/IPositioningConfig.sol";
 import { IVault } from "../interfaces/IVault.sol";
+import { IVolmexPerpPeriphery } from "../interfaces/IVolmexPerpPeriphery.sol";
 
 import { OwnerPausable } from "../helpers/OwnerPausable.sol";
 import { RoleManager } from "../helpers/RoleManager.sol";
@@ -47,6 +43,8 @@ contract Vault is IVault, ReentrancyGuardUpgradeable, OwnerPausable, VaultStorag
         _;
     }
 
+    IVolmexPerpPeriphery internal _periphery;
+
     //
     // EXTERNAL NON-VIEW
     //
@@ -56,7 +54,8 @@ contract Vault is IVault, ReentrancyGuardUpgradeable, OwnerPausable, VaultStorag
         address accountBalanceArg,
         address tokenArg,
         address vaultControllerArg,
-        bool isEthVaultArg
+        bool isEthVaultArg,
+        IVolmexPerpPeriphery peripheryArg
     ) external override initializer {
         uint8 decimalsArg = 0;
         if (isEthVaultArg) {
@@ -82,6 +81,7 @@ contract Vault is IVault, ReentrancyGuardUpgradeable, OwnerPausable, VaultStorag
         _accountBalance = accountBalanceArg;
         _vaultController = vaultControllerArg;
         _isEthVault = isEthVaultArg;
+        _periphery = peripheryArg;
         _grantRole(VAULT_ADMIN, _msgSender());
     }
 
@@ -95,6 +95,12 @@ contract Vault is IVault, ReentrancyGuardUpgradeable, OwnerPausable, VaultStorag
     function setVaultController(address vaultControllerArg) external {
         _requireVaultAdmin();
         _vaultController = vaultControllerArg;
+    }
+
+    function setPeriphery(IVolmexPerpPeriphery peripheryArg) external onlyOwner {
+        require(address(peripheryArg).isContract(), "V_VPMM");
+        _periphery = peripheryArg;
+        // TODO add event for state changes
     }
 
     /// @inheritdoc IVault
@@ -129,7 +135,8 @@ contract Vault is IVault, ReentrancyGuardUpgradeable, OwnerPausable, VaultStorag
             require(msg.value == 0, "V_ANA");
             // check for deflationary tokens by assuring balances before and after transferring to be the same
             uint256 balanceBefore = IERC20Metadata(token).balanceOf(address(this));
-            SafeERC20Upgradeable.safeTransferFrom(IERC20Upgradeable(token), from, address(this), amount);
+            _periphery.transferToVault(IERC20Upgradeable(token), from, amount);
+            // SafeERC20Upgradeable.safeTransferFrom(IERC20Upgradeable(token), from, address(this), amount);
             // V_BAI: inconsistent balance amount, to prevent from deflationary tokens
             require((IERC20Metadata(token).balanceOf(address(this)) - balanceBefore) == amount, "V_IBA");
             _vaultBalance = IERC20Metadata(token).balanceOf(address(this));
@@ -267,6 +274,10 @@ contract Vault is IVault, ReentrancyGuardUpgradeable, OwnerPausable, VaultStorag
         return _vaultController;
     }
 
+    function isEthVault() external view returns (bool) {
+        return _isEthVault;
+    }
+
     //
     // PUBLIC VIEW
     //
@@ -302,12 +313,7 @@ contract Vault is IVault, ReentrancyGuardUpgradeable, OwnerPausable, VaultStorag
         require(_msgSender() == _vaultController, "V_OVC");
     }
 
-    function _msgData() 
-    internal 
-    view 
-    virtual 
-    override(ContextUpgradeable)
-    returns (bytes calldata) {
+    function _msgData() internal view virtual override(ContextUpgradeable) returns (bytes calldata) {
         return msg.data;
     }
 
