@@ -3,6 +3,8 @@ pragma solidity =0.8.12;
 
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
+import "../libs/LibOrder.sol";
+
 import "../helpers/RoleManager.sol";
 import "../interfaces/IMarkPriceOracle.sol";
 import "../interfaces/IPositioning.sol";
@@ -10,7 +12,7 @@ import "../interfaces/IVaultController.sol";
 
 contract VolmexPerpPeriphery is Initializable, RoleManager {
     // Save positioning & vaulcontroller
-    
+
     // Used to set the index of positioning
     uint256 public positioningIndex;
 
@@ -18,10 +20,10 @@ contract VolmexPerpPeriphery is Initializable, RoleManager {
     uint256 public vaultControllerIndex;
 
     // Store the addresses of positionings { index => positioning address }
-    mapping(uint256 => address) public positionings;
+    mapping(uint256 => IPositioning) public positionings;
 
     // Store the addresses of vaultControllers { index => vaultController address }
-    mapping(uint256 => address) public vaultControllers;
+    mapping(uint256 => IVaultController) public vaultControllers;
 
     IMarkPriceOracle public markPriceOracle;
 
@@ -43,8 +45,8 @@ contract VolmexPerpPeriphery is Initializable, RoleManager {
         markPriceOracle = _markPriceOracle;
 
         for (uint256 i = 0; i < 2; i++) {
-            positionings[i] = address(_positioning[i]);
-            vaultControllers[i] = address(_vaultController[i]);
+            positionings[i] = _positioning[i];
+            vaultControllers[i] = _vaultController[i];
         }
         // Since we are adding two addresses, hence updating indexes to 2
         positioningIndex = 2;
@@ -65,7 +67,7 @@ contract VolmexPerpPeriphery is Initializable, RoleManager {
      */
     function addPositioning(IPositioning _positioning) external {
         _requireVolmexPerpPeripheryAdmin();
-        positionings[positioningIndex] = address(_positioning);
+        positionings[positioningIndex] = _positioning;
         positioningIndex++;
     }
 
@@ -76,7 +78,7 @@ contract VolmexPerpPeriphery is Initializable, RoleManager {
      */
     function addVaultController(IVaultController _vaultController) external {
         _requireVolmexPerpPeripheryAdmin();
-        vaultControllers[vaultControllerIndex] = address(_vaultController);
+        vaultControllers[vaultControllerIndex] = _vaultController;
         vaultControllerIndex++;
     }
 
@@ -157,11 +159,55 @@ contract VolmexPerpPeriphery is Initializable, RoleManager {
         return markPriceOracle.getCumulativePrice(_twInterval, _index);
     }
 
+    function depositToVault(
+        uint64 _index,
+        address _token,
+        uint256 _amount
+    ) external payable {
+        /**
+        Getter for _isEthVault in Vault contract
+            - Check the msg.value and send it to vault controller
+         */
+        vaultControllers[_index].deposit{ value: msg.value }(_token, _msgSender(), _amount);
+    }
+
+    function withdrawFromVault(
+        uint64 _index,
+        address _token,
+        address payable _to,
+        uint256 _amount
+    ) external {
+        vaultControllers[_index].withdraw(_token, _to, _amount);
+    }
+
+    function transferToVault(
+        IERC20Upgradeable _token,
+        address _from,
+        uint256 _amount
+    ) external {
+        // TODO: Add msg.sender is vault require check here - "Periphery: Caller is not vault"
+        _token.transferFrom(_from, _msgSender(), _amount);
+    }
+
+    function openPosition(
+        uint64 _index,
+        LibOrder.Order memory _orderLeft,
+        bytes memory _signatureLeft,
+        LibOrder.Order memory _orderRight,
+        bytes memory _signatureRight
+    ) external {
+        positionings[_index].openPosition(
+            _orderLeft,
+            _signatureLeft,
+            _orderRight,
+            _signatureRight
+        );
+    }
+
     /**
         Internal view functions
      */
     function _requireVolmexPerpPeripheryAdmin() internal view {
         require(hasRole(VOLMEX_PERP_PERIPHERY, _msgSender()), "VolmexPerpPeriphery: Not admin");
     }
-    
 }
