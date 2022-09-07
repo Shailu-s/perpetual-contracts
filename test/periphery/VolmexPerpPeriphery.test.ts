@@ -1,20 +1,13 @@
 import { expect } from "chai"
 import { ethers, upgrades } from "hardhat"
-const { Order, Asset, sign } = require("../order")
-import { FakeContract, smock } from "@defi-wonderland/smock"
-import { AccountBalance, IndexPriceOracle, MarkPriceOracle } from "../../typechain"
-import { BigNumber } from "ethers";
+import { smock } from "@defi-wonderland/smock"
 
-describe("Positioning", function () {
+describe("VolmexPerpPeriphery", function () {
   let MatchingEngine
   let matchingEngine
   let VirtualToken
   let virtualToken
-  let erc20TransferProxy
   let ERC20TransferProxyTest
-  let TransferManagerTest
-  let ERC1271Test
-  let erc1271Test
   let Positioning
   let positioning
   let positioning2
@@ -36,9 +29,6 @@ describe("Positioning", function () {
   let VolmexPerpPeriphery;
   let volmexPerpPeriphery;
   
-  let transferManagerTest
-    let ExchangeTest;
-    let exchangeTest;
   let accountBalance1
   let MarketRegistry
   let marketRegistry
@@ -46,11 +36,7 @@ describe("Positioning", function () {
   let baseToken
   let TestERC20;
   let USDC;
-  let orderLeft, orderRight;
-  const deadline = 87654321987654;
   let owner, account1, account2, account3, account4;
-  const one = ethers.constants.WeiPerEther; // 1e18
-  const two = ethers.constants.WeiPerEther.mul(BigNumber.from("2")); // 2e18
 
   this.beforeAll(async () => {
     VolmexPerpPeriphery = await ethers.getContractFactory("VolmexPerpPeriphery")
@@ -59,8 +45,6 @@ describe("Positioning", function () {
     MatchingEngine = await ethers.getContractFactory("MatchingEngineTest")
     VirtualToken = await ethers.getContractFactory("VirtualTokenTest")
     ERC20TransferProxyTest = await ethers.getContractFactory("ERC20TransferProxyTest")
-    TransferManagerTest = await ethers.getContractFactory("TransferManagerTest")
-    ERC1271Test = await ethers.getContractFactory("ERC1271Test")
     Positioning = await ethers.getContractFactory("PositioningTest")
     PositioningConfig = await ethers.getContractFactory("PositioningConfig")
     Vault = await ethers.getContractFactory("Vault")
@@ -114,9 +98,6 @@ describe("Positioning", function () {
     accountBalance = await smock.fake("AccountBalance")
     baseToken = await smock.fake("VolmexBaseToken")
 
-    erc20TransferProxy = await ERC20TransferProxyTest.deploy()
-    erc1271Test = await ERC1271Test.deploy()
-
     positioningConfig = await upgrades.deployProxy(PositioningConfig, [])
 
     USDC = await TestERC20.deploy()
@@ -151,10 +132,6 @@ describe("Positioning", function () {
       accountBalance.address,
       false,
     ])
-
-    transferManagerTest = await upgrades.deployProxy(TransferManagerTest, [erc20TransferProxy.address, owner.address], {
-      initializer: "__TransferManager_init",
-    })
 
     accountBalance1 = await upgrades.deployProxy(AccountBalance, [positioningConfig.address])
     vaultController = await upgrades.deployProxy(VaultController, [positioningConfig.address, accountBalance1.address])
@@ -193,7 +170,6 @@ describe("Positioning", function () {
     )
     marketRegistry = await upgrades.deployProxy(MarketRegistry, [virtualToken.address])
     
-    await marketRegistry.connect(owner).addBaseToken(virtualToken.address)
     await marketRegistry.connect(owner).addBaseToken(volmexBaseToken.address)
     await marketRegistry.connect(owner).addBaseToken(baseToken.address)
     await marketRegistry.connect(owner).setMakerFeeRatio(0.0004e6)
@@ -212,24 +188,6 @@ describe("Positioning", function () {
     await positioning.connect(owner).setMarketRegistry(marketRegistry.address)
     await positioning.connect(owner).setDefaultFeeReceiver(owner.address)
     await positioning.connect(owner).setPositioning(positioning.address)
-
-    orderLeft = Order(
-      account1.address,
-      deadline,
-      true,
-      Asset(virtualToken.address, one.toString()),
-      Asset(volmexBaseToken.address, two.toString()),
-      1
-    )
-
-    orderRight = Order(
-      account2.address,
-      deadline,
-      false,
-      Asset(volmexBaseToken.address, one.toString()),
-      Asset(virtualToken.address, two.toString()),
-      2,
-    )
 
     for (let i = 0; i < 9; i++) {
       await matchingEngine.addObservation(10000000, 0);
