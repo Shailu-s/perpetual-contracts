@@ -43,8 +43,6 @@ contract Vault is IVault, ReentrancyGuardUpgradeable, OwnerPausable, VaultStorag
         _;
     }
 
-    IVolmexPerpPeriphery internal _periphery;
-
     //
     // EXTERNAL NON-VIEW
     //
@@ -54,8 +52,7 @@ contract Vault is IVault, ReentrancyGuardUpgradeable, OwnerPausable, VaultStorag
         address accountBalanceArg,
         address tokenArg,
         address vaultControllerArg,
-        bool isEthVaultArg,
-        IVolmexPerpPeriphery peripheryArg
+        bool isEthVaultArg
     ) external override initializer {
         uint8 decimalsArg = 0;
         if (isEthVaultArg) {
@@ -81,7 +78,6 @@ contract Vault is IVault, ReentrancyGuardUpgradeable, OwnerPausable, VaultStorag
         _accountBalance = accountBalanceArg;
         _vaultController = vaultControllerArg;
         _isEthVault = isEthVaultArg;
-        _periphery = peripheryArg;
         _grantRole(VAULT_ADMIN, _msgSender());
     }
 
@@ -97,14 +93,9 @@ contract Vault is IVault, ReentrancyGuardUpgradeable, OwnerPausable, VaultStorag
         _vaultController = vaultControllerArg;
     }
 
-    function setPeriphery(IVolmexPerpPeriphery peripheryArg) external onlyOwner {
-        require(address(peripheryArg).isContract(), "V_VPMM");
-        _periphery = peripheryArg;
-        // TODO add event for state changes
-    }
-
     /// @inheritdoc IVault
     function deposit(
+        IVolmexPerpPeriphery periphery,
         address token,
         uint256 amount,
         address from
@@ -113,10 +104,11 @@ contract Vault is IVault, ReentrancyGuardUpgradeable, OwnerPausable, VaultStorag
         //   token: here
         //   amount: here
         _requireOnlyVaultController();
-        _deposit(token, amount, from);
+        _deposit(periphery, token, amount, from);
     }
 
     function _deposit(
+        IVolmexPerpPeriphery periphery,
         address token,
         uint256 amount,
         address from
@@ -135,13 +127,12 @@ contract Vault is IVault, ReentrancyGuardUpgradeable, OwnerPausable, VaultStorag
             require(msg.value == 0, "V_ANA");
             // check for deflationary tokens by assuring balances before and after transferring to be the same
             uint256 balanceBefore = IERC20Metadata(token).balanceOf(address(this));
-            _periphery.transferToVault(IERC20Upgradeable(token), from, amount);
+            periphery.transferToVault(IERC20Upgradeable(token), from, amount);
             // SafeERC20Upgradeable.safeTransferFrom(IERC20Upgradeable(token), from, address(this), amount);
             // V_BAI: inconsistent balance amount, to prevent from deflationary tokens
             require((IERC20Metadata(token).balanceOf(address(this)) - balanceBefore) == amount, "V_IBA");
             _vaultBalance = IERC20Metadata(token).balanceOf(address(this));
         }
-
         uint256 settlementTokenBalanceCap = IPositioningConfig(_PositioningConfig).getSettlementTokenBalanceCap();
         // V_GTSTBC: greater than settlement token balance cap
         require(_vaultBalance <= settlementTokenBalanceCap, "V_GTSTBC");
