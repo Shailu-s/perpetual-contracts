@@ -25,8 +25,7 @@ interface IVault {
         address accountBalanceArg,
         address tokenArg,
         address vaultControllerArg,
-        bool isEthVaultArg,
-        IVolmexPerpPeriphery peripheryArg
+        bool isEthVaultArg
     ) external;
 
     /// @notice Deposit collateral into vault
@@ -34,6 +33,7 @@ interface IVault {
     /// @param token The address of the token to deposit
     /// @param amountX10_D The amount of the token to deposit in decimals D (D = _decimals)
     function deposit(
+        IVolmexPerpPeriphery periphery,
         address token,
         uint256 amountX10_D,
         address from

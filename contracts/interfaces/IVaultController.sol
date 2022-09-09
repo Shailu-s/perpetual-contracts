@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: BUSL - 1.1
 pragma solidity =0.8.12;
 
+import "./IVolmexPerpPeriphery.sol";
+
 interface IVaultController{
 
      function initialize(
@@ -8,7 +10,7 @@ interface IVaultController{
         address accountBalanceArg
     ) external;
 
-    function deposit(address token, address from, uint256 amount) external payable;
+    function deposit(IVolmexPerpPeriphery periphery, address token, address from, uint256 amount) external payable;
 
     function withdraw(address token, address payable to, uint256 amount) external;
 

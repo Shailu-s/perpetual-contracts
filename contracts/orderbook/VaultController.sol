@@ -17,6 +17,7 @@ import { IPositioning } from "../interfaces/IPositioning.sol";
 import { IPositioningConfig } from "../interfaces/IPositioningConfig.sol";
 import { IVault } from "../interfaces/IVault.sol";
 import { IVaultController } from "../interfaces/IVaultController.sol";
+import { IVolmexPerpPeriphery } from "../interfaces/IVolmexPerpPeriphery.sol";
 
 import { OwnerPausable } from "../helpers/OwnerPausable.sol";
 import { RoleManager } from "../helpers/RoleManager.sol";
@@ -52,6 +53,7 @@ contract VaultController is
     }
 
     function deposit(
+        IVolmexPerpPeriphery periphery,
         address token,
         address from,
         uint256 amount
@@ -70,7 +72,7 @@ contract VaultController is
         if (IVault(_vault).getBalance(from) == 0) {
             _vaultList.push(_vault);
         }
-        IVault(_vault).deposit{ value: msg.value }(token, amount, from);
+        IVault(_vault).deposit{ value: msg.value }(periphery, token, amount, from);
         uint256 amountX10_18 = LibSettlementTokenMath.parseSettlementToken(amount, IVault(_vault).decimals());
         _modifyBalance(from, amountX10_18.toInt256());
     }
