@@ -9,6 +9,7 @@ import "../helpers/RoleManager.sol";
 import "../interfaces/IMarkPriceOracle.sol";
 import "../interfaces/IPositioning.sol";
 import "../interfaces/IVaultController.sol";
+import "../interfaces/IVolmexPerpPeriphery.sol";
 
 contract VolmexPerpPeriphery is Initializable, RoleManager {
     // Save positioning & vaulcontroller
@@ -168,7 +169,12 @@ contract VolmexPerpPeriphery is Initializable, RoleManager {
         Getter for _isEthVault in Vault contract
             - Check the msg.value and send it to vault controller
          */
-        vaultControllers[_index].deposit{ value: msg.value }(_token, _msgSender(), _amount);
+        vaultControllers[_index].deposit{ value: msg.value }(
+            IVolmexPerpPeriphery(address(this)),
+            _token,
+            _msgSender(),
+            _amount
+        );
     }
 
     function withdrawFromVault(
@@ -180,15 +186,6 @@ contract VolmexPerpPeriphery is Initializable, RoleManager {
         vaultControllers[_index].withdraw(_token, _to, _amount);
     }
 
-    function transferToVault(
-        IERC20Upgradeable _token,
-        address _from,
-        uint256 _amount
-    ) external {
-        // TODO: Add msg.sender is vault require check here - "Periphery: Caller is not vault"
-        _token.transferFrom(_from, _msgSender(), _amount);
-    }
-
     function openPosition(
         uint64 _index,
         LibOrder.Order memory _orderLeft,
@@ -196,12 +193,16 @@ contract VolmexPerpPeriphery is Initializable, RoleManager {
         LibOrder.Order memory _orderRight,
         bytes memory _signatureRight
     ) external {
-        positionings[_index].openPosition(
-            _orderLeft,
-            _signatureLeft,
-            _orderRight,
-            _signatureRight
-        );
+        positionings[_index].openPosition(_orderLeft, _signatureLeft, _orderRight, _signatureRight);
+    }
+
+    function transferToVault(
+        IERC20Upgradeable _token,
+        address _from,
+        uint256 _amount
+    ) external {
+        // TODO: Add msg.sender is vault require check here - "Periphery: Caller is not vault"
+        _token.transferFrom(_from, _msgSender(), _amount);
     }
 
     /**
