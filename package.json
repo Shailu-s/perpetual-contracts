@@ -2,7 +2,6 @@
   "name": "volmex-perpetuals",
   "version": "1.0.15",
   "description": "Volmex Perpetual core contracts",
-  "license": "BUSL - 1.1",
   "author": {
     "name": "Volmex Finance",
     "email": "security@volmexlabs.com",
@@ -40,7 +39,8 @@
     "prepack": "ts-node --files scripts/prepack.ts",
     "flatten": "ts-node --files scripts/flatten.ts",
     "slither": "ts-node --files scripts/slither.ts",
-    "compile": "hardhat compile"
+    "compile": "hardhat compile",
+    "coverage": "hardhat coverage"
   },
   "devDependencies": {
     "@chainlink/contracts": "0.1.7",
@@ -53,8 +53,9 @@
     "@nomiclabs/ethereumjs-vm": "4.2.2",
     "@nomiclabs/hardhat-ethers": "2.0.2",
     "@nomiclabs/hardhat-waffle": "2.0.1",
-    "@openzeppelin/contracts": "3.4.0",
-    "@openzeppelin/contracts-upgradeable": "3.4.2",
+    "@nomiclabs/hardhat-web3": "^2.0.0",
+    "@openzeppelin/contracts": "^4.6.0",
+    "@openzeppelin/contracts-upgradeable": "^4.6.0",
     "@openzeppelin/hardhat-upgrades": "1.10.0",
     "@perp/perp-oracle-contract": "0.3.0",
     "@typechain/ethers-v5": "7.0.0",
@@ -91,7 +92,8 @@
     "ts-generator": "0.1.1",
     "ts-node": "10.0.0",
     "typechain": "5.0.0",
-    "typescript": "4.3.2"
+    "typescript": "4.3.2",
+    "web3": "^1.7.4"
   },
   "lint-staged": {
     "*.ts": [
@@ -101,5 +103,9 @@
       "prettier --write",
       "solhint"
     ]
+  },
+  "dependencies": {
+    "@defi-wonderland/smock": "^2.2.0",
+    "eth-sig-util": "3.0.1"
   }
 }

@@ -1,46 +1,36 @@
-// SPDX-License-Identifier: GPL-3.0-or-later
-pragma solidity 0.7.6;
+// SPDX-License-Identifier: BUSL - 1.1
+pragma solidity =0.8.12;
 pragma abicoder v2;
 
 import { AddressUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol";
-import { SafeMathUpgradeable } from "@openzeppelin/contracts-upgradeable/math/SafeMathUpgradeable.sol";
-import { SignedSafeMathUpgradeable } from "@openzeppelin/contracts-upgradeable/math/SignedSafeMathUpgradeable.sol";
-import { PerpSafeCast } from "../libs/PerpSafeCast.sol";
-import { SwapMath } from "../libs/SwapMath.sol";
-import { PerpFixedPoint96 } from "../libs/PerpFixedPoint96.sol";
-import { PerpMath } from "../libs/PerpMath.sol";
-import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/Initializable.sol";
-import { PositioningCallee } from "../helpers/PositioningCallee.sol";
+import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+
+import { LibSafeCastInt } from "../libs/LibSafeCastInt.sol";
+import { LibSafeCastUint } from "../libs/LibSafeCastUint.sol";
+import { LibPerpMath } from "../libs/LibPerpMath.sol";
+
+import { IAccountBalance } from "../interfaces/IAccountBalance.sol";
+import { IIndexPriceOracle } from "../interfaces/IIndexPriceOracle.sol";
+import { IFundingRate } from "../interfaces/IFundingRate.sol";
+import { IMarkPriceOracle } from "../interfaces/IMarkPriceOracle.sol";
+import { IPositioningConfig } from "../interfaces/IPositioningConfig.sol";
+
 import { BlockContext } from "../helpers/BlockContext.sol";
 import { FundingRateStorage } from "../storage/FundingRateStorage.sol";
-import { IPositioningConfig } from "../interfaces/IPositioningConfig.sol";
-import { IIndexPriceOracle } from "../interfaces/IIndexPriceOracle.sol";
-import { IMarkPriceOracle } from "../interfaces/IMarkPriceOracle.sol";
-import { IFundingRate } from "../interfaces/IFundingRate.sol";
-import { IAccountBalance } from "../interfaces/IAccountBalance.sol";
+import { PositioningCallee } from "../helpers/PositioningCallee.sol";
+import { PositioningStorageV1 } from "../storage/PositioningStorage.sol";
 
-contract FundingRate is IFundingRate, BlockContext, PositioningCallee, FundingRateStorage {
+contract FundingRate is IFundingRate, BlockContext, PositioningCallee, FundingRateStorage, PositioningStorageV1 {
     using AddressUpgradeable for address;
-    using SafeMathUpgradeable for uint256;
-    using SignedSafeMathUpgradeable for int256;
-    using PerpMath for uint256;
-    using PerpMath for uint160;
-    using PerpMath for int256;
-    using PerpSafeCast for uint256;
-    using PerpSafeCast for int256;
+    using LibPerpMath for uint256;
+    using LibPerpMath for int256;
+    using LibSafeCastUint for uint256;
 
-    function initialize(
-        address positioningConfigArg,
+    function __FundingRate_init(
         address markPriceOracleArg,
         address indexPriceOracleArg
-    ) external initializer {
+    ) internal onlyInitializing {
         __PositioningCallee_init();
-
-        // E_PCANC: PCA is not contract
-        require(positioningConfigArg.isContract(), "E_VPMMNC");
-
-        // update states
-        _PositioningConfig = positioningConfigArg;
         _markPriceOracleArg = markPriceOracleArg;
         _indexPriceOracleArg = indexPriceOracleArg;
     }
@@ -52,7 +42,6 @@ contract FundingRate is IFundingRate, BlockContext, PositioningCallee, FundingRa
         override
         returns (int256 fundingPayment, int256 growthTwPremium)
     {
-        _requireOnlyPositioning();
 
         uint256 markTwap;
         uint256 indexTwap;
@@ -71,6 +60,9 @@ contract FundingRate is IFundingRate, BlockContext, PositioningCallee, FundingRa
         return (fundingPayment, growthTwPremium);
     }
 
+    /**
+    TODO:   we should check use cases here whether marketFundingRate goes -ve or not
+     */
     /// @dev this function calculates pending funding payment of user
     /// @param markTwap only for settleFunding()
     /// @param indexTwap only for settleFunding()
@@ -81,9 +73,9 @@ contract FundingRate is IFundingRate, BlockContext, PositioningCallee, FundingRa
         int256 markTwap,
         int256 indexTwap
     ) internal virtual view returns (int256 pendingFundingPayment) {
-        int256 marketFundingRate = ((markTwap.sub(indexTwap)).div(indexTwap)).div(24);
+        int256 marketFundingRate = ((markTwap - indexTwap) / indexTwap) / (24);
         int256 PositionSize = IAccountBalance(_accountBalance).getTakerPositionSize(trader, baseToken);
-        pendingFundingPayment = PositionSize.mul(marketFundingRate);
+        pendingFundingPayment = PositionSize*marketFundingRate;
     }
 
     /// @dev this function calculates the up-to-date growthTwPremium and twaps and pass them out
@@ -101,16 +93,16 @@ contract FundingRate is IFundingRate, BlockContext, PositioningCallee, FundingRa
             uint256 indexTwap
         )
     {
-        uint32 twapInterval;
+        uint256 twapInterval;
         uint256 timestamp = _blockTimestamp();
         // shorten twapInterval if prior observations are not enough
         if (_firstTradedTimestampMap[baseToken] != 0) {
             twapInterval = IPositioningConfig(_PositioningConfig).getTwapInterval();
-            uint32 deltaTimestamp = timestamp.sub(_firstTradedTimestampMap[baseToken]).toUint32();
+            uint256 deltaTimestamp = (timestamp - _firstTradedTimestampMap[baseToken]);
             twapInterval = twapInterval > deltaTimestamp ? deltaTimestamp : twapInterval;
         }
 
-        uint256 markTwapX96 = IMarkPriceOracle(_markPriceOracleArg).getCumulativePrice(twapInterval);
+        uint256 markTwapX96 = IMarkPriceOracle(_markPriceOracleArg).getCumulativePrice(twapInterval, _underlyingPriceIndex);
         markTwap = markTwapX96.formatX96ToX10_18();
         (indexTwap, , ) = IIndexPriceOracle(_indexPriceOracleArg).getIndexTwap(twapInterval);
 
@@ -122,8 +114,8 @@ contract FundingRate is IFundingRate, BlockContext, PositioningCallee, FundingRa
         } else {
             // deltaTwPremium = (markTwap - indexTwap) * (now - lastSettledTimestamp)
             int256 deltaTwPremium =
-                _getDeltaTwap(markTwap, indexTwap).mul(timestamp.sub(lastSettledTimestamp).toInt256());
-            growthTwPremium = lastTwPremium.add(deltaTwPremium);
+                _getDeltaTwap(markTwap, indexTwap)*((timestamp-lastSettledTimestamp).toInt256());
+            growthTwPremium = lastTwPremium + deltaTwPremium;
         }
 
         return (growthTwPremium, markTwap, indexTwap);
@@ -134,10 +126,10 @@ contract FundingRate is IFundingRate, BlockContext, PositioningCallee, FundingRa
         uint256 maxDeltaTwap = indexTwap.mulRatio(maxFundingRate);
         uint256 absDeltaTwap;
         if (markTwap > indexTwap) {
-            absDeltaTwap = markTwap.sub(indexTwap);
+            absDeltaTwap = markTwap - indexTwap;
             deltaTwap = absDeltaTwap > maxDeltaTwap ? maxDeltaTwap.toInt256() : absDeltaTwap.toInt256();
         } else {
-            absDeltaTwap = indexTwap.sub(markTwap);
+            absDeltaTwap = indexTwap - markTwap;
             deltaTwap = absDeltaTwap > maxDeltaTwap ? maxDeltaTwap.neg256() : absDeltaTwap.neg256();
         }
     }

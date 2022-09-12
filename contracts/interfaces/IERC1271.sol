@@ -1,6 +1,6 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: BUSL - 1.1
 
-pragma solidity 0.7.6;
+pragma solidity =0.8.12;
 
 interface IERC1271 {
     /**
@@ -15,6 +15,5 @@ interface IERC1271 {
     function isValidSignature(bytes32 _hash, bytes calldata _signature)
         external
         view
-        virtual
         returns (bytes4 magicValue);
 }

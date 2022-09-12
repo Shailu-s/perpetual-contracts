@@ -37,6 +37,7 @@ describe('Factory', function () {
       [
         "VolmexBaseToken", // nameArg
         "VBT", // symbolArg,
+        true, // isBase
         indexPriceOracle.address, // priceFeedArg
       ],
       {
@@ -56,7 +57,7 @@ describe('Factory', function () {
 
     virtualTokenTest = await upgrades.deployProxy(
       VirtualTokenTest,
-      ["VirtualToken", "VTK"],
+      ["VirtualToken", "VTK", false],
       {
         initializer: "initialize"
       }
@@ -139,7 +140,7 @@ describe('Factory', function () {
       it("Should deploy VirtualToken", async () => {
         virtualTokenTest = await upgrades.deployProxy(
           VirtualTokenTest,
-          ["VirtualToken", "VTK"],
+          ["VirtualToken", "VTK", false],
           {
             initializer: "initialize"
           }

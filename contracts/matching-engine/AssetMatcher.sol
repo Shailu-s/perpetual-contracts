@@ -1,71 +1,51 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: BUSL - 1.1
 
-pragma solidity 0.7.6;
-pragma abicoder v2;
+pragma solidity =0.8.12;
 
-import "../interfaces/IAssetMatcher.sol";
-import "@openzeppelin/contracts-upgradeable/proxy/Initializable.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
 abstract contract AssetMatcher is Initializable, OwnableUpgradeable {
-    bytes constant EMPTY = "";
-    mapping(bytes4 => address) matchers;
-
-    event MatcherChange(bytes4 indexed assetType, address matcher);
-
-    function setAssetMatcher(bytes4 assetType, address matcher) external onlyOwner {
-        matchers[assetType] = matcher;
-        emit MatcherChange(assetType, matcher);
-    }
-
-    function matchAssets(LibAsset.AssetType memory leftAssetType, LibAsset.AssetType memory rightAssetType)
+    function _matchAssets(address leftBaseToken, address rightBaseToken)
         internal
-        view
-        returns (LibAsset.AssetType memory)
+        pure
+        returns (address baseToken)
     {
-        LibAsset.AssetType memory result = matchAssetOneSide(leftAssetType, rightAssetType);
-        if (result.assetClass == 0) {
-            return matchAssetOneSide(rightAssetType, leftAssetType);
+        address result = _matchAssetOneSide(leftBaseToken, rightBaseToken);
+        if (result == address(0)) {
+            return _matchAssetOneSide(rightBaseToken, leftBaseToken);
         } else {
             return result;
         }
     }
 
-    function matchAssetOneSide(LibAsset.AssetType memory leftAssetType, LibAsset.AssetType memory rightAssetType)
-        private
-        view
-        returns (LibAsset.AssetType memory)
-    {
-        bytes4 classLeft = leftAssetType.assetClass;
-        bytes4 classRight = rightAssetType.assetClass;
-        if (classLeft == LibAsset.ERC20_ASSET_CLASS) {
-            if (classRight == LibAsset.ERC20_ASSET_CLASS) {
-                return simpleMatch(leftAssetType, rightAssetType);
-            }
-            return LibAsset.AssetType(0, EMPTY);
-        }
-        address matcher = matchers[classLeft];
-        if (matcher != address(0)) {
-            return IAssetMatcher(matcher).matchAssets(leftAssetType, rightAssetType);
-        }
-        if (classLeft == classRight) {
-            return simpleMatch(leftAssetType, rightAssetType);
-        }
-        revert("not found IAssetMatcher");
-    }
-
-    function simpleMatch(LibAsset.AssetType memory leftAssetType, LibAsset.AssetType memory rightAssetType)
+    function _matchAssetOneSide(address leftBaseToken, address rightBaseToken)
         private
         pure
-        returns (LibAsset.AssetType memory)
+        returns (address baseToken)
     {
-        bytes32 leftHash = keccak256(leftAssetType.data);
-        bytes32 rightHash = keccak256(rightAssetType.data);
-        if (leftHash == rightHash) {
-            return leftAssetType;
+        if (leftBaseToken != address(0)) {
+            if (rightBaseToken != address(0)) {
+                return _simpleMatch(leftBaseToken, rightBaseToken);
+            }
+            return address(0);
         }
-        return LibAsset.AssetType(0, EMPTY);
+        revert("V_PERP_M: not found");
     }
 
-    uint256[49] private __gap;
+    function _simpleMatch(address leftBaseToken, address rightBaseToken)
+        private
+        pure
+        returns (address baseToken)
+    {
+        bytes32 leftHash = keccak256(abi.encodePacked(leftBaseToken));
+        bytes32 rightHash = keccak256(abi.encodePacked(rightBaseToken));
+
+        if (leftHash == rightHash) {
+            return leftBaseToken;
+        }
+        return address(0);
+    }
+
+    uint256[50] private __gap;
 }

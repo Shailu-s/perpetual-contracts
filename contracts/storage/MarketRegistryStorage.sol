@@ -1,5 +1,5 @@
-// SPDX-License-Identifier: GPL-3.0-or-later
-pragma solidity 0.7.6;
+// SPDX-License-Identifier: BUSL - 1.1
+pragma solidity =0.8.12;
 
 /// @notice For future upgrades, do not change MarketRegistryStorageV1. Create a new
 /// contract which implements MarketRegistryStorageV1 and following the naming convention
@@ -9,11 +9,8 @@ abstract contract MarketRegistryStorageV1 {
 
     uint8 internal _maxOrdersPerMarket;
 
-    // key: baseToken, value: pool
-    mapping(address => address) internal _poolMap;
+    address[] internal _baseTokensMarketMap;
 
-    // key: baseToken, what insurance fund get = exchangeFee * insuranceFundFeeRatio
-    mapping(address => uint24) internal _insuranceFundFeeRatioMap;
-
-    mapping(address => uint24) internal _exchangeFeeRatioMap;
+    uint24 internal _makerFeeRatio;
+    uint24 internal _takerFeeRatio;
 }

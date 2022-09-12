@@ -1,10 +1,10 @@
-// SPDX-License-Identifier: GPL-3.0-or-later
-pragma solidity 0.7.6;
+// SPDX-License-Identifier: BUSL - 1.1
+pragma solidity =0.8.12;
 
 interface IVolmexBaseToken {
     event PriceFeedChanged(address indexed priceFeed);
 
-    function initialize(string memory nameArg, string memory symbolArg, address priceFeedArg) external;
+    function initialize(string memory nameArg, string memory symbolArg, address priceFeedArg, bool isBase) external;
 
     /// @dev This function is only used for emergency shutdown, to set priceFeed to an emergencyPriceFeed
     function setPriceFeed(address priceFeedArg) external;
