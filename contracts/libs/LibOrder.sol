@@ -1,80 +1,39 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: BUSL - 1.1
 
-pragma solidity 0.7.6;
-
-import "./ExchangeFee.sol";
+pragma solidity =0.8.12;
 
 import "./LibMath.sol";
-import "./LibOrderDataV3.sol";
-import "./LibOrderDataV2.sol";
-import "./LibOrderDataV1.sol";
+import "./LibAsset.sol";
 
 library LibOrder {
-    using SafeMathUpgradeable for uint256;
-
     bytes32 constant ORDER_TYPEHASH =
         keccak256(
-            "Order(address maker,Asset makeAsset,address taker,Asset takeAsset,uint256 salt,uint256 start,uint256 end,bytes4 dataType,bytes data)Asset(AssetType assetType,uint256 value)AssetType(bytes4 assetClass,bytes data)"
+            "Order(address trader,uint64 deadline,bool isShort,Asset makeAsset,Asset takeAsset,uint256 salt)Asset(address virtualToken,uint256 value)"
         );
 
-    uint256 constant ON_CHAIN_ORDER = 0;
-    bytes4 constant DEFAULT_ORDER_TYPE = 0xffffffff;
-
     struct Order {
-        address maker;
+        address trader;
+        uint64 deadline;
+        bool isShort;
         LibAsset.Asset makeAsset;
-        address taker;
         LibAsset.Asset takeAsset;
         uint256 salt;
-        uint256 start;
-        uint256 end;
-        bytes4 dataType;
-        bytes data;
     }
 
-    struct MatchedAssets {
-        LibAsset.AssetType makeMatch;
-        LibAsset.AssetType takeMatch;
-    }
-
-    function calculateRemaining(
-        Order memory order,
-        uint256 fill,
-        bool isMakeFill
-    ) internal pure returns (uint256 makeValue, uint256 takeValue) {
-        if (isMakeFill) {
-            makeValue = order.makeAsset.value.sub(fill);
-            takeValue = LibMath.safeGetPartialAmountFloor(order.takeAsset.value, order.makeAsset.value, makeValue);
-        } else {
-            takeValue = order.takeAsset.value.sub(fill);
-            makeValue = LibMath.safeGetPartialAmountFloor(order.makeAsset.value, order.takeAsset.value, takeValue);
-        }
+    function calculateRemaining(Order memory order, uint256 fill)
+        internal
+        pure
+        returns (uint256 baseValue, uint256 quoteValue)
+    {
+        baseValue = order.makeAsset.value - fill;
+        quoteValue = LibMath.safeGetPartialAmountFloor(order.makeAsset.value, order.takeAsset.value, baseValue);
     }
 
     function hashKey(Order memory order) internal pure returns (bytes32) {
-        if (order.dataType == LibOrderDataV1.V1 || order.dataType == DEFAULT_ORDER_TYPE) {
-            return
-                keccak256(
-                    abi.encode(
-                        order.maker,
-                        LibAsset.hash(order.makeAsset.assetType),
-                        LibAsset.hash(order.takeAsset.assetType),
-                        order.salt
-                    )
-                );
-        } else {
-            //order.data is in hash for V2, V3 and all new order
-            return
-                keccak256(
-                    abi.encode(
-                        order.maker,
-                        LibAsset.hash(order.makeAsset.assetType),
-                        LibAsset.hash(order.takeAsset.assetType),
-                        order.salt,
-                        order.data
-                    )
-                );
-        }
+        return
+            keccak256(
+                abi.encode(order.trader, LibAsset.hash(order.makeAsset), LibAsset.hash(order.takeAsset), order.salt)
+            );
     }
 
     function hash(Order memory order) internal pure returns (bytes32) {
@@ -82,21 +41,17 @@ library LibOrder {
             keccak256(
                 abi.encode(
                     ORDER_TYPEHASH,
-                    order.maker,
+                    order.trader,
+                    order.deadline,
+                    order.isShort,
                     LibAsset.hash(order.makeAsset),
-                    order.taker,
                     LibAsset.hash(order.takeAsset),
-                    order.salt,
-                    order.start,
-                    order.end,
-                    order.dataType,
-                    keccak256(order.data)
+                    order.salt
                 )
             );
     }
 
     function validate(LibOrder.Order memory order) internal view {
-        require(order.start == 0 || order.start < block.timestamp, "Order start validation failed");
-        require(order.end == 0 || order.end > block.timestamp, "Order end validation failed");
+        require(order.deadline > block.timestamp, "V_PERP_M: Order deadline validation failed");
     }
 }

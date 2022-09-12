@@ -1,5 +1,5 @@
-// SPDX-License-Identifier: GPL-3.0-or-later
-pragma solidity 0.7.6;
+// SPDX-License-Identifier: BUSL - 1.1
+pragma solidity =0.8.12;
 
 abstract contract BlockContext {
     function _blockTimestamp() internal view virtual returns (uint256) {
@@ -9,7 +9,9 @@ abstract contract BlockContext {
         return block.timestamp;
     }
 
-    function _blockNumber() internal view virtual returns (uint256) {
-        return block.number;
+    function _networkId() internal view virtual returns (uint256 networkId) {
+        assembly {
+            networkId := chainid()
+        }
     }
 }

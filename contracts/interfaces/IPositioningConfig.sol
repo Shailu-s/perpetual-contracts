@@ -1,5 +1,5 @@
-// SPDX-License-Identifier: GPL-3.0-or-later
-pragma solidity 0.7.6;
+// SPDX-License-Identifier: BUSL - 1.1
+pragma solidity =0.8.12;
 
 interface IPositioningConfig {
     /// @return maxMarketsPerAccount Max value of total markets per account
@@ -26,6 +26,6 @@ interface IPositioningConfig {
     /// @return maxFundingRate Max value of funding rate
     function getMaxFundingRate() external view returns (uint24 maxFundingRate);
 
-    /// @return isBackstopLiquidityProvider is backstop liquidity provider
-    function isBackstopLiquidityProvider(address account) external view returns (bool isBackstopLiquidityProvider);
+    /// @return partial liquidation ratio
+    function getPartialLiquidationRatio() external view returns (uint24);
 }

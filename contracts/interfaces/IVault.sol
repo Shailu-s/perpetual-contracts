@@ -1,5 +1,5 @@
-// SPDX-License-Identifier: GPL-3.0-or-later
-pragma solidity 0.7.6;
+// SPDX-License-Identifier: BUSL - 1.1
+pragma solidity =0.8.12;
 
 interface IVault {
     /// @notice Emitted when trader deposit collateral into vault
@@ -14,38 +14,65 @@ interface IVault {
     /// @param amount The amount of token that was withdrawn
     event Withdrawn(address indexed collateralToken, address indexed trader, uint256 amount);
 
+    /// @notice Emitted when vault have low balance
+    /// @param amount The amount needed to the vault
+    event LowBalance(uint256 amount);
+
+    /// @notice Emitted when vault borrow the amount
+    /// @param from The address which send the fund
+    /// @param amount The amount needed to the vault
+    event BorrowFund(address from, uint256 amount);
+
+    /// @notice Emitted when vault repay the debt
+    /// @param to The address which fund was refunded
+    /// @param amount The amount of the fund
+    event DebtRepayed(address to, uint256 amount);
+
     /// @notice Deposit collateral into vault
-    /// @dev once multi-collateral is implemented, the token is not limited to settlementToken
     /// @param token The address of the token to deposit
-    /// @param amountX10_D The amount of the token to deposit in decimals D (D = _decimals)
-    function deposit(address token, uint256 amountX10_D) external;
+    /// @param amount The amount of the token to deposit
+    /// @param from The address of the trader
+    function deposit(
+        address token,
+        uint256 amount,
+        address from
+    ) external payable;
 
     /// @notice Withdraw collateral from vault
-    /// @dev once multi-collateral is implemented, the token is not limited to settlementToken
     /// @param token The address of the token sender is going to withdraw
-    /// @param amountX10_D The amount of the token to withdraw in decimals D (D = _decimals)
-    function withdraw(address token, uint256 amountX10_D) external;
+    /// @param amount The amount of the token to withdraw
+    /// @param to The address of the trader
+    function withdraw(
+        address token,
+        uint256 amount,
+        address payable to
+    ) external ;
+
+    /// @notice transfer fund to vault in case of low balance
+    /// @dev once multi-collateral is implemented, the token is not limited to settlementToken
+    /// @param token The address of the token vault need funding
+    /// @param amount The amount of the token to withdraw
+    function transferFundToVault(address token, uint256 amount) external;
+
+    /// @notice function to repay debt taken during low balance period
+    /// @dev once multi-collateral is implemented, the token is not limited to settlementToken
+    /// @param token The address of the token
+    /// @param amount The amount of the token to withdraw
+    function repayDebtToOwner(address token, uint256 amount) external;
+
+    /// @notice Set new settlement token
+    /// @param newTokenArg The address of `Positioning` contract
+    function setSettlementToken(address newTokenArg) external;
+
+    /// @notice Set positioning contract
+    function setPositioning(address PositioningArg) external;
+
+    /// @notice Set vault controller contract
+    function setVaultController(address vaultControllerArg) external;
 
     /// @notice Get the balance in vault of specified account
     /// @return balance The balance amount
     function getBalance(address account) external view returns (int256 balance);
-
-    /// @notice Get free collateral amount of specified trader
-    /// @param trader The address of the trader
-    /// @return freeCollateral Max(0, amount of collateral available for withdraw or opening new positions or orders)
-    function getFreeCollateral(address trader) external view returns (uint256 freeCollateral);
-
-    /// @notice Get free collateral amount of specified trader and collateral ratio
-    /// @dev There are three configurations for different insolvency risk tolerances: **conservative, moderate,
-    /// aggressive**, we will start with the **conservative** one and gradually move to aggressive to
-    /// increase capital efficiency
-    /// @param trader The address of the trader
-    /// @param ratio The margin requirement ratio, imRatio or mmRatio
-    /// @return freeCollateralByRatio freeCollateral, by using the input margin requirement ratio; can be negative
-    function getFreeCollateralByRatio(address trader, uint24 ratio)
-        external
-        view
-        returns (int256 freeCollateralByRatio);
 
     /// @notice Get settlement token address
     /// @return settlementToken The address of settlement token
@@ -68,15 +95,10 @@ interface IVault {
     /// @return accountBalance The address of `AccountBalance` contract
     function getAccountBalance() external view returns (address accountBalance);
 
-    /// @notice Get `InsuranceFund` contract address
-    /// @return insuranceFund The address of `InsuranceFund` contract
-    function getInsuranceFund() external view returns (address);
-
-    /// @notice Get `Exchange` contract address
-    /// @return exchange The address of `Exchange` contract
-    function getExchange() external view returns (address);
-
     /// @notice Get `Positioning` contract address
     /// @return Positioning The address of `Positioning` contract
     function getPositioning() external view returns (address);
+
+    /// @notice Get `Vault controller` contract address
+    function getVaultController() external view returns (address);
 }
