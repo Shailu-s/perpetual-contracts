@@ -163,7 +163,9 @@ contract VolmexPerpPeriphery is Initializable, RoleManager {
     /**
      * @notice Used to update the Positioning at index
      *
-     * @param _newPositioning Address of the positioning contract
+     * @param _oldPositioning Address of the old positioning contract
+     * @param _newPositioning Address of the new positioning contract
+     * @param _index Index of positioning to update
      */
     function updatePositioningAtIndex(
         IPositioning _oldPositioning,
@@ -178,7 +180,9 @@ contract VolmexPerpPeriphery is Initializable, RoleManager {
     /**
      * @notice Used to update the VaultController at index
      *
-     * @param _newVaultController Address of the vaultController contract
+     * @param _oldVaultController Address of the old vaultController contract
+     * @param _newVaultController Address of the new vaultController contract
+     * @param _index Index of vault controller to update
      */
     function updateVaultControllerAtIndex(
         IVaultController _oldVaultController,
