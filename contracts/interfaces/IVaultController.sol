@@ -3,6 +3,8 @@ pragma solidity =0.8.12;
 
 interface IVaultController{
 
+    function initialize(address positioningConfig, address accountBalanceArg) external;
+
     /// @notice Deposit collateral into vault
     /// @param token The address of the token to deposit
     /// @param amount The amount of the token to deposit
@@ -15,8 +17,6 @@ interface IVaultController{
 
     /// @notice Function to register new vault
     function registerVault(address _vault, address _token) external;
-
-    function setPositioning(address PositioningArg) external;
 
     function getAccountValue(address trader)  external view returns (int256);
 

@@ -28,6 +28,15 @@ interface IVault {
     /// @param amount The amount of the fund
     event DebtRepayed(address to, uint256 amount);
 
+
+    function initialize(
+        address PositioningConfigArg,
+        address accountBalanceArg,
+        address tokenArg,
+        address vaultControllerArg,
+        bool isEthVaultArg
+    ) external;
+
     /// @notice Deposit collateral into vault
     /// @param token The address of the token to deposit
     /// @param amount The amount of the token to deposit
