@@ -481,6 +481,33 @@ describe("VolmexPerpPeriphery", function () {
     });
   });
 
+  describe("Update Vault controller and Positioning by index", async () => {
+    it("Should update the vault controller at index", async () => {
+      const controller = await upgrades.deployProxy(VaultController, [
+        positioningConfig.address,
+        accountBalance1.address,
+      ]);
+      const oldVaultController = await volmexPerpPeriphery.vaultControllers(0);
+      await (await volmexPerpPeriphery.updateVaultControllerAtIndex(oldVaultController, controller.address, 0)).wait();
+      expect(await volmexPerpPeriphery.vaultControllers(0)).to.equal(controller.address);
+    });
+
+    it("Should update the positioning at index", async () => {
+      const newPositioning = await upgrades.deployProxy(Positioning, [
+          positioningConfig.address,
+          vaultController.address,
+          accountBalance1.address,
+          matchingEngine.address,
+          markPriceOracle.address,
+          indexPriceOracle.address,
+          0,
+      ]);
+      const oldPositioning = await volmexPerpPeriphery.positionings(0);
+      await (await volmexPerpPeriphery.updatePositioningAtIndex(oldPositioning, newPositioning.address, 0)).wait();
+      expect(await volmexPerpPeriphery.positionings(0)).to.equal(newPositioning.address);
+    });
+  });
+
   describe("Deposit, Withdraw & Open position", async () => {
     let index;
     let amount;

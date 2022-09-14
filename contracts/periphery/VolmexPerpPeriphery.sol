@@ -11,7 +11,7 @@ import "../interfaces/IPositioning.sol";
 import "../interfaces/IVaultController.sol";
 import "../interfaces/IVolmexPerpPeriphery.sol";
 
-contract VolmexPerpPeriphery is Initializable, RoleManager {
+contract VolmexPerpPeriphery is Initializable, RoleManager, IVolmexPerpPeriphery {
     // Save positioning & vaulcontroller
 
     // Used to set the index of positioning
@@ -69,6 +69,7 @@ contract VolmexPerpPeriphery is Initializable, RoleManager {
     function addPositioning(IPositioning _positioning) external {
         _requireVolmexPerpPeripheryAdmin();
         positionings[positioningIndex] = _positioning;
+        emit PositioningAdded(positioningIndex, address(_positioning));
         positioningIndex++;
     }
 
@@ -80,6 +81,7 @@ contract VolmexPerpPeriphery is Initializable, RoleManager {
     function addVaultController(IVaultController _vaultController) external {
         _requireVolmexPerpPeripheryAdmin();
         vaultControllers[vaultControllerIndex] = _vaultController;
+        emit VaultControllerAdded(vaultControllerIndex, address(_vaultController));
         vaultControllerIndex++;
     }
 
@@ -175,6 +177,7 @@ contract VolmexPerpPeriphery is Initializable, RoleManager {
         _requireVolmexPerpPeripheryAdmin();
         require(positionings[_index] == _oldPositioning, "VolmexPerpPeriphery: Incorrect positioning _index");
         positionings[_index] = _newPositioning;
+        emit PositioningUpdated(_index, address(_oldPositioning), address(_newPositioning));
     }
 
     /**
