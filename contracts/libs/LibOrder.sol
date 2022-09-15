@@ -4,6 +4,7 @@ pragma solidity =0.8.12;
 
 import "./LibMath.sol";
 import "./LibAsset.sol";
+import "../interfaces/IVirtualToken.sol";
 
 library LibOrder {
     bytes32 constant ORDER_TYPEHASH =
@@ -53,5 +54,19 @@ library LibOrder {
 
     function validate(LibOrder.Order memory order) internal view {
         require(order.deadline > block.timestamp, "V_PERP_M: Order deadline validation failed");
+        
+        bool isMakeAssetBase = IVirtualToken(order.makeAsset.virtualToken).isBase();
+        bool isTakeAssetBase = IVirtualToken(order.takeAsset.virtualToken).isBase();
+
+        require(
+            (isMakeAssetBase && !isTakeAssetBase) || (!isMakeAssetBase && isTakeAssetBase), 
+            "Both makeAsset & takeAsset can't be baseTokens"
+        );
+
+        require(
+            (order.isShort && isMakeAssetBase && !isTakeAssetBase) ||
+            (!order.isShort && !isMakeAssetBase && isTakeAssetBase), 
+            "Short order can't have takeAsset as a baseToken/Long order can't have makeAsset as baseToken"
+        );
     }
 }
