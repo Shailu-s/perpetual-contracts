@@ -132,7 +132,7 @@ describe("Positioning", function () {
 
     virtualToken = await upgrades.deployProxy(
       VirtualToken,
-      ["VirtualToken", "VTK", true],
+      ["VirtualToken", "VTK", false],
       {
         initializer: "initialize"
       }
@@ -171,7 +171,6 @@ describe("Positioning", function () {
     )
     marketRegistry = await upgrades.deployProxy(MarketRegistry, [virtualToken.address])
     
-    await marketRegistry.connect(owner).addBaseToken(virtualToken.address)
     await marketRegistry.connect(owner).addBaseToken(volmexBaseToken.address)
     await marketRegistry.connect(owner).addBaseToken(baseToken.address)
     await marketRegistry.connect(owner).setMakerFeeRatio(0.0004e6)
@@ -195,8 +194,8 @@ describe("Positioning", function () {
       account1.address,
       deadline,
       true,
-      Asset(virtualToken.address, one.toString()),
       Asset(volmexBaseToken.address, two.toString()),
+      Asset(virtualToken.address, one.toString()),
       1
     )
 
@@ -204,8 +203,8 @@ describe("Positioning", function () {
       account2.address,
       deadline,
       false,
-      Asset(volmexBaseToken.address, one.toString()),
       Asset(virtualToken.address, two.toString()),
+      Asset(volmexBaseToken.address, one.toString()),
       2,
     )
 
@@ -260,8 +259,8 @@ describe("Positioning", function () {
           orderLeft.makeAsset.virtualToken,
         )
 
-        await expect(positionSize).to.be.equal("-500000000000000000")
-        await expect(positionSize1).to.be.equal("500000000000000000")
+        await expect(positionSize).to.be.equal("-2000000000000000000")
+        await expect(positionSize1).to.be.equal("2000000000000000000")
       })
 
       it("should reduce position of both traders", async () => {
@@ -285,8 +284,8 @@ describe("Positioning", function () {
           account1.address,
           87654321987654,
           true,
-          Asset(virtualToken.address, "1000000000000000000"),
-          Asset(volmexBaseToken.address, "2000000000000000000"),
+          Asset(volmexBaseToken.address, "1000000000000000000"),
+          Asset(virtualToken.address, "2000000000000000000"),
           1,
         )
 
@@ -294,8 +293,8 @@ describe("Positioning", function () {
           account2.address,
           87654321987654,
           false,
-          Asset(volmexBaseToken.address, "1000000000000000000"),
-          Asset(virtualToken.address, "2000000000000000000"),
+          Asset(virtualToken.address, "1000000000000000000"),
+          Asset(volmexBaseToken.address, "2000000000000000000"),
           1,
         )
 
@@ -317,8 +316,8 @@ describe("Positioning", function () {
           orderLeft.makeAsset.virtualToken,
         )
 
-        await expect(positionSize).to.be.equal("-500000000000000000")
-        await expect(positionSize1).to.be.equal("500000000000000000")
+        await expect(positionSize).to.be.equal("-2000000000000000000")
+        await expect(positionSize1).to.be.equal("2000000000000000000")
 
         let signatureLeft1 = await getSignature(orderLeft1, account1.address)
         let signatureRight1 = await getSignature(orderRight1, account2.address)
@@ -330,7 +329,7 @@ describe("Positioning", function () {
         )
         const positionSizeAfter = await accountBalance1.getTakerPositionSize(account1.address, virtualToken.address)
 
-        await expect(positionSizeAfter).to.be.equal("-1000000000000000000")
+        await expect(positionSizeAfter).to.be.equal("0")
       })
 
       it("should close the whole position", async () => {
@@ -350,7 +349,7 @@ describe("Positioning", function () {
           account1.address,
           87654321987654,
           true,
-          Asset(baseToken.address, one.toString()),
+          Asset(volmexBaseToken.address, one.toString()),
           Asset(virtualToken.address, one.toString()),
           1,
         )
@@ -360,7 +359,7 @@ describe("Positioning", function () {
           87654321987654,
           false,
           Asset(virtualToken.address, one.toString()),
-          Asset(baseToken.address, one.toString()),
+          Asset(volmexBaseToken.address, one.toString()),
           1,
         )
 
@@ -369,7 +368,7 @@ describe("Positioning", function () {
           87654321987654,
           false,
           Asset(virtualToken.address, one.toString()),
-          Asset(baseToken.address, one.toString()),
+          Asset(volmexBaseToken.address, one.toString()),
           1,
         )
 
@@ -377,7 +376,7 @@ describe("Positioning", function () {
           account2.address,
           87654321987654,
           true,
-          Asset(baseToken.address, one.toString()),
+          Asset(volmexBaseToken.address, one.toString()),
           Asset(virtualToken.address, one.toString()),
           1,
         )
@@ -435,7 +434,7 @@ describe("Positioning", function () {
           account1.address,
           10,
           true,
-          Asset(virtualToken.address, "20"),
+          Asset(volmexBaseToken.address, "20"),
           Asset(virtualToken.address, "20"),
           1,
         )
@@ -445,7 +444,7 @@ describe("Positioning", function () {
           10,
           false,
           Asset(virtualToken.address, "20"),
-          Asset(virtualToken.address, "20"),
+          Asset(volmexBaseToken.address, "20"),
           1,
         )
 
@@ -463,7 +462,7 @@ describe("Positioning", function () {
           account1.address,
           87654321987654,
           true,
-          Asset(virtualToken.address, "20"),
+          Asset(volmexBaseToken.address, "20"),
           Asset(virtualToken.address, "20"),
           0,
         )
@@ -473,7 +472,7 @@ describe("Positioning", function () {
           87654321987654,
           false,
           Asset(virtualToken.address, "20"),
-          Asset(virtualToken.address, "20"),
+          Asset(volmexBaseToken.address, "20"),
           0,
         )
 
@@ -491,7 +490,7 @@ describe("Positioning", function () {
           account1.address,
           87654321987654,
           true,
-          Asset(virtualToken.address, "20"),
+          Asset(volmexBaseToken.address, "20"),
           Asset(virtualToken.address, "20"),
           1,
         )
@@ -501,7 +500,7 @@ describe("Positioning", function () {
           87654321987654,
           false,
           Asset(virtualToken.address, "20"),
-          Asset(virtualToken.address, "20"),
+          Asset(volmexBaseToken.address, "20"),
           1,
         )
 
@@ -521,7 +520,7 @@ describe("Positioning", function () {
           account1.address,
           87654321987654,
           true,
-          Asset(baseToken.address, "20"),
+          Asset(volmexBaseToken.address, "20"),
           Asset(virtualToken.address, "20"),
           1,
         )
@@ -531,7 +530,7 @@ describe("Positioning", function () {
           87654321987654,
           false,
           Asset(virtualToken.address, "20"),
-          Asset(baseToken.address, "20"),
+          Asset(volmexBaseToken.address, "20"),
           1,
         )
 
@@ -557,7 +556,7 @@ describe("Positioning", function () {
           account1.address,
           87654321987654,
           true,
-          Asset(virtualToken.address, "20"),
+          Asset(volmexBaseToken.address, "20"),
           Asset(virtualToken.address, "20"),
           1,
         )
@@ -567,7 +566,7 @@ describe("Positioning", function () {
           87654321987654,
           false,
           Asset(virtualToken.address, "20"),
-          Asset(virtualToken.address, "20"),
+          Asset(volmexBaseToken.address, "20"),
           1,
         )
 
@@ -592,7 +591,7 @@ describe("Positioning", function () {
           account1.address,
           87654321987654,
           true,
-          Asset(virtualToken.address, "20"),
+          Asset(volmexBaseToken.address, "20"),
           Asset(virtualToken.address, "20"),
           1,
         )
@@ -602,7 +601,7 @@ describe("Positioning", function () {
           87654321987654,
           false,
           Asset(virtualToken.address, "20"),
-          Asset(virtualToken.address, "20"),
+          Asset(volmexBaseToken.address, "20"),
           1,
         )
 
