@@ -26,4 +26,5 @@ contract RoleManager is AccessControlUpgradeable {
     bytes32 public constant VAULT_CONTROLLER_ADMIN = keccak256("VAULT_CONTROLLER_ADMIN");
     bytes32 public constant VIRTUAL_TOKEN_ADMIN = keccak256("VIRTUAL_TOKEN_ADMIN");
     bytes32 public constant VOLMEX_PERP_PERIPHERY = keccak256("VOLMEX_PERP_PERIPHERY");
+    bytes32 public constant LIMIT_ORDER_ADMIN = keccak256("LIMIT_ORDER_ADMIN");
 }
