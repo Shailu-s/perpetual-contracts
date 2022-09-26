@@ -35,6 +35,30 @@ contract VolmexPerpLimitOrder is IVolmexPerpLimitOrder, RoleManager {
         markPriceOracle = _markPriceOracle;
     }
 
+    function _fillLimitOrder(
+        LimitOrder memory _limitOrder,
+        bytes memory _signatureLimitOrder,
+        LibOrder.Order memory _order,
+        bytes memory _signatureOrder,
+        uint256 _triggerPrice
+    ) internal {
+        _verifyTriggerPrice(_limitOrder, _triggerPrice);
+
+        positioning.openPosition(
+            LibOrder.Order({
+                trader: _limitOrder.trader,
+                deadline: _limitOrder.deadline,
+                isShort: _limitOrder.isShort,
+                makeAsset: _limitOrder.makeAsset,
+                takeAsset: _limitOrder.takeAsset,
+                salt: _limitOrder.salt
+            }),
+            _signatureLimitOrder,
+            _order,
+            _signatureOrder
+        );
+    }
+
     // TODO: Change the logic to round id, if Volmex Oracle implements price by round id functionality
     function _verifyTriggerPrice(LimitOrder memory _limitOrder, uint256 _triggerPrice) internal view {
         if (_limitOrder.orderType == OrderType.LimitOrder) {
