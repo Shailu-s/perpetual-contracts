@@ -35,6 +35,36 @@ contract VolmexPerpLimitOrder is IVolmexPerpLimitOrder, RoleManager {
         markPriceOracle = _markPriceOracle;
     }
 
+    // TODO: Change the logic to round id, if Volmex Oracle implements price by round id functionality
+    function _verifyTriggerPrice(LimitOrder memory _limitOrder, uint256 _triggerPrice) internal view {
+        if (_limitOrder.orderType == OrderType.LimitOrder) {
+            return;
+        }
+        // TODO: Add check for round id, when Volmex Oracle updates functionality
+        require(_limitOrder.triggerPrice > 0 && _triggerPrice > 0, "Invalid price");
+        uint256 triggeredPrice = _getBaseTokenPrice(_limitOrder, 15 minutes); // TODO Ask and update this hardhcoded time reference for tw interval
+
+        if (_limitOrder.orderType == OrderType.StopLossLimitOrder) {
+            if (_limitOrder.isShort) {
+                require(triggeredPrice <= _limitOrder.triggerPrice, "Sell Stop Limit Order Trigger Price Not Matched");
+            } else {
+                require(triggeredPrice >= _limitOrder.triggerPrice, "Buy Stop Limit Order Trigger Price Not Matched");
+            }
+        } else if (_limitOrder.orderType == OrderType.TakeProfitLimitOrder) {
+            if (_limitOrder.isShort) {
+                require(
+                    triggeredPrice >= _limitOrder.triggerPrice,
+                    "Sell Take-profit Limit Order Trigger Price Not Matched"
+                );
+            } else {
+                require(
+                    triggeredPrice <= _limitOrder.triggerPrice,
+                    "Buy Take-profit Limit Order Trigger Price Not Matched"
+                );
+            }
+        }
+    }
+
     // TODO: Add round id in the Volmex oracle to faciliate the chainlink oracle functionality
     function _getBaseTokenPrice(LimitOrder memory _order, uint256 _twInterval) internal view returns (uint256 price) {
         // TODO: Add Order validate, similar to -> LibOrder.validate(order);
