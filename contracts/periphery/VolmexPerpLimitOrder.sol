@@ -1,19 +1,32 @@
 // SPDX-License-Identifier: BUSL - 1.1
 pragma solidity =0.8.12;
 
-import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "../libs/LibOrder.sol";
+
 import "../interfaces/IVirtualToken.sol";
 import "../interfaces/IMarkPriceOracle.sol";
+import "../interfaces/IPositioning.sol";
+import "../interfaces/IAccountBalance.sol";
+import "../interfaces/IVolmexPerpLimitOrder.sol";
+
 import "../helpers/RoleManager.sol";
 import "../helpers/OwnerPausable.sol";
 
-contract LimitOrder is Initializable, RoleManager {
+contract VolmexPerpLimitOrder is IVolmexPerpLimitOrder, RoleManager {
     IMarkPriceOracle public markPriceOracle;
+    IPositioning public positioning;
+    IAccountBalance public accountBalance;
 
-    function initialize(IMarkPriceOracle _markPriceOracle, address _admin) external initializer {
+    function initialize(
+        IMarkPriceOracle _markPriceOracle,
+        IPositioning _positioning,
+        IAccountBalance _accountBalance,
+        address _admin
+    ) external initializer {
         require(_admin != address(0), "Admin can't be address(0)");
         markPriceOracle = _markPriceOracle;
+        positioning = _positioning;
+        accountBalance = _accountBalance;
         _grantRole(LIMIT_ORDER_ADMIN, _admin);
     }
 
@@ -22,15 +35,12 @@ contract LimitOrder is Initializable, RoleManager {
         markPriceOracle = _markPriceOracle;
     }
 
-    function getBaseTokenPrice(LibOrder.Order memory order, uint256 _twInterval) 
-        public 
-        view
-        returns (uint256 price) 
-    {
-        LibOrder.validate(order);
+    // TODO: Add round id in the Volmex oracle to faciliate the chainlink oracle functionality
+    function _getBaseTokenPrice(LimitOrder memory _order, uint256 _twInterval) internal view returns (uint256 price) {
+        // TODO: Add Order validate, similar to -> LibOrder.validate(order);
 
-        address makeAsset = order.makeAsset.virtualToken;
-        address takeAsset = order.takeAsset.virtualToken;
+        address makeAsset = _order.makeAsset.virtualToken;
+        address takeAsset = _order.takeAsset.virtualToken;
 
         address baseToken = IVirtualToken(makeAsset).isBase() ? makeAsset : takeAsset;
 
