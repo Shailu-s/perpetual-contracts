@@ -35,6 +35,16 @@ contract VolmexPerpLimitOrder is IVolmexPerpLimitOrder, RoleManager {
         markPriceOracle = _markPriceOracle;
     }
 
+    function fillLimitOrder(
+        LimitOrder memory _limitOrder,
+        bytes memory _signatureLimitOrder,
+        LibOrder.Order memory _order,
+        bytes memory _signatureOrder,
+        uint256 _triggerPrice
+    ) external {
+        _fillLimitOrder(_limitOrder, _signatureLimitOrder, _order, _signatureOrder, _triggerPrice);
+    }
+
     function _fillLimitOrder(
         LimitOrder memory _limitOrder,
         bytes memory _signatureLimitOrder,
