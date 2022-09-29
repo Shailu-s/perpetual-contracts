@@ -9,7 +9,7 @@ import "./IAccountBalance.sol";
 
 interface IVolmexPerpLimitOrder {
     enum OrderType {
-        LimitOrder,
+        Order,
         StopLossLimitOrder,
         TakeProfitLimitOrder
     }
