@@ -36,9 +36,9 @@ contract VolmexPerpLimitOrder is IVolmexPerpLimitOrder, RoleManager {
     }
 
     function fillLimitOrder(
-        LimitOrder memory _leftLimitOrder,
+        LibOrder.Order memory _leftLimitOrder,
         bytes memory _signatureLeftLimitOrder,
-        LimitOrder memory _rightLimitOrder,
+        LibOrder.Order memory _rightLimitOrder,
         bytes memory _signatureRightLimitOrder
     ) external {
         _fillLimitOrder(
@@ -50,38 +50,38 @@ contract VolmexPerpLimitOrder is IVolmexPerpLimitOrder, RoleManager {
     }
 
     function _fillLimitOrder(
-        LimitOrder memory _leftLimitOrder,
+        LibOrder.Order memory _leftLimitOrder,
         bytes memory _signatureLeftLimitOrder,
-        LimitOrder memory _rightLimitOrder,
+        LibOrder.Order memory _rightLimitOrder,
         bytes memory _signatureRightLimitOrder
     ) internal {
-        _verifyTriggerPrice(_leftLimitOrder, _leftLimitOrder.triggerPrice);
-        _verifyTriggerPrice(_rightLimitOrder, _rightLimitOrder.triggerPrice);
+        _verifyTriggerPrice(_leftLimitOrder);
+        _verifyTriggerPrice(_rightLimitOrder);
 
         positioning.openPosition(
-            _convertLimitOrderToOrder(_leftLimitOrder), 
+            _leftLimitOrder, 
             _signatureLeftLimitOrder, 
-            _convertLimitOrderToOrder(_rightLimitOrder),
+            _rightLimitOrder,
             _signatureRightLimitOrder
         );
     }
 
     // TODO: Change the logic to round id, if Volmex Oracle implements price by round id functionality
-    function _verifyTriggerPrice(LimitOrder memory _limitOrder, uint256 _triggerPrice) internal view {
-        if (_limitOrder.orderType == OrderType.Order) {
+    function _verifyTriggerPrice(LibOrder.Order memory _limitOrder) internal view {
+        if (_limitOrder.orderType == LibOrder.ORDER) {
             return;
         }
         // TODO: Add check for round id, when Volmex Oracle updates functionality
-        require(_limitOrder.triggerPrice > 0 && _triggerPrice > 0, "Invalid price");
-        uint256 triggeredPrice = _getBaseTokenPrice(_limitOrder, 15 minutes); // TODO Ask and update this hardhcoded time reference for tw interval
+        // TODO Ask and update this hardhcoded time reference for tw interval
+        uint256 triggeredPrice = _getBaseTokenPrice(_limitOrder, 15 minutes); 
 
-        if (_limitOrder.orderType == OrderType.StopLossLimitOrder) {
+        if (_limitOrder.orderType == LibOrder.STOP_LOSS_LIMIT_ORDER) {
             if (_limitOrder.isShort) {
                 require(triggeredPrice <= _limitOrder.triggerPrice, "Sell Stop Limit Order Trigger Price Not Matched");
             } else {
                 require(triggeredPrice >= _limitOrder.triggerPrice, "Buy Stop Limit Order Trigger Price Not Matched");
             }
-        } else if (_limitOrder.orderType == OrderType.TakeProfitLimitOrder) {
+        } else if (_limitOrder.orderType == LibOrder.TAKE_PROFIT_LIMIT_ORDER) {
             if (_limitOrder.isShort) {
                 require(
                     triggeredPrice >= _limitOrder.triggerPrice,
@@ -97,7 +97,7 @@ contract VolmexPerpLimitOrder is IVolmexPerpLimitOrder, RoleManager {
     }
 
     // TODO: Add round id in the Volmex oracle to faciliate the chainlink oracle functionality
-    function _getBaseTokenPrice(LimitOrder memory _order, uint256 _twInterval) internal view returns (uint256 price) {
+    function _getBaseTokenPrice(LibOrder.Order memory _order, uint256 _twInterval) internal view returns (uint256 price) {
         // TODO: Add Order validate, similar to -> LibOrder.validate(order);
 
         address makeAsset = _order.makeAsset.virtualToken;
@@ -111,16 +111,5 @@ contract VolmexPerpLimitOrder is IVolmexPerpLimitOrder, RoleManager {
 
     function _requireLimitOrderAdmin() internal view {
         require(hasRole(LIMIT_ORDER_ADMIN, _msgSender()), "Not Limit Order admin");
-    }
-
-    function _convertLimitOrderToOrder(LimitOrder memory _limitOrder) internal pure returns(LibOrder.Order memory) {
-        return LibOrder.Order({
-            trader: _limitOrder.trader,
-            deadline: _limitOrder.deadline,
-            isShort: _limitOrder.isShort,
-            makeAsset: _limitOrder.makeAsset,
-            takeAsset: _limitOrder.takeAsset,
-            salt: _limitOrder.salt
-        });
     }
 }

@@ -33,6 +33,10 @@ describe("MatchingEngine", function () {
   const one = ethers.constants.WeiPerEther; // 1e18
   const two = ethers.constants.WeiPerEther.mul(BigNumber.from("2")); // 2e18
 
+  const ORDER = "0xf555eb98";
+  const STOP_LOSS_LIMIT_ORDER = "0xeeaed735";
+  const TAKE_PROFIT_LIMIT_ORDER = "0xe0fc7f94";
+
   this.beforeAll(async () => {
     MatchingEngine = await ethers.getContractFactory("MatchingEngineTest")
     MarkPriceOracle = await ethers.getContractFactory("MarkPriceOracle")
@@ -107,21 +111,25 @@ describe("MatchingEngine", function () {
     asset = Asset(virtualToken.address, "10")
 
     orderLeft = Order(
-      account1.address,
+      ORDER,
       deadline,
-      true,
+      account1.address,
       Asset(virtualToken.address, one.toString()),
       Asset(volmexBaseToken.address, two.toString()),
-      1
+      1,
+      0,
+      true,
     )
 
     orderRight = Order(
-      account2.address,
+      ORDER,
       deadline,
-      false,
+      account2.address,
       Asset(volmexBaseToken.address, one.toString()),
       Asset(virtualToken.address, two.toString()),
       2,
+      0,
+      false,
     )
   })
 
@@ -134,12 +142,12 @@ describe("MatchingEngine", function () {
 
   describe("Cancel orders:", function () {
     it("Should cancel order successfully", async () => {
-      const order1 = Order(owner.address, deadline, true, orderLeft.makeAsset, orderLeft.takeAsset, 1);
+      const order1 = Order(ORDER, deadline, owner.address, orderLeft.makeAsset, orderLeft.takeAsset, 1, 0, true);
       await expect(matchingEngine.cancelOrder(order1)).to.emit(matchingEngine, "Canceled")
     })
 
     it("Should cancel order successfully", async () => {
-      const order1 = Order(owner.address, deadline, true, orderLeft.makeAsset, orderLeft.takeAsset, 1);
+      const order1 = Order(ORDER, deadline, owner.address, orderLeft.makeAsset, orderLeft.takeAsset, 1, 0, true);
       await matchingEngine.setMakerMinSalt(100)
       await expect(matchingEngine.cancelOrder(order1)).to.be.revertedWith("V_PERP_M: order salt lower")
     })
@@ -149,14 +157,14 @@ describe("MatchingEngine", function () {
     })
 
     it("will fail to cancel order if salt is 0", async () => {
-      const order1 = Order(owner.address, deadline, true, orderLeft.makeAsset, orderLeft.takeAsset, 0);
+      const order1 = Order(ORDER, deadline, owner.address, orderLeft.makeAsset, orderLeft.takeAsset, 0, 0, true);
       await expect(matchingEngine.cancelOrder(order1)).to.be.revertedWith("V_PERP_M: 0 salt can't be used")
     })
 
     // TODO: Need to check for event or something else
     it("should cancel multiple orders", async () => {
-      const order1 = Order(owner.address, deadline, true, orderLeft.makeAsset, orderLeft.takeAsset, 1);
-      const order2 = Order(owner.address, deadline, true, orderLeft.makeAsset, orderLeft.takeAsset, 2);
+      const order1 = Order(ORDER, deadline, owner.address, orderLeft.makeAsset, orderLeft.takeAsset, 1, 0, true);
+      const order2 = Order(ORDER, deadline, owner.address, orderLeft.makeAsset, orderLeft.takeAsset, 2, 0, true);
 
       var ordersList: any[] = [order1, order2]
 
@@ -187,21 +195,25 @@ describe("MatchingEngine", function () {
         await virtualToken.connect(account2).approve(matchingEngine.address, 1000000000000000)
 
         const orderLeft = Order(
-          account1.address,
+          ORDER,
           deadline,
-          true,
+          account1.address,
           Asset(virtualToken.address, "40"),
           Asset(virtualToken.address, "20"),
           1,
+          0,
+          true,
         )
 
         const orderRight = Order(
-          account2.address,
+          ORDER,
           deadline,
-          false,
+          account2.address,
           Asset("0x0000000000000000000000000000000000000000", "20"),
           Asset(virtualToken.address, "20"),
           1,
+          0,
+          false,
         )
 
         let signatureLeft = await getSignature(orderLeft, account1.address)
@@ -221,21 +233,25 @@ describe("MatchingEngine", function () {
         await virtualToken.connect(account2).approve(matchingEngine.address, 1000000000000000)
 
         const orderLeft = Order(
-          account1.address,
+          ORDER,
           deadline,
-          true,
+          account1.address,
           Asset(virtualToken.address, "20"),
           Asset(virtualToken.address, "20"),
           1,
+          0,
+          true,
         )
 
         const orderRight = Order(
-          account2.address,
+          ORDER,
           deadline,
-          false,
+          account2.address,
           Asset(virtualToken.address, "20"),
           Asset(virtualToken.address, "20"),
           1,
+          0,
+          false,
         )
 
         let signatureLeft = await getSignature(orderLeft, account1.address)
@@ -315,22 +331,26 @@ describe("MatchingEngine", function () {
       let salt = 3;
       for (let index = 0; index < 46; index++) {
         ordersLeft.push(Order(
-          account1.address,
+          ORDER,
           deadline,
-          true,
+          account1.address,
           Asset(virtualToken.address, one.toString()),
           Asset(volmexBaseToken.address, two.toString()),
-          salt
+          salt,
+          0,
+          true,
         ));
         salt++;
         
         ordersRight.push(Order(
-          account2.address,
+          ORDER,
           deadline,
-          true,
+          account2.address,
           Asset(volmexBaseToken.address, one.toString()),
           Asset(virtualToken.address, two.toString()),
-          salt
+          salt,
+          0,
+          true,
         ));
         salt++;
       }
@@ -345,17 +365,19 @@ describe("MatchingEngine", function () {
       const [owner, account1] = await ethers.getSigners()
 
       const order = Order(
-        account1.address,
+        ORDER,
         10,
-        true,
+        account1.address,
         Asset(virtualToken.address, "20"),
         Asset(virtualToken.address, "20"),
         1,
+        0,
+        true,
       )
 
       let ordersList = []
 
-      for (let index = 0; index < 188; index++) {
+      for (let index = 0; index < 171; index++) {
         ordersList.push(order);
       }
 

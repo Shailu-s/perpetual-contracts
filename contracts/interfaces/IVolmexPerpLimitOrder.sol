@@ -8,21 +8,16 @@ import "./IPositioning.sol";
 import "./IAccountBalance.sol";
 
 interface IVolmexPerpLimitOrder {
-    enum OrderType {
-        Order,
-        StopLossLimitOrder,
-        TakeProfitLimitOrder
-    }
 
     struct LimitOrder {
-        OrderType orderType;
+        bytes4 orderType;
         address trader;
         uint64 deadline;
         bool isShort;
         LibAsset.Asset makeAsset;
         LibAsset.Asset takeAsset;
         uint256 salt;
-        uint256 triggerPrice;
+        uint128 triggerPrice;
     }
 
     function initialize(

@@ -4,16 +4,16 @@ function Asset(virtualToken, value) {
   return { virtualToken, value }
 }
 
-function Order(orderType, deadline, trader, makeAsset, takeAsset, salt, triggerPrice, isShort) {
+function LimitOrder(orderType, trader, deadline, isShort, makeAsset, takeAsset, salt, triggerPrice) {
   return {
-    orderType, 
-    deadline, 
-    trader, 
-    makeAsset, 
-    takeAsset, 
-    salt, 
-    triggerPrice, 
-    isShort
+    orderType,
+    trader,
+    deadline,
+    isShort,
+    makeAsset,
+    takeAsset,
+    salt,
+    triggerPrice
   }
 }
 
@@ -22,15 +22,15 @@ const Types = {
     { name: "virtualToken", type: "address" },
     { name: "value", type: "uint256" },
   ],
-  Order: [
+  LimitOrder: [
     { name: "orderType", type: "bytes4" },
-    { name: "deadline", type: "uint64" },
     { name: "trader", type: "address" },
+    { name: "deadline", type: "uint64" },
+    { name: "isShort", type: "bool" },
     { name: "makeAsset", type: "Asset" },
     { name: "takeAsset", type: "Asset" },
     { name: "salt", type: "uint256" },
-    { name: "triggerPrice", type: "uint128" },
-    { name: "isShort", type: "bool" },
+    { name: "triggerPrice", type: "uint256" }
   ],
 }
 
@@ -43,11 +43,11 @@ async function sign(order, account, verifyingContract) {
       chainId,
       verifyingContract,
     },
-    "Order",
+    "LimitOrder",
     order,
     Types,
   )
   return (await EIP712.signTypedData(web3, account, data)).sig
 }
 
-module.exports = { Asset, Order, sign }
+module.exports = { Asset, LimitOrder, sign }

@@ -9,16 +9,25 @@ import "../interfaces/IVirtualToken.sol";
 library LibOrder {
     bytes32 constant ORDER_TYPEHASH =
         keccak256(
-            "Order(address trader,uint64 deadline,bool isShort,Asset makeAsset,Asset takeAsset,uint256 salt)Asset(address virtualToken,uint256 value)"
+            "Order(bytes4 orderType,uint64 deadline,address trader,Asset makeAsset,Asset takeAsset,uint256 salt,uint128 triggerPrice,bool isShort)Asset(address virtualToken,uint256 value)"
         );
 
+    // Generated using bytes4(keccack256(abi.encodePacked("Order")))
+    bytes4 public constant ORDER = 0xf555eb98;
+    // Generated using bytes4(keccack256(abi.encodePacked("StopLossLimitOrder")))
+    bytes4 public constant STOP_LOSS_LIMIT_ORDER = 0xeeaed735;
+    // Generated using bytes4(keccack256(abi.encodePacked("TakeProfitLimitOrder")))
+    bytes4 public constant TAKE_PROFIT_LIMIT_ORDER = 0xe0fc7f94;
+
     struct Order {
-        address trader;
+        bytes4 orderType;
         uint64 deadline;
-        bool isShort;
+        address trader;
         LibAsset.Asset makeAsset;
         LibAsset.Asset takeAsset;
         uint256 salt;
+        uint128 triggerPrice;
+        bool isShort;
     }
 
     function calculateRemaining(Order memory order, uint256 fill)
@@ -33,7 +42,7 @@ library LibOrder {
     function hashKey(Order memory order) internal pure returns (bytes32) {
         return
             keccak256(
-                abi.encode(order.trader, LibAsset.hash(order.makeAsset), LibAsset.hash(order.takeAsset), order.salt)
+                abi.encode(order.orderType, order.deadline, order.trader, LibAsset.hash(order.makeAsset), LibAsset.hash(order.takeAsset), order.salt, order.triggerPrice, order.isShort)
             );
     }
 
@@ -42,12 +51,14 @@ library LibOrder {
             keccak256(
                 abi.encode(
                     ORDER_TYPEHASH,
-                    order.trader,
+                    order.orderType,
                     order.deadline,
-                    order.isShort,
+                    order.trader,
                     LibAsset.hash(order.makeAsset),
                     LibAsset.hash(order.takeAsset),
-                    order.salt
+                    order.salt,
+                    order.triggerPrice,
+                    order.isShort
                 )
             );
     }
