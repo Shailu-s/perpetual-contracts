@@ -254,10 +254,10 @@ describe("VolmexPerpLimitOrder", function () {
           const orderLeft = Order(
             STOP_LOSS_LIMIT_ORDER,
             deadline,
-            ethers.constants.AddressZero,
+            account1.address,
             Asset(volmexBaseToken.address, two.toString()),
             Asset(virtualToken.address, one.toString()),
-            0,
+            1,
             1e8.toString(),
             true,
           )
@@ -265,10 +265,10 @@ describe("VolmexPerpLimitOrder", function () {
           const orderRight = Order(
             STOP_LOSS_LIMIT_ORDER,
             deadline,
-            ethers.constants.AddressZero,
+            account2.address,
             Asset(virtualToken.address, one.toString()),
             Asset(volmexBaseToken.address, two.toString()),
-            0,
+            1,
             1e6.toString(),
             false,
           )
@@ -276,11 +276,9 @@ describe("VolmexPerpLimitOrder", function () {
           const signatureLeftLimitOrder = await getSignature(orderLeft, account1.address);
           const signatureRightLimitOrder = await getSignature(orderRight, account2.address);
 
-          console.log("leftSigner: ", account1.address);
-          console.log("rightSigner: ", account2.address);
+          await matchingEngine.grantMatchOrders(positioning.address);
+          await matchingEngine.grantMatchOrders(positioning2.address);
 
-          await matchingEngine.grantMatchOrders(volmexPerpLimitOrder.address);
-            
           let receipt = await volmexPerpLimitOrder.fillLimitOrder(
               orderLeft,
               signatureLeftLimitOrder,
@@ -292,6 +290,6 @@ describe("VolmexPerpLimitOrder", function () {
     });
 
     async function getSignature(orderObj, signer) {
-      return sign(orderObj, signer, volmexPerpLimitOrder.address)
+      return sign(orderObj, signer, positioning.address)
     }
 });
