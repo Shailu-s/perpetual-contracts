@@ -250,13 +250,13 @@ describe("VolmexPerpLimitOrder", function () {
     });
 
     describe("Fill Limit order", async () => {
-        it.only("should fill LimitOrder", async () => {
+        it("should fill LimitOrder", async () => {
           const orderLeft = Order(
             STOP_LOSS_LIMIT_ORDER,
             deadline,
             account1.address,
             Asset(volmexBaseToken.address, two.toString()),
-            Asset(virtualToken.address, one.toString()),
+            Asset(virtualToken.address, two.toString()),
             1,
             1e8.toString(),
             true,
@@ -266,7 +266,7 @@ describe("VolmexPerpLimitOrder", function () {
             STOP_LOSS_LIMIT_ORDER,
             deadline,
             account2.address,
-            Asset(virtualToken.address, one.toString()),
+            Asset(virtualToken.address, two.toString()),
             Asset(volmexBaseToken.address, two.toString()),
             1,
             1e6.toString(),
@@ -286,6 +286,162 @@ describe("VolmexPerpLimitOrder", function () {
               signatureRightLimitOrder
           );
           expect(receipt.confirmations).not.equal(0);
+        });
+
+        it("should fail to fill LimitOrder: Sell Stop Limit Order Trigger Price Not Matched", async () => {
+          const orderLeft = Order(
+            STOP_LOSS_LIMIT_ORDER,
+            deadline,
+            account1.address,
+            Asset(volmexBaseToken.address, two.toString()),
+            Asset(virtualToken.address, two.toString()),
+            1,
+            1e6.toString(),
+            true,
+          )
+      
+          const orderRight = Order(
+            STOP_LOSS_LIMIT_ORDER,
+            deadline,
+            account2.address,
+            Asset(virtualToken.address, two.toString()),
+            Asset(volmexBaseToken.address, two.toString()),
+            1,
+            1e6.toString(),
+            false,
+          )
+
+          const signatureLeftLimitOrder = await getSignature(orderLeft, account1.address);
+          const signatureRightLimitOrder = await getSignature(orderRight, account2.address);
+
+          await matchingEngine.grantMatchOrders(positioning.address);
+          await matchingEngine.grantMatchOrders(positioning2.address);
+
+          await expect(
+            volmexPerpLimitOrder.fillLimitOrder(
+              orderLeft,
+              signatureLeftLimitOrder,
+              orderRight,
+              signatureRightLimitOrder
+            )
+          ).to.be.revertedWith("Sell Stop Limit Order Trigger Price Not Matched");
+        });
+
+        it("should fail to fill LimitOrder: Buy Stop Limit Order Trigger Price Not Matched", async () => {
+          const orderLeft = Order(
+            STOP_LOSS_LIMIT_ORDER,
+            deadline,
+            account1.address,
+            Asset(volmexBaseToken.address, two.toString()),
+            Asset(virtualToken.address, two.toString()),
+            1,
+            1e8.toString(),
+            true,
+          )
+      
+          const orderRight = Order(
+            STOP_LOSS_LIMIT_ORDER,
+            deadline,
+            account2.address,
+            Asset(virtualToken.address, two.toString()),
+            Asset(volmexBaseToken.address, two.toString()),
+            1,
+            1e8.toString(),
+            false,
+          )
+
+          const signatureLeftLimitOrder = await getSignature(orderLeft, account1.address);
+          const signatureRightLimitOrder = await getSignature(orderRight, account2.address);
+
+          await matchingEngine.grantMatchOrders(positioning.address);
+          await matchingEngine.grantMatchOrders(positioning2.address);
+
+          await expect(
+            volmexPerpLimitOrder.fillLimitOrder(
+              orderLeft,
+              signatureLeftLimitOrder,
+              orderRight,
+              signatureRightLimitOrder
+            )
+          ).to.be.revertedWith("Buy Stop Limit Order Trigger Price Not Matched");
+        });
+
+        it("should fail to fill LimitOrder: Sell Take-profit Limit Order Trigger Price Not Matched", async () => {
+          const orderLeft = Order(
+            TAKE_PROFIT_LIMIT_ORDER,
+            deadline,
+            account1.address,
+            Asset(volmexBaseToken.address, two.toString()),
+            Asset(virtualToken.address, two.toString()),
+            1,
+            1e8.toString(),
+            true,
+          )
+      
+          const orderRight = Order(
+            TAKE_PROFIT_LIMIT_ORDER,
+            deadline,
+            account2.address,
+            Asset(virtualToken.address, two.toString()),
+            Asset(volmexBaseToken.address, two.toString()),
+            1,
+            1e6.toString(),
+            false,
+          )
+
+          const signatureLeftLimitOrder = await getSignature(orderLeft, account1.address);
+          const signatureRightLimitOrder = await getSignature(orderRight, account2.address);
+
+          await matchingEngine.grantMatchOrders(positioning.address);
+          await matchingEngine.grantMatchOrders(positioning2.address);
+
+          await expect(
+            volmexPerpLimitOrder.fillLimitOrder(
+              orderLeft,
+              signatureLeftLimitOrder,
+              orderRight,
+              signatureRightLimitOrder
+            )
+          ).to.be.revertedWith("Sell Take-profit Limit Order Trigger Price Not Matched");
+        });
+
+        it("should fail to fill LimitOrder: Buy Take-profit Limit Order Trigger Price Not Matched", async () => {
+          const orderLeft = Order(
+            TAKE_PROFIT_LIMIT_ORDER,
+            deadline,
+            account1.address,
+            Asset(volmexBaseToken.address, two.toString()),
+            Asset(virtualToken.address, two.toString()),
+            1,
+            1e6.toString(),
+            true,
+          )
+      
+          const orderRight = Order(
+            TAKE_PROFIT_LIMIT_ORDER,
+            deadline,
+            account2.address,
+            Asset(virtualToken.address, two.toString()),
+            Asset(volmexBaseToken.address, two.toString()),
+            1,
+            1e6.toString(),
+            false,
+          )
+
+          const signatureLeftLimitOrder = await getSignature(orderLeft, account1.address);
+          const signatureRightLimitOrder = await getSignature(orderRight, account2.address);
+
+          await matchingEngine.grantMatchOrders(positioning.address);
+          await matchingEngine.grantMatchOrders(positioning2.address);
+
+          await expect(
+            volmexPerpLimitOrder.fillLimitOrder(
+              orderLeft,
+              signatureLeftLimitOrder,
+              orderRight,
+              signatureRightLimitOrder
+            )
+          ).to.be.revertedWith("Buy Take-profit Limit Order Trigger Price Not Matched");
         });
     });
 
