@@ -4,6 +4,7 @@ pragma solidity =0.8.12;
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
 import "../helpers/RoleManager.sol";
+import "../interfaces/IMarkPriceOracle.sol";
 import "../interfaces/IPositioning.sol";
 import "../interfaces/IVaultController.sol";
 
@@ -22,6 +23,8 @@ contract VolmexPerpPeriphery is Initializable, RoleManager {
     // Store the addresses of vaultControllers { index => vaultController address }
     mapping(uint256 => address) public vaultControllers;
 
+    IMarkPriceOracle public markPriceOracle;
+
     /**
      * @notice Initializes the contract
      *
@@ -33,8 +36,11 @@ contract VolmexPerpPeriphery is Initializable, RoleManager {
     function initialize(
         IPositioning[2] memory _positioning,
         IVaultController[2] memory _vaultController,
+        IMarkPriceOracle _markPriceOracle,
         address _owner
     ) external initializer {
+        require(_owner != address(0), "Admin can't be address(0)");
+        markPriceOracle = _markPriceOracle;
 
         for (uint256 i = 0; i < 2; i++) {
             positionings[i] = address(_positioning[i]);
@@ -44,6 +50,12 @@ contract VolmexPerpPeriphery is Initializable, RoleManager {
         positioningIndex = 2;
         vaultControllerIndex = 2;
         _grantRole(VOLMEX_PERP_PERIPHERY, _owner);
+    }
+
+
+    function setMarkPriceOracle(IMarkPriceOracle _markPriceOracle) external {
+        _requireVolmexPerpPeripheryAdmin();
+        markPriceOracle = _markPriceOracle;
     }
 
     /**
@@ -66,6 +78,83 @@ contract VolmexPerpPeriphery is Initializable, RoleManager {
         _requireVolmexPerpPeripheryAdmin();
         vaultControllers[vaultControllerIndex] = address(_vaultController);
         vaultControllerIndex++;
+    }
+
+    function fillLimitOrder(
+        LibOrder.Order memory _leftLimitOrder,
+        bytes memory _signatureLeftLimitOrder,
+        LibOrder.Order memory _rightLimitOrder,
+        bytes memory _signatureRightLimitOrder,
+        uint256 _index
+    ) external {
+        _fillLimitOrder(
+            _leftLimitOrder, 
+            _signatureLeftLimitOrder, 
+            _rightLimitOrder, 
+            _signatureRightLimitOrder,
+            _index
+        );
+    }
+
+    function _fillLimitOrder(
+        LibOrder.Order memory _leftLimitOrder,
+        bytes memory _signatureLeftLimitOrder,
+        LibOrder.Order memory _rightLimitOrder,
+        bytes memory _signatureRightLimitOrder,
+        uint256 _index
+    ) internal {
+        _verifyTriggerPrice(_leftLimitOrder);
+        _verifyTriggerPrice(_rightLimitOrder);
+
+		IPositioning(positionings[_index]).openPosition(
+			_leftLimitOrder, 
+			_signatureLeftLimitOrder, 
+			_rightLimitOrder,
+			_signatureRightLimitOrder
+		);
+    }
+
+    // TODO: Change the logic to round id, if Volmex Oracle implements price by round id functionality
+    function _verifyTriggerPrice(LibOrder.Order memory _limitOrder) internal view {
+        if (_limitOrder.orderType == LibOrder.ORDER) {
+            return;
+        }
+        // TODO: Add check for round id, when Volmex Oracle updates functionality
+        // TODO Ask and update this hardhcoded time reference for tw interval
+        uint256 triggeredPrice = _getBaseTokenPrice(_limitOrder, 15 minutes); 
+
+        if (_limitOrder.orderType == LibOrder.STOP_LOSS_LIMIT_ORDER) {
+            if (_limitOrder.isShort) {
+                require(triggeredPrice <= _limitOrder.triggerPrice, "Sell Stop Limit Order Trigger Price Not Matched");
+            } else {
+                require(triggeredPrice >= _limitOrder.triggerPrice, "Buy Stop Limit Order Trigger Price Not Matched");
+            }
+        } else if (_limitOrder.orderType == LibOrder.TAKE_PROFIT_LIMIT_ORDER) {
+            if (_limitOrder.isShort) {
+                require(
+                    triggeredPrice >= _limitOrder.triggerPrice,
+                    "Sell Take-profit Limit Order Trigger Price Not Matched"
+                );
+            } else {
+                require(
+                    triggeredPrice <= _limitOrder.triggerPrice,
+                    "Buy Take-profit Limit Order Trigger Price Not Matched"
+                );
+            }
+        }
+    }
+
+    // TODO: Add round id in the Volmex oracle to faciliate the chainlink oracle functionality
+    function _getBaseTokenPrice(LibOrder.Order memory _order, uint256 _twInterval) internal view returns (uint256 price) {
+        // TODO: Add Order validate, similar to -> LibOrder.validate(order);
+
+        address makeAsset = _order.makeAsset.virtualToken;
+        address takeAsset = _order.takeAsset.virtualToken;
+
+        address baseToken = IVirtualToken(makeAsset).isBase() ? makeAsset : takeAsset;
+
+        uint64 _index = markPriceOracle.indexByBaseToken(baseToken);
+        return markPriceOracle.getCumulativePrice(_twInterval, _index);
     }
 
     /**

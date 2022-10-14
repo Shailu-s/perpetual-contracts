@@ -1,6 +1,8 @@
 import { expect } from "chai"
 import { ethers, upgrades } from "hardhat"
 import { smock } from "@defi-wonderland/smock"
+import { Order, Asset, sign } from "../order"
+import { BigNumber } from "ethers";
 
 describe("VolmexPerpPeriphery", function () {
   let MatchingEngine
@@ -37,6 +39,13 @@ describe("VolmexPerpPeriphery", function () {
   let TestERC20;
   let USDC;
   let owner, account1, account2, account3, account4;
+  const deadline = 87654321987654;
+  const one = ethers.constants.WeiPerEther; // 1e18
+  const two = ethers.constants.WeiPerEther.mul(BigNumber.from("2")); // 2e18
+
+  const ORDER = "0xf555eb98";
+  const STOP_LOSS_LIMIT_ORDER = "0xeeaed735";
+  const TAKE_PROFIT_LIMIT_ORDER = "0xe0fc7f94";
 
   this.beforeAll(async () => {
     VolmexPerpPeriphery = await ethers.getContractFactory("VolmexPerpPeriphery")
@@ -118,7 +127,7 @@ describe("VolmexPerpPeriphery", function () {
 
     virtualToken = await upgrades.deployProxy(
       VirtualToken,
-      ["VirtualToken", "VTK", true],
+      ["VirtualToken", "VTK", false],
       {
         initializer: "initialize"
       }
@@ -192,6 +201,16 @@ describe("VolmexPerpPeriphery", function () {
     for (let i = 0; i < 9; i++) {
       await matchingEngine.addObservation(10000000, 0);
     }
+
+    volmexPerpPeriphery = await upgrades.deployProxy(
+      VolmexPerpPeriphery, 
+      [
+          [positioning.address, positioning2.address], 
+          [vaultController.address, vaultController2.address],
+          markPriceOracle.address,
+          owner.address,
+      ]
+    );
   });
 
     describe("VolmexPerpPeriphery deployment", async () => {
@@ -201,12 +220,227 @@ describe("VolmexPerpPeriphery", function () {
                 [
                     [positioning.address, positioning2.address], 
                     [vaultController.address, vaultController2.address],
+                    markPriceOracle.address,
                     owner.address,
                 ]
             );
             let receipt = await volmexPerpPeriphery.deployed();
             expect(receipt.confirmations).not.equal(0);
         });
+    });
+
+    describe("Set MarkPriceOracle", async () => {
+      it("should set MarkPriceOracle", async () => {
+          let receipt = await volmexPerpPeriphery.setMarkPriceOracle(markPriceOracle.address);
+          expect(receipt.confirmations).not.equal(0);
+      });
+
+      it("should fail to set MarkPriceOracle if not admin", async () => {
+          await expect(
+              volmexPerpPeriphery.connect(account2).setMarkPriceOracle(markPriceOracle.address)
+          ).to.be.revertedWith("VolmexPerpPeriphery: Not admin");
+      });
+    });
+
+    describe("Fill Limit order", async () => {
+      it("should fill LimitOrder", async () => {
+        const orderLeft = Order(
+          STOP_LOSS_LIMIT_ORDER,
+          deadline,
+          account1.address,
+          Asset(volmexBaseToken.address, two.toString()),
+          Asset(virtualToken.address, two.toString()),
+          1,
+          1e8.toString(),
+          true,
+        )
+    
+        const orderRight = Order(
+          STOP_LOSS_LIMIT_ORDER,
+          deadline,
+          account2.address,
+          Asset(virtualToken.address, two.toString()),
+          Asset(volmexBaseToken.address, two.toString()),
+          1,
+          1e6.toString(),
+          false,
+        )
+
+        const signatureLeftLimitOrder = await getSignature(orderLeft, account1.address);
+        const signatureRightLimitOrder = await getSignature(orderRight, account2.address);
+
+        await matchingEngine.grantMatchOrders(positioning.address);
+        await matchingEngine.grantMatchOrders(positioning2.address);
+
+        let receipt = await volmexPerpPeriphery.fillLimitOrder(
+            orderLeft,
+            signatureLeftLimitOrder,
+            orderRight,
+            signatureRightLimitOrder,
+            0
+        );
+        expect(receipt.confirmations).not.equal(0);
+      });
+
+      it("should fail to fill LimitOrder: Sell Stop Limit Order Trigger Price Not Matched", async () => {
+        const orderLeft = Order(
+          STOP_LOSS_LIMIT_ORDER,
+          deadline,
+          account1.address,
+          Asset(volmexBaseToken.address, two.toString()),
+          Asset(virtualToken.address, two.toString()),
+          1,
+          1e6.toString(),
+          true,
+        )
+    
+        const orderRight = Order(
+          STOP_LOSS_LIMIT_ORDER,
+          deadline,
+          account2.address,
+          Asset(virtualToken.address, two.toString()),
+          Asset(volmexBaseToken.address, two.toString()),
+          1,
+          1e6.toString(),
+          false,
+        )
+
+        const signatureLeftLimitOrder = await getSignature(orderLeft, account1.address);
+        const signatureRightLimitOrder = await getSignature(orderRight, account2.address);
+
+        await matchingEngine.grantMatchOrders(positioning.address);
+        await matchingEngine.grantMatchOrders(positioning2.address);
+
+        await expect(
+          volmexPerpPeriphery.fillLimitOrder(
+            orderLeft,
+            signatureLeftLimitOrder,
+            orderRight,
+            signatureRightLimitOrder,
+            0
+          )
+        ).to.be.revertedWith("Sell Stop Limit Order Trigger Price Not Matched");
+      });
+
+      it("should fail to fill LimitOrder: Buy Stop Limit Order Trigger Price Not Matched", async () => {
+        const orderLeft = Order(
+          STOP_LOSS_LIMIT_ORDER,
+          deadline,
+          account1.address,
+          Asset(volmexBaseToken.address, two.toString()),
+          Asset(virtualToken.address, two.toString()),
+          1,
+          1e8.toString(),
+          true,
+        )
+    
+        const orderRight = Order(
+          STOP_LOSS_LIMIT_ORDER,
+          deadline,
+          account2.address,
+          Asset(virtualToken.address, two.toString()),
+          Asset(volmexBaseToken.address, two.toString()),
+          1,
+          1e8.toString(),
+          false,
+        )
+
+        const signatureLeftLimitOrder = await getSignature(orderLeft, account1.address);
+        const signatureRightLimitOrder = await getSignature(orderRight, account2.address);
+
+        await matchingEngine.grantMatchOrders(positioning.address);
+        await matchingEngine.grantMatchOrders(positioning2.address);
+
+        await expect(
+          volmexPerpPeriphery.fillLimitOrder(
+            orderLeft,
+            signatureLeftLimitOrder,
+            orderRight,
+            signatureRightLimitOrder,
+            0
+          )
+        ).to.be.revertedWith("Buy Stop Limit Order Trigger Price Not Matched");
+      });
+
+      it("should fail to fill LimitOrder: Sell Take-profit Limit Order Trigger Price Not Matched", async () => {
+        const orderLeft = Order(
+          TAKE_PROFIT_LIMIT_ORDER,
+          deadline,
+          account1.address,
+          Asset(volmexBaseToken.address, two.toString()),
+          Asset(virtualToken.address, two.toString()),
+          1,
+          1e8.toString(),
+          true,
+        )
+    
+        const orderRight = Order(
+          TAKE_PROFIT_LIMIT_ORDER,
+          deadline,
+          account2.address,
+          Asset(virtualToken.address, two.toString()),
+          Asset(volmexBaseToken.address, two.toString()),
+          1,
+          1e6.toString(),
+          false,
+        )
+
+        const signatureLeftLimitOrder = await getSignature(orderLeft, account1.address);
+        const signatureRightLimitOrder = await getSignature(orderRight, account2.address);
+
+        await matchingEngine.grantMatchOrders(positioning.address);
+        await matchingEngine.grantMatchOrders(positioning2.address);
+
+        await expect(
+          volmexPerpPeriphery.fillLimitOrder(
+            orderLeft,
+            signatureLeftLimitOrder,
+            orderRight,
+            signatureRightLimitOrder,
+            0
+          )
+        ).to.be.revertedWith("Sell Take-profit Limit Order Trigger Price Not Matched");
+      });
+
+      it("should fail to fill LimitOrder: Buy Take-profit Limit Order Trigger Price Not Matched", async () => {
+        const orderLeft = Order(
+          TAKE_PROFIT_LIMIT_ORDER,
+          deadline,
+          account1.address,
+          Asset(volmexBaseToken.address, two.toString()),
+          Asset(virtualToken.address, two.toString()),
+          1,
+          1e6.toString(),
+          true,
+        )
+    
+        const orderRight = Order(
+          TAKE_PROFIT_LIMIT_ORDER,
+          deadline,
+          account2.address,
+          Asset(virtualToken.address, two.toString()),
+          Asset(volmexBaseToken.address, two.toString()),
+          1,
+          1e6.toString(),
+          false,
+        )
+
+        const signatureLeftLimitOrder = await getSignature(orderLeft, account1.address);
+        const signatureRightLimitOrder = await getSignature(orderRight, account2.address);
+
+        await matchingEngine.grantMatchOrders(positioning.address);
+        await matchingEngine.grantMatchOrders(positioning2.address);
+
+        await expect(
+          volmexPerpPeriphery.fillLimitOrder(
+            orderLeft,
+            signatureLeftLimitOrder,
+            orderRight,
+            signatureRightLimitOrder,
+            0
+          )
+        ).to.be.revertedWith("Buy Take-profit Limit Order Trigger Price Not Matched");
+      });
     });
 
     describe("Add positioning", async () => {
@@ -234,4 +468,8 @@ describe("VolmexPerpPeriphery", function () {
             ).to.be.revertedWith("VolmexPerpPeriphery: Not admin");
         });
     });
+
+    async function getSignature(orderObj, signer) {
+      return sign(orderObj, signer, positioning.address)
+    }
 });
