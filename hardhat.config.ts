@@ -12,6 +12,9 @@ import { HardhatUserConfig } from "hardhat/config"
 import "solidity-coverage"
 import "./mocha-test"
 
+import { config as dotEnvConfig } from "dotenv"
+dotEnvConfig()
+
 const config: HardhatUserConfig = {
   solidity: {
     version: "0.8.12",
