@@ -40,7 +40,8 @@
     "flatten": "ts-node --files scripts/flatten.ts",
     "slither": "ts-node --files scripts/slither.ts",
     "compile": "hardhat compile",
-    "coverage": "hardhat coverage"
+    "coverage": "hardhat coverage",
+    "deploy": "npx hardhat run --network $NETWORK scripts/deploy.ts"
   },
   "devDependencies": {
     "@chainlink/contracts": "0.1.7",
@@ -106,6 +107,8 @@
   },
   "dependencies": {
     "@defi-wonderland/smock": "^2.2.0",
+    "@nomiclabs/hardhat-etherscan": "^3.1.2",
+    "@openzeppelin/hardhat-defender": "^1.8.1",
     "eth-sig-util": "3.0.1"
   }
 }
