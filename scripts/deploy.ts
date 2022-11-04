@@ -49,6 +49,7 @@ const deploy = async () => {
   console.log("Deploying Positioning Config Impl ...")
   const positioningConfig = await upgrades.deployProxy(PositioningConfig, [])
   await positioningConfig.deployed()
+  console.log("Deploying Positioning Config Impl ...", positioningConfig.address)
 
   console.log("Deploying Account Balance Impl ...")
   const accountBalance = await AccountBalance.deploy()
