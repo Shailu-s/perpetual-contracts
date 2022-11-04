@@ -47,7 +47,7 @@ const deploy = async () => {
   await matchingEngine.deployed()
 
   console.log("Deploying Positioning Config Impl ...")
-  const positioningConfig = await PositioningConfig.deploy()
+  const positioningConfig = await upgrades.deployProxy(PositioningConfig, [])
   await positioningConfig.deployed()
 
   console.log("Deploying Account Balance Impl ...")
@@ -115,7 +115,7 @@ const deploy = async () => {
   }
   try {
     await run("verify:verify", {
-      address: positioningConfig.address,
+      address: await proxyAdmin.getProxyImplementation(positioningConfig.address),
     })
   } catch (error) {
     console.log("ERROR - verify - positioning config!")
