@@ -33,7 +33,11 @@ abstract contract TransferExecutor is RoleManager {
         address to,
         address proxy
     ) internal {
-        // TODO: At the time of perp integration, @Aditya needs to update the logic here of minting the vTokens
+        if (from == address(this)){
+            require(IERC20Upgradeable(asset.virtualToken).transfer(to, asset.value), "erc20 transfer failed");
+        } else {
+            IERC20TransferProxy(proxy).erc20SafeTransferFrom(IERC20Upgradeable(asset.virtualToken), from, to, asset.value);
+        }
     }
 
     uint256[50] private __gap;

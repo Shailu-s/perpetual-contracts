@@ -10,7 +10,7 @@ contract ERC20TransferProxy is
     Initializable,
     OperatorRole
 {
-    function __ERC20TransferProxy_init(address exchange, address owner)
+    function erc20TransferProxyInit(address exchange, address owner)
         external
         initializer
     {
