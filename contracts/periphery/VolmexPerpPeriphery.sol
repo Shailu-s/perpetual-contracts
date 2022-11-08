@@ -160,6 +160,39 @@ contract VolmexPerpPeriphery is Initializable, RoleManager {
         return markPriceOracle.getCumulativePrice(_twInterval, _index);
     }
 
+    /**
+     * @notice Used to update the Positioning at index
+     *
+     * @param _newPositioning Address of the positioning contract
+     */
+    function updatePositioningAtIndex(
+        IPositioning _oldPositioning,
+        IPositioning _newPositioning,
+        uint256 _index
+    ) external {
+        _requireVolmexPerpPeripheryAdmin();
+        require(positionings[_index] == _oldPositioning, "VolmexPerpPeriphery: Incorrect positioning _index");
+        positionings[_index] = _newPositioning;
+    }
+
+    /**
+     * @notice Used to update the VaultController at index
+     *
+     * @param _newVaultController Address of the vaultController contract
+     */
+    function updateVaultControllerAtIndex(
+        IVaultController _oldVaultController,
+        IVaultController _newVaultController,
+        uint256 _index
+    ) external {
+        _requireVolmexPerpPeripheryAdmin();
+        require(
+            vaultControllers[_index] == _oldVaultController,
+            "VolmexPerpPeriphery: Incorrect vault controller _index"
+        );
+        vaultControllers[_index] = _newVaultController;
+    }
+
     function depositToVault(
         uint64 _index,
         address _token,
