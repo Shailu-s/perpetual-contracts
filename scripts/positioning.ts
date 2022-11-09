@@ -5,7 +5,6 @@ const positioning = async () => {
   console.log("Deployer: ", await owner.getAddress())
   console.log("Balance: ", (await owner.getBalance()).toString())
 
-  const ZERO_ADDR = "0x0000000000000000000000000000000000000000"
   const MatchingEngine = await ethers.getContractFactory("MatchingEngine")
   const PerpFactory = await ethers.getContractFactory("PerpFactory")
   const VolmexBaseToken = await ethers.getContractFactory("VolmexBaseToken")
@@ -155,21 +154,28 @@ const positioning = async () => {
     [positioning.address, positioning2.address],
     [vaultController.address, vaultController2.address],
     markPriceOracle.address,
-    owner.address
+    owner.address,
   ])
-  await periphery.deployed();
-
-  //   console.log("Deploying Perpetual Factory ...")
-  //   const factory = await upgrades.deployProxy(
-  //     PerpFactory,
-  //     [volmexBaseToken.address, vaultController.address, vault.address, positioning.address, accountBalance.address],
-  //     {
-  //       initializer: "initialize",
-  //     },
-  //   )
-  //   await factory.deployed()
+  await periphery.deployed()
 
   const proxyAdmin = await upgrades.admin.getInstance()
+
+  console.log("Deploying Perpetual Factory ...")
+  const factory = await upgrades.deployProxy(
+    PerpFactory,
+    [
+      await proxyAdmin.getProxyImplementation(volmexBaseToken.address),
+      await proxyAdmin.getProxyImplementation(vaultController.address),
+      await proxyAdmin.getProxyImplementation(vault.address),
+      await proxyAdmin.getProxyImplementation(positioning.address),
+      await proxyAdmin.getProxyImplementation(accountBalance.address),
+    ],
+    {
+      initializer: "initialize",
+    },
+  )
+  await factory.deployed()
+
   try {
     await run("verify:verify", {
       address: await proxyAdmin.getProxyImplementation(indexPriceOracle.address),
@@ -189,7 +195,7 @@ const positioning = async () => {
       address: await proxyAdmin.getProxyImplementation(volmexQuoteToken.address),
     })
   } catch (error) {
-    console.log("ERROR - verify - base token!")
+    console.log("ERROR - verify - quote token!")
   }
   try {
     await run("verify:verify", {
@@ -252,7 +258,7 @@ const positioning = async () => {
       address: await proxyAdmin.getProxyImplementation(marketRegistry.address),
     })
   } catch (error) {
-    console.log("ERROR - verify - periphery!")
+    console.log("ERROR - verify - market registry!")
   }
   try {
     await run("verify:verify", {
@@ -261,29 +267,31 @@ const positioning = async () => {
   } catch (error) {
     console.log("ERROR - verify - periphery!")
   }
-//   try {
-//     await run("verify:verify", {
-//       address: await proxyAdmin.getProxyImplementation(factory.address),
-//     })
-//   } catch (error) {
-//     console.log("ERROR - verify - factory!")
-//   }
+  try {
+    await run("verify:verify", {
+      address: await proxyAdmin.getProxyImplementation(factory.address),
+    })
+  } catch (error) {
+    console.log("ERROR - verify - factory!")
+  }
 
+  const addresses = [
+    ["Index Price Oracle: ", indexPriceOracle.address],
+    ["Mark Price Oracle: ", markPriceOracle.address],
+    ["Base Token: ", volmexBaseToken.address],
+    ["USDC: ", usdc.address],
+    ["Matching Engine: ", matchingEngine.address],
+    ["Positioning Cnnfig: ", positioningConfig.address],
+    ["Account Balance: ", accountBalance.address],
+    ["Vault: ", vault.address],
+    ["Vault Controller: ", vaultController.address],
+    ["Positioning: ", positioning.address],
+    ["Periphery: ", periphery.address],
+    ["MarketRegistry: ", marketRegistry.address],
+    ["Quote token: ", volmexQuoteToken.address],
+  ]
   console.log("\n =====Deployment Successful===== \n")
-  console.log("Index Price Oracle: ", indexPriceOracle.address)
-  console.log("Mark Price Oracle: ", markPriceOracle.address)
-  console.log("Base Token: ", volmexBaseToken.address)
-  console.log("USDC: ", usdc.address)
-  console.log("Matching Engine: ", matchingEngine.address)
-  console.log("Positioning Cnnfig: ", positioningConfig.address)
-  console.log("Account Balance: ", accountBalance.address)
-  console.log("Vault: ", vault.address)
-  console.log("Vault Controller: ", vaultController.address)
-  console.log("Positioning: ", positioning.address)
-  console.log("Periphery: ", periphery.address)
-  console.log("MarketRegistry: ", marketRegistry.address)
-  console.log("Quote token: ", volmexQuoteToken.address)
-//   console.log("Perpetual Factory: ", factory.address)
+  console.table(addresses)
 }
 
 positioning()
