@@ -3,20 +3,24 @@
 pragma solidity =0.8.12;
 
 import "../helpers/OperatorRole.sol";
+import "../helpers/RoleManager.sol";
 import "../interfaces/IERC20TransferProxy.sol";
 
 contract ERC20TransferProxy is
     IERC20TransferProxy,
     Initializable,
-    OperatorRole
+    RoleManager
 {
-    function erc20TransferProxyInit(address exchange, address owner)
+    function erc20TransferProxyInit()
         external
         initializer
     {
-        __OperatorRole_init(exchange);
+        _grantRole(TRANSFER_PROXY_ADMIN, _msgSender());
+    }
 
-        _transferOwnership(owner);
+    function addTransferProxyRole(address exchange) external {
+        _requireTransferProxyAdmin();
+        _grantRole(TRANSFER_PROXY_CALLER, exchange);
     }
 
     function erc20SafeTransferFrom(
@@ -24,10 +28,19 @@ contract ERC20TransferProxy is
         address from,
         address to,
         uint256 value
-    ) external override onlyOperator {
+    ) external override {
+        _requireTransferProxyCaller();
         require(
             token.transferFrom(from, to, value),
             "ERC20TransferProxy: failure while transferring"
         );
+    }
+
+    function _requireTransferProxyAdmin() internal view {
+        require(hasRole(TRANSFER_PROXY_ADMIN, _msgSender()), "Positioning: Not admin");
+    }
+
+    function _requireTransferProxyCaller() internal view {
+        require(hasRole(TRANSFER_PROXY_CALLER, _msgSender()), "Positioning: Not admin");
     }
 }
