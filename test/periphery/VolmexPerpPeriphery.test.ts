@@ -102,7 +102,7 @@ describe("VolmexPerpPeriphery", function () {
 
     matchingEngine = await upgrades.deployProxy(
       MatchingEngine,
-      [USDC.address, owner.address, markPriceOracle.address],
+      [owner.address, markPriceOracle.address],
       {
         initializer: "__MatchingEngineTest_init",
       },

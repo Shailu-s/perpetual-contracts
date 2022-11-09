@@ -11,7 +11,7 @@ describe("Positioning", function () {
   let VirtualToken
   let virtualToken
   let erc20TransferProxy
-  let ERC20TransferProxyTest
+  let ERC20TransferProxy
   let TransferManagerTest
   let ERC1271Test
   let erc1271Test
@@ -57,7 +57,7 @@ describe("Positioning", function () {
     IndexPriceOracle = await ethers.getContractFactory("IndexPriceOracle")
     MatchingEngine = await ethers.getContractFactory("MatchingEngineTest")
     VirtualToken = await ethers.getContractFactory("VirtualTokenTest")
-    ERC20TransferProxyTest = await ethers.getContractFactory("ERC20TransferProxyTest")
+    ERC20TransferProxy = await ethers.getContractFactory("ERC20TransferProxy")
     TransferManagerTest = await ethers.getContractFactory("TransferManagerTest")
     ERC1271Test = await ethers.getContractFactory("ERC1271Test")
     Positioning = await ethers.getContractFactory("PositioningTest")
@@ -113,7 +113,11 @@ describe("Positioning", function () {
     accountBalance = await smock.fake("AccountBalance")
     baseToken = await smock.fake("VolmexBaseToken")
 
-    erc20TransferProxy = await ERC20TransferProxyTest.deploy()
+    erc20TransferProxy = await upgrades.deployProxy(ERC20TransferProxy, [], {
+      initializer: "erc20TransferProxyInit"
+    })
+    await erc20TransferProxy.deployed();
+
     erc1271Test = await ERC1271Test.deploy()
 
     positioningConfig = await upgrades.deployProxy(PositioningConfig, [])
@@ -124,13 +128,9 @@ describe("Positioning", function () {
 
     matchingEngine = await upgrades.deployProxy(MatchingEngine, 
       [
-        USDC.address,
         owner.address,
         markPriceOracle.address,
-      ],
-      {
-        initializer: "__MatchingEngineTest_init"
-      }
+      ]
     );
     await markPriceOracle.setMatchingEngine(matchingEngine.address);
 

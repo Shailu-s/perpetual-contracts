@@ -113,7 +113,6 @@ describe('MarkPriceOracle', function () {
 
     matchingEngine = await upgrades.deployProxy(MatchingEngine, 
       [
-        USDC.address,
         owner.address,
         markPriceOracle.address,
       ],
