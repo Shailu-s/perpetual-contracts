@@ -7,17 +7,16 @@ import { PausableUpgradeable } from "@openzeppelin/contracts-upgradeable/securit
 import "../libs/LibFill.sol";
 
 import "../interfaces/IMarkPriceOracle.sol";
-import "../interfaces/ITransferManager.sol";
 import "../interfaces/IMatchingEngine.sol";
 
 import "./AssetMatcher.sol";
-import "./TransferManager.sol";
 import "../helpers/OwnerPausable.sol";
+import "../helpers/RoleManager.sol";
 
 abstract contract MatchingEngineCore is
     PausableUpgradeable,
     AssetMatcher,
-    TransferManager
+    RoleManager
 {
     uint256 private constant _UINT256_MAX = 2**256 - 1;
     uint256 private constant _ORACLE_BASE = 1000000;
@@ -134,11 +133,6 @@ abstract contract MatchingEngineCore is
         isLeftBase
             ? _updateObservation(newFill.rightValue, newFill.leftValue, makeToken)
             : _updateObservation(newFill.leftValue, newFill.rightValue, takeToken);
-
-        _doTransfers(
-            LibDeal.DealSide(LibAsset.Asset(makeToken, newFill.leftValue), _proxy, orderLeft.trader),
-            LibDeal.DealSide(LibAsset.Asset(takeToken, newFill.rightValue), _proxy, orderRight.trader)
-        );
 
         emit Matched(newFill.leftValue, newFill.rightValue);
     }

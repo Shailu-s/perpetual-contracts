@@ -10,12 +10,10 @@ contract MatchingEngineTest is MatchingEngine
     uint256 private constant _UINT256_MAX = 2**256 - 1;
 
     function __MatchingEngineTest_init(
-        address erc20TransferProxy,
         address owner,
         IMarkPriceOracle markPriceOracle
     ) external initializer {
         initialize(
-            erc20TransferProxy,
             owner,
             markPriceOracle
         );
@@ -32,13 +30,6 @@ contract MatchingEngineTest is MatchingEngine
         LibOrder.Order memory orderRight
     ) external payable {
         matchOrders(orderLeft, orderRight);
-    }
-
-    function doTransfersTest(
-        LibDeal.DealSide memory left,
-        LibDeal.DealSide memory right
-    ) public virtual returns (uint totalMakeValue, uint totalTakeValue) {
-        return _doTransfers(left, right);
     }
 
     function setMakerMinSalt(uint256 _val) external {

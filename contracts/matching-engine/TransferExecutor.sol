@@ -33,11 +33,7 @@ abstract contract TransferExecutor is RoleManager {
         address to,
         address proxy
     ) internal {
-        if (from == address(this)){
-            require(IERC20Upgradeable(asset.virtualToken).transfer(to, asset.value), "erc20 transfer failed");
-        } else {
-            IERC20TransferProxy(proxy).erc20SafeTransferFrom(IERC20Upgradeable(asset.virtualToken), from, to, asset.value);
-        }
+        // Transfer of virtual tokens are handled at Positioning.sol
     }
 
     uint256[50] private __gap;

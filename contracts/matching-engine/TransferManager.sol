@@ -35,8 +35,8 @@ abstract contract TransferManager is OwnableUpgradeable, TransferExecutor {
         totalLeftValue = left.asset.value;
         totalRightValue = right.asset.value;
 
-        _transferPayouts(left.asset.virtualToken, left.asset.value, left.from, right.from, left.proxy);
-        _transferPayouts(right.asset.virtualToken, right.asset.value, right.from, left.from, right.proxy);
+        _transferPayouts(left.asset.virtualToken, totalLeftValue, left.from, right.from, left.proxy);
+        _transferPayouts(right.asset.virtualToken, totalRightValue, right.from, left.from, right.proxy);
     }
 
     function _transferPayouts(
