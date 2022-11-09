@@ -40,11 +40,11 @@ const deploy = async () => {
 
   console.log("Deploying MatchingEngine ...")
   const matchingEngine = await upgrades.deployProxy(MatchingEngine, [
-    usdc.address,
     owner.address,
     markPriceOracle.address,
   ])
   await matchingEngine.deployed()
+  await (await markPriceOracle.setMatchingEngine(matchingEngine.address)).wait()
 
   console.log("Deploying Positioning Config Impl ...")
   const positioningConfig = await upgrades.deployProxy(PositioningConfig, [])
