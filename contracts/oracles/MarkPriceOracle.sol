@@ -54,7 +54,6 @@ contract MarkPriceOracle is Initializable, RoleManager {
         require(priceCumulativeLength == assetLength, "MarkSMA: Unequal length of prices & assets");
 
         for (uint index; index < priceCumulativeLength; index++) {
-            require(_priceCumulative[index] >= 1000000, "MarkSMA: Not decimal precise");
             require(_asset[index] != address(0), "MarkSMA: Asset address can't be 0");
         }
 
@@ -89,7 +88,6 @@ contract MarkPriceOracle is Initializable, RoleManager {
         require(priceCumulativeLength == assetLength, "MarkSMA: Unequal length of prices & assets");
 
         for (uint index; index < priceCumulativeLength; index++) {
-            require(_priceCumulative[index] >= 1000000, "MarkSMA: Not decimal precise");
             require(_asset[index] != address(0), "MarkSMA: Asset address can't be 0");
         }
         
@@ -115,7 +113,6 @@ contract MarkPriceOracle is Initializable, RoleManager {
      */    
     function addObservation(uint256 _priceCumulative, uint64 _index) external {
         _requireCanAddObservation();
-        require(_priceCumulative >= 1000000, "MarkSMA: Not decimal precise");
         Observation memory observation = Observation({ timestamp: block.timestamp, priceCumulative: _priceCumulative });
         Observation[] storage observations = observationsByIndex[_index];
         observations.push(observation);

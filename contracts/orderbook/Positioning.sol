@@ -169,7 +169,7 @@ contract Positioning is
          */
         (LibFill.FillResult memory newFill) =
             IMatchingEngine(_matchingEngine).matchOrders(orderLeft, orderRight);
-
+//rq, lb == left goes long ; rb, lq ==left goes short
         response = MatchResponse(newFill);
 
         InternalData memory internalData;

@@ -128,6 +128,7 @@ abstract contract MatchingEngineCore is
         address makeToken = orderLeft.isShort ? orderLeft.makeAsset.virtualToken : orderLeft.takeAsset.virtualToken;
         address takeToken = orderRight.isShort ? orderRight.makeAsset.virtualToken : orderRight.takeAsset.virtualToken;
 
+        //TODO: This could be optimised
         bool isLeftBase = IVirtualToken(makeToken).isBase();
 
         isLeftBase
