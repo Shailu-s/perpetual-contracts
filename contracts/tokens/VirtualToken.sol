@@ -19,15 +19,19 @@ contract VirtualToken is IVirtualToken, ERC20Upgradeable, RoleManager {
         _grantRole(VIRTUAL_TOKEN_ADMIN, _msgSender());
     }
 
-    /**
-    TODO: we cannot mint tokens here as _beforeTokenTransfer will fail
-     */
+    function setMintBurnRole(address minterBurner) external {
+        _requireVirtualTokenAdmin();
+        _grantRole(MINTER, minterBurner);
+        _grantRole(BURNER, minterBurner);
+    }
+
     function mint(address recipient, uint256 amount) external override {
+        _requireMinterRole();
         _mint(recipient, amount);
     }
 
     function burn(address recipient, uint256 amount) external override {
-        _requireVirtualTokenAdmin();
+        _requireBurnerRole();
         _burn(recipient, amount);
     }
 
@@ -72,6 +76,14 @@ contract VirtualToken is IVirtualToken, ERC20Upgradeable, RoleManager {
 
     function _requireVirtualTokenAdmin() internal view {
         require(hasRole(VIRTUAL_TOKEN_ADMIN, _msgSender()), "VirtualToken: Not admin");
+    }
+
+    function _requireMinterRole() internal view {
+        require(hasRole(MINTER, _msgSender()), "VirtualToken: Not admin");
+    }
+
+    function _requireBurnerRole() internal view {
+        require(hasRole(BURNER, _msgSender()), "VirtualToken: Not admin");
     }
 
     uint256[50] private __gap;
