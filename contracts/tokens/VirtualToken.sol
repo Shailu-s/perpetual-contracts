@@ -79,11 +79,11 @@ contract VirtualToken is IVirtualToken, ERC20Upgradeable, RoleManager {
     }
 
     function _requireMinterRole() internal view {
-        require(hasRole(MINTER, _msgSender()), "VirtualToken: Not admin");
+        require(hasRole(MINTER, _msgSender()), "VirtualToken: Not minter");
     }
 
     function _requireBurnerRole() internal view {
-        require(hasRole(BURNER, _msgSender()), "VirtualToken: Not admin");
+        require(hasRole(BURNER, _msgSender()), "VirtualToken: Not burner");
     }
 
     uint256[50] private __gap;
