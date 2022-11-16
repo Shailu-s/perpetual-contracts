@@ -113,6 +113,7 @@ contract MarkPriceOracle is Initializable, RoleManager {
      */    
     function addObservation(uint256 _priceCumulative, uint64 _index) external {
         _requireCanAddObservation();
+        require(_priceCumulative != 0, "MarkSMA: Not zero");
         Observation memory observation = Observation({ timestamp: block.timestamp, priceCumulative: _priceCumulative });
         Observation[] storage observations = observationsByIndex[_index];
         observations.push(observation);
@@ -122,6 +123,7 @@ contract MarkPriceOracle is Initializable, RoleManager {
      * @notice Get the single moving average price of the asset
      *
      * @param _twInterval Time in seconds of the range
+     * @param _index Index of the observation, the index base token mapping
      * @return priceCumulative The SMA price of the asset
      */
     function getCumulativePrice(uint256 _twInterval, uint64 _index) external view returns (uint256 priceCumulative) {
