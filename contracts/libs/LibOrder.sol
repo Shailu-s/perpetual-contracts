@@ -36,7 +36,7 @@ library LibOrder {
         returns (uint256 baseValue, uint256 quoteValue)
     {
         baseValue = order.makeAsset.value - fill;
-        quoteValue = LibMath.safeGetPartialAmountFloor(order.makeAsset.value, order.takeAsset.value, baseValue);
+        quoteValue = LibMath.safeGetPartialAmountFloor(order.takeAsset.value, order.makeAsset.value, baseValue);
     }
 
     function hashKey(Order memory order) internal pure returns (bytes32) {
