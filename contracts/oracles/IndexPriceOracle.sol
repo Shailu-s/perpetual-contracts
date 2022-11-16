@@ -17,7 +17,7 @@ contract IndexPriceOracle is ERC165StorageUpgradeable, IndexTWAP, IIndexPriceOra
     // price precision constant upto 6 decimal places
     uint256 private constant _VOLATILITY_PRICE_PRECISION = 1000000;
     // maximum allowed number of index volatility datapoints for calculating twap
-    uint256 private constant _MAX_ALLOWED_TWAP_DATAPOINTS = 180;
+    uint256 private constant _MAX_ALLOWED_TWAP_DATAPOINTS = 6;
     // Interface ID of VolmexOracle contract, hashId = 0xf9fffc9f
     bytes4 private constant _IVOLMEX_ORACLE_ID = type(IIndexPriceOracle).interfaceId;
 
@@ -45,15 +45,15 @@ contract IndexPriceOracle is ERC165StorageUpgradeable, IndexTWAP, IIndexPriceOra
     function initialize(address _owner) external initializer {
         _updateTwapMaxDatapoints(_MAX_ALLOWED_TWAP_DATAPOINTS);
 
-        _updateVolatilityMeta(indexCount, 125000000, "");
+        _updateVolatilityMeta(indexCount, 200000000, "");
         volatilityIndexBySymbol["ETHV"] = indexCount;
-        volatilityCapRatioByIndex[indexCount] = 250000000;
+        volatilityCapRatioByIndex[indexCount] = 400000000;
 
         indexCount++;
 
-        _updateVolatilityMeta(indexCount, 125000000, "");
+        _updateVolatilityMeta(indexCount, 200000000, "");
         volatilityIndexBySymbol["BTCV"] = indexCount;
-        volatilityCapRatioByIndex[indexCount] = 250000000;
+        volatilityCapRatioByIndex[indexCount] = 400000000;
 
         __ERC165Storage_init();
         _registerInterface(_IVOLMEX_ORACLE_ID);
