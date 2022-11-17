@@ -31,7 +31,7 @@ abstract contract MatchingEngineCore is
     //events
     event Canceled(bytes32 indexed hash, address trader, address baseToken, uint256 amount, uint256 salt);
     event CanceledAll(address indexed trader, uint256 minSalt);
-    event Matched(uint256 newLeftFill, uint256 newRightFill);
+    event Matched(address[2] traders, uint64[2] deadline, uint256[2] salt, uint256 newLeftFill, uint256 newRightFill);
 
     /**
         @notice Cancels a given order
@@ -135,7 +135,13 @@ abstract contract MatchingEngineCore is
             ? _updateObservation(newFill.rightValue, newFill.leftValue, makeToken)
             : _updateObservation(newFill.leftValue, newFill.rightValue, takeToken);
 
-        emit Matched(newFill.leftValue, newFill.rightValue);
+        emit Matched(
+            [orderLeft.trader, orderRight.trader],
+            [orderLeft.deadline, orderRight.deadline],
+            [orderLeft.salt, orderRight.salt],
+            newFill.leftValue,
+            newFill.rightValue
+        );
     }
 
     function _updateObservation(
