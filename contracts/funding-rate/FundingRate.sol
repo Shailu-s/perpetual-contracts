@@ -26,10 +26,7 @@ contract FundingRate is IFundingRate, BlockContext, PositioningCallee, FundingRa
     using LibPerpMath for int256;
     using LibSafeCastUint for uint256;
 
-    function __FundingRate_init(
-        address markPriceOracleArg,
-        address indexPriceOracleArg
-    ) internal onlyInitializing {
+    function __FundingRate_init(address markPriceOracleArg, address indexPriceOracleArg) internal onlyInitializing {
         __PositioningCallee_init();
         _markPriceOracleArg = markPriceOracleArg;
         _indexPriceOracleArg = indexPriceOracleArg;
@@ -42,7 +39,6 @@ contract FundingRate is IFundingRate, BlockContext, PositioningCallee, FundingRa
         override
         returns (int256 fundingPayment, int256 growthTwPremium)
     {
-
         uint256 markTwap;
         uint256 indexTwap;
         (growthTwPremium, markTwap, indexTwap) = _getFundingGrowthGlobalAndTwaps(baseToken);
@@ -72,10 +68,10 @@ contract FundingRate is IFundingRate, BlockContext, PositioningCallee, FundingRa
         address baseToken,
         int256 markTwap,
         int256 indexTwap
-    ) internal virtual view returns (int256 pendingFundingPayment) {
+    ) internal view virtual returns (int256 pendingFundingPayment) {
         int256 marketFundingRate = ((markTwap - indexTwap) / indexTwap) / (24);
         int256 PositionSize = IAccountBalance(_accountBalance).getTakerPositionSize(trader, baseToken);
-        pendingFundingPayment = PositionSize*marketFundingRate;
+        pendingFundingPayment = PositionSize * marketFundingRate;
     }
 
     /// @dev this function calculates the up-to-date growthTwPremium and twaps and pass them out
@@ -85,8 +81,8 @@ contract FundingRate is IFundingRate, BlockContext, PositioningCallee, FundingRa
     /// @return indexTwap only for settleFunding()
     function _getFundingGrowthGlobalAndTwaps(address baseToken)
         internal
-        virtual
         view
+        virtual
         returns (
             int256 growthTwPremium,
             uint256 markTwap,
@@ -97,12 +93,13 @@ contract FundingRate is IFundingRate, BlockContext, PositioningCallee, FundingRa
         uint256 timestamp = _blockTimestamp();
         // shorten twapInterval if prior observations are not enough
         if (_firstTradedTimestampMap[baseToken] != 0) {
-            twapInterval = IPositioningConfig(_PositioningConfig).getTwapInterval();
+            twapInterval = IPositioningConfig(_positioningConfig).getTwapInterval();
             uint256 deltaTimestamp = (timestamp - _firstTradedTimestampMap[baseToken]);
             twapInterval = twapInterval < deltaTimestamp ? deltaTimestamp : twapInterval;
         }
 
-        uint256 markTwapX96 = IMarkPriceOracle(_markPriceOracleArg).getCumulativePrice(twapInterval, _underlyingPriceIndex);
+        uint256 markTwapX96 =
+            IMarkPriceOracle(_markPriceOracleArg).getCumulativePrice(twapInterval, _underlyingPriceIndex);
         markTwap = markTwapX96.formatX96ToX10_18();
         // TODO getIndexTwap method takes _index of underlying to fetch the price, not the time interval
         (indexTwap, , ) = IIndexPriceOracle(_indexPriceOracleArg).getIndexTwap(_underlyingPriceIndex);
@@ -115,7 +112,7 @@ contract FundingRate is IFundingRate, BlockContext, PositioningCallee, FundingRa
         } else {
             // deltaTwPremium = (markTwap - indexTwap) * (now - lastSettledTimestamp)
             int256 deltaTwPremium =
-                _getDeltaTwap(markTwap, indexTwap)*((timestamp-lastSettledTimestamp).toInt256());
+                _getDeltaTwap(markTwap, indexTwap) * ((timestamp - lastSettledTimestamp).toInt256());
             growthTwPremium = lastTwPremium + deltaTwPremium;
         }
 
@@ -123,7 +120,7 @@ contract FundingRate is IFundingRate, BlockContext, PositioningCallee, FundingRa
     }
 
     function _getDeltaTwap(uint256 markTwap, uint256 indexTwap) internal view virtual returns (int256 deltaTwap) {
-        uint24 maxFundingRate = IPositioningConfig(_PositioningConfig).getMaxFundingRate();
+        uint24 maxFundingRate = IPositioningConfig(_positioningConfig).getMaxFundingRate();
         uint256 maxDeltaTwap = indexTwap.mulRatio(maxFundingRate);
         uint256 absDeltaTwap;
         if (markTwap > indexTwap) {

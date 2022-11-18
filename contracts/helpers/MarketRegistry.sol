@@ -43,17 +43,12 @@ contract MarketRegistry is IMarketRegistry, PositioningCallee, MarketRegistrySto
     }
 
     /// @inheritdoc IMarketRegistry
-    function setFeeRatio(address baseToken, uint24 feeRatio) external override checkRatio(feeRatio) {
-        _requireMarketRegistryAdmin();
-        _exchangeFeeRatioMap[baseToken] = feeRatio;
-        emit FeeRatioChanged(baseToken, feeRatio);
-    }
-
     function setMakerFeeRatio( uint24 makerFeeRatio) external override checkRatio(makerFeeRatio) {
         _requireMarketRegistryAdmin();
         _makerFeeRatio = makerFeeRatio;
     }
 
+    /// @inheritdoc IMarketRegistry
     function setTakerFeeRatio( uint24 takerFeeRatio) external override checkRatio(takerFeeRatio) {
         _requireMarketRegistryAdmin();
         _takerFeeRatio = takerFeeRatio;
@@ -66,6 +61,7 @@ contract MarketRegistry is IMarketRegistry, PositioningCallee, MarketRegistrySto
         emit MaxOrdersPerMarketChanged(maxOrdersPerMarketArg);
     }
 
+    ///TODO_V: Add something as you removed onlyOwner
     /// @inheritdoc IMarketRegistry
     function addBaseToken(address baseToken) external override {
         address[] storage tokensStorage = _baseTokensMarketMap;
@@ -91,22 +87,15 @@ contract MarketRegistry is IMarketRegistry, PositioningCallee, MarketRegistrySto
     }
 
     /// @inheritdoc IMarketRegistry
-    function getFeeRatio(address baseToken) external view override returns (uint24) {
-        return _exchangeFeeRatioMap[baseToken];
-    }
-
     function getMakerFeeRatio() external view override returns (uint24) {
         return _makerFeeRatio;
     }
 
+    /// @inheritdoc IMarketRegistry
     function getTakerFeeRatio() external view override returns (uint24) {
         return _takerFeeRatio;
     }
 
-    /// @inheritdoc IMarketRegistry
-    function getMarketInfo(address baseToken) external view override returns (MarketInfo memory) {
-        return MarketInfo({ exchangeFeeRatio: _exchangeFeeRatioMap[baseToken] });
-    }
 
     /// @inheritdoc IMarketRegistry
     function checkBaseToken(address baseToken) external view override returns (bool) {

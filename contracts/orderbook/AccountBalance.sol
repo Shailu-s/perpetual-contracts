@@ -43,7 +43,7 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
 
         __PositioningCallee_init();
 
-        _PositioningConfig = PositioningConfigArg;
+        _positioningConfig = PositioningConfigArg;
         _grantRole(ACCOUNT_BALANCE_ADMIN, _msgSender());
     }
 
@@ -107,7 +107,7 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
 
         tokensStorage.push(baseToken);
         // AB_MNE: markets number exceeds
-        require(tokensStorage.length <= IPositioningConfig(_PositioningConfig).getMaxMarketsPerAccount(), "AB_MNE");
+        require(tokensStorage.length <= IPositioningConfig(_positioningConfig).getMaxMarketsPerAccount(), "AB_MNE");
     }
 
     /// @inheritdoc IAccountBalance
@@ -132,7 +132,7 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
 
     /// @inheritdoc IAccountBalance
     function getPositioningConfig() external view override returns (address) {
-        return _PositioningConfig;
+        return _positioningConfig;
     }
 
     /// @inheritdoc IAccountBalance
@@ -178,7 +178,7 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
                 baseDebtValue = baseBalance.mulDiv(_getIndexPrice(baseToken).toInt256(), 1e18);
             }
             totalBaseDebtValue = totalBaseDebtValue + baseDebtValue;
-
+     
             // we can't calculate totalQuoteDebtValue until we have totalQuoteBalance
             totalQuoteBalance = totalQuoteBalance + _accountMarketMap[trader][baseToken].takerOpenNotional;
         }
@@ -191,7 +191,7 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
     /// @inheritdoc IAccountBalance
     function getMarginRequirementForLiquidation(address trader) external view override returns (int256) {
         return
-            getTotalAbsPositionValue(trader).mulRatio(IPositioningConfig(_PositioningConfig).getMmRatio()).toInt256();
+            getTotalAbsPositionValue(trader).mulRatio(IPositioningConfig(_positioningConfig).getMmRatio()).toInt256();
     }
 
     /// @inheritdoc IAccountBalance
@@ -202,6 +202,7 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
             address baseToken = _baseTokensMap[trader][i];
             totalPositionValue = totalPositionValue + getTotalPositionValue(trader, baseToken);
         }
+
         int256 netQuoteBalance = _getNetQuoteBalance(trader);
         int256 unrealizedPnl = totalPositionValue + netQuoteBalance;
 
@@ -227,7 +228,8 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
         // both positionSize & indexTwap are in 10^18 already
         // overflow inspection:
         // only overflow when position value in USD(18 decimals) > 2^255 / 10^18
-        return positionSize.mulDiv(indexTwap.toInt256(), 1e18);
+        // TODO: Decimal calculation for indexTwap is not as same decimal as Position size
+        return positionSize * indexTwap.toInt256();
     }
 
     /// @inheritdoc IAccountBalance
@@ -306,11 +308,11 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
     //
 
     function _getIndexPrice(address baseToken) internal view returns (uint256) {
-        return IIndexPrice(baseToken).getIndexPrice(IPositioningConfig(_PositioningConfig).getTwapInterval());
+        return IIndexPrice(baseToken).getIndexPrice(IPositioningConfig(_positioningConfig).getTwapInterval());
     }
 
     /// @return netQuoteBalance = quote.balance
-    function _getNetQuoteBalance(address trader) internal view returns (int256 netQuoteBalance) {
+    function _getNetQuoteBalance(address trader) internal view returns (int256 ) {
         int256 totalTakerQuoteBalance;
         uint256 tokenLen = _baseTokensMap[trader].length;
         for (uint256 i = 0; i < tokenLen; i++) {
@@ -318,9 +320,7 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
             totalTakerQuoteBalance = totalTakerQuoteBalance + (_accountMarketMap[trader][baseToken].takerOpenNotional);
         }
 
-        netQuoteBalance = totalTakerQuoteBalance;
-
-        return (netQuoteBalance);
+        return (totalTakerQuoteBalance);
     }
 
     function _requireAccountBalanceAdmin() internal view {

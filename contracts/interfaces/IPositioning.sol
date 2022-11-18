@@ -5,11 +5,6 @@ import "../libs/LibFill.sol";
 import "../libs/LibDeal.sol";
 
 interface IPositioning {
-    
-    struct MatchResponse {
-        LibFill.FillResult newFill;
-    }
-
     struct InternalData {
         int256 leftExchangedPositionSize;
         int256 leftExchangedPositionNotional;
@@ -17,12 +12,33 @@ interface IPositioning {
         int256 rightExchangedPositionNotional;
         int256 leftPositionSize;
         int256 rightPositionSize;
+        int256 leftOpenNotional;
+        int256 rightOpenNotional;
     }
+
+    /// @notice Emitted when taker position is being liquidated
+    /// @param trader The trader who has been liquidated
+    /// @param baseToken Virtual base token(ETH, BTC, etc...) address
+    /// @param positionNotional The cost of position
+    /// @param positionSize The size of position
+    /// @param liquidationFee The fee of liquidate
+    /// @param liquidator The address of liquidator
+    event PositionLiquidated(
+        address indexed trader,
+        address indexed baseToken,
+        uint256 positionNotional,
+        int256 positionSize,
+        uint256 liquidationFee,
+        address liquidator
+    );
 
     // TODO: Implement this event
     /// @notice Emitted when open position with non-zero referral code
     /// @param referralCode The referral code by partners
     event ReferredPositionChanged(bytes32 indexed referralCode);
+
+    /// @notice Emitted when defualt fee receiver is changed
+    event DefaultFeeReceiverChanged(address defaultFeeReceiver);
 
     /// @notice Emitted when taker's position is being changed
     /// @param trader Trader address
@@ -66,6 +82,9 @@ interface IPositioning {
     /// @param trader The address of trader
     function settleAllFunding(address trader) external;
 
+    /// @notice Function to set fee receiver
+    function setDefaultFeeReceiver(address newDefaultFeeReceiver) external;
+
     /// @notice Trader can call `openPosition` to long/short on baseToken market
     /// @param orderLeft PositionParams struct
     /// @param orderRight PositionParams struct
@@ -74,7 +93,7 @@ interface IPositioning {
         bytes memory signatureLeft,
         LibOrder.Order memory orderRight,
         bytes memory signatureRight
-    ) external returns (MatchResponse memory);
+    ) external returns (LibFill.FillResult memory);
 
     /// @notice Set Positioning address
     function setPositioning(address positioning) external;
@@ -95,6 +114,4 @@ interface IPositioning {
     /// @notice Get AccountBalance address
     /// @return accountBalance `AccountBalance` address
     function getAccountBalance() external view returns (address accountBalance);
-
-    function getAccountValue(address trader) external view returns (int256);
 }

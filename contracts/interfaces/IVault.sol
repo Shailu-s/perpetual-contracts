@@ -16,10 +16,20 @@ interface IVault {
     /// @param amount The amount of token that was withdrawn
     event Withdrawn(address indexed collateralToken, address indexed trader, uint256 amount);
 
+    /// @notice Emitted when vault have low balance
+    /// @param amount The amount needed to the vault
     event LowBalance(uint256 amount);
+
+    /// @notice Emitted when vault borrow the amount
+    /// @param from The address which send the fund
+    /// @param amount The amount needed to the vault
     event BorrowFund(address from, uint256 amount);
+
+    /// @notice Emitted when vault repay the debt
+    /// @param to The address which fund was refunded
+    /// @param amount The amount of the fund
     event DebtRepayed(address to, uint256 amount);
-    
+
     function initialize(
         address PositioningConfigArg,
         address accountBalanceArg,
@@ -29,41 +39,47 @@ interface IVault {
     ) external;
 
     /// @notice Deposit collateral into vault
-    /// @dev once multi-collateral is implemented, the token is not limited to settlementToken
     /// @param token The address of the token to deposit
-    /// @param amountX10_D The amount of the token to deposit in decimals D (D = _decimals)
+    /// @param amount The amount of the token to deposit
+    /// @param from The address of the trader
     function deposit(
         IVolmexPerpPeriphery periphery,
         address token,
-        uint256 amountX10_D,
+        uint256 amount,
         address from
     ) external payable;
 
     /// @notice Withdraw collateral from vault
-    /// @dev once multi-collateral is implemented, the token is not limited to settlementToken
     /// @param token The address of the token sender is going to withdraw
-    /// @param amountX10_D The amount of the token to withdraw in decimals D (D = _decimals)
+    /// @param amount The amount of the token to withdraw
+    /// @param to The address of the trader
     function withdraw(
         address token,
-        uint256 amountX10_D,
+        uint256 amount,
         address payable to
     ) external ;
 
     /// @notice transfer fund to vault in case of low balance
     /// @dev once multi-collateral is implemented, the token is not limited to settlementToken
     /// @param token The address of the token vault need funding
-    /// @param amountX10_D The amount of the token to withdraw in decimals D (D = _decimals)
-    function transferFundToVault(address token, uint256 amountX10_D) external;
+    /// @param amount The amount of the token to withdraw
+    function transferFundToVault(address token, uint256 amount) external;
 
     /// @notice function to repay debt taken during low balance period
     /// @dev once multi-collateral is implemented, the token is not limited to settlementToken
     /// @param token The address of the token
-    /// @param amountX10_D The amount of the token to withdraw in decimals D (D = _decimals)
-    function repayDebtToOwner(address token, uint256 amountX10_D) external;
+    /// @param amount The amount of the token to withdraw
+    function repayDebtToOwner(address token, uint256 amount) external;
 
     /// @notice Set new settlement token
     /// @param newTokenArg The address of `Positioning` contract
     function setSettlementToken(address newTokenArg) external;
+
+    /// @notice Set positioning contract
+    function setPositioning(address PositioningArg) external;
+
+    /// @notice Set vault controller contract
+    function setVaultController(address vaultControllerArg) external;
 
     /// @notice Get the balance in vault of specified account
     /// @return balance The balance amount
@@ -94,4 +110,7 @@ interface IVault {
     /// @return Positioning The address of `Positioning` contract
     function getPositioning() external view returns (address);
     function isEthVault() external view returns (bool);
+
+    /// @notice Get `Vault controller` contract address
+    function getVaultController() external view returns (address);
 }

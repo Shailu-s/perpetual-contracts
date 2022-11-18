@@ -53,7 +53,7 @@ contract Vault is IVault, ReentrancyGuardUpgradeable, OwnerPausable, VaultStorag
         address tokenArg,
         address vaultControllerArg,
         bool isEthVaultArg
-    ) external override initializer {
+    ) external initializer {
         uint8 decimalsArg = 0;
         if (isEthVaultArg) {
             decimalsArg = 18;
@@ -74,22 +74,26 @@ contract Vault is IVault, ReentrancyGuardUpgradeable, OwnerPausable, VaultStorag
         // update states
         _decimals = decimalsArg;
         _settlementToken = tokenArg;
-        _PositioningConfig = PositioningConfigArg;
+        _positioningConfig = PositioningConfigArg;
         _accountBalance = accountBalanceArg;
         _vaultController = vaultControllerArg;
         _isEthVault = isEthVaultArg;
         _grantRole(VAULT_ADMIN, _msgSender());
     }
 
-    function setPositioning(address PositioningArg) external {
+    /// @inheritdoc IVault
+    function setPositioning(address PositioningArg) external onlyOwner{
         // V_VPMM: Positioning is not contract
         require(PositioningArg.isContract(), "V_VPMM");
         _grantRole(CAN_MATCH_ORDERS, PositioningArg);
         _Positioning = PositioningArg;
     }
 
+    /// @inheritdoc IVault
     function setVaultController(address vaultControllerArg) external {
         _requireVaultAdmin();
+        // V_VPMM: Vault controller is not contract
+        require(vaultControllerArg.isContract(), "V_VPMM");
         _vaultController = vaultControllerArg;
     }
 
@@ -133,7 +137,8 @@ contract Vault is IVault, ReentrancyGuardUpgradeable, OwnerPausable, VaultStorag
             require((IERC20Metadata(token).balanceOf(address(this)) - balanceBefore) == amount, "V_IBA");
             _vaultBalance = IERC20Metadata(token).balanceOf(address(this));
         }
-        uint256 settlementTokenBalanceCap = IPositioningConfig(_PositioningConfig).getSettlementTokenBalanceCap();
+
+        uint256 settlementTokenBalanceCap = IPositioningConfig(_positioningConfig).getSettlementTokenBalanceCap();
         // V_GTSTBC: greater than settlement token balance cap
         require(_vaultBalance <= settlementTokenBalanceCap, "V_GTSTBC");
         emit Deposited(token, from, amount);
@@ -248,7 +253,7 @@ contract Vault is IVault, ReentrancyGuardUpgradeable, OwnerPausable, VaultStorag
 
     /// @inheritdoc IVault
     function getPositioningConfig() external view override returns (address) {
-        return _PositioningConfig;
+        return _positioningConfig;
     }
 
     /// @inheritdoc IVault
@@ -261,7 +266,8 @@ contract Vault is IVault, ReentrancyGuardUpgradeable, OwnerPausable, VaultStorag
         return _Positioning;
     }
 
-    function getVaultController() external view returns (address) {
+    /// @inheritdoc IVault
+    function getVaultController() external view override returns (address) {
         return _vaultController;
     }
 

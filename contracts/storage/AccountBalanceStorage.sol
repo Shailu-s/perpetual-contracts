@@ -7,7 +7,7 @@ import { LibAccountMarket } from "../libs/LibAccountMarket.sol";
 /// contract which implements AccountBalanceStorageV1 and following the naming convention
 /// AccountBalanceStorageVX.
 abstract contract AccountBalanceStorageV1 {
-    address internal _PositioningConfig;
+    address internal _positioningConfig;
     address internal _orderBook;
     address internal _vault;
 

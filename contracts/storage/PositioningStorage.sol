@@ -11,7 +11,7 @@ abstract contract PositioningStorageV1 {
     uint8 internal _settlementTokenDecimals;
     // --------- ^^^^^^^^^ ---------
     mapping(address => uint256) internal _firstTradedTimestampMap;
-    address internal _PositioningConfig;
+    address internal _positioningConfig;
     address internal _vaultController;
     address internal _accountBalance;
     address internal _matchingEngine;
@@ -19,4 +19,5 @@ abstract contract PositioningStorageV1 {
 
     address public defaultFeeReceiver;
 
+    uint256[50] private __gap;
 }
