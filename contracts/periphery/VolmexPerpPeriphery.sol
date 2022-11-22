@@ -42,7 +42,7 @@ contract VolmexPerpPeriphery is Initializable, RoleManager, IVolmexPerpPeriphery
         IMarkPriceOracle _markPriceOracle,
         address _owner
     ) external initializer {
-        require(_owner != address(0), "Admin can't be address(0)");
+        require(_owner != address(0), "Periphery: Admin can't be address(0)");
         markPriceOracle = _markPriceOracle;
 
         for (uint256 i = 0; i < 2; i++) {
@@ -130,20 +130,20 @@ contract VolmexPerpPeriphery is Initializable, RoleManager, IVolmexPerpPeriphery
 
         if (_limitOrder.orderType == LibOrder.STOP_LOSS_LIMIT_ORDER) {
             if (_limitOrder.isShort) {
-                require(triggeredPrice <= _limitOrder.triggerPrice, "Sell Stop Limit Order Trigger Price Not Matched");
+                require(triggeredPrice <= _limitOrder.triggerPrice, "Periphery: Sell Stop Limit Order Trigger Price Not Matched");
             } else {
-                require(triggeredPrice >= _limitOrder.triggerPrice, "Buy Stop Limit Order Trigger Price Not Matched");
+                require(triggeredPrice >= _limitOrder.triggerPrice, "Periphery: Buy Stop Limit Order Trigger Price Not Matched");
             }
         } else if (_limitOrder.orderType == LibOrder.TAKE_PROFIT_LIMIT_ORDER) {
             if (_limitOrder.isShort) {
                 require(
                     triggeredPrice >= _limitOrder.triggerPrice,
-                    "Sell Take-profit Limit Order Trigger Price Not Matched"
+                    "Periphery: Sell Take-profit Limit Order Trigger Price Not Matched"
                 );
             } else {
                 require(
                     triggeredPrice <= _limitOrder.triggerPrice,
-                    "Buy Take-profit Limit Order Trigger Price Not Matched"
+                    "Periphery: Buy Take-profit Limit Order Trigger Price Not Matched"
                 );
             }
         }
@@ -175,7 +175,7 @@ contract VolmexPerpPeriphery is Initializable, RoleManager, IVolmexPerpPeriphery
         uint256 _index
     ) external {
         _requireVolmexPerpPeripheryAdmin();
-        require(positionings[_index] == _oldPositioning, "VolmexPerpPeriphery: Incorrect positioning _index");
+        require(positionings[_index] == _oldPositioning, "Periphery: Incorrect positioning _index");
         positionings[_index] = _newPositioning;
         emit PositioningUpdated(_index, address(_oldPositioning), address(_newPositioning));
     }
@@ -195,7 +195,7 @@ contract VolmexPerpPeriphery is Initializable, RoleManager, IVolmexPerpPeriphery
         _requireVolmexPerpPeripheryAdmin();
         require(
             vaultControllers[_index] == _oldVaultController,
-            "VolmexPerpPeriphery: Incorrect vault controller _index"
+            "Periphery: Incorrect vault controller _index"
         );
         vaultControllers[_index] = _newVaultController;
     }
@@ -236,6 +236,46 @@ contract VolmexPerpPeriphery is Initializable, RoleManager, IVolmexPerpPeriphery
         positionings[_index].openPosition(_orderLeft, _signatureLeft, _orderRight, _signatureRight);
     }
 
+    function batchOpenPosition(
+        uint64 _index,
+        LibOrder.Order[] memory _ordersLeft,
+        bytes[] memory _signaturesLeft,
+        LibOrder.Order[] memory _ordersRight,
+        bytes[] memory _signaturesRight
+    ) external {
+        require(_ordersLeft.length == _ordersRight.length, "Periphery: mismatch orders");
+        IPositioning positioning = positionings[_index];
+        uint256 ordersLength = _ordersLeft.length;
+        for(uint256 orderIndex = 0; orderIndex < ordersLength; orderIndex++) {
+            positioning.openPosition(
+                _ordersLeft[orderIndex],
+                _signaturesLeft[orderIndex],
+                _ordersRight[orderIndex],
+                _signaturesRight[orderIndex]
+            );
+        }
+    }
+
+    function batchFillLimitOrders(
+        uint256 _index,
+        LibOrder.Order[] memory _leftLimitOrders,
+        bytes[] memory _signaturesLeftLimitOrder,
+        LibOrder.Order[] memory _rightLimitOrders,
+        bytes[] memory _signaturesRightLimitOrder
+    ) external {
+        require(_leftLimitOrders.length == _rightLimitOrders.length, "Periphery: mismatch limit orders");
+        uint256 ordersLength = _leftLimitOrders.length;
+        for (uint256 orderIndex = 0; orderIndex < ordersLength; orderIndex++) {
+            _fillLimitOrder(
+                _leftLimitOrders[orderIndex],
+                _signaturesLeftLimitOrder[orderIndex],
+                _rightLimitOrders[orderIndex],
+                _signaturesRightLimitOrder[orderIndex],
+                _index
+            );
+        }
+    }
+
     function transferToVault(
         IERC20Upgradeable _token,
         address _from,
@@ -249,6 +289,6 @@ contract VolmexPerpPeriphery is Initializable, RoleManager, IVolmexPerpPeriphery
         Internal view functions
      */
     function _requireVolmexPerpPeripheryAdmin() internal view {
-        require(hasRole(VOLMEX_PERP_PERIPHERY, _msgSender()), "VolmexPerpPeriphery: Not admin");
+        require(hasRole(VOLMEX_PERP_PERIPHERY, _msgSender()), "Periphery: Not admin");
     }
 }
