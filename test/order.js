@@ -50,4 +50,11 @@ async function sign(order, account, verifyingContract) {
   return (await EIP712.signTypedData(web3, account, data)).sig
 }
 
-module.exports = { Asset, Order, sign }
+function encodeAddress(account) {
+  return web3.eth.abi.encodeParameters(
+    ["address"],
+    [account]
+  );
+}
+
+module.exports = { Asset, Order, sign, encodeAddress }
