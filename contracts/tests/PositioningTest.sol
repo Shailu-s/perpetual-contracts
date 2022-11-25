@@ -34,9 +34,10 @@ contract PositioningTest is Positioning {
         LibOrder.Order memory orderLeft,
         bytes memory signatureLeft,
         LibOrder.Order memory orderRight,
-        bytes memory signatureRight
+        bytes memory signatureRight,
+        bytes memory liquidator
         ) external {
-            openPosition(orderLeft, signatureLeft, orderRight, signatureRight);
+            openPosition(orderLeft, signatureLeft, orderRight, signatureRight, liquidator);
         }
 
     function setMakerMinSalt(uint256 _val) external {
