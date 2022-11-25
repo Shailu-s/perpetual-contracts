@@ -92,7 +92,8 @@ interface IPositioning {
         LibOrder.Order memory orderLeft,
         bytes memory signatureLeft,
         LibOrder.Order memory orderRight,
-        bytes memory signatureRight
+        bytes memory signatureRight,
+        bytes memory liquidator
     ) external returns (LibFill.FillResult memory);
 
     /// @notice Set Positioning address
