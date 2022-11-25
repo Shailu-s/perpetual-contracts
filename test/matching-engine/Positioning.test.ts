@@ -7,7 +7,7 @@ import { BigNumber } from "ethers"
 import { parseUnits } from "ethers/lib/utils"
 
 
-describe("Positioning", function () {
+describe.only("Positioning", function () {
   let MatchingEngine
   let matchingEngine
   let VirtualToken
@@ -61,8 +61,8 @@ describe("Positioning", function () {
   this.beforeAll(async () => {
     VolmexPerpPeriphery = await ethers.getContractFactory("VolmexPerpPeriphery")
     MarkPriceOracle = await ethers.getContractFactory("MarkPriceOracle")
-    // IndexPriceOracle = await ethers.getContractFactory("IndexPriceOracle")
-    indexPriceOracle = await smock.fake("IndexPriceOracle")
+    IndexPriceOracle = await ethers.getContractFactory("IndexPriceOracle")
+    // indexPriceOracle = await smock.fake("IndexPriceOracle")
     MatchingEngine = await ethers.getContractFactory("MatchingEngineTest")
     VirtualToken = await ethers.getContractFactory("VirtualTokenTest")
     ERC20TransferProxy = await ethers.getContractFactory("ERC20TransferProxy")
@@ -83,13 +83,31 @@ describe("Positioning", function () {
   beforeEach(async () => {
     const [owner, account4] = await ethers.getSigners()
 
-    markPriceFake = await smock.fake("MarkPriceOracle")
-    indexPriceFake = await smock.fake("IndexPriceOracle")
+    // markPriceFake = await smock.fake("MarkPriceOracle")
+    // indexPriceFake = await smock.fake("IndexPriceOracle")
+    // indexPriceOracle.latestRoundData.whenCalledWith(0).returns(['100', '0']);
+    // indexPriceOracle.latestRoundData.whenCalledWith(3600).returns(['100', '0']);
+    // indexPriceOracle.volatilityCapRatioByIndex.whenCalledWith(3600).returns('1000000000000000');
 
-    indexPriceOracle.getIndexTwap.whenCalledWith(0).returns(['1000000000000000', '0', '0']);
-    indexPriceOracle.getIndexTwap.whenCalledWith(3600).returns(['1000000000000000', '0', '0']);
-    indexPriceOracle.volatilityCapRatioByIndex.whenCalledWith(3600).returns('1000000000000000');
+    // indexPriceOracle.getIndexTwap.whenCalledWith(0).returns(['1000000000000000', '0', '0']);
+    // indexPriceOracle.getIndexTwap.whenCalledWith(3600).returns(['1000000000000000', '0', '0']);
+    
+    indexPriceOracle = await upgrades.deployProxy(IndexPriceOracle, [owner.address], {
+      initializer: "initialize",
+    });
+    await indexPriceOracle.deployed();
 
+
+    // await indexPriceOracle.connect(owner).addIndexDataPoint(0,250000000)
+    const proofHash = "0x6c00000000000000000000000000000000000000000000000000000000000000";
+
+    for (let index = 0; index < 10; index++) {
+      await (
+        await indexPriceOracle.updateBatchVolatilityTokenPrice([0, 1], [200000000, 200000000], [proofHash, proofHash])
+      ).wait();
+    }
+
+    // await
     volmexBaseToken = await upgrades.deployProxy(
       VolmexBaseToken,
       [
@@ -174,6 +192,7 @@ describe("Positioning", function () {
     )
     marketRegistry = await upgrades.deployProxy(MarketRegistry, [virtualToken.address])
 
+    await indexPriceOracle.connect(owner).addIndexDataPoint(0,250000000)
     // await marketRegistry.connect(owner).addBaseToken(virtualToken.address)
     await marketRegistry.connect(owner).addBaseToken(volmexBaseToken.address)
     await marketRegistry.connect(owner).addBaseToken(baseToken.address)
@@ -385,7 +404,7 @@ describe("Positioning", function () {
         await expect(positionSize1).to.be.equal("-2000000000000000000")
       })
 
-      it("should match orders and open position with leverage", async () => {  
+      it.only("should match orders and open position with leverage", async () => {  
         const txn = await markPriceOracle.getCumulativePrice(10000000, 0);
 
         await matchingEngine.grantMatchOrders(positioning.address);
@@ -399,6 +418,9 @@ describe("Positioning", function () {
         await virtualToken.connect(account2).approve(vault.address, ten.toString())
         await virtualToken.connect(account1).approve(volmexPerpPeriphery.address, ten.toString())
         await virtualToken.connect(account2).approve(volmexPerpPeriphery.address, ten.toString())
+
+
+        await indexPriceOracle.connect(owner).addIndexDataPoint(0,250000000)
 
         await vaultController.connect(account1).deposit(
           volmexPerpPeriphery.address,
@@ -441,8 +463,9 @@ describe("Positioning", function () {
         let signatureLeft = await getSignature(orderLeftLeverage, account1.address)
         let signatureRight = await getSignature(orderRightLeverage, account2.address)
 
+        // let a = await indexPriceOracle
         // opening the position here
-        await expect(positioning.connect(account1).openPosition(orderLeftLeverage, signatureLeft, orderRightLeverage, signatureRight)).to.emit(
+        await expect(positioning.connect(account1).openPosition(orderRightLeverage, signatureRight,orderLeftLeverage, signatureLeft)).to.emit(
           positioning,
           "PositionChanged",
         )
@@ -461,39 +484,39 @@ describe("Positioning", function () {
 
         // **********************
 
-        const orderLeftLeverage2x = Order(
-          ORDER,
-          deadline,
-          account1.address,
-          Asset(virtualToken.address, BigNumber.from("1").mul(one).div(BigNumber.from("10")).toString()),
-          Asset(volmexBaseToken.address, BigNumber.from("1").mul(one).div(BigNumber.from("10")).toString()),
-          2,
-          0,
-          false,
-        )
+        // const orderLeftLeverage2x = Order(
+        //   ORDER,
+        //   deadline,
+        //   account1.address,
+        //   Asset(virtualToken.address, BigNumber.from("1").mul(one).div(BigNumber.from("10")).toString()),
+        //   Asset(volmexBaseToken.address, BigNumber.from("1").mul(one).div(BigNumber.from("10")).toString()),
+        //   2,
+        //   0,
+        //   false,
+        // )
     
-        const orderRightLeverage2x = Order(
-          ORDER,
-          deadline,
-          account2.address,
-          Asset(volmexBaseToken.address, BigNumber.from("1").mul(one).div(BigNumber.from("10")).toString()),
-          Asset(virtualToken.address, BigNumber.from("1").mul(one).div(BigNumber.from("10")).toString()),
-          3,
-          0,
-          true,
-        )
+        // const orderRightLeverage2x = Order(
+        //   ORDER,
+        //   deadline,
+        //   account2.address,
+        //   Asset(volmexBaseToken.address, BigNumber.from("1").mul(one).div(BigNumber.from("10")).toString()),
+        //   Asset(virtualToken.address, BigNumber.from("1").mul(one).div(BigNumber.from("10")).toString()),
+        //   3,
+        //   0,
+        //   true,
+        // )
 
         // const vaultAddress = await vaultController.getVault(virtualToken.address)
 
         // const vaultContract = await vault.attach(vaultAddress)
-        let signatureLeft2x = await getSignature(orderLeftLeverage2x, account1.address)
-        let signatureRight2x = await getSignature(orderRightLeverage2x, account2.address)
+      //   let signatureLeft2x = await getSignature(orderLeftLeverage2x, account1.address)
+      //   let signatureRight2x = await getSignature(orderRightLeverage2x, account2.address)
 
-        // opening the position here
-        await expect(positioning.connect(account1).openPosition(orderLeftLeverage2x, signatureLeft2x, orderRightLeverage2x, signatureRight2x)).to.emit(
-          positioning,
-          "PositionChanged",
-        )
+      //   // opening the position here
+      //   await expect(positioning.connect(account1).openPosition(orderLeftLeverage2x, signatureLeft2x, orderRightLeverage2x, signatureRight2x)).to.emit(
+      //     positioning,
+      //     "PositionChanged",
+      //   )
       })
 
       it("should reduce position of both traders", async () => {

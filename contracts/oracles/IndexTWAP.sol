@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity =0.8.12;
+import "hardhat/console.sol";
 
 /**
  * @title Volmex Oracle TWAP library
@@ -32,6 +33,7 @@ contract IndexTWAP {
         if (_datapoints[_index].length < _MAX_DATAPOINTS) {
             // initially populate available datapoint storage slots with index data
             _datapoints[_index].push(_value);
+                    console.log("inside1111111111111111111111111111111");
         } else {
             if (
                 // reset the cursor has reached the maximum allowed storage datapoints 
@@ -55,7 +57,8 @@ contract IndexTWAP {
      */
     function _getIndexTwap(uint256 _index) internal view returns (uint256 twap) {
         uint256 _datapointsSum;
-
+        console.log("Indexxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx");
+        console.logUint(_index);
         uint256 _datapointsLen = _datapoints[_index].length;
         // No datapoints
         require(_datapointsLen != 0, "IndexTWAP: No datapoints");

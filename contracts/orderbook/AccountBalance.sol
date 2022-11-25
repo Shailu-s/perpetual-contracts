@@ -185,6 +185,11 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
         }
         int256 totalQuoteDebtValue = totalQuoteBalance >= int256(0) ? int256(0) : totalQuoteBalance;
 
+        console.log("totalQuoteDebtValue");
+        console.logInt(totalQuoteDebtValue);
+                console.log("totalBaseDebtValue");
+        console.logInt(totalBaseDebtValue);
+
         // both values are negative due to the above condition checks
         return (totalQuoteDebtValue + totalBaseDebtValue).abs();
     }
@@ -205,6 +210,13 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
         }
 
         int256 netQuoteBalance = _getNetQuoteBalance(trader);
+        console.log("jjjjjjjjjjjjjjjjgetPnlAndPendingFee");
+        
+        console.log("totalPositionValue");
+        console.logInt(totalPositionValue);
+
+        console.log("netQuoteBalance");
+        console.logInt(netQuoteBalance);
         int256 unrealizedPnl = totalPositionValue + netQuoteBalance;
 
         return (_owedRealizedPnlMap[trader], unrealizedPnl);
@@ -223,7 +235,8 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
     /// @inheritdoc IAccountBalance
     function getTotalPositionValue(address trader, address baseToken) public view override returns (int256) {
         int256 positionSize = getTakerPositionSize(trader, baseToken);
-        console.log("positionSize: ", uint256(positionSize));
+       console.log("Position SIze:");
+        console.logInt(positionSize);
         if (positionSize == 0) return 0;
 
         uint256 indexTwap = _getIndexPrice(baseToken);
@@ -311,7 +324,7 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
     //
 
     function _getIndexPrice(address baseToken) internal view returns (uint256) {
-        return IIndexPrice(baseToken).getIndexPrice(IPositioningConfig(_positioningConfig).getTwapInterval());
+        return IIndexPrice(baseToken).getIndexPrice(0);
     }
 
     /// @return netQuoteBalance = quote.balance

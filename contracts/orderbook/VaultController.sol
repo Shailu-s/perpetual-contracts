@@ -131,6 +131,9 @@ contract VaultController is
     /// @inheritdoc IVaultController
     function getFreeCollateralByRatio(address trader, uint24 ratio) public view override returns (int256) {
         // conservative config: freeCollateral = min(collateral, accountValue) - margin requirement ratio
+       
+       console.log("STARTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT");
+       
         int256 fundingPayment = IPositioning(_positioning).getAllPendingFundingPayment(trader);
         console.log("fundingPayment: ");
         console.logInt(fundingPayment);
@@ -149,12 +152,16 @@ contract VaultController is
         int256 totalCollateralValue = accountValue + unrealizedPnl;
         console.log("totalCollateralValue: ");
         console.logInt(totalCollateralValue);
+
+        console.log("Ratio:");
+        console.log(ratio);
         uint256 totalMarginRequirementX10_18 = _getTotalMarginRequirement(trader, ratio);
         console.log("totalMarginRequirementX10_18:");
         console.logUint(totalMarginRequirementX10_18);
 
         console.log("alCollateralValue:");
         console.logInt(LibPerpMath.min(totalCollateralValue, accountValue) - (totalMarginRequirementX10_18.toInt256()));
+               console.log("ENDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDD");
         return LibPerpMath.min(totalCollateralValue, accountValue) - (totalMarginRequirementX10_18.toInt256());
     }
 
@@ -184,6 +191,8 @@ contract VaultController is
     /// @return totalMarginRequirement with decimals == 18, for freeCollateral calculation
     function _getTotalMarginRequirement(address trader, uint24 ratio) internal view returns (uint256) {
         uint256 totalDebtValue = IAccountBalance(_accountBalance).getTotalDebtValue(trader);
+        console.log("totalDebtValue===========================");
+        console.logUint(totalDebtValue);
         return totalDebtValue.mulRatio(ratio);
     }
 
