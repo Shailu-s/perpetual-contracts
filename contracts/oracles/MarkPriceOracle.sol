@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity =0.8.12;
 
+import "hardhat/console.sol";
 import { AccessControl } from "@openzeppelin/contracts/access/AccessControl.sol";
 import { SafeMathUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/math/SafeMathUpgradeable.sol";
 import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
@@ -132,11 +133,14 @@ contract MarkPriceOracle is Initializable, RoleManager {
         uint256 initialTimestamp = block.timestamp - _twInterval;
         for (index = observations.length - 1; observations[index].timestamp >= initialTimestamp; index--) {
             priceCumulative += observations[index].priceCumulative;
+            console.log("inside for loop", priceCumulative);
             if (index == 0) {
                 break;
             }
         }
+        // TODO: this method should be inspected
         priceCumulative = priceCumulative.div(observations.length.sub(index));
+        console.log("priceCumulative", priceCumulative);
     }
 
     function _requireCanAddObservation() internal view {

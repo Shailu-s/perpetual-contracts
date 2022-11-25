@@ -205,7 +205,6 @@ contract IndexPriceOracle is ERC165StorageUpgradeable, IndexTWAP, IIndexPriceOra
      */
     function addIndexDataPoint(uint256 _index, uint256 _value) external {
         _requireIndexPriceOracleAdmin();
-        console.log("inside====================================================================");
         _addIndexDataPoint(_index, _value);
     }
 

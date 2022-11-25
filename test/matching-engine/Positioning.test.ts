@@ -99,13 +99,13 @@ describe.only("Positioning", function () {
 
 
     // await indexPriceOracle.connect(owner).addIndexDataPoint(0,250000000)
-    const proofHash = "0x6c00000000000000000000000000000000000000000000000000000000000000";
+    // const proofHash = "0x6c00000000000000000000000000000000000000000000000000000000000000";
 
-    for (let index = 0; index < 10; index++) {
-      await (
-        await indexPriceOracle.updateBatchVolatilityTokenPrice([0, 1], [200000000, 200000000], [proofHash, proofHash])
-      ).wait();
-    }
+    // for (let index = 0; index < 10; index++) {
+    //   await (
+    //     await indexPriceOracle.updateBatchVolatilityTokenPrice([0, 1], [1000000, 1000000], [proofHash, proofHash])
+    //   ).wait();
+    // }
 
     // await
     volmexBaseToken = await upgrades.deployProxy(
@@ -122,7 +122,7 @@ describe.only("Positioning", function () {
     )
     await volmexBaseToken.deployed()
 
-    markPriceOracle = await upgrades.deployProxy(MarkPriceOracle, [[1000000], [volmexBaseToken.address]], {
+    markPriceOracle = await upgrades.deployProxy(MarkPriceOracle, [[10000000, 10000000], [volmexBaseToken.address, volmexBaseToken.address]], {
       initializer: "initialize",
     })
     await markPriceOracle.deployed()
@@ -405,7 +405,7 @@ describe.only("Positioning", function () {
       })
 
       it.only("should match orders and open position with leverage", async () => {  
-        const txn = await markPriceOracle.getCumulativePrice(10000000, 0);
+        // const txn = await markPriceOracle.getCumulativePrice(10000000, 0);
 
         await matchingEngine.grantMatchOrders(positioning.address);
 

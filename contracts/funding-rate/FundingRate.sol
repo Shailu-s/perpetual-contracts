@@ -2,6 +2,8 @@
 pragma solidity =0.8.12;
 pragma abicoder v2;
 
+import "hardhat/console.sol";
+
 import { AddressUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol";
 import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
@@ -95,12 +97,19 @@ contract FundingRate is IFundingRate, BlockContext, PositioningCallee, FundingRa
         if (_firstTradedTimestampMap[baseToken] != 0) {
             twapInterval = IPositioningConfig(_positioningConfig).getTwapInterval();
             uint256 deltaTimestamp = (timestamp - _firstTradedTimestampMap[baseToken]);
+            // TODO: this differs from perp-curie
             twapInterval = twapInterval < deltaTimestamp ? deltaTimestamp : twapInterval;
         }
 
-        uint256 markTwapX96 =
+        console.log(twapInterval, "twapINterval");
+        console.log("_underlyingPriceIndex");
+        console.log(_underlyingPriceIndex);
+
+        markTwap =
             IMarkPriceOracle(_markPriceOracleArg).getCumulativePrice(twapInterval, _underlyingPriceIndex);
-        markTwap = markTwapX96.formatX96ToX10_18();
+
+            //TODO: review if we need this formatting
+        // markTwap = markTwapX96.formatX96ToX10_18();
         // TODO getIndexTwap method takes _index of underlying to fetch the price, not the time interval
         (indexTwap, , ) = IIndexPriceOracle(_indexPriceOracleArg).getIndexTwap(_underlyingPriceIndex);
 
@@ -136,6 +145,10 @@ contract FundingRate is IFundingRate, BlockContext, PositioningCallee, FundingRa
     function getPendingFundingPayment(address trader, address baseToken) public view virtual override returns (int256) {
         (, uint256 markTwap, uint256 indexTwap) = _getFundingGrowthGlobalAndTwaps(baseToken);
 
+        console.log("markTwap before");
+        console.logUint(markTwap);
+        console.log("indexTwap before");
+        console.logUint(indexTwap);
         return _getFundingPayment(trader, baseToken, markTwap.toInt256(), indexTwap.toInt256());
     }
 }
