@@ -90,6 +90,7 @@ contract VolmexPerpPeriphery is Initializable, RoleManager, IVolmexPerpPeriphery
         bytes memory _signatureLeftLimitOrder,
         LibOrder.Order memory _rightLimitOrder,
         bytes memory _signatureRightLimitOrder,
+        bytes memory liquidator,
         uint256 _index
     ) external {
         _fillLimitOrder(
@@ -97,6 +98,7 @@ contract VolmexPerpPeriphery is Initializable, RoleManager, IVolmexPerpPeriphery
             _signatureLeftLimitOrder, 
             _rightLimitOrder, 
             _signatureRightLimitOrder,
+            liquidator,
             _index
         );
     }
@@ -106,6 +108,7 @@ contract VolmexPerpPeriphery is Initializable, RoleManager, IVolmexPerpPeriphery
         bytes memory _signatureLeftLimitOrder,
         LibOrder.Order memory _rightLimitOrder,
         bytes memory _signatureRightLimitOrder,
+        bytes memory liquidator,
         uint256 _index
     ) internal {
         _verifyTriggerPrice(_leftLimitOrder);
@@ -115,7 +118,8 @@ contract VolmexPerpPeriphery is Initializable, RoleManager, IVolmexPerpPeriphery
 			_leftLimitOrder, 
 			_signatureLeftLimitOrder, 
 			_rightLimitOrder,
-			_signatureRightLimitOrder
+			_signatureRightLimitOrder,
+            liquidator
 		);
     }
 
@@ -231,9 +235,10 @@ contract VolmexPerpPeriphery is Initializable, RoleManager, IVolmexPerpPeriphery
         LibOrder.Order memory _orderLeft,
         bytes memory _signatureLeft,
         LibOrder.Order memory _orderRight,
-        bytes memory _signatureRight
+        bytes memory _signatureRight,
+        bytes memory liquidator
     ) external {
-        positionings[_index].openPosition(_orderLeft, _signatureLeft, _orderRight, _signatureRight);
+        positionings[_index].openPosition(_orderLeft, _signatureLeft, _orderRight, _signatureRight, liquidator);
     }
 
     function batchOpenPosition(
@@ -241,7 +246,8 @@ contract VolmexPerpPeriphery is Initializable, RoleManager, IVolmexPerpPeriphery
         LibOrder.Order[] memory _ordersLeft,
         bytes[] memory _signaturesLeft,
         LibOrder.Order[] memory _ordersRight,
-        bytes[] memory _signaturesRight
+        bytes[] memory _signaturesRight,
+        bytes memory liquidator
     ) external {
         require(_ordersLeft.length == _ordersRight.length, "Periphery: mismatch orders");
         IPositioning positioning = positionings[_index];
@@ -251,7 +257,8 @@ contract VolmexPerpPeriphery is Initializable, RoleManager, IVolmexPerpPeriphery
                 _ordersLeft[orderIndex],
                 _signaturesLeft[orderIndex],
                 _ordersRight[orderIndex],
-                _signaturesRight[orderIndex]
+                _signaturesRight[orderIndex],
+                liquidator
             );
         }
     }
@@ -261,7 +268,8 @@ contract VolmexPerpPeriphery is Initializable, RoleManager, IVolmexPerpPeriphery
         LibOrder.Order[] memory _leftLimitOrders,
         bytes[] memory _signaturesLeftLimitOrder,
         LibOrder.Order[] memory _rightLimitOrders,
-        bytes[] memory _signaturesRightLimitOrder
+        bytes[] memory _signaturesRightLimitOrder,
+        bytes memory liquidator
     ) external {
         require(_leftLimitOrders.length == _rightLimitOrders.length, "Periphery: mismatch limit orders");
         uint256 ordersLength = _leftLimitOrders.length;
@@ -271,6 +279,7 @@ contract VolmexPerpPeriphery is Initializable, RoleManager, IVolmexPerpPeriphery
                 _signaturesLeftLimitOrder[orderIndex],
                 _rightLimitOrders[orderIndex],
                 _signaturesRightLimitOrder[orderIndex],
+                liquidator,
                 _index
             );
         }
