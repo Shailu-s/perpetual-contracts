@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: BUSL - 1.1
 pragma solidity =0.8.12;
+import "hardhat/console.sol";
 
 import { AddressUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol";
 import { Context } from "@openzeppelin/contracts/utils/Context.sol";
@@ -222,9 +223,11 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
     /// @inheritdoc IAccountBalance
     function getTotalPositionValue(address trader, address baseToken) public view override returns (int256) {
         int256 positionSize = getTakerPositionSize(trader, baseToken);
+        console.log("positionSize: ", uint256(positionSize));
         if (positionSize == 0) return 0;
 
         uint256 indexTwap = _getIndexPrice(baseToken);
+        console.log("indexTwap: ", indexTwap);
         // both positionSize & indexTwap are in 10^18 already
         // overflow inspection:
         // only overflow when position value in USD(18 decimals) > 2^255 / 10^18

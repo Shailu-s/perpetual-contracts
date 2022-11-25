@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: BUSL - 1.1
 pragma solidity =0.8.12;
 
+import "hardhat/console.sol";
+
 import "@openzeppelin/contracts/proxy/Clones.sol";
 import { AddressUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol";
 import { ContextUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol";
@@ -130,13 +132,29 @@ contract VaultController is
     function getFreeCollateralByRatio(address trader, uint24 ratio) public view override returns (int256) {
         // conservative config: freeCollateral = min(collateral, accountValue) - margin requirement ratio
         int256 fundingPayment = IPositioning(_positioning).getAllPendingFundingPayment(trader);
+        console.log("fundingPayment: ");
+        console.logInt(fundingPayment);
         (int256 owedRealizedPnl, int256 unrealizedPnl) = IAccountBalance(_accountBalance).getPnlAndPendingFee(trader);
+        console.log("owedRealizedPnl: ");
+        console.logInt(owedRealizedPnl);
+        console.log("unrealizedPnl: ");
+        console.logInt(unrealizedPnl);
 
         int256 balanceX10_18 = getBalance(trader);
+        console.log("balanceX10_18: ");
+        console.logInt(balanceX10_18);
         int256 accountValue = balanceX10_18 + (owedRealizedPnl - fundingPayment);
+        console.log("accountValue: ");
+        console.logInt(accountValue);
         int256 totalCollateralValue = accountValue + unrealizedPnl;
+        console.log("totalCollateralValue: ");
+        console.logInt(totalCollateralValue);
         uint256 totalMarginRequirementX10_18 = _getTotalMarginRequirement(trader, ratio);
+        console.log("totalMarginRequirementX10_18:");
+        console.logUint(totalMarginRequirementX10_18);
 
+        console.log("alCollateralValue:");
+        console.logInt(LibPerpMath.min(totalCollateralValue, accountValue) - (totalMarginRequirementX10_18.toInt256()));
         return LibPerpMath.min(totalCollateralValue, accountValue) - (totalMarginRequirementX10_18.toInt256());
     }
 
