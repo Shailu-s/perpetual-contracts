@@ -1,6 +1,6 @@
 import { expect } from "chai"
 import { ethers, upgrades } from "hardhat"
-const { Order, Asset, sign } = require("../order")
+const { Order, Asset, sign, encodeAddress } = require("../order")
 import { FakeContract, smock } from "@defi-wonderland/smock"
 import { IndexPriceOracle, MarkPriceOracle } from "../../typechain"
 import { BigNumber } from "ethers"
@@ -44,6 +44,7 @@ describe("Positioning", function () {
   let orderLeft, orderRight
   const deadline = 87654321987654
   let owner, account1, account2, account3, account4
+  let liquidator;
   const one = ethers.constants.WeiPerEther // 1e18
   const two = ethers.constants.WeiPerEther.mul(BigNumber.from("2")) // 2e18
 
@@ -73,6 +74,7 @@ describe("Positioning", function () {
 
   beforeEach(async () => {
     const [owner, account4] = await ethers.getSigners()
+    liquidator = encodeAddress(owner.address)
 
     markPriceFake = await smock.fake("MarkPriceOracle")
     indexPriceFake = await smock.fake("IndexPriceOracle")
@@ -334,7 +336,7 @@ describe("Positioning", function () {
         let signatureRight = await getSignature(orderRight, account2.address)
 
         // opening the position here
-        await expect(positioning.connect(account1).openPosition(orderLeft, signatureLeft, orderRight, signatureRight)).to.emit(
+        await expect(positioning.connect(account1).openPosition(orderLeft, signatureLeft, orderRight, signatureRight, liquidator)).to.emit(
           positioning,
           "PositionChanged",
         )
@@ -395,7 +397,7 @@ describe("Positioning", function () {
         let signatureRight = await getSignature(orderRight, account2.address)
 
         // opening the position here
-        await expect(positioning.connect(account1).openPosition(orderLeft, signatureLeft, orderRight, signatureRight)).to.emit(
+        await expect(positioning.connect(account1).openPosition(orderLeft, signatureLeft, orderRight, signatureRight, liquidator)).to.emit(
           positioning,
           "PositionChanged",
         )
@@ -416,7 +418,7 @@ describe("Positioning", function () {
         let signatureRight1 = await getSignature(orderRight1, account2.address)
 
         // reducing the position here
-        await expect(positioning.connect(account1).openPosition(orderLeft1, signatureLeft1, orderRight1, signatureRight1)).to.emit(
+        await expect(positioning.connect(account1).openPosition(orderLeft1, signatureLeft1, orderRight1, signatureRight1, liquidator)).to.emit(
           positioning,
           "PositionChanged",
         )
@@ -486,7 +488,7 @@ describe("Positioning", function () {
         let signatureLeft = await getSignature(orderLeft, account1.address)
         let signatureRight = await getSignature(orderRight, account2.address)
 
-        await expect(positioning.openPosition(orderLeft, signatureLeft, orderRight, signatureRight)).to.emit(
+        await expect(positioning.openPosition(orderLeft, signatureLeft, orderRight, signatureRight, liquidator)).to.emit(
           positioning,
           "PositionChanged",
         )
@@ -506,7 +508,7 @@ describe("Positioning", function () {
         let signatureRight1 = await getSignature(orderRight1, account2.address)
 
         // liquidating the position
-        await expect(positioning.openPosition(orderLeft1, signatureLeft1, orderRight1, signatureRight1)).to.emit(
+        await expect(positioning.openPosition(orderLeft1, signatureLeft1, orderRight1, signatureRight1, liquidator)).to.emit(
           positioning,
           "PositionLiquidated",
         )
@@ -572,7 +574,7 @@ describe("Positioning", function () {
         let signatureLeft = await getSignature(orderLeft, account1.address)
         let signatureRight = await getSignature(orderRight, account2.address)
 
-        await expect(positioning.openPosition(orderLeft, signatureLeft, orderRight, signatureRight)).to.emit(
+        await expect(positioning.openPosition(orderLeft, signatureLeft, orderRight, signatureRight, liquidator)).to.emit(
           positioning,
           "PositionChanged",
         )
@@ -586,7 +588,7 @@ describe("Positioning", function () {
         let signatureLeft1 = await getSignature(orderLeft1, account1.address)
         let signatureRight1 = await getSignature(orderRight1, account2.address)
 
-        await expect(positioning.openPosition(orderLeft1, signatureLeft1, orderRight1, signatureRight1)).to.emit(
+        await expect(positioning.openPosition(orderLeft1, signatureLeft1, orderRight1, signatureRight1, liquidator)).to.emit(
           positioning,
           "PositionLiquidated",
         )
@@ -636,7 +638,7 @@ describe("Positioning", function () {
         let signatureRight = await getSignature(orderRight, account2.address)
 
         // opening the position here
-        await expect(positioning.openPosition(orderLeft, signatureLeft, orderRight, signatureRight)).to.emit(
+        await expect(positioning.openPosition(orderLeft, signatureLeft, orderRight, signatureRight, liquidator)).to.emit(
           positioning,
           "PositionChanged",
         )
@@ -709,7 +711,7 @@ describe("Positioning", function () {
         let signatureRight = await getSignature(orderRight, account2.address)
 
         // opening the position here
-        await expect(positioning.openPosition(orderLeft, signatureLeft, orderRight, signatureRight)).to.emit(
+        await expect(positioning.openPosition(orderLeft, signatureLeft, orderRight, signatureRight, liquidator)).to.emit(
           positioning,
           "PositionChanged",
         )
@@ -730,7 +732,7 @@ describe("Positioning", function () {
         let signatureRight1 = await getSignature(orderRight1, account2.address)
 
         // reducing the position here
-        await expect(positioning.openPosition(orderLeft1, signatureLeft1, orderRight1, signatureRight1)).to.emit(
+        await expect(positioning.openPosition(orderLeft1, signatureLeft1, orderRight1, signatureRight1, liquidator)).to.emit(
           positioning,
           "PositionChanged",
         )
@@ -794,7 +796,7 @@ describe("Positioning", function () {
         let signatureRight = await getSignature(orderRight, account2.address)
 
         // opening the position here
-        await expect(positioning.openPosition(orderLeft, signatureLeft, orderRight, signatureRight)).to.emit(
+        await expect(positioning.openPosition(orderLeft, signatureLeft, orderRight, signatureRight, liquidator)).to.emit(
           positioning,
           "PositionChanged",
         )
@@ -815,7 +817,7 @@ describe("Positioning", function () {
         let signatureRight1 = await getSignature(orderRight1, account2.address)
 
         // reducing the position here
-        await expect(positioning.openPosition(orderLeft1, signatureLeft1, orderRight1, signatureRight1)).to.emit(
+        await expect(positioning.openPosition(orderLeft1, signatureLeft1, orderRight1, signatureRight1, liquidator)).to.emit(
           positioning,
           "PositionChanged",
         )
@@ -877,7 +879,7 @@ describe("Positioning", function () {
         let signatureLeft = await getSignature(orderLeft, account1.address)
         let signatureRight = await getSignature(orderRight, account2.address)
 
-        await expect(positioning.openPosition(orderLeft, signatureLeft, orderRight, signatureRight)).to.be.revertedWith(
+        await expect(positioning.openPosition(orderLeft, signatureLeft, orderRight, signatureRight, liquidator)).to.be.revertedWith(
           " V_PERP: Basetoken is not registered in market",
         )
       })
@@ -916,7 +918,7 @@ describe("Positioning", function () {
         let signatureRight = await getSignature(orderRight, account2.address)
 
         // opening the position here
-        await expect(positioning.openPosition(orderLeft, signatureLeft, orderRight, signatureRight)).to.be.revertedWith(
+        await expect(positioning.openPosition(orderLeft, signatureLeft, orderRight, signatureRight, liquidator)).to.be.revertedWith(
           "division by zero",
         )
       })
@@ -976,7 +978,7 @@ describe("Positioning", function () {
         let signatureRight = await getSignature(orderRight, account2.address)
 
         // opening the position here
-        await expect(positioning.openPosition(orderLeft, signatureLeft, orderRight, signatureRight)).to.emit(
+        await expect(positioning.openPosition(orderLeft, signatureLeft, orderRight, signatureRight, liquidator)).to.emit(
           positioning,
           "PositionChanged",
         )
@@ -986,7 +988,7 @@ describe("Positioning", function () {
 
         // trying to liquidate here
         await expect(
-          positioning.openPosition(orderLeft1, signatureLeft1, orderRight1, signatureRight1),
+          positioning.openPosition(orderLeft1, signatureLeft1, orderRight1, signatureRight1, liquidator),
         ).to.be.revertedWith("P_WTV")
       })
       it("failure not enough free collateral", async () => {
@@ -1022,7 +1024,7 @@ describe("Positioning", function () {
         let signatureLeft = await getSignature(orderLeft, account1.address)
         let signatureRight = await getSignature(orderRight, account2.address)
 
-        await expect(positioning.openPosition(orderLeft, signatureLeft, orderRight, signatureRight)).to.be.revertedWith(
+        await expect(positioning.openPosition(orderLeft, signatureLeft, orderRight, signatureRight, liquidator)).to.be.revertedWith(
           "CH_NEFCI",
         )
         it("should fail to match orders as signer is not order maker & order maker is not a contract", async () => {
@@ -1082,7 +1084,7 @@ describe("Positioning", function () {
         let signatureLeft = await getSignature(orderLeft, account1.address)
         let signatureRight = await getSignature(orderRight, account2.address)
 
-        await expect(positioning.openPosition(orderLeft, signatureLeft, orderRight, signatureRight)).to.be.revertedWith(
+        await expect(positioning.openPosition(orderLeft, signatureLeft, orderRight, signatureRight, liquidator)).to.be.revertedWith(
           "V_PERP_M: Order deadline validation failed",
         )
       })
@@ -1114,7 +1116,7 @@ describe("Positioning", function () {
         let signatureLeft = await getSignature(orderLeft, account1.address)
         let signatureRight = await getSignature(orderRight, account2.address)
 
-        await expect(positioning.openPosition(orderLeft, signatureLeft, orderRight, signatureRight)).to.be.revertedWith(
+        await expect(positioning.openPosition(orderLeft, signatureLeft, orderRight, signatureRight, liquidator)).to.be.revertedWith(
           "V_PERP_M: maker is not tx sender",
         )
       })
@@ -1146,7 +1148,7 @@ describe("Positioning", function () {
         let signatureLeft = await getSignature(orderLeft, owner.address)
         let signatureRight = await getSignature(orderRight, account2.address)
 
-        await expect(positioning.openPosition(orderLeft, signatureLeft, orderRight, signatureRight)).to.be.revertedWith(
+        await expect(positioning.openPosition(orderLeft, signatureLeft, orderRight, signatureRight, liquidator)).to.be.revertedWith(
           "V_PERP_M: order signature verification error",
         )
       })
@@ -1181,7 +1183,7 @@ describe("Positioning", function () {
         let signatureRight = await getSignature(orderRight, account3.address)
 
         await expect(
-          positioning.connect(account1).openPosition(orderLeft, signatureLeft, orderRight, signatureRight),
+          positioning.connect(account1).openPosition(orderLeft, signatureLeft, orderRight, signatureRight, liquidator),
         ).to.be.revertedWith("V_PERP_M: order verification failed")
       })
 
@@ -1221,7 +1223,7 @@ describe("Positioning", function () {
         let signatureRight = await getSignature(orderRight, account2.address)
 
         await expect(
-          positioning.connect(account1).openPosition(orderLeft, signatureLeft, orderRight, signatureRight),
+          positioning.connect(account1).openPosition(orderLeft, signatureLeft, orderRight, signatureRight, liquidator),
         ).to.be.revertedWith("V_PERP_M: contract order signature verification error")
       })
       it("should fail to match orders & revert as order is cancelled", async () => {
@@ -1261,7 +1263,7 @@ describe("Positioning", function () {
         let signatureLeft = await getSignature(orderLeft, account1.address)
         let signatureRight = await getSignature(orderRight, account2.address)
 
-        await expect(positioning.openPosition(orderLeft, signatureLeft, orderRight, signatureRight)).to.be.revertedWith(
+        await expect(positioning.openPosition(orderLeft, signatureLeft, orderRight, signatureRight, liquidator)).to.be.revertedWith(
           "V_PERP_M: Order canceled",
         )
       })

@@ -1,6 +1,6 @@
 import { expect } from "chai";
 import { ethers, upgrades } from "hardhat";
-const { Order, Asset, sign } = require("./order");
+const { Order, Asset, sign, encodeAddress } = require("./order");
 import { BigNumber } from "ethers";
 
 describe("Global", function () {
@@ -37,6 +37,7 @@ describe("Global", function () {
   let factory;
   let matchingEngine;
   let orderLeft, orderRight;
+  let liquidator;
 
   const ORDER = "0xf555eb98";
   const STOP_LOSS_LIMIT_ORDER = "0xeeaed735";
@@ -54,6 +55,7 @@ describe("Global", function () {
     [owner, account1, account2] = await ethers.getSigners();
     console.log("Deployer: ", await owner.getAddress());
     console.log("Balance: ", (await owner.getBalance()).toString());
+    liquidator = encodeAddress(owner.address);
 
     MatchingEngine = await ethers.getContractFactory("MatchingEngine");
     PerpFactory = await ethers.getContractFactory("PerpFactory");
@@ -252,7 +254,7 @@ describe("Global", function () {
     // left 1, 2
     // right 2, 1
     await expect(
-      positioning.connect(account1).openPosition(orderLeft, signatureLeft, orderRight, signatureRight),
+      positioning.connect(account1).openPosition(orderLeft, signatureLeft, orderRight, signatureRight, liquidator),
     ).to.emit(positioning, "PositionChanged");
 
     let positionSize = await accountBalance.getTakerPositionSize(account1.address, orderLeft.takeAsset.virtualToken);
@@ -311,7 +313,7 @@ describe("Global", function () {
     // left 1, 2
     // right 2, 1
     await expect(
-      positioning.connect(account1).openPosition(orderLeft, signatureLeft, orderRight, signatureRight),
+      positioning.connect(account1).openPosition(orderLeft, signatureLeft, orderRight, signatureRight, liquidator),
     ).to.emit(positioning, "PositionChanged");
 
     positionSize = await accountBalance.getTakerPositionSize(account1.address, orderLeft.makeAsset.virtualToken);
@@ -359,7 +361,7 @@ describe("Global", function () {
     // left 1, 2
     // right 2, 1
     await expect(
-      positioning.connect(account1).openPosition(orderLeft, signatureLeft, orderRight, signatureRight),
+      positioning.connect(account1).openPosition(orderLeft, signatureLeft, orderRight, signatureRight, liquidator),
     ).to.emit(positioning, "PositionChanged");
 
     positionSize = await accountBalance.getTakerPositionSize(account1.address, orderLeft.makeAsset.virtualToken);
@@ -422,7 +424,7 @@ describe("Global", function () {
     let signatureRight = await getSignature(orderRight, account2.address);
 
     await expect(
-      positioning.connect(account1).openPosition(orderLeft, signatureLeft, orderRight, signatureRight),
+      positioning.connect(account1).openPosition(orderLeft, signatureLeft, orderRight, signatureRight, liquidator),
     ).to.emit(positioning, "PositionChanged");
 
     let positionSize = await accountBalance.getTakerPositionSize(account1.address, orderLeft.takeAsset.virtualToken);
@@ -483,7 +485,7 @@ describe("Global", function () {
     signatureRight = await getSignature(orderRight, account2.address);
 
     await expect(
-      positioning.connect(account1).openPosition(orderLeft, signatureLeft, orderRight, signatureRight),
+      positioning.connect(account1).openPosition(orderLeft, signatureLeft, orderRight, signatureRight, liquidator),
     ).to.emit(positioning, "PositionChanged");
 
     positionSize = await accountBalance.getTakerPositionSize(account1.address, orderLeft.makeAsset.virtualToken);
@@ -533,7 +535,7 @@ describe("Global", function () {
     signatureRight = await getSignature(orderRight, account2.address);
 
     await expect(
-      positioning.connect(account1).openPosition(orderLeft, signatureLeft, orderRight, signatureRight),
+      positioning.connect(account1).openPosition(orderLeft, signatureLeft, orderRight, signatureRight, liquidator),
     ).to.emit(positioning, "PositionChanged");
 
     positionSize = await accountBalance.getTakerPositionSize(account1.address, orderLeft.makeAsset.virtualToken);
