@@ -98,7 +98,6 @@ describe.only("Positioning", function () {
     await indexPriceOracle.deployed();
 
 
-    // await indexPriceOracle.connect(owner).addIndexDataPoint(0,250000000)
     // const proofHash = "0x6c00000000000000000000000000000000000000000000000000000000000000";
 
     // for (let index = 0; index < 10; index++) {
@@ -192,7 +191,7 @@ describe.only("Positioning", function () {
     )
     marketRegistry = await upgrades.deployProxy(MarketRegistry, [virtualToken.address])
 
-    await indexPriceOracle.connect(owner).addIndexDataPoint(0,250000000)
+    // await indexPriceOracle.connect(owner).addIndexDataPoint(0,250000000)
     // await marketRegistry.connect(owner).addBaseToken(virtualToken.address)
     await marketRegistry.connect(owner).addBaseToken(volmexBaseToken.address)
     await marketRegistry.connect(owner).addBaseToken(baseToken.address)
@@ -420,7 +419,7 @@ describe.only("Positioning", function () {
         await virtualToken.connect(account2).approve(volmexPerpPeriphery.address, ten.toString())
 
 
-        await indexPriceOracle.connect(owner).addIndexDataPoint(0,250000000)
+        // await indexPriceOracle.connect(owner).addIndexDataPoint(0,10000000)
 
         await vaultController.connect(account1).deposit(
           volmexPerpPeriphery.address,
@@ -439,8 +438,8 @@ describe.only("Positioning", function () {
           ORDER,
           deadline,
           account1.address,
-          Asset(virtualToken.address, BigNumber.from("7").mul(one).toString()),
-          Asset(volmexBaseToken.address, BigNumber.from("7").mul(one).toString()),
+          Asset(virtualToken.address, BigNumber.from("150000000").mul(one).toString()),
+          Asset(volmexBaseToken.address, BigNumber.from("15").mul(one).toString()),
           0,
           0,
           false,
@@ -450,8 +449,8 @@ describe.only("Positioning", function () {
           ORDER,
           deadline,
           account2.address,
-          Asset(volmexBaseToken.address, BigNumber.from("7").mul(one).toString()),
-          Asset(virtualToken.address, BigNumber.from("7").mul(one).toString()),
+          Asset(volmexBaseToken.address, BigNumber.from("15").mul(one).toString()),
+          Asset(virtualToken.address, BigNumber.from("150000000").mul(one).toString()),
           1,
           0,
           true,

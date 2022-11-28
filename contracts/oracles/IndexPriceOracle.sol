@@ -46,13 +46,14 @@ contract IndexPriceOracle is ERC165StorageUpgradeable, IndexTWAP, IIndexPriceOra
     function initialize(address _owner) external initializer {
         _updateTwapMaxDatapoints(_MAX_ALLOWED_TWAP_DATAPOINTS);
 
-        _updateVolatilityMeta(indexCount, 200000000, "");
+        //TODO: should setting up initial price be in initialise parameter?
+        _updateVolatilityMeta(indexCount, 10000000, "");
         volatilityIndexBySymbol["ETHV"] = indexCount;
         volatilityCapRatioByIndex[indexCount] = 400000000;
 
         indexCount++;
 
-        _updateVolatilityMeta(indexCount, 200000000, "");
+        _updateVolatilityMeta(indexCount, 10000000, "");
         volatilityIndexBySymbol["BTCV"] = indexCount;
         volatilityCapRatioByIndex[indexCount] = 400000000;
 
@@ -300,7 +301,9 @@ contract IndexPriceOracle is ERC165StorageUpgradeable, IndexTWAP, IIndexPriceOra
         virtual
         returns (uint256 answer, uint256 lastUpdateTimestamp)
     {
-        answer = _getIndexTwap(_index) * 100;
+        //TODO: why are we multiplying with 100
+        // answer = _getIndexTwap(_index) * 100;
+        answer = _getIndexTwap(_index) * 1;
         lastUpdateTimestamp = volatilityLeverageByIndex[_index] > 0
             ? volatilityLastUpdateTimestamp[baseVolatilityIndex[_index]]
             : volatilityLastUpdateTimestamp[_index];

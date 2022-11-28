@@ -64,6 +64,7 @@ contract IndexTWAP {
             _datapointsSum += _datapoints[_index][i];
         }
 
+        console.log(_datapointsLen, "datapoint length ================");
         twap = _datapointsSum / _datapointsLen;
     }
 

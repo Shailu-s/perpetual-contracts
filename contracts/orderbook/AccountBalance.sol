@@ -176,7 +176,9 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
             // baseDebt = baseBalance when it's negative
             if (baseBalance < 0) {
                 // baseDebtValue = baseDebt * indexPrice
-                baseDebtValue = baseBalance.mulDiv(_getIndexPrice(baseToken).toInt256(), 1e18);
+                //TODO: decimal checks for index price
+                // baseDebtValue = baseBalance.mulDiv(_getIndexPrice(baseToken).toInt256(), 1e18);
+                baseDebtValue = baseBalance * _getIndexPrice(baseToken).toInt256();
             }
             totalBaseDebtValue = totalBaseDebtValue + baseDebtValue;
      
