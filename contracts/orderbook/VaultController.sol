@@ -75,7 +75,7 @@ contract VaultController is
         }
         IVault(_vault).deposit{ value: msg.value }(periphery, token, amount, from);
         uint256 amountX10_18 = LibSettlementTokenMath.parseSettlementToken(amount, IVault(_vault).decimals());
-        _modifyBalance(from, amountX10_18.toInt256());
+        _modifyBalance(from, token, amountX10_18.toInt256());
     }
 
     function withdraw(
@@ -111,7 +111,7 @@ contract VaultController is
         IVault(_vault).withdraw(token, amount, to);
 
         uint256 amountX10_18 = LibSettlementTokenMath.parseSettlementToken(amount, IVault(_vault).decimals());
-        _modifyBalance(to, amountX10_18.neg256());
+        _modifyBalance(to, token, amountX10_18.neg256());
     }
 
     /// @inheritdoc IVaultController
@@ -119,15 +119,16 @@ contract VaultController is
         _requireOnlyPositioning();
         int256 fundingPayment = IPositioning(_positioning).getAllPendingFundingPayment(trader);
         (int256 owedRealizedPnl, int256 unrealizedPnl) = IAccountBalance(_accountBalance).getPnlAndPendingFee(trader);
-
         int256 balanceX10_18 = getBalance(trader);
-
         // accountValue = collateralValue + owedRealizedPnl - fundingPayment + unrealizedPnl
         return balanceX10_18 + (owedRealizedPnl - fundingPayment) + unrealizedPnl;
     }
 
     /// @inheritdoc IVaultController
-    function getFreeCollateralByRatio(address trader, uint24 ratio) public view override returns (int256) {
+    function getFreeCollateralByRatio(
+        address trader,
+        uint24 ratio
+    ) public view override returns (int256) {
         // conservative config: freeCollateral = min(collateral, accountValue) - margin requirement ratio
         int256 fundingPayment = IPositioning(_positioning).getAllPendingFundingPayment(trader);
         (int256 owedRealizedPnl, int256 unrealizedPnl) = IAccountBalance(_accountBalance).getPnlAndPendingFee(trader);
@@ -141,8 +142,12 @@ contract VaultController is
     }
 
     /// @inheritdoc IVaultController
-    function getBalance(address trader) public view override returns (int256) {
-        return _balance[trader];
+    function getBalance(address trader) public view override returns (int256 balanceX10_18) {
+        address[] memory _baseTokens = IAccountBalance(_accountBalance).getBaseTokens(trader);
+        uint256 len = _baseTokens.length;
+        for (uint256 i = 0; i < len; i++) {
+            balanceX10_18 += _balance[trader][_baseTokens[i]];
+        }
     }
 
     /// @inheritdoc IVaultController
@@ -169,8 +174,8 @@ contract VaultController is
         return totalDebtValue.mulRatio(ratio);
     }
 
-    function _modifyBalance(address trader, int256 amount) internal {
-        _balance[trader] = _balance[trader] + amount;
+    function _modifyBalance(address trader, address token, int256 amount) internal {
+        _balance[trader][token] = _balance[trader][token] + amount;
     }
 
     function _msgSender() internal view override(OwnerPausable, ContextUpgradeable) returns (address) {

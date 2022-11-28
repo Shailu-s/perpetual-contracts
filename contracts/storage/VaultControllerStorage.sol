@@ -13,5 +13,6 @@ abstract contract VaultControllerStorage {
     address internal _positioningConfig;
     address internal _accountBalance;
 
-    mapping(address =>  int256) internal _balance;
+    // trader => (token => balance)
+    mapping(address =>  mapping(address => int256)) internal _balance;
 }

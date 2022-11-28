@@ -120,7 +120,7 @@ contract Vault is IVault, ReentrancyGuardUpgradeable, OwnerPausable, VaultStorag
         // input requirement checks:
         //   token: here
         //   amount: here
-        _modifyBalance(from, token, amount.toInt256());
+        _modifyBalance(from, amount.toInt256());
         uint256 _vaultBalance;
         if (_isEthVault) {
             // amount not equal
@@ -187,7 +187,6 @@ contract Vault is IVault, ReentrancyGuardUpgradeable, OwnerPausable, VaultStorag
         // TODO: Remove it from vault
         _modifyBalance(
             to,
-            token,
             (amountToTransfer.toInt256() - (owedRealizedPnlX10_18.formatSettlementToken(_decimals))).neg256()
         );
 
@@ -281,7 +280,7 @@ contract Vault is IVault, ReentrancyGuardUpgradeable, OwnerPausable, VaultStorag
 
     // @inheritdoc IVault
     function getBalance(address trader) public view override returns (int256) {
-        return _balance[trader][_settlementToken];
+        return _balance[trader];
     }
 
     //
@@ -291,10 +290,9 @@ contract Vault is IVault, ReentrancyGuardUpgradeable, OwnerPausable, VaultStorag
     /// @param amount can be 0; do not require this
     function _modifyBalance(
         address trader,
-        address token,
         int256 amount
     ) internal {
-        _balance[trader][token] = _balance[trader][token] + amount;
+        _balance[trader] = _balance[trader] + amount;
     }
 
     //
