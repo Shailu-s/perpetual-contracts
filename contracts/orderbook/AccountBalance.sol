@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: BUSL - 1.1
 pragma solidity =0.8.12;
-import "hardhat/console.sol";
 
 import { AddressUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol";
 import { Context } from "@openzeppelin/contracts/utils/Context.sol";
@@ -176,7 +175,7 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
             // baseDebt = baseBalance when it's negative
             if (baseBalance < 0) {
                 // baseDebtValue = baseDebt * indexPrice
-                //TODO: decimal checks for index price
+                //TODOCHANGE: decimal checks for index price
                 // baseDebtValue = baseBalance.mulDiv(_getIndexPrice(baseToken).toInt256(), 1e18);
                 baseDebtValue = baseBalance * _getIndexPrice(baseToken).toInt256();
             }
@@ -186,11 +185,6 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
             totalQuoteBalance = totalQuoteBalance + _accountMarketMap[trader][baseToken].takerOpenNotional;
         }
         int256 totalQuoteDebtValue = totalQuoteBalance >= int256(0) ? int256(0) : totalQuoteBalance;
-
-        console.log("totalQuoteDebtValue");
-        console.logInt(totalQuoteDebtValue);
-                console.log("totalBaseDebtValue");
-        console.logInt(totalBaseDebtValue);
 
         // both values are negative due to the above condition checks
         return (totalQuoteDebtValue + totalBaseDebtValue).abs();
@@ -212,13 +206,6 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
         }
 
         int256 netQuoteBalance = _getNetQuoteBalance(trader);
-        console.log("jjjjjjjjjjjjjjjjgetPnlAndPendingFee");
-        
-        console.log("totalPositionValue");
-        console.logInt(totalPositionValue);
-
-        console.log("netQuoteBalance");
-        console.logInt(netQuoteBalance);
         int256 unrealizedPnl = totalPositionValue + netQuoteBalance;
 
         return (_owedRealizedPnlMap[trader], unrealizedPnl);
@@ -237,16 +224,13 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
     /// @inheritdoc IAccountBalance
     function getTotalPositionValue(address trader, address baseToken) public view override returns (int256) {
         int256 positionSize = getTakerPositionSize(trader, baseToken);
-       console.log("Position SIze:");
-        console.logInt(positionSize);
         if (positionSize == 0) return 0;
 
         uint256 indexTwap = _getIndexPrice(baseToken);
-        console.log("indexTwap: ", indexTwap);
         // both positionSize & indexTwap are in 10^18 already
         // overflow inspection:
         // only overflow when position value in USD(18 decimals) > 2^255 / 10^18
-        // TODO: Decimal calculation for indexTwap is not as same decimal as Position size
+        // TODOCHANGE: Decimal calculation for indexTwap is not as same decimal as Position size
         return positionSize * indexTwap.toInt256();
     }
 

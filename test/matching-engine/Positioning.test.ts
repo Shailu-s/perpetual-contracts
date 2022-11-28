@@ -7,7 +7,7 @@ import { BigNumber } from "ethers"
 import { parseUnits } from "ethers/lib/utils"
 
 
-describe.only("Positioning", function () {
+describe("Positioning", function () {
   let MatchingEngine
   let matchingEngine
   let VirtualToken
@@ -49,8 +49,8 @@ describe.only("Positioning", function () {
   const one = ethers.constants.WeiPerEther // 1e18
   const two = ethers.constants.WeiPerEther.mul(BigNumber.from("2")) // 2e18
   const five = ethers.constants.WeiPerEther.mul(BigNumber.from("5")) // 5e18
-  const ten = ethers.constants.WeiPerEther.mul(BigNumber.from("10")) // 10e18
-  const hundred = ethers.constants.WeiPerEther.mul(BigNumber.from("100")) // 100e18
+  const ten = ethers.constants.WeiPerEther.mul(BigNumber.from("10000")) // 10e18
+  const hundred = ethers.constants.WeiPerEther.mul(BigNumber.from("1000000")) // 100e18
   let VolmexPerpPeriphery
   let volmexPerpPeriphery
 
@@ -121,7 +121,7 @@ describe.only("Positioning", function () {
     )
     await volmexBaseToken.deployed()
 
-    markPriceOracle = await upgrades.deployProxy(MarkPriceOracle, [[10000000, 10000000], [volmexBaseToken.address, volmexBaseToken.address]], {
+    markPriceOracle = await upgrades.deployProxy(MarkPriceOracle, [[1000, 1000], [volmexBaseToken.address, volmexBaseToken.address]], {
       initializer: "initialize",
     })
     await markPriceOracle.deployed()
@@ -173,7 +173,7 @@ describe.only("Positioning", function () {
     accountBalance1 = await upgrades.deployProxy(AccountBalance, [positioningConfig.address])
     vaultController = await upgrades.deployProxy(VaultController, [positioningConfig.address, accountBalance1.address])
 
-    vaultController = await upgrades.deployProxy(VaultController, [positioningConfig.address, accountBalance1.address])
+    // vaultController = await upgrades.deployProxy(VaultController, [positioningConfig.address, accountBalance1.address])
     positioning = await upgrades.deployProxy(
       Positioning,
       [
@@ -235,9 +235,9 @@ describe.only("Positioning", function () {
       true,
     )
 
-    for (let i = 0; i < 9; i++) {
-      await matchingEngine.addObservation(10000000, 0)
-    }
+    // for (let i = 0; i < 9; i++) {
+    //   await matchingEngine.addObservation(1000, 0)
+    // }
 
     volmexPerpPeriphery = await upgrades.deployProxy(
       VolmexPerpPeriphery, 
@@ -403,7 +403,7 @@ describe.only("Positioning", function () {
         await expect(positionSize1).to.be.equal("-2000000000000000000")
       })
 
-      it.only("should match orders and open position with leverage", async () => {  
+      it("should match orders and open position with leverage", async () => {  
         // const txn = await markPriceOracle.getCumulativePrice(10000000, 0);
 
         await matchingEngine.grantMatchOrders(positioning.address);
@@ -438,8 +438,8 @@ describe.only("Positioning", function () {
           ORDER,
           deadline,
           account1.address,
-          Asset(virtualToken.address, BigNumber.from("150000000").mul(one).toString()),
-          Asset(volmexBaseToken.address, BigNumber.from("15").mul(one).toString()),
+          Asset(virtualToken.address, BigNumber.from("24000").mul(one).toString()),
+          Asset(volmexBaseToken.address, BigNumber.from("24").mul(one).toString()),
           0,
           0,
           false,
@@ -449,8 +449,8 @@ describe.only("Positioning", function () {
           ORDER,
           deadline,
           account2.address,
-          Asset(volmexBaseToken.address, BigNumber.from("15").mul(one).toString()),
-          Asset(virtualToken.address, BigNumber.from("150000000").mul(one).toString()),
+          Asset(volmexBaseToken.address, BigNumber.from("24").mul(one).toString()),
+          Asset(virtualToken.address, BigNumber.from("24000").mul(one).toString()),
           1,
           0,
           true,

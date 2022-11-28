@@ -8,7 +8,6 @@ import "../interfaces/IVolmexProtocol.sol";
 import "../interfaces/IIndexPriceOracle.sol";
 import "./IndexTWAP.sol";
 import "../helpers/RoleManager.sol";
-import "hardhat/console.sol";
 
 /**
  * @title Volmex Oracle contract
@@ -47,13 +46,13 @@ contract IndexPriceOracle is ERC165StorageUpgradeable, IndexTWAP, IIndexPriceOra
         _updateTwapMaxDatapoints(_MAX_ALLOWED_TWAP_DATAPOINTS);
 
         //TODO: should setting up initial price be in initialise parameter?
-        _updateVolatilityMeta(indexCount, 10000000, "");
+        _updateVolatilityMeta(indexCount, 1000, "");
         volatilityIndexBySymbol["ETHV"] = indexCount;
         volatilityCapRatioByIndex[indexCount] = 400000000;
 
         indexCount++;
 
-        _updateVolatilityMeta(indexCount, 10000000, "");
+        _updateVolatilityMeta(indexCount, 1000, "");
         volatilityIndexBySymbol["BTCV"] = indexCount;
         volatilityCapRatioByIndex[indexCount] = 400000000;
 
@@ -301,7 +300,7 @@ contract IndexPriceOracle is ERC165StorageUpgradeable, IndexTWAP, IIndexPriceOra
         virtual
         returns (uint256 answer, uint256 lastUpdateTimestamp)
     {
-        //TODO: why are we multiplying with 100
+        //TODOCHANGE: why are we multiplying with 100
         // answer = _getIndexTwap(_index) * 100;
         answer = _getIndexTwap(_index) * 1;
         lastUpdateTimestamp = volatilityLeverageByIndex[_index] > 0

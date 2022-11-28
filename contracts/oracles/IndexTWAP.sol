@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity =0.8.12;
-import "hardhat/console.sol";
 
 /**
  * @title Volmex Oracle TWAP library
@@ -64,7 +63,6 @@ contract IndexTWAP {
             _datapointsSum += _datapoints[_index][i];
         }
 
-        console.log(_datapointsLen, "datapoint length ================");
         twap = _datapointsSum / _datapointsLen;
     }
 
