@@ -32,6 +32,8 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
     //
 
     uint256 internal constant _DUST = 10 wei;
+    uint256 private constant _ORACLE_BASE = 100000000;
+
 
     //
     // EXTERNAL NON-VIEW
@@ -310,7 +312,7 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
     //
 
     function _getIndexPrice(address baseToken) internal view returns (uint256) {
-        return IIndexPrice(baseToken).getIndexPrice(0);
+        return IIndexPrice(baseToken).getIndexPrice(IPositioningConfig(_positioningConfig).getTwapInterval()) / _ORACLE_BASE ;
     }
 
     /// @return netQuoteBalance = quote.balance

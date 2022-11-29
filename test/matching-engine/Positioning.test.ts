@@ -4,7 +4,6 @@ const { Order, Asset, sign } = require("../order")
 import { FakeContract, smock } from "@defi-wonderland/smock"
 import { IndexPriceOracle, MarkPriceOracle } from "../../typechain"
 import { BigNumber } from "ethers"
-import { parseUnits } from "ethers/lib/utils"
 
 
 describe("Positioning", function () {
@@ -438,7 +437,7 @@ describe("Positioning", function () {
           ORDER,
           deadline,
           account1.address,
-          Asset(virtualToken.address, BigNumber.from("24000").mul(one).toString()),
+          Asset(virtualToken.address, BigNumber.from("2400").mul(one).toString()),
           Asset(volmexBaseToken.address, BigNumber.from("24").mul(one).toString()),
           0,
           0,
@@ -450,7 +449,7 @@ describe("Positioning", function () {
           deadline,
           account2.address,
           Asset(volmexBaseToken.address, BigNumber.from("24").mul(one).toString()),
-          Asset(virtualToken.address, BigNumber.from("24000").mul(one).toString()),
+          Asset(virtualToken.address, BigNumber.from("2400").mul(one).toString()),
           1,
           0,
           true,
