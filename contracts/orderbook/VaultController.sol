@@ -130,14 +130,16 @@ contract VaultController is
         uint24 ratio
     ) public view override returns (int256) {
         // conservative config: freeCollateral = min(collateral, accountValue) - margin requirement ratio
+       
+       
         int256 fundingPayment = IPositioning(_positioning).getAllPendingFundingPayment(trader);
         (int256 owedRealizedPnl, int256 unrealizedPnl) = IAccountBalance(_accountBalance).getPnlAndPendingFee(trader);
 
         int256 balanceX10_18 = getBalance(trader);
         int256 accountValue = balanceX10_18 + (owedRealizedPnl - fundingPayment);
         int256 totalCollateralValue = accountValue + unrealizedPnl;
-        uint256 totalMarginRequirementX10_18 = _getTotalMarginRequirement(trader, ratio);
 
+        uint256 totalMarginRequirementX10_18 = _getTotalMarginRequirement(trader, ratio);
         return LibPerpMath.min(totalCollateralValue, accountValue) - (totalMarginRequirementX10_18.toInt256());
     }
 
