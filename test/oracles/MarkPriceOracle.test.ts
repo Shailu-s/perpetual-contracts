@@ -157,21 +157,6 @@ describe('MarkPriceOracle', function () {
       ).to.be.revertedWith("MarkSMA: Unequal length of prices & assets");
     });
 
-    it("Should fail to deploy when price is < 1000000", async () => {
-      await expect(
-        upgrades.deployProxy(
-          MarkPriceOracle,
-          [
-            [100000],
-            [volmexBaseToken.address],
-          ],
-          { 
-            initializer: "initialize",
-          }
-        ),
-      ).to.be.revertedWith("MarkSMA: Not decimal precise");
-    });
-
     it("Should fail to deploy when asset address is 0", async () => {
       await expect(
         upgrades.deployProxy(
@@ -209,12 +194,6 @@ describe('MarkPriceOracle', function () {
       await expect(
         markPriceOracle.addObservation(1000000, 0)
       ).to.be.revertedWith("MPO_NCAO");
-    });
-
-    it("Should fail to add observation when cumulative price is < 1000000", async () => {
-      await expect(
-        matchingEngine.addObservation(999999, 0)
-      ).to.be.revertedWith("MarkSMA: Not decimal precise");
     });
 
     it("Should get cumulative price", async () => {

@@ -39,22 +39,18 @@ interface IVault {
     ) external;
 
     /// @notice Deposit collateral into vault
-    /// @param token The address of the token to deposit
     /// @param amount The amount of the token to deposit
     /// @param from The address of the trader
     function deposit(
         IVolmexPerpPeriphery periphery,
-        address token,
         uint256 amount,
         address from
     ) external payable;
 
     /// @notice Withdraw collateral from vault
-    /// @param token The address of the token sender is going to withdraw
     /// @param amount The amount of the token to withdraw
     /// @param to The address of the trader
     function withdraw(
-        address token,
         uint256 amount,
         address payable to
     ) external ;
@@ -80,10 +76,6 @@ interface IVault {
 
     /// @notice Set vault controller contract
     function setVaultController(address vaultControllerArg) external;
-
-    /// @notice Get the balance in vault of specified account
-    /// @return balance The balance amount
-    function getBalance(address account) external view returns (int256 balance);
 
     /// @notice Get settlement token address
     /// @return settlementToken The address of settlement token

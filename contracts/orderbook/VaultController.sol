@@ -24,6 +24,7 @@ import { RoleManager } from "../helpers/RoleManager.sol";
 import { TestERC20 } from "../tests/TestERC20.sol";
 import { Vault } from "./Vault.sol";
 import { VaultControllerStorage } from "../storage/VaultControllerStorage.sol";
+import "hardhat/console.sol";
 
 contract VaultController is
     ReentrancyGuardUpgradeable,
@@ -68,14 +69,13 @@ contract VaultController is
         // TODO From should be external user not periphery
         // address from = _msgSender();
 
-        address[] storage _vaultList = _tradersVaultMap[from];
+        // VC_CWZA: can't deposit zero amount
+        require(amount > 0, "VC_CDZA");
 
-        if (IVault(_vault).getBalance(from) == 0) {
-            _vaultList.push(_vault);
-        }
-        IVault(_vault).deposit{ value: msg.value }(periphery, token, amount, from);
+        IVault(_vault).deposit{ value: msg.value }(periphery, amount, from);
+        
         uint256 amountX10_18 = LibSettlementTokenMath.parseSettlementToken(amount, IVault(_vault).decimals());
-        _modifyBalance(from, token, amountX10_18.toInt256());
+        _modifyBalance(from, token, amountX10_18.toInt256(),_vault);
     }
 
     function withdraw(
@@ -83,45 +83,50 @@ contract VaultController is
         address payable to,
         uint256 amount
     ) external override whenNotPaused nonReentrant {
+        // the full process of withdrawal:
+        // 1. settle funding payment to owedRealizedPnl
+        // 2. collect fee to owedRealizedPnl
+        // 3. call Vault.withdraw(token, amount)
+        // 4. settle pnl to trader balance in Vault
+        // 5. transfer the amount to trader
+
         address _vault = getVault(token);
-        // vault of token is not available
+        // VC_VOTNA: vault of token is not available
         require(_vault != address(0), "VC_VOTNA");
 
-        // positioning not set
+        // VC_PNS: positioning not set
         require(_positioning != address(0), "VC_PNS");
+
+        // VC_CWZA: can't withdraw zero amount
+        require(amount > 0, "VC_CWZA");
 
         // TODO: Get from the periphery contract
         // address payable to = payable(_msgSender());
 
         // settle all funding payments owedRealizedPnl
         IPositioning(_positioning).settleAllFunding(to);
-
-        // settle owedRealizedPnl in AccountBalance
-        int256 owedRealizedPnlX10_18 = IAccountBalance(_accountBalance).settleOwedRealizedPnl(to);
-
         // by this time there should be no owedRealizedPnl nor pending funding payment in free collateral
         int256 freeCollateralByImRatio = getFreeCollateralByRatio(
             to,
             IPositioningConfig(_positioningConfig).getImRatio()
         );
 
-        // V_NEFC: not enough freeCollateral
-        require(freeCollateralByImRatio + owedRealizedPnlX10_18 >= amount.toInt256(), "V_NEFC");
-
-        IVault(_vault).withdraw(token, amount, to);
-
         uint256 amountX10_18 = LibSettlementTokenMath.parseSettlementToken(amount, IVault(_vault).decimals());
-        _modifyBalance(to, token, amountX10_18.neg256());
+        // V_NEFC: not enough freeCollateral
+        require(freeCollateralByImRatio >= amountX10_18.toInt256(), "V_NEFC");
+        int256 deltaBalance = amountX10_18.toInt256().neg256();
+
+        // settle owedRealizedPnl in AccountBalance
+        int256 owedRealizedPnlX10_18 = IAccountBalance(_accountBalance).settleOwedRealizedPnl(to);
+        deltaBalance = deltaBalance + owedRealizedPnlX10_18;
+        _modifyBalance(to, token, deltaBalance,_vault);
+        IVault(_vault).withdraw( amount, to);
     }
 
     /// @inheritdoc IVaultController
-    function getAccountValue(address trader) external view override whenNotPaused returns (int256) {
-        _requireOnlyPositioning();
-        int256 fundingPayment = IPositioning(_positioning).getAllPendingFundingPayment(trader);
-        (int256 owedRealizedPnl, int256 unrealizedPnl) = IAccountBalance(_accountBalance).getPnlAndPendingFee(trader);
-        int256 balanceX10_18 = getBalance(trader);
-        // accountValue = collateralValue + owedRealizedPnl - fundingPayment + unrealizedPnl
-        return balanceX10_18 + (owedRealizedPnl - fundingPayment) + unrealizedPnl;
+    function getAccountValue(address trader) public view override whenNotPaused returns (int256) {
+       _requireOnlyPositioning();
+        return _getAccountValue(trader);
     }
 
     /// @inheritdoc IVaultController
@@ -130,26 +135,30 @@ contract VaultController is
         uint24 ratio
     ) public view override returns (int256) {
         // conservative config: freeCollateral = min(collateral, accountValue) - margin requirement ratio
-       
-       
-        int256 fundingPayment = IPositioning(_positioning).getAllPendingFundingPayment(trader);
-        (int256 owedRealizedPnl, int256 unrealizedPnl) = IAccountBalance(_accountBalance).getPnlAndPendingFee(trader);
+        (, int256 unrealizedPnl) = IAccountBalance(_accountBalance).getPnlAndPendingFee(trader);
 
-        int256 balanceX10_18 = getBalance(trader);
-        int256 accountValue = balanceX10_18 + (owedRealizedPnl - fundingPayment);
-        int256 totalCollateralValue = accountValue + unrealizedPnl;
+        int256 accountValue = _getAccountValue(trader);
+        int256 totalCollateralValue = accountValue - unrealizedPnl;
 
         uint256 totalMarginRequirementX10_18 = _getTotalMarginRequirement(trader, ratio);
+
         return LibPerpMath.min(totalCollateralValue, accountValue) - (totalMarginRequirementX10_18.toInt256());
     }
 
     /// @inheritdoc IVaultController
     function getBalance(address trader) public view override returns (int256 balanceX10_18) {
-        address[] memory _baseTokens = IAccountBalance(_accountBalance).getBaseTokens(trader);
-        uint256 len = _baseTokens.length;
+        address[] storage _vaultList = _tradersVaultMap[trader];
+        uint256 len = _vaultList.length;
         for (uint256 i = 0; i < len; i++) {
-            balanceX10_18 += _balance[trader][_baseTokens[i]];
+            if (_vaultList[i] != address(0)) {
+            address token = IVault(_vaultList[i]).getSettlementToken();
+            balanceX10_18 += _balance[trader][token];
+            }
         }
+    }
+
+     function getBalanceByToken(address trader, address token) public view override returns (int256 balanceX10_18) {
+        return _balance[trader][token];
     }
 
     /// @inheritdoc IVaultController
@@ -170,14 +179,37 @@ contract VaultController is
         require(_msgSender() == _positioning, "CHD_OCH");
     }
 
+    function _getAccountValue(address trader) internal view returns (int256) {
+        int256 fundingPayment = IPositioning(_positioning).getAllPendingFundingPayment(trader);
+        (int256 owedRealizedPnl, int256 unrealizedPnl) = IAccountBalance(_accountBalance).getPnlAndPendingFee(trader);
+        int256 balanceX10_18 = getBalance(trader);
+        // accountValue = collateralValue + owedRealizedPnl - fundingPayment + unrealizedPnl
+
+        return balanceX10_18 + (owedRealizedPnl - fundingPayment) + unrealizedPnl;
+    }
+
     /// @return totalMarginRequirement with decimals == 18, for freeCollateral calculation
     function _getTotalMarginRequirement(address trader, uint24 ratio) internal view returns (uint256) {
         uint256 totalDebtValue = IAccountBalance(_accountBalance).getTotalDebtValue(trader);
         return totalDebtValue.mulRatio(ratio);
     }
 
-    function _modifyBalance(address trader, address token, int256 amount) internal {
+    function _modifyBalance(address trader, address token, int256 amount, address vaultAddress) internal {
+        address[] storage _vaultList = _tradersVaultMap[trader];
+
+        if (_balance[trader][token] == 0) {
+            _vaultList.push(vaultAddress);
+        }
+
         _balance[trader][token] = _balance[trader][token] + amount;
+        if (_balance[trader][token] <= 0) {
+            uint256 len = _vaultList.length;
+            for (uint256 i = 0; i < len; i++) {
+                if (_vaultList[i] == vaultAddress){
+                    delete _vaultList[i];
+                }
+            }
+        }
     }
 
     function _msgSender() internal view override(OwnerPausable, ContextUpgradeable) returns (address) {

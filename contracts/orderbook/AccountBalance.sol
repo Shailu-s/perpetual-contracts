@@ -17,6 +17,7 @@ import { AccountBalanceStorageV1 } from "../storage/AccountBalanceStorage.sol";
 import { BlockContext } from "../helpers/BlockContext.sol";
 import { RoleManager } from "../helpers/RoleManager.sol";
 import { PositioningCallee } from "../helpers/PositioningCallee.sol";
+import "hardhat/console.sol";
 
 // never inherit any new stateful contract. never change the orders of parent stateful contracts
 contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, AccountBalanceStorageV1 {
@@ -106,10 +107,10 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
         if (_hasBaseToken(tokensStorage, baseToken)) {
             return;
         }
+        require(tokensStorage.length + 1 <= IPositioningConfig(_positioningConfig).getMaxMarketsPerAccount(), "AB_MNE");
 
         tokensStorage.push(baseToken);
         // AB_MNE: markets number exceeds
-        require(tokensStorage.length <= IPositioningConfig(_positioningConfig).getMaxMarketsPerAccount(), "AB_MNE");
     }
 
     /// @inheritdoc IAccountBalance
@@ -208,8 +209,9 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
         }
 
         int256 netQuoteBalance = _getNetQuoteBalance(trader);
-        int256 unrealizedPnl = totalPositionValue + netQuoteBalance;
 
+        int256 unrealizedPnl = totalPositionValue + netQuoteBalance;
+        
         return (_owedRealizedPnlMap[trader], unrealizedPnl);
     }
 

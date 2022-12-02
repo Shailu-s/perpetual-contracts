@@ -1,11 +1,11 @@
 import { parseUnits } from "ethers/lib/utils"
 import { expect } from "chai"
 import { ethers, upgrades } from "hardhat"
-import { MarkPriceOracle, IndexPriceOracle } from "../typechain"
+import { MarkPriceOracle, IndexPriceOracle, MatchingEngine } from "../typechain"
 import { FakeContract, smock } from "@defi-wonderland/smock"
 
 describe("Vault Controller tests for withdrawal", function () {
-    let USDC
+  let USDC
   let positioningConfig
   let accountBalance
   let vault
@@ -13,16 +13,51 @@ describe("Vault Controller tests for withdrawal", function () {
   let vaultController
   let vaultFactory
   let DAI
-  let markPriceFake: FakeContract<MarkPriceOracle>
-  let indexPriceFake: FakeContract<IndexPriceOracle>
-  let matchingEngineFake: FakeContract<MarkPriceOracle>
+  let matchingEngineFake: FakeContract<MatchingEngine>;
+  let MarkPriceOracle
+  let markPriceOracle
+  let IndexPriceOracle
+  let indexPriceOracle
+  let VolmexBaseToken
+  let volmexBaseToken
   let Positioning
   let positioning
+  let VolmexPerpPeriphery
+  let volmexPerpPeriphery
+  let owner, alice, relayer;
 
-  beforeEach(async function () {
-    const [owner, alice] = await ethers.getSigners()
-    markPriceFake = await smock.fake("MarkPriceOracle")
-    indexPriceFake = await smock.fake("IndexPriceOracle")
+  this.beforeEach(async function () {
+    [owner, alice, relayer] = await ethers.getSigners()
+
+    VolmexPerpPeriphery = await ethers.getContractFactory("VolmexPerpPeriphery");
+    MarkPriceOracle = await ethers.getContractFactory("MarkPriceOracle");
+    IndexPriceOracle = await ethers.getContractFactory("IndexPriceOracle");
+    VolmexBaseToken = await ethers.getContractFactory("VolmexBaseToken");
+
+    indexPriceOracle = await upgrades.deployProxy(IndexPriceOracle, [owner.address], {
+      initializer: "initialize",
+    });
+    await indexPriceOracle.deployed();
+
+    volmexBaseToken = await upgrades.deployProxy(
+      VolmexBaseToken,
+      [
+        "VolmexBaseToken", // nameArg
+        "VBT", // symbolArg,
+        indexPriceOracle.address, // priceFeedArg
+        true, // isBase
+      ],
+      {
+        initializer: "initialize",
+      },
+    );
+    await volmexBaseToken.deployed();
+
+    markPriceOracle = await upgrades.deployProxy(MarkPriceOracle, [[1000000], [volmexBaseToken.address]], {
+      initializer: "initialize",
+    });
+    await markPriceOracle.deployed();
+
     matchingEngineFake = await smock.fake('MatchingEngine')
 
     const tokenFactory = await ethers.getContractFactory("TestERC20")
@@ -68,8 +103,8 @@ describe("Vault Controller tests for withdrawal", function () {
         vaultController.address,
         accountBalance.address,
         matchingEngineFake.address,
-        markPriceFake.address,
-        indexPriceFake.address,
+        markPriceOracle.address,
+        indexPriceOracle.address,
         0
       ],
       {
@@ -77,6 +112,8 @@ describe("Vault Controller tests for withdrawal", function () {
       },
     )
 
+    await accountBalance.setPositioning(positioning.address);
+    await positioning.registerBaseToken(alice.address, USDC.address);
     await vaultController.connect(owner).setPositioning(positioning.address)
     await vaultController.registerVault(vault.address, USDC.address)
     await vaultController.registerVault(DAIVault.address, DAI.address)
@@ -91,37 +128,45 @@ describe("Vault Controller tests for withdrawal", function () {
     await DAI.mint(alice.address, DAIAmount)
 
     await DAI.connect(alice).approve(vaultController.address, DAIAmount)
-    await USDC.mint(owner.address, DAIAmount)
-    })
-    it("Positive Test for withdrawal of token", async () => {
-        const [owner, alice] = await ethers.getSigners()
 
-        const amount = parseUnits("100", await USDC.decimals())
+    volmexPerpPeriphery = await upgrades.deployProxy(
+      VolmexPerpPeriphery, 
+      [
+          [positioning.address, positioning.address], 
+          [vaultController.address, vaultController.address],
+          markPriceOracle.address,
+          owner.address,
+          relayer.address,
+      ]
+    );
+  })
+  
+  it("Positive Test for withdrawal of token", async () => {
+      const amount = parseUnits("100", await USDC.decimals())
 
-        await positioningConfig.setSettlementTokenBalanceCap(amount)
+      await positioningConfig.setSettlementTokenBalanceCap(amount)
 
-        const USDCVaultAddress = await vaultController.getVault(USDC.address)
+      const USDCVaultAddress = await vaultController.getVault(USDC.address)
 
-        const USDCVaultContract = await vaultFactory.attach(USDCVaultAddress)
-        await USDC.connect(alice).approve(USDCVaultAddress, amount)
-        await USDCVaultContract.setPositioning(positioning.address)
+      const USDCVaultContract = await vaultFactory.attach(USDCVaultAddress)
+      await USDC.connect(alice).approve(USDCVaultAddress, amount)
+      await USDC.connect(alice).approve(volmexPerpPeriphery.address, amount)
+      await USDCVaultContract.setPositioning(positioning.address)
 
-        // check event has been sent
-        await expect(vaultController.connect(alice).deposit(USDC.address, amount))
-            .to.emit(USDCVaultContract, "Deposited")
+      // check event has been sent
+      await expect(vaultController.connect(alice).deposit(volmexPerpPeriphery.address, USDC.address, alice.address, amount))
+          .to.emit(USDCVaultContract, "Deposited")
 
-        // // update sender's balance
-        expect(await USDCVaultContract.getBalance(alice.address)).to.eq(parseUnits("100", await USDC.decimals()))
+      // // check sender's balance
+      expect(await vaultController.getBalanceByToken(alice.address, USDC.address)).to.eq("100000000000000000000")
 
-        await expect(vaultController.connect(alice).withdraw(USDC.address, amount))
-            .to.emit(USDCVaultContract, "Withdrawn")
-    })
+      await expect(vaultController.connect(alice).withdraw(USDC.address, alice.address, amount))
+          .to.emit(USDCVaultContract, "Withdrawn")
+  })
 
-    it("Negative Test for withdrawal of token", async () => {
-        const [owner, alice] = await ethers.getSigners()
+  it("Negative Test for withdrawal of token", async () => {
+      const amount = parseUnits("100", await USDC.decimals())
 
-        const amount = parseUnits("100", await USDC.decimals())
-
-        await expect(vaultController.connect(alice).withdraw(USDC.address, amount)).to.be.revertedWith("V_NEFC")
-    })
+      await expect(vaultController.connect(alice).withdraw(USDC.address, alice.address, amount)).to.be.revertedWith("V_NEFC")
+  })
 })

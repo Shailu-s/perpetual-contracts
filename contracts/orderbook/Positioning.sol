@@ -373,6 +373,10 @@ contract Positioning is
         return newFill;
     }
 
+    function registerBaseToken(address trader, address token) external {
+        IAccountBalance(_accountBalance).registerBaseToken(trader, token);
+    }
+
     //
     // INTERNAL VIEW
     //
