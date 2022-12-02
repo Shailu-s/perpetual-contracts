@@ -6,7 +6,7 @@ import { IndexPriceOracle, MarkPriceOracle } from "../../typechain"
 import { BigNumber } from "ethers"
 
 
-describe("Positioning", function () {
+describe.only("Positioning", function () {
   let MatchingEngine
   let matchingEngine
   let VirtualToken
@@ -402,7 +402,7 @@ describe("Positioning", function () {
         await expect(positionSize1).to.be.equal("-2000000000000000000")
       })
 
-      it("should match orders and open position with leverage", async () => {  
+      it.only("should match orders and open position with leverage", async () => {  
         // const txn = await markPriceOracle.getCumulativePrice(10000000, 0);
 
         await matchingEngine.grantMatchOrders(positioning.address);

@@ -17,6 +17,7 @@ import { AccountBalanceStorageV1 } from "../storage/AccountBalanceStorage.sol";
 import { BlockContext } from "../helpers/BlockContext.sol";
 import { RoleManager } from "../helpers/RoleManager.sol";
 import { PositioningCallee } from "../helpers/PositioningCallee.sol";
+import "hardhat/console.sol";
 
 // never inherit any new stateful contract. never change the orders of parent stateful contracts
 contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, AccountBalanceStorageV1 {
@@ -229,6 +230,8 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
         if (positionSize == 0) return 0;
 
         uint256 indexTwap = _getIndexPrice(baseToken);
+        console.log("=================================");
+        console.logUint(indexTwap);
         // both positionSize & indexTwap are in 10^18 already
         // overflow inspection:
         // only overflow when position value in USD(18 decimals) > 2^255 / 10^18
