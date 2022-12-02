@@ -142,15 +142,6 @@ contract VaultController is
 
         uint256 totalMarginRequirementX10_18 = _getTotalMarginRequirement(trader, ratio);
 
-        // console.log("totalMarginRequirementX10_18");
-        // console.log("accountValue");
-        // console.log("totalCollateralValue");
-
-        // console.logUint(totalMarginRequirementX10_18);
-
-        // console.logInt(accountValue);
-        // console.logInt(totalCollateralValue);
-
         return LibPerpMath.min(totalCollateralValue, accountValue) - (totalMarginRequirementX10_18.toInt256());
     }
 
@@ -193,13 +184,6 @@ contract VaultController is
         (int256 owedRealizedPnl, int256 unrealizedPnl) = IAccountBalance(_accountBalance).getPnlAndPendingFee(trader);
         int256 balanceX10_18 = getBalance(trader);
         // accountValue = collateralValue + owedRealizedPnl - fundingPayment + unrealizedPnl
-        console.log("balanceX10_18");
-
-        console.logInt(balanceX10_18);
-
-        console.logInt(owedRealizedPnl);
-        console.log("unrealizedPnl");
-        console.logInt(unrealizedPnl);
 
         return balanceX10_18 + (owedRealizedPnl - fundingPayment) + unrealizedPnl;
     }
