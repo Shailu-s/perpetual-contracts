@@ -17,11 +17,14 @@ describe("Vault Controller Mock tests for account value", function () {
     let matchingEngineFake: FakeContract<MarkPriceOracle>
     let Positioning
     let positioning
+    let VolmexPerpPeriphery
+    let volmexPerpPeriphery
+    let owner, alice, relayer;
 
 
     beforeEach(async function () {
-        const [owner, alice] = await ethers.getSigners()
-        
+        [owner, alice, relayer] = await ethers.getSigners()
+        VolmexPerpPeriphery = await ethers.getContractFactory("VolmexPerpPeriphery");
         markPriceFake = await smock.fake('MarkPriceOracle')
         indexPriceFake = await smock.fake('IndexPriceOracle')
         matchingEngineFake = await smock.fake('MatchingEngine')
@@ -88,6 +91,17 @@ describe("Vault Controller Mock tests for account value", function () {
 
         await DAI.connect(alice).approve(vaultController.address, DAIAmount)
         await USDC.mint(owner.address, DAIAmount)
+
+        volmexPerpPeriphery = await upgrades.deployProxy(
+            VolmexPerpPeriphery, 
+            [
+                [positioning.address, positioning.address], 
+                [vaultController.address, vaultController.address],
+                markPriceFake.address,
+                owner.address,
+                relayer.address,
+            ]
+        );
     })
 
     it("Positive Test for single token getAccountValue", async () => {
@@ -101,14 +115,15 @@ describe("Vault Controller Mock tests for account value", function () {
 
         const USDCVaultContract = await vaultFactory.attach(USDCVaultAddress);
         await USDC.connect(alice).approve(USDCVaultAddress, amount)
+        await USDC.connect(alice).approve(volmexPerpPeriphery.address, amount)
 
         // check event has been sent
-        await expect(vaultController.connect(alice).deposit(USDC.address, amount))
+        await expect(vaultController.connect(alice).deposit(volmexPerpPeriphery.address, USDC.address, alice.address, amount))
             .to.emit(USDCVaultContract, "Deposited")
             .withArgs(USDC.address, alice.address, amount)
 
         // update sender's balance
-        expect(await USDCVaultContract.getBalance(alice.address)).to.eq(parseUnits("100", await USDC.decimals()))
-        expect((await vaultController.connect(positioning.address).getAccountValue(alice.address)).toString()).to.be.equal("100000000000000000000000000")
+        expect(await vaultController.getBalanceByToken(alice.address, USDC.address)).to.eq("100000000000000000000")
+        expect((await vaultController.connect(positioning.address).getAccountValue(alice.address)).toString()).to.be.equal("100000000000000000000")
     })
 })

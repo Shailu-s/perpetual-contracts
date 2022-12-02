@@ -2,9 +2,8 @@ import { expect } from "chai"
 import { ethers, upgrades } from "hardhat"
 const { Order, Asset, sign } = require("../order")
 import { FakeContract, smock } from "@defi-wonderland/smock"
-import { IndexPriceOracle, MarkPriceOracle } from "../../typechain"
+import { FundingRate, IndexPriceOracle, MarkPriceOracle } from "../../typechain"
 import { BigNumber } from "ethers"
-
 
 describe.only("Positioning", function () {
   let MatchingEngine
@@ -30,29 +29,29 @@ describe.only("Positioning", function () {
   let markPriceOracle
   let IndexPriceOracle
   let indexPriceOracle
-  let VolmexBaseToken
-  let volmexBaseToken
   let markPriceFake: FakeContract<MarkPriceOracle>
   let indexPriceFake: FakeContract<IndexPriceOracle>
+  let VolmexBaseToken
+  let volmexBaseToken  
+  let VolmexPerpPeriphery;
+  let volmexPerpPeriphery;
+  
   let transferManagerTest
   let accountBalance1
   let MarketRegistry
   let marketRegistry
   let BaseToken
   let baseToken
-  let TestERC20
-  let USDC
-  let orderLeft, orderRight
-  const deadline = 87654321987654
-  let owner, account1, account2, account3, account4, relayer
+  let TestERC20;
+  let USDC;
+  let orderLeft, orderRight;
+  const deadline = 87654321987654;
+  let owner, account1, account2, account3, account4, relayer;
   const one = ethers.constants.WeiPerEther // 1e18
   const two = ethers.constants.WeiPerEther.mul(BigNumber.from("2")) // 2e18
   const five = ethers.constants.WeiPerEther.mul(BigNumber.from("5")) // 5e18
   const ten = ethers.constants.WeiPerEther.mul(BigNumber.from("10000")) // 10e18
   const hundred = ethers.constants.WeiPerEther.mul(BigNumber.from("1000000")) // 100e18
-  let VolmexPerpPeriphery
-  let volmexPerpPeriphery
-
   const ORDER = "0xf555eb98";
   const STOP_LOSS_LIMIT_ORDER = "0xeeaed735";
   const TAKE_PROFIT_LIMIT_ORDER = "0xe0fc7f94";
@@ -62,6 +61,10 @@ describe.only("Positioning", function () {
     MarkPriceOracle = await ethers.getContractFactory("MarkPriceOracle")
     IndexPriceOracle = await ethers.getContractFactory("IndexPriceOracle")
     // indexPriceOracle = await smock.fake("IndexPriceOracle")
+    // indexPriceFake = await smock.fake("IndexPriceOracle")
+    // markPriceFake = await smock.fake("IndexPriceOracle")
+
+    // fundingRate = await smock.fake("FundingRate")
     MatchingEngine = await ethers.getContractFactory("MatchingEngineTest")
     VirtualToken = await ethers.getContractFactory("VirtualTokenTest")
     ERC20TransferProxy = await ethers.getContractFactory("ERC20TransferProxy")
@@ -76,36 +79,16 @@ describe.only("Positioning", function () {
     BaseToken = await ethers.getContractFactory("VolmexBaseToken")
     TestERC20 = await ethers.getContractFactory("TestERC20")
     VolmexBaseToken = await ethers.getContractFactory("VolmexBaseToken");
-    [owner, account1, account2, account3, account4, relayer] = await ethers.getSigners()
+    [owner, account1, account2, account3, account4, relayer] = await ethers.getSigners();
   })
 
   beforeEach(async () => {
     const [owner, account4] = await ethers.getSigners()
 
-    // markPriceFake = await smock.fake("MarkPriceOracle")
-    // indexPriceFake = await smock.fake("IndexPriceOracle")
-    // indexPriceOracle.latestRoundData.whenCalledWith(0).returns(['100', '0']);
-    // indexPriceOracle.latestRoundData.whenCalledWith(3600).returns(['100', '0']);
-    // indexPriceOracle.volatilityCapRatioByIndex.whenCalledWith(3600).returns('1000000000000000');
-
-    // indexPriceOracle.getIndexTwap.whenCalledWith(0).returns(['1000000000000000', '0', '0']);
-    // indexPriceOracle.getIndexTwap.whenCalledWith(3600).returns(['1000000000000000', '0', '0']);
-    
     indexPriceOracle = await upgrades.deployProxy(IndexPriceOracle, [owner.address], {
       initializer: "initialize",
     });
     await indexPriceOracle.deployed();
-
-
-    // const proofHash = "0x6c00000000000000000000000000000000000000000000000000000000000000";
-
-    // for (let index = 0; index < 10; index++) {
-    //   await (
-    //     await indexPriceOracle.updateBatchVolatilityTokenPrice([0, 1], [1000000, 1000000], [proofHash, proofHash])
-    //   ).wait();
-    // }
-
-    // await
     volmexBaseToken = await upgrades.deployProxy(
       VolmexBaseToken,
       [
@@ -149,6 +132,7 @@ describe.only("Positioning", function () {
         initializer: "__MatchingEngineTest_init",
       },
     )
+    
     await markPriceOracle.setMatchingEngine(matchingEngine.address)
 
     virtualToken = await upgrades.deployProxy(VirtualToken, ["VirtualToken", "VTK", false], {
@@ -173,6 +157,7 @@ describe.only("Positioning", function () {
     vaultController = await upgrades.deployProxy(VaultController, [positioningConfig.address, accountBalance1.address])
 
     // vaultController = await upgrades.deployProxy(VaultController, [positioningConfig.address, accountBalance1.address])
+
     positioning = await upgrades.deployProxy(
       Positioning,
       [
@@ -190,7 +175,6 @@ describe.only("Positioning", function () {
     )
     marketRegistry = await upgrades.deployProxy(MarketRegistry, [virtualToken.address])
 
-    // await indexPriceOracle.connect(owner).addIndexDataPoint(0,250000000)
     // await marketRegistry.connect(owner).addBaseToken(virtualToken.address)
     await marketRegistry.connect(owner).addBaseToken(volmexBaseToken.address)
     await marketRegistry.connect(owner).addBaseToken(baseToken.address)
@@ -235,7 +219,7 @@ describe.only("Positioning", function () {
     )
 
     // for (let i = 0; i < 9; i++) {
-    //   await matchingEngine.addObservation(1000, 0)
+    //   await matchingEngine.addObservation(10000000, 0)
     // }
 
     volmexPerpPeriphery = await upgrades.deployProxy(
@@ -245,6 +229,7 @@ describe.only("Positioning", function () {
           [vaultController.address, vaultController.address],
           markPriceOracle.address,
           owner.address,
+          relayer.address,
       ]
     );
   })
@@ -354,6 +339,10 @@ describe.only("Positioning", function () {
       it("should match orders and open position", async () => {  
         const txn = await markPriceOracle.getCumulativePrice(10000000, 0);
 
+        // indexPriceOracle.getIndexTwap.whenCalledWith(0).returns(['1000000000000000', '0', '0']);
+        // indexPriceOracle.getIndexTwap.whenCalledWith(3600).returns(['1000000000000000', '0', '0']);
+        // indexPriceOracle.volatilityCapRatioByIndex.whenCalledWith(3600).returns('1000000000000000');
+
         await matchingEngine.grantMatchOrders(positioning.address);
 
         await virtualToken.mint(account1.address, ten.toString())
@@ -364,8 +353,8 @@ describe.only("Positioning", function () {
         await virtualToken.connect(account2).approve(vault.address, ten.toString())
         await virtualToken.connect(account1).approve(volmexPerpPeriphery.address, ten.toString())
         await virtualToken.connect(account2).approve(volmexPerpPeriphery.address, ten.toString())
-
-        await vaultController.connect(account1)
+        
+          await vaultController.connect(account1)
           .deposit(
             volmexPerpPeriphery.address, 
             virtualToken.address, 
@@ -416,12 +405,8 @@ describe.only("Positioning", function () {
         await virtualToken.connect(account2).approve(vault.address, ten.toString())
         await virtualToken.connect(account1).approve(volmexPerpPeriphery.address, ten.toString())
         await virtualToken.connect(account2).approve(volmexPerpPeriphery.address, ten.toString())
-
-
-        // await indexPriceOracle.connect(owner).addIndexDataPoint(0,10000000)
-
         await vaultController.connect(account1).deposit(
-          volmexPerpPeriphery.address,
+          volmexPerpPeriphery.address, 
           virtualToken.address, 
           account1.address,
           ten.toString()
@@ -477,50 +462,17 @@ describe.only("Positioning", function () {
           orderLeft.takeAsset.virtualToken,
         )
 
-        // await expect(positionSize).to.be.equal("2000000000000000000")
-        // await expect(positionSize1).to.be.equal("-2000000000000000000")
-
-        // **********************
-
-        // const orderLeftLeverage2x = Order(
-        //   ORDER,
-        //   deadline,
-        //   account1.address,
-        //   Asset(virtualToken.address, BigNumber.from("1").mul(one).div(BigNumber.from("10")).toString()),
-        //   Asset(volmexBaseToken.address, BigNumber.from("1").mul(one).div(BigNumber.from("10")).toString()),
-        //   2,
-        //   0,
-        //   false,
-        // )
-    
-        // const orderRightLeverage2x = Order(
-        //   ORDER,
-        //   deadline,
-        //   account2.address,
-        //   Asset(volmexBaseToken.address, BigNumber.from("1").mul(one).div(BigNumber.from("10")).toString()),
-        //   Asset(virtualToken.address, BigNumber.from("1").mul(one).div(BigNumber.from("10")).toString()),
-        //   3,
-        //   0,
-        //   true,
-        // )
-
-        // const vaultAddress = await vaultController.getVault(virtualToken.address)
-
-        // const vaultContract = await vault.attach(vaultAddress)
-      //   let signatureLeft2x = await getSignature(orderLeftLeverage2x, account1.address)
-      //   let signatureRight2x = await getSignature(orderRightLeverage2x, account2.address)
-
-      //   // opening the position here
-      //   await expect(positioning.connect(account1).openPosition(orderLeftLeverage2x, signatureLeft2x, orderRightLeverage2x, signatureRight2x)).to.emit(
-      //     positioning,
-      //     "PositionChanged",
-      //   )
+        await expect(positionSize).to.be.equal("24000000000000000000")
+        await expect(positionSize1).to.be.equal("-24000000000000000000")
       })
 
       it("should reduce position of both traders", async () => {
         for (let i = 0; i < 9; i++) {
           await matchingEngine.addObservation(10000000, 0);
         }
+
+        indexPriceOracle.getIndexTwap.whenCalledWith(0).returns(['1000000000000000', '0', '0']);
+        indexPriceOracle.getIndexTwap.whenCalledWith(3600).returns(['1000000000000000', '0', '0']);
 
         await matchingEngine.grantMatchOrders(positioning.address);
 
@@ -530,9 +482,21 @@ describe.only("Positioning", function () {
         await virtualToken.addWhitelist(account2.address)
         await virtualToken.connect(account1).approve(vault.address, 1000000000000000)
         await virtualToken.connect(account2).approve(vault.address, 1000000000000000)
+        await virtualToken.connect(account1).approve(volmexPerpPeriphery.address, 1000000000000000)
+        await virtualToken.connect(account2).approve(volmexPerpPeriphery.address, 1000000000000000)
 
-        await vaultController.connect(account1).deposit(virtualToken.address, 25000)
-        await vaultController.connect(account2).deposit(virtualToken.address, 25000)
+        await vaultController.connect(account1).deposit(
+          volmexPerpPeriphery.address, 
+          virtualToken.address, 
+          account1.address,
+          25000,
+        )
+        await vaultController.connect(account2).deposit(
+          volmexPerpPeriphery.address,
+          virtualToken.address, 
+          account2.address,
+          25000,
+        )
 
         const orderLeft1 = Order(
           ORDER,
@@ -600,9 +564,12 @@ describe.only("Positioning", function () {
         await virtualToken.addWhitelist(account2.address)
         await virtualToken.connect(account1).approve(vault.address, 1000000000000000)
         await virtualToken.connect(account2).approve(vault.address, 1000000000000000)
+        await virtualToken.connect(account1).approve(volmexPerpPeriphery.address, 1000000000000000)
+        await virtualToken.connect(account2).approve(volmexPerpPeriphery.address, 1000000000000000)
 
-        await vaultController.connect(account1).deposit(virtualToken.address, 25000)
-        await vaultController.connect(account2).deposit(virtualToken.address, 25000)
+        // volmexPerpPeriphery.address, USDC.address, alice.address, amount
+        await vaultController.connect(account1).deposit(volmexPerpPeriphery.address, virtualToken.address, account1.address, 25000)
+        await vaultController.connect(account2).deposit(volmexPerpPeriphery.address, virtualToken.address, account2.address, 25000)
 
         const orderLeft = Order(
           ORDER,

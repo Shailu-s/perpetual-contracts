@@ -100,27 +100,24 @@ contract Vault is IVault, ReentrancyGuardUpgradeable, OwnerPausable, VaultStorag
     /// @inheritdoc IVault
     function deposit(
         IVolmexPerpPeriphery periphery,
-        address token,
         uint256 amount,
         address from
-    ) external payable override whenNotPaused nonReentrant onlySettlementToken(token) {
+    ) external payable override whenNotPaused nonReentrant {
         // input requirement checks:
         //   token: here
         //   amount: here
         _requireOnlyVaultController();
-        _deposit(periphery, token, amount, from);
+        _deposit(periphery, amount, from);
     }
 
     function _deposit(
         IVolmexPerpPeriphery periphery,
-        address token,
         uint256 amount,
         address from
     ) internal {
         // input requirement checks:
         //   token: here
         //   amount: here
-        _modifyBalance(from, amount.toInt256());
         uint256 _vaultBalance;
         if (_isEthVault) {
             // amount not equal
@@ -130,40 +127,29 @@ contract Vault is IVault, ReentrancyGuardUpgradeable, OwnerPausable, VaultStorag
             //amount not accepted
             require(msg.value == 0, "V_ANA");
             // check for deflationary tokens by assuring balances before and after transferring to be the same
-            uint256 balanceBefore = IERC20Metadata(token).balanceOf(address(this));
-            periphery.transferToVault(IERC20Upgradeable(token), from, amount);
+            uint256 balanceBefore = IERC20Metadata(_settlementToken).balanceOf(address(this));
+            periphery.transferToVault(IERC20Upgradeable(_settlementToken), from, amount);
             // SafeERC20Upgradeable.safeTransferFrom(IERC20Upgradeable(token), from, address(this), amount);
             // V_BAI: inconsistent balance amount, to prevent from deflationary tokens
-            require((IERC20Metadata(token).balanceOf(address(this)) - balanceBefore) == amount, "V_IBA");
-            _vaultBalance = IERC20Metadata(token).balanceOf(address(this));
+            require((IERC20Metadata(_settlementToken).balanceOf(address(this)) - balanceBefore) == amount, "V_IBA");
+            _vaultBalance = IERC20Metadata(_settlementToken).balanceOf(address(this));
         }
 
         uint256 settlementTokenBalanceCap = IPositioningConfig(_positioningConfig).getSettlementTokenBalanceCap();
         // V_GTSTBC: greater than settlement token balance cap
         require(_vaultBalance <= settlementTokenBalanceCap, "V_GTSTBC");
-        emit Deposited(token, from, amount);
+        emit Deposited(_settlementToken, from, amount);
     }
 
     /// @inheritdoc IVault
     function withdraw(
-        address token,
         uint256 amount,
         address payable to
-    ) external virtual override whenNotPaused nonReentrant onlySettlementToken(token) {
+    ) external virtual override whenNotPaused nonReentrant {
         _requireOnlyVaultController();
         // input requirement checks:
         //   token: here
         //   amount: here
-
-        // the full process of withdrawal:
-        // 1. settle funding payment to owedRealizedPnl
-        // 2. collect fee to owedRealizedPnl
-        // 3. call Vault.withdraw(token, amount)
-        // 4. settle pnl to trader balance in Vault
-        // 5. transfer the amount to trader
-
-        // settle owedRealizedPnl in AccountBalance
-        int256 owedRealizedPnlX10_18 = IAccountBalance(_accountBalance).settleOwedRealizedPnl(to);
 
         uint256 amountToTransfer = amount.formatSettlementToken(_decimals);
         if (_isEthVault) {
@@ -172,7 +158,7 @@ contract Vault is IVault, ReentrancyGuardUpgradeable, OwnerPausable, VaultStorag
             to.transfer(amountToTransfer);
         } else {
             // send available funds to trader if vault balance is not enough and emit LowBalance event
-            uint256 vaultBalance = IERC20Metadata(token).balanceOf(address(this));
+            uint256 vaultBalance = IERC20Metadata(_settlementToken).balanceOf(address(this));
             uint256 remainingAmount = 0;
             if (vaultBalance < amountToTransfer) {
                 remainingAmount = amountToTransfer - vaultBalance;
@@ -180,17 +166,9 @@ contract Vault is IVault, ReentrancyGuardUpgradeable, OwnerPausable, VaultStorag
             }
             amountToTransfer = amountToTransfer - remainingAmount;
 
-            SafeERC20Upgradeable.safeTransfer(IERC20Upgradeable(token), to, amountToTransfer);
+            SafeERC20Upgradeable.safeTransfer(IERC20Upgradeable(_settlementToken), to, amountToTransfer);
         }
-
-        // settle withdrawn amount and owedRealizedPnl to collateral
-        // TODO: Remove it from vault
-        _modifyBalance(
-            to,
-            (amountToTransfer.toInt256() - (owedRealizedPnlX10_18.formatSettlementToken(_decimals))).neg256()
-        );
-
-        emit Withdrawn(token, to, amountToTransfer);
+        emit Withdrawn(_settlementToken, to, amountToTransfer);
     }
 
     /// @inheritdoc IVault
@@ -272,27 +250,6 @@ contract Vault is IVault, ReentrancyGuardUpgradeable, OwnerPausable, VaultStorag
 
     function isEthVault() external view returns (bool) {
         return _isEthVault;
-    }
-
-    //
-    // PUBLIC VIEW
-    //
-
-    // @inheritdoc IVault
-    function getBalance(address trader) public view override returns (int256) {
-        return _balance[trader];
-    }
-
-    //
-    // INTERNAL NON-VIEW
-    //
-
-    /// @param amount can be 0; do not require this
-    function _modifyBalance(
-        address trader,
-        int256 amount
-    ) internal {
-        _balance[trader] = _balance[trader] + amount;
     }
 
     //

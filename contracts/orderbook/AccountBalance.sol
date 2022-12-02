@@ -107,10 +107,10 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
         if (_hasBaseToken(tokensStorage, baseToken)) {
             return;
         }
+        require(tokensStorage.length + 1 <= IPositioningConfig(_positioningConfig).getMaxMarketsPerAccount(), "AB_MNE");
 
         tokensStorage.push(baseToken);
         // AB_MNE: markets number exceeds
-        require(tokensStorage.length <= IPositioningConfig(_positioningConfig).getMaxMarketsPerAccount(), "AB_MNE");
     }
 
     /// @inheritdoc IAccountBalance
@@ -209,8 +209,15 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
         }
 
         int256 netQuoteBalance = _getNetQuoteBalance(trader);
-        int256 unrealizedPnl = totalPositionValue + netQuoteBalance;
 
+        console.log("totalPositionValue");
+        console.log("netQuoteBalance");
+
+        console.logInt(totalPositionValue);
+        console.logInt(netQuoteBalance);
+
+        int256 unrealizedPnl = totalPositionValue + netQuoteBalance;
+        
         return (_owedRealizedPnlMap[trader], unrealizedPnl);
     }
 
@@ -230,6 +237,8 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
         if (positionSize == 0) return 0;
 
         uint256 indexTwap = _getIndexPrice(baseToken);
+        console.log("positionSize");
+        console.logInt(positionSize);
         console.log("=================================");
         console.logUint(indexTwap);
         // both positionSize & indexTwap are in 10^18 already

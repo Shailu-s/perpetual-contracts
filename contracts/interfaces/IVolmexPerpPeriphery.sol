@@ -22,6 +22,7 @@ interface IVolmexPerpPeriphery {
         address indexed oldPositionings,
         address indexed newPositionings
     );
+    event RelayerUpdated(address indexed oldRelayerAddress, address indexed newRelayerAddress);
 
     function depositToVault(
         uint64 _index,

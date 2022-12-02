@@ -76,12 +76,11 @@
 //     );
 //     await markPriceOracle.deployed();
 
-//     matchingEngine = await upgrades.deployProxy(MatchingEngine, [
-//       USDC.address,
-//       owner.address,
-//       markPriceOracle.address,
-//     ]);
-//     await matchingEngine.deployed();
+    // matchingEngine = await upgrades.deployProxy(MatchingEngine, [
+    //   owner.address,
+    //   markPriceOracle.address,
+    // ]);
+    // await matchingEngine.deployed();
 
 //     positioningConfig = await PositioningConfig.deploy()
 //     await positioningConfig.deployed();
