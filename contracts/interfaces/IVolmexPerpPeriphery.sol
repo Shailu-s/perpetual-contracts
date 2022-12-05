@@ -42,7 +42,8 @@ interface IVolmexPerpPeriphery {
         LibOrder.Order memory _orderLeft,
         bytes memory _signatureLeft,
         LibOrder.Order memory _orderRight,
-        bytes memory _signatureRight
+        bytes memory _signatureRight,
+        bytes memory liquidator
     ) external;
 
     function transferToVault(
