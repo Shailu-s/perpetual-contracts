@@ -323,7 +323,7 @@ contract Positioning is
         int256 exchangedPositionNotional,
         int256 exchangedPositionSize,
         address baseToken,
-        bytes memory liquidator
+        address liquidator
     ) internal {
         uint256 liquidationFee;
         // trader's pnl-- as liquidation penalty
