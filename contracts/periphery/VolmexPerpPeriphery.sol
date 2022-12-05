@@ -135,8 +135,10 @@ contract VolmexPerpPeriphery is Initializable, RoleManager, IVolmexPerpPeriphery
         bytes memory _signatureRightLimitOrder,
         uint256 _index
     ) internal {
-        _verifyTriggerPrice(_leftLimitOrder);
-        _verifyTriggerPrice(_rightLimitOrder);
+        if (_leftLimitOrder.orderType != LibOrder.ORDER)
+            require(_verifyTriggerPrice(_leftLimitOrder), "Periphery: left order price verification failed");
+        if (_rightLimitOrder.orderType != LibOrder.ORDER)
+            require(_verifyTriggerPrice(_rightLimitOrder), "Periphery: right order price verification failed");
 
 		IPositioning(positionings[_index]).openPosition(
 			_leftLimitOrder, 
@@ -144,36 +146,6 @@ contract VolmexPerpPeriphery is Initializable, RoleManager, IVolmexPerpPeriphery
 			_rightLimitOrder,
 			_signatureRightLimitOrder
 		);
-    }
-
-    // TODO: Change the logic to round id, if Volmex Oracle implements price by round id functionality
-    function _verifyTriggerPrice(LibOrder.Order memory _limitOrder) internal view {
-        if (_limitOrder.orderType == LibOrder.ORDER) {
-            return;
-        }
-        // TODO: Add check for round id, when Volmex Oracle updates functionality
-        // TODO Ask and update this hardhcoded time reference for tw interval
-        uint256 triggeredPrice = _getBaseTokenPrice(_limitOrder, 15 minutes); 
-
-        if (_limitOrder.orderType == LibOrder.STOP_LOSS_LIMIT_ORDER) {
-            if (_limitOrder.isShort) {
-                require(triggeredPrice <= _limitOrder.triggerPrice, "Periphery: Sell Stop Limit Order Trigger Price Not Matched");
-            } else {
-                require(triggeredPrice >= _limitOrder.triggerPrice, "Periphery: Buy Stop Limit Order Trigger Price Not Matched");
-            }
-        } else if (_limitOrder.orderType == LibOrder.TAKE_PROFIT_LIMIT_ORDER) {
-            if (_limitOrder.isShort) {
-                require(
-                    triggeredPrice >= _limitOrder.triggerPrice,
-                    "Periphery: Sell Take-profit Limit Order Trigger Price Not Matched"
-                );
-            } else {
-                require(
-                    triggeredPrice <= _limitOrder.triggerPrice,
-                    "Periphery: Buy Take-profit Limit Order Trigger Price Not Matched"
-                );
-            }
-        }
     }
 
     // TODO: Add round id in the Volmex oracle to faciliate the chainlink oracle functionality
@@ -323,5 +295,31 @@ contract VolmexPerpPeriphery is Initializable, RoleManager, IVolmexPerpPeriphery
 
     function _requireVolmexPerpPeripheryRelayer() internal view {
         require(hasRole(RELAYER_MULTISIG, _msgSender()), "VolmexPerpPeriphery: Not relayer");
+    }
+
+    // TODO: Change the logic to round id, if Volmex Oracle implements price by round id functionality
+    function _verifyTriggerPrice(LibOrder.Order memory _limitOrder) private view returns (bool) {
+        // TODO: Add check for round id, when Volmex Oracle updates functionality
+        // TODO Ask and update this hardhcoded time reference for tw interval
+        uint256 triggeredPrice = _getBaseTokenPrice(_limitOrder, 15 minutes); 
+
+        if (_limitOrder.orderType == LibOrder.STOP_LOSS_LIMIT_ORDER) {
+            if (_limitOrder.isShort) {
+                // Sell Stop Limit Order Trigger Price Not Matched
+                return triggeredPrice <= _limitOrder.triggerPrice ? true : false;
+            } else {
+                // Buy Stop Limit Order Trigger Price Not Matched
+                return triggeredPrice >= _limitOrder.triggerPrice ? true : false;
+            }
+        } else if (_limitOrder.orderType == LibOrder.TAKE_PROFIT_LIMIT_ORDER) {
+            if (_limitOrder.isShort) {
+                // Sell Take-profit Limit Order Trigger Price Not Matched
+                return triggeredPrice >= _limitOrder.triggerPrice ? true : false;
+            } else {
+                // Buy Take-profit Limit Order Trigger Price Not Matched
+                return triggeredPrice <= _limitOrder.triggerPrice ? true : false;
+            }
+        }
+        return false;
     }
 }
