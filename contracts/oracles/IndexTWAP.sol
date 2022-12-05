@@ -55,7 +55,6 @@ contract IndexTWAP {
      */
     function _getIndexTwap(uint256 _index) internal view returns (uint256 twap) {
         uint256 _datapointsSum;
-
         uint256 _datapointsLen = _datapoints[_index].length;
         // No datapoints
         require(_datapointsLen != 0, "IndexTWAP: No datapoints");

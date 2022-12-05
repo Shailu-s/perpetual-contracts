@@ -106,6 +106,7 @@ describe("MatchingEngine", function () {
       }
     );
     await virtualToken.deployed();
+    await virtualToken.setMintBurnRole(owner.address);
 
     asset = Asset(virtualToken.address, "10")
 

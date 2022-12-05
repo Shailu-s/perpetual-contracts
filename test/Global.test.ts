@@ -381,7 +381,7 @@ describe("Global", function () {
     ]);
   });
 
-  it.only("should match orders and open position", async () => {
+  it("should match orders and open position", async () => {
     const index = await markPriceOracle.indexByBaseToken(volmexBaseToken.address);
     let observations = await markPriceOracle.getCumulativePrice(3600, index);
     console.log("observations", observations.toString());

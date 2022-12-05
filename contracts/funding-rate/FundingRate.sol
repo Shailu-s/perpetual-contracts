@@ -95,13 +95,16 @@ contract FundingRate is IFundingRate, BlockContext, PositioningCallee, FundingRa
         if (_firstTradedTimestampMap[baseToken] != 0) {
             twapInterval = IPositioningConfig(_positioningConfig).getTwapInterval();
             uint256 deltaTimestamp = (timestamp - _firstTradedTimestampMap[baseToken]);
+            // TODO: this differs from perp-curie
             twapInterval = twapInterval < deltaTimestamp ? deltaTimestamp : twapInterval;
         }
 
-        uint256 markTwapX96 =
+        markTwap =
             IMarkPriceOracle(_markPriceOracleArg).getCumulativePrice(twapInterval, _underlyingPriceIndex);
-        markTwap = markTwapX96.formatX96ToX10_18();
-        // TODO getIndexTwap method takes _index of underlying to fetch the price, not the time interval
+
+        //TODOCHANGE: review if we need this formatting
+        // markTwap = markTwapX96.formatX96ToX10_18();
+        // TODO: getIndexTwap method takes _index of underlying to fetch the price, not the time interval
         (indexTwap, , ) = IIndexPriceOracle(_indexPriceOracleArg).getIndexTwap(_underlyingPriceIndex);
 
         uint256 lastSettledTimestamp = _lastSettledTimestampMap[baseToken];
@@ -135,7 +138,6 @@ contract FundingRate is IFundingRate, BlockContext, PositioningCallee, FundingRa
     /// @inheritdoc IFundingRate
     function getPendingFundingPayment(address trader, address baseToken) public view virtual override returns (int256) {
         (, uint256 markTwap, uint256 indexTwap) = _getFundingGrowthGlobalAndTwaps(baseToken);
-
         return _getFundingPayment(trader, baseToken, markTwap.toInt256(), indexTwap.toInt256());
     }
 }

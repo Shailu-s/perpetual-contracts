@@ -31,4 +31,5 @@ contract RoleManager is AccessControlUpgradeable {
     bytes32 public constant TRANSFER_PROXY_CALLER = keccak256("TRANSFER_PROXY_CALLER");
     bytes32 public constant MINTER = keccak256("MINTER");
     bytes32 public constant BURNER = keccak256("BURNER");
+    bytes32 public constant RELAYER_MULTISIG = keccak256("RELAYER_MULTISIG");
 }

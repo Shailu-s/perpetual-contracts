@@ -77,7 +77,6 @@ describe('PerpFactory', function () {
     await markPriceOracle.deployed();
 
     matchingEngine = await upgrades.deployProxy(MatchingEngine, [
-      USDC.address,
       owner.address,
       markPriceOracle.address,
     ]);

@@ -28,6 +28,9 @@ contract VolmexPerpPeriphery is Initializable, RoleManager, IVolmexPerpPeriphery
 
     IMarkPriceOracle public markPriceOracle;
 
+    // Store the address of relayer
+    address public relayer;
+
     /**
      * @notice Initializes the contract
      *
@@ -40,9 +43,11 @@ contract VolmexPerpPeriphery is Initializable, RoleManager, IVolmexPerpPeriphery
         IPositioning[2] memory _positioning,
         IVaultController[2] memory _vaultController,
         IMarkPriceOracle _markPriceOracle,
-        address _owner
+        address _owner,
+        address _relayer
     ) external initializer {
-        require(_owner != address(0), "Periphery: Admin can't be address(0)");
+        require(_owner != address(0), "Admin can't be address(0)");
+        require(_relayer != address(0), "Relayer can't be address(0)");
         markPriceOracle = _markPriceOracle;
 
         for (uint256 i = 0; i < 2; i++) {
@@ -52,13 +57,23 @@ contract VolmexPerpPeriphery is Initializable, RoleManager, IVolmexPerpPeriphery
         // Since we are adding two addresses, hence updating indexes to 2
         positioningIndex = 2;
         vaultControllerIndex = 2;
+        relayer = _relayer;
         _grantRole(VOLMEX_PERP_PERIPHERY, _owner);
+        _grantRole(RELAYER_MULTISIG, _relayer);
     }
 
 
     function setMarkPriceOracle(IMarkPriceOracle _markPriceOracle) external {
         _requireVolmexPerpPeripheryAdmin();
         markPriceOracle = _markPriceOracle;
+    }
+
+    function setRelayer(address _relayer) external {
+        _requireVolmexPerpPeripheryAdmin();
+        require(_relayer != address(0), "VolmexPerpPeriphery: Not relayer");
+        address oldRelayerAddress = relayer;
+        relayer = _relayer;
+        emit RelayerUpdated(oldRelayerAddress, _relayer);
     }
 
     /**
@@ -93,6 +108,7 @@ contract VolmexPerpPeriphery is Initializable, RoleManager, IVolmexPerpPeriphery
         bytes memory liquidator,
         uint256 _index
     ) external {
+        _requireVolmexPerpPeripheryRelayer();
         _fillLimitOrder(
             _leftLimitOrder, 
             _signatureLeftLimitOrder, 
@@ -238,6 +254,7 @@ contract VolmexPerpPeriphery is Initializable, RoleManager, IVolmexPerpPeriphery
         bytes memory _signatureRight,
         bytes memory liquidator
     ) external {
+        _requireVolmexPerpPeripheryRelayer();
         positionings[_index].openPosition(_orderLeft, _signatureLeft, _orderRight, _signatureRight, liquidator);
     }
 
@@ -299,5 +316,9 @@ contract VolmexPerpPeriphery is Initializable, RoleManager, IVolmexPerpPeriphery
      */
     function _requireVolmexPerpPeripheryAdmin() internal view {
         require(hasRole(VOLMEX_PERP_PERIPHERY, _msgSender()), "Periphery: Not admin");
+    }
+
+    function _requireVolmexPerpPeripheryRelayer() internal view {
+        require(hasRole(RELAYER_MULTISIG, _msgSender()), "VolmexPerpPeriphery: Not relayer");
     }
 }

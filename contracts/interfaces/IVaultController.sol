@@ -35,6 +35,9 @@ interface IVaultController{
     /// @notice Function to balance of the trader in 18 Decimals
     function getBalance(address trader) external view returns (int256);
 
+    /// @notice Function to balance of the trader on the basis of token in 18 Decimals
+    function getBalanceByToken(address trader, address token) external view returns (int256);
+
     /// @notice Function to set positioning contract
     function setPositioning(address PositioningArg) external;
 } 

@@ -1,7 +1,7 @@
 import { parseUnits } from "ethers/lib/utils"
 import { expect } from "chai"
-import { ethers, upgrades } from "hardhat"
-import { IndexPriceOracle, MarkPriceOracle } from "../typechain"
+import { ethers, upgrades, waffle } from "hardhat"
+import { IndexPriceOracle, MarkPriceOracle, MatchingEngine } from "../typechain"
 import { FakeContract, smock } from "@defi-wonderland/smock"
 
 describe("Vault tests", function () {
@@ -10,17 +10,26 @@ describe("Vault tests", function () {
   let accountBalance
   let vault
   let DAIVault
+  let ethVault
   let vaultController
   let vaultFactory
   let DAI
+  let ETH
   let markPriceFake: FakeContract<MarkPriceOracle>
   let indexPriceFake: FakeContract<IndexPriceOracle>
-  let matchingEngineFake: FakeContract<MarkPriceOracle>
+  let matchingEngineFake: FakeContract<MatchingEngine>
   let Positioning
   let positioning
+  let EthPositioning
+  let ethPositioning
+  let VolmexPerpPeriphery
+  let volmexPerpPeriphery
+  let volmexPerpPeripheryEth
+  let owner, alice, relayer;
 
   beforeEach(async function () {
-    const [owner, alice] = await ethers.getSigners()
+    VolmexPerpPeriphery = await ethers.getContractFactory("VolmexPerpPeriphery");
+    [owner, alice, relayer] = await ethers.getSigners()
     markPriceFake = await smock.fake("MarkPriceOracle")
     indexPriceFake = await smock.fake("IndexPriceOracle")
     matchingEngineFake = await smock.fake('MatchingEngine')
@@ -33,7 +42,12 @@ describe("Vault tests", function () {
     const tokenFactory2 = await ethers.getContractFactory("TestERC20")
     const Dai = await tokenFactory2.deploy()
     DAI = await Dai.deployed()
-    await DAI.__TestERC20_init("TestDai", "DAI", 10)
+    await DAI.__TestERC20_init("TestDai", "DAI", 18)
+
+    const tokenFactory3 = await ethers.getContractFactory("TestERC20")
+    const eth = await tokenFactory3.deploy()
+    ETH = await eth.deployed()
+    await eth.__TestERC20_init("TestETH", "ETH", 18)
 
     const positioningConfigFactory = await ethers.getContractFactory("PositioningConfig")
     positioningConfig = await upgrades.deployProxy(positioningConfigFactory, [])
@@ -62,6 +76,13 @@ describe("Vault tests", function () {
       vaultController.address,
       false,
     ])
+    ethVault = await upgrades.deployProxy(vaultFactory, [
+      positioningConfig.address,
+      accountBalance.address,
+      eth.address,
+      vaultController.address,
+      true,
+    ])
 
     Positioning = await ethers.getContractFactory("PositioningTest")
     positioning = await upgrades.deployProxy(
@@ -80,20 +101,67 @@ describe("Vault tests", function () {
       },
     )
 
+    ethPositioning = await upgrades.deployProxy(
+      Positioning,
+      [
+        positioningConfig.address,
+        vaultController.address,
+        accountBalance.address,
+        matchingEngineFake.address,
+        markPriceFake.address,
+        indexPriceFake.address,
+        1
+      ],
+      {
+        initializer: "initialize",
+      },
+    )
+
     await vaultController.connect(owner).setPositioning(positioning.address)
     await vaultController.registerVault(vault.address, USDC.address)
     await vaultController.registerVault(DAIVault.address, DAI.address)
+    await vaultController.registerVault(ethVault.address, ETH.address)
 
     const amount = parseUnits("1000", await USDC.decimals())
     await USDC.mint(alice.address, amount)
     await USDC.connect(alice).approve(vault.address, amount)
 
     await USDC.mint(owner.address, amount)
+
+    const daiAmount = parseUnits("1000", await DAI.decimals())
+    await DAI.mint(alice.address, daiAmount)
+    await DAI.connect(alice).approve(DAIVault.address, daiAmount)
+
+    await DAI.mint(owner.address, daiAmount)
+
+    const ethAmount = parseUnits("1000", await ETH.decimals())
+    await ETH.mint(alice.address, ethAmount)
+    await ETH.connect(alice).approve(ethVault.address, ethAmount)
+
+    volmexPerpPeriphery = await upgrades.deployProxy(
+      VolmexPerpPeriphery, 
+      [
+          [positioning.address, ethPositioning.address], 
+          [vaultController.address, vaultController.address],
+          markPriceFake.address,
+          owner.address,
+          relayer.address,
+      ]
+    );
+
+    volmexPerpPeripheryEth = await upgrades.deployProxy(
+      VolmexPerpPeriphery, 
+      [
+          [ethPositioning.address, ethPositioning.address], 
+          [vaultController.address, vaultController.address],
+          markPriceFake.address,
+          owner.address,
+          relayer.address,
+      ]
+    );
   })
   // @SAMPLE - deposit
   it("Positive Test for deposit function", async () => {
-    const [owner, alice] = await ethers.getSigners()
-
     const amount = parseUnits("100", await USDC.decimals())
 
     await positioningConfig.setSettlementTokenBalanceCap(amount)
@@ -102,9 +170,10 @@ describe("Vault tests", function () {
 
     const USDCVaultContract = await vaultFactory.attach(USDCVaultAddress)
     await USDC.connect(alice).approve(USDCVaultAddress, amount)
+    await USDC.connect(alice).approve(volmexPerpPeriphery.address, amount)
 
     // check event has been sent
-    await expect(vaultController.connect(alice).deposit(USDC.address, amount))
+    await expect(vaultController.connect(alice).deposit(volmexPerpPeriphery.address, USDC.address, alice.address, amount))
       .to.emit(USDCVaultContract, "Deposited")
       .withArgs(USDC.address, alice.address, amount)
 
@@ -115,17 +184,170 @@ describe("Vault tests", function () {
     expect(await USDC.balanceOf(USDCVaultAddress)).to.eq(parseUnits("100", await USDC.decimals()))
 
     // // update sender's balance
-    expect(await USDCVaultContract.getBalance(alice.address)).to.eq(parseUnits("100", await USDC.decimals()))
+    expect(await vaultController.getBalanceByToken(alice.address, USDC.address)).to.eq("100000000000000000000")
   })
 
-  it("force error,amount more than allowance", async () => {
+  it("should not allow user to withdraw from vault if vault balance is empty", async () => {
+    const amount = parseUnits("100", await USDC.decimals())
+    await positioningConfig.setSettlementTokenBalanceCap(amount)
+    await accountBalance.grantSettleRealizedPnlRole(vaultController.address)
+
+    await expect(
+      vaultController.connect(alice)
+        .withdraw(
+          USDC.address, 
+          alice.address,
+          amount
+        )
+    ).to.be.revertedWith("V_NEFC");
+  })
+
+  it("should allow user to deposit max collateral", async () => {
+    const userBalance = await USDC.balanceOf(alice.address)
+
+    await positioningConfig.setSettlementTokenBalanceCap(userBalance)
+
+    const USDCVaultAddress = await vaultController.getVault(USDC.address)
+
+    const USDCVaultContract = await vaultFactory.attach(USDCVaultAddress)
+    await USDC.connect(alice).approve(USDCVaultAddress, userBalance)
+    await USDC.connect(alice).approve(volmexPerpPeriphery.address, userBalance)
+
+    // Deposit max amount equal to balance of the user
+    await expect(vaultController.connect(alice).deposit(volmexPerpPeriphery.address, USDC.address, alice.address, userBalance))
+      .to.emit(USDCVaultContract, "Deposited")
+      .withArgs(USDC.address, alice.address, userBalance);
+
+    // User balance should be 0 as alice deposited whole collateral
+    expect(await USDC.balanceOf(alice.address)).to.eq(parseUnits("0", await USDC.decimals()))
+
+    // Vault balance should increase
+    expect(await USDC.balanceOf(USDCVaultAddress)).to.eq(userBalance.toString())
+
+    // update sender's balance
+    expect(await vaultController.getBalanceByToken(alice.address, USDC.address)).to.eq("1000000000000000000000")
+  })
+
+  it("should allow user to deposit collateral to ETH vault", async () => {
+    const provider = waffle.provider;
+    const userBalance = await provider.getBalance(alice.address);
+
+    const amount = parseUnits("100", await ETH.decimals())
+
+    await positioningConfig.setSettlementTokenBalanceCap(userBalance)
+
+    const ethVaultAddress = await vaultController.getVault(ETH.address)
+
+    const ethVaultContract = await vaultFactory.attach(ethVaultAddress)
+    await ETH.connect(alice).approve(ethVaultAddress, amount)
+    await ETH.connect(alice).approve(volmexPerpPeripheryEth.address, amount)
+
+    // Deposit max amount equal to balance of the user
+    await expect(vaultController.connect(alice).deposit(volmexPerpPeripheryEth.address, ETH.address, alice.address, amount, {value: amount.toString()}))
+      .to.emit(ethVaultContract, "Deposited")
+      .withArgs(ETH.address, alice.address, amount);
+
+      // Vault balance should increase
+      expect((await provider.getBalance(ethVaultAddress)).toString()).to.eq(amount.toString())
+
+      // update sender's balance
+      expect(await vaultController.getBalanceByToken(alice.address, ETH.address)).to.eq(amount.toString())
+    })  
+
+  it("should not allow user to interact directly with Vault - deposit", async () => {
+    const userBalance = await USDC.balanceOf(alice.address)
+    // Deposit max amount equal to balance of the user
+    await expect(
+      vault.deposit(
+        volmexPerpPeriphery.address, 
+        userBalance,
+        alice.address
+      )
+    ).to.be.revertedWith("V_OVC");
+  })
+
+  it("should not allow user to interact directly with Vault - withdraw", async () => {
+    const userBalance = await USDC.balanceOf(alice.address)
+
+    await expect(
+      vault.withdraw(
+        userBalance,
+        alice.address
+      )
+    ).to.be.revertedWith("V_OVC");
+  })
+
+  it("should not allow user to deposit amount greater than max collateral", async () => {
+    const userBalance = await USDC.balanceOf(alice.address)
+    const userBalance2x = userBalance.add(userBalance)
+
+    await positioningConfig.setSettlementTokenBalanceCap(userBalance)
+
+    const USDCVaultAddress = await vaultController.getVault(USDC.address)
+
+    const USDCVaultContract = await vaultFactory.attach(USDCVaultAddress)
+    await USDC.connect(alice).approve(USDCVaultAddress, userBalance2x)
+    await USDC.connect(alice).approve(volmexPerpPeriphery.address, userBalance2x)
+
+    // Deposit max amount equal to balance of the user
+    await expect(vaultController
+      .connect(alice)
+      .deposit(
+        volmexPerpPeriphery.address, 
+        USDC.address, 
+        alice.address, 
+        userBalance2x // 2x - user balance
+      )
+    ).to.be.revertedWith("ERC20: transfer amount exceeds balance");
+  })
+
+  // TODO: Fix this test case
+  xit("should not allow user to deposit USDC to ETH vault", async () => {
+    const userBalance = await USDC.balanceOf(alice.address)
+
+    await positioningConfig.setSettlementTokenBalanceCap(userBalance)
+
+    const ethVaultAddress = await vaultController.getVault(ETH.address)
+
+    const ethVaultContract = await vaultFactory.attach(ethVaultAddress)
+    await USDC.connect(alice).approve(ethVaultAddress, userBalance)
+    await USDC.connect(alice).approve(volmexPerpPeriphery.address, userBalance)
+
+    // Deposit max amount equal to balance of the user
+    await expect(vaultController
+      .connect(alice)
+      .deposit(
+        volmexPerpPeriphery.address, 
+        ETH.address, 
+        alice.address, 
+        userBalance,
+        { value: userBalance.toString() }
+      )
+    ).to.be.revertedWith("ERC20: transfer amount exceeds balance");
+  })
+
+  it("should not allow user to interact with vault if contract is paused", async () => {
+    await vault.pause();
+
+    const userBalance = await USDC.balanceOf(alice.address)
+    // Deposit max amount equal to balance of the user
+    await expect(
+      vault.deposit(
+        volmexPerpPeriphery.address, 
+        userBalance,
+        alice.address
+      )
+    ).to.be.revertedWith("Pausable: paused");
+  })
+
+  it("force error, amount more than allowance", async () => {
     const [owner, alice] = await ethers.getSigners()
 
     const amount = parseUnits("100", await USDC.decimals())
 
     await positioningConfig.setSettlementTokenBalanceCap(amount)
 
-    await expect(vaultController.connect(owner).deposit(USDC.address, amount)).to.be.revertedWith(
+    await expect(vaultController.connect(owner).deposit(volmexPerpPeriphery.address, USDC.address, owner.address, amount)).to.be.revertedWith(
       "ERC20: insufficient allowance",
     )
   })
@@ -137,9 +359,10 @@ describe("Vault tests", function () {
 
     const USDCVaultAddress = await vaultController.getVault(USDC.address)
     const USDCVaultContract = await vaultFactory.attach(USDCVaultAddress)
+    await USDC.connect(alice).approve(volmexPerpPeriphery.address, amount)
 
     await USDC.connect(alice).approve(USDCVaultAddress, amount)
-    await expect(vaultController.connect(alice).deposit(USDC.address, amount)).to.be.revertedWith("V_GTSTBC")
+    await expect(vaultController.connect(alice).deposit(volmexPerpPeriphery.address, USDC.address, alice.address, amount)).to.be.revertedWith("V_GTSTBC")
   })
 
   it("force error, inconsistent vault balance with deflationary token", async () => {
@@ -150,9 +373,10 @@ describe("Vault tests", function () {
     const USDCVaultContract = await vaultFactory.attach(USDCVaultAddress)
 
     await USDC.connect(alice).approve(USDCVaultAddress, amount)
+    await USDC.connect(alice).approve(volmexPerpPeriphery.address, amount)
 
     USDC.setTransferFeeRatio(50)
-    await expect(vaultController.connect(alice).deposit(USDC.address, amount)).to.be.revertedWith("V_IBA")
+    await expect(vaultController.connect(alice).deposit(volmexPerpPeriphery.address, USDC.address, alice.address, amount)).to.be.revertedWith("V_IBA")
     USDC.setTransferFeeRatio(0)
   })
 
