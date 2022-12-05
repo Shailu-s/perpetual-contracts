@@ -120,7 +120,8 @@ contract Positioning is
         LibOrder.Order memory orderLeft,
         bytes memory signatureLeft,
         LibOrder.Order memory orderRight,
-        bytes memory signatureRight
+        bytes memory signatureRight,
+        bytes memory liquidator
     ) external override whenNotPaused nonReentrant {
         // short = selling base token
         address baseToken = orderLeft.isShort ? orderLeft.makeAsset.virtualToken : orderLeft.takeAsset.virtualToken;
@@ -139,13 +140,15 @@ contract Positioning is
         _settleFunding(orderRight.trader, baseToken);
 
         InternalData memory internalData = _openPosition(orderLeft, orderRight, baseToken);
+        address liquidator = liquidator.decodeAddress();
 
         if (_validateOrder(orderLeft, signatureLeft, baseToken)) {
             _takeLiquidationFees(
                 orderLeft,
                 internalData.leftExchangedPositionNotional,
                 internalData.leftExchangedPositionSize,
-                baseToken
+                baseToken,
+                liquidator
             );
         }
         if (_validateOrder(orderRight, signatureRight, baseToken)) {
@@ -153,7 +156,8 @@ contract Positioning is
                 orderRight,
                 internalData.rightExchangedPositionNotional,
                 internalData.rightExchangedPositionSize,
-                baseToken
+                baseToken,
+                liquidator
             );
         }
     }
@@ -315,10 +319,10 @@ contract Positioning is
         LibOrder.Order memory order,
         int256 exchangedPositionNotional,
         int256 exchangedPositionSize,
-        address baseToken
+        address baseToken,
+        bytes memory liquidator
     ) internal {
         uint256 liquidationFee;
-        address liquidator;
         // trader's pnl-- as liquidation penalty
         liquidationFee = exchangedPositionNotional.abs().mulRatio(
             IPositioningConfig(_positioningConfig).getLiquidationPenaltyRatio()
@@ -328,7 +332,6 @@ contract Positioning is
         _modifyOwedRealizedPnl(_getFeeReceiver(), liquidationFee.toInt256());
 
         //2.5 % liquidation fees to liquidator, increase liquidator's pnl liquidation reward
-        liquidator = _msgSender();
         _modifyOwedRealizedPnl(liquidator, liquidationFee.toInt256());
         _modifyOwedRealizedPnl(order.trader, (liquidationFee * 2).neg256());
 
