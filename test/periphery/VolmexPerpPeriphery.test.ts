@@ -202,6 +202,7 @@ describe("VolmexPerpPeriphery", function () {
           [positioning.address, positioning2.address], 
           [vaultController.address, vaultController2.address],
           markPriceOracle.address,
+          [vault.address, vault.address],
           owner.address,
       ]
     );
@@ -215,6 +216,7 @@ describe("VolmexPerpPeriphery", function () {
                     [positioning.address, positioning2.address], 
                     [vaultController.address, vaultController2.address],
                     markPriceOracle.address,
+                    [vault.address, vault.address],
                     owner.address,
                 ]
             );
@@ -437,17 +439,11 @@ describe("VolmexPerpPeriphery", function () {
       });
     });
 
-    describe("Add positioning", async () => {
-        it("should add another Positioning", async () => {
-            let receipt = await volmexPerpPeriphery.addPositioning(positioning.address);
-            expect(receipt.confirmations).not.equal(0);
-        });
-    volmexPerpPeriphery = await upgrades.deployProxy(VolmexPerpPeriphery, [
-      [positioning.address, positioning2.address],
-      [vaultController.address, vaultController2.address],
-      owner.address,
-    ]);
-    await volmexPerpPeriphery.deployed();
+  describe("Add positioning", async () => {
+    it("should add another Positioning", async () => {
+      let receipt = await volmexPerpPeriphery.addPositioning(positioning.address);
+      expect(receipt.confirmations).not.equal(0);
+    });
   });
 
   describe("VolmexPerpPeriphery deployment", async () => {

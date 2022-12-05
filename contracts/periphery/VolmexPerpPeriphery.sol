@@ -26,6 +26,10 @@ contract VolmexPerpPeriphery is Initializable, RoleManager, IVolmexPerpPeriphery
     // Store the addresses of vaultControllers { index => vaultController address }
     mapping(uint256 => IVaultController) public vaultControllers;
 
+    // Store the whitelist Vaults
+    mapping(address => bool) private _isVaultWhitelist;
+
+    // Uused to fetch base token price according to market
     IMarkPriceOracle public markPriceOracle;
 
     // Store the address of relayer
@@ -43,6 +47,7 @@ contract VolmexPerpPeriphery is Initializable, RoleManager, IVolmexPerpPeriphery
         IPositioning[2] memory _positioning,
         IVaultController[2] memory _vaultController,
         IMarkPriceOracle _markPriceOracle,
+        address[2] memory _vaults,
         address _owner,
         address _relayer
     ) external initializer {
@@ -53,6 +58,7 @@ contract VolmexPerpPeriphery is Initializable, RoleManager, IVolmexPerpPeriphery
         for (uint256 i = 0; i < 2; i++) {
             positionings[i] = _positioning[i];
             vaultControllers[i] = _vaultController[i];
+            _isVaultWhitelist[_vaults[i]] = true;
         }
         // Since we are adding two addresses, hence updating indexes to 2
         positioningIndex = 2;
@@ -61,7 +67,6 @@ contract VolmexPerpPeriphery is Initializable, RoleManager, IVolmexPerpPeriphery
         _grantRole(VOLMEX_PERP_PERIPHERY, _owner);
         _grantRole(RELAYER_MULTISIG, _relayer);
     }
-
 
     function setMarkPriceOracle(IMarkPriceOracle _markPriceOracle) external {
         _requireVolmexPerpPeripheryAdmin();
@@ -74,6 +79,12 @@ contract VolmexPerpPeriphery is Initializable, RoleManager, IVolmexPerpPeriphery
         address oldRelayerAddress = relayer;
         relayer = _relayer;
         emit RelayerUpdated(oldRelayerAddress, _relayer);
+    }
+
+    function whitelistVault(address _vault, bool _isWhitelist) external {
+        _requireVolmexPerpPeripheryAdmin();
+        _isVaultWhitelist[_vault] = _isWhitelist;
+        emit VaultWhitelisted(_vault, _isWhitelist);
     }
 
     /**
@@ -127,8 +138,10 @@ contract VolmexPerpPeriphery is Initializable, RoleManager, IVolmexPerpPeriphery
         bytes memory liquidator,
         uint256 _index
     ) internal {
-        _verifyTriggerPrice(_leftLimitOrder);
-        _verifyTriggerPrice(_rightLimitOrder);
+        if (_leftLimitOrder.orderType != LibOrder.ORDER)
+            require(_verifyTriggerPrice(_leftLimitOrder), "Periphery: left order price verification failed");
+        if (_rightLimitOrder.orderType != LibOrder.ORDER)
+            require(_verifyTriggerPrice(_rightLimitOrder), "Periphery: right order price verification failed");
 
 		IPositioning(positionings[_index]).openPosition(
 			_leftLimitOrder, 
@@ -137,36 +150,6 @@ contract VolmexPerpPeriphery is Initializable, RoleManager, IVolmexPerpPeriphery
 			_signatureRightLimitOrder,
             liquidator
 		);
-    }
-
-    // TODO: Change the logic to round id, if Volmex Oracle implements price by round id functionality
-    function _verifyTriggerPrice(LibOrder.Order memory _limitOrder) internal view {
-        if (_limitOrder.orderType == LibOrder.ORDER) {
-            return;
-        }
-        // TODO: Add check for round id, when Volmex Oracle updates functionality
-        // TODO Ask and update this hardhcoded time reference for tw interval
-        uint256 triggeredPrice = _getBaseTokenPrice(_limitOrder, 15 minutes); 
-
-        if (_limitOrder.orderType == LibOrder.STOP_LOSS_LIMIT_ORDER) {
-            if (_limitOrder.isShort) {
-                require(triggeredPrice <= _limitOrder.triggerPrice, "Periphery: Sell Stop Limit Order Trigger Price Not Matched");
-            } else {
-                require(triggeredPrice >= _limitOrder.triggerPrice, "Periphery: Buy Stop Limit Order Trigger Price Not Matched");
-            }
-        } else if (_limitOrder.orderType == LibOrder.TAKE_PROFIT_LIMIT_ORDER) {
-            if (_limitOrder.isShort) {
-                require(
-                    triggeredPrice >= _limitOrder.triggerPrice,
-                    "Periphery: Sell Take-profit Limit Order Trigger Price Not Matched"
-                );
-            } else {
-                require(
-                    triggeredPrice <= _limitOrder.triggerPrice,
-                    "Periphery: Buy Take-profit Limit Order Trigger Price Not Matched"
-                );
-            }
-        }
     }
 
     // TODO: Add round id in the Volmex oracle to faciliate the chainlink oracle functionality
@@ -307,8 +290,9 @@ contract VolmexPerpPeriphery is Initializable, RoleManager, IVolmexPerpPeriphery
         address _from,
         uint256 _amount
     ) external {
-        // TODO: Add msg.sender is vault require check here - "Periphery: Caller is not vault"
-        _token.transferFrom(_from, _msgSender(), _amount);
+        address caller = _msgSender();
+        require(_isVaultWhitelist[caller], "Periphery: vault not whitelisted");
+        _token.transferFrom(_from, caller, _amount);
     }
 
     /**
@@ -320,5 +304,31 @@ contract VolmexPerpPeriphery is Initializable, RoleManager, IVolmexPerpPeriphery
 
     function _requireVolmexPerpPeripheryRelayer() internal view {
         require(hasRole(RELAYER_MULTISIG, _msgSender()), "VolmexPerpPeriphery: Not relayer");
+    }
+
+    // TODO: Change the logic to round id, if Volmex Oracle implements price by round id functionality
+    function _verifyTriggerPrice(LibOrder.Order memory _limitOrder) private view returns (bool) {
+        // TODO: Add check for round id, when Volmex Oracle updates functionality
+        // TODO Ask and update this hardhcoded time reference for tw interval
+        uint256 triggeredPrice = _getBaseTokenPrice(_limitOrder, 15 minutes); 
+
+        if (_limitOrder.orderType == LibOrder.STOP_LOSS_LIMIT_ORDER) {
+            if (_limitOrder.isShort) {
+                // Sell Stop Limit Order Trigger Price Not Matched
+                return triggeredPrice <= _limitOrder.triggerPrice;
+            } else {
+                // Buy Stop Limit Order Trigger Price Not Matched
+                return triggeredPrice >= _limitOrder.triggerPrice;
+            }
+        } else if (_limitOrder.orderType == LibOrder.TAKE_PROFIT_LIMIT_ORDER) {
+            if (_limitOrder.isShort) {
+                // Sell Take-profit Limit Order Trigger Price Not Matched
+                return triggeredPrice >= _limitOrder.triggerPrice;
+            } else {
+                // Buy Take-profit Limit Order Trigger Price Not Matched
+                return triggeredPrice <= _limitOrder.triggerPrice;
+            }
+        }
+        return false;
     }
 }
