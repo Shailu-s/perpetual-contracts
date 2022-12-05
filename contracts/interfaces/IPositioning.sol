@@ -16,6 +16,11 @@ interface IPositioning {
         int256 rightOpenNotional;
     }
 
+    struct OrderFees {
+            uint256 orderLeftFee;
+            uint256 orderRightFee;
+        }
+
     /// @notice Emitted when taker position is being liquidated
     /// @param trader The trader who has been liquidated
     /// @param baseToken Virtual base token(ETH, BTC, etc...) address
@@ -93,8 +98,8 @@ interface IPositioning {
         bytes memory signatureLeft,
         LibOrder.Order memory orderRight,
         bytes memory signatureRight
-    ) external returns (LibFill.FillResult memory);
-
+    ) external;
+    
     /// @notice Set Positioning address
     function setPositioning(address positioning) external;
 
