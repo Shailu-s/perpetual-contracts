@@ -57,7 +57,6 @@ contract Positioning is
     using LibSignature for bytes32;
     using EncodeDecode for bytes;
 
-
     /// @dev this function is public for testing
     // solhint-disable-next-line func-order
     function initialize(
@@ -94,7 +93,6 @@ contract Positioning is
         _grantRole(POSITIONING_ADMIN, _msgSender());
     }
 
-
     function setMarketRegistry(address marketRegistryArg) external {
         _requirePositioningAdmin();
         // V_VPMM: Positioning is not contract
@@ -126,33 +124,45 @@ contract Positioning is
         LibOrder.Order memory orderRight,
         bytes memory signatureRight,
         bytes memory liquidator
-    ) public override whenNotPaused nonReentrant returns (LibFill.FillResult memory newFill) {
+    ) external override whenNotPaused nonReentrant {
+
         // short = selling base token
         address baseToken = orderLeft.isShort ? orderLeft.makeAsset.virtualToken : orderLeft.takeAsset.virtualToken;
-
-        // register base token for account balance calculations
-        IAccountBalance(_accountBalance).registerBaseToken(orderLeft.trader, baseToken);
-        IAccountBalance(_accountBalance).registerBaseToken(orderRight.trader, baseToken);
 
         require(
             IMarketRegistry(_marketRegistry).checkBaseToken(baseToken),
             "V_PERP: Basetoken not registered at market"
         );
 
+        // register base token for account balance calculations
+        IAccountBalance(_accountBalance).registerBaseToken(orderLeft.trader, baseToken);
+        IAccountBalance(_accountBalance).registerBaseToken(orderRight.trader, baseToken);
+
         // must settle funding first
         _settleFunding(orderLeft.trader, baseToken);
         _settleFunding(orderRight.trader, baseToken);
 
-        // check if order is eligible for liquidation
-        bool isLeftLiquidation = _isAccountLiquidatable(orderLeft.trader);
+        InternalData memory internalData = _openPosition(orderLeft, orderRight, baseToken);
+        address liquidator = liquidator.decodeAddress();
 
-        // if order is liquidatable, no need to validate signature of order
-        isLeftLiquidation ? _isOrderLiquidatable(orderLeft, baseToken) : _validateFull(orderLeft, signatureLeft);
-
-        bool isRightLiquidation = _isAccountLiquidatable(orderRight.trader);
-        isRightLiquidation ? _isOrderLiquidatable(orderRight, baseToken) : _validateFull(orderRight, signatureRight);
-
-        newFill = _openPosition(orderLeft, orderRight, isLeftLiquidation, isRightLiquidation, baseToken, liquidator);
+        if (_validateOrder(orderLeft, signatureLeft, baseToken)) {
+            _takeLiquidationFees(
+                orderLeft,
+                internalData.leftExchangedPositionNotional,
+                internalData.leftExchangedPositionSize,
+                baseToken,
+                liquidator
+            );
+        }
+        if (_validateOrder(orderRight, signatureRight, baseToken)) {
+            _takeLiquidationFees(
+                orderRight,
+                internalData.rightExchangedPositionNotional,
+                internalData.rightExchangedPositionSize,
+                baseToken,
+                liquidator
+            );
+        }
     }
 
     /// @inheritdoc IPositioning
@@ -222,15 +232,10 @@ contract Positioning is
     function _openPosition(
         LibOrder.Order memory orderLeft,
         LibOrder.Order memory orderRight,
-        bool isLeftLiquidation,
-        bool isRightLiquidation,
-        address baseToken,
-        bytes memory liquidatorData
-    ) internal returns (LibFill.FillResult memory newFill) {
-        newFill =
-            IMatchingEngine(_matchingEngine).matchOrders(orderLeft, orderRight);
+        address baseToken
+    ) internal returns (InternalData memory internalData) {
+        LibFill.FillResult memory newFill = IMatchingEngine(_matchingEngine).matchOrders(orderLeft, orderRight);
 
-        InternalData memory internalData;
         if (orderLeft.isShort) {
             internalData.leftExchangedPositionSize = newFill.leftValue.neg256();
             internalData.rightExchangedPositionSize = newFill.leftValue.toInt256();
@@ -245,31 +250,17 @@ contract Positioning is
             internalData.rightExchangedPositionNotional = newFill.leftValue.toInt256();
         }
 
-        uint256 _orderLeftFee;
-        uint256 _orderRightFee;
-
         // TODO: This is hardcoded right now but changes it during relayer development
         bool isLeftMaker = true;
-
-        if (isLeftMaker) {
-            _orderLeftFee = internalData.leftExchangedPositionNotional.abs().mulRatio(
-                IMarketRegistry(_marketRegistry).getMakerFeeRatio()
+        OrderFees memory orderFees =
+            _calculateFees(
+                isLeftMaker,
+                internalData.leftExchangedPositionNotional,
+                internalData.rightExchangedPositionNotional
             );
 
-            _orderRightFee = internalData.rightExchangedPositionNotional.abs().mulRatio(
-                IMarketRegistry(_marketRegistry).getTakerFeeRatio()
-            );
-        } else {
-            _orderLeftFee = internalData.leftExchangedPositionNotional.abs().mulRatio(
-                IMarketRegistry(_marketRegistry).getTakerFeeRatio()
-            );
-
-            _orderRightFee = internalData.rightExchangedPositionNotional.abs().mulRatio(
-                IMarketRegistry(_marketRegistry).getMakerFeeRatio()
-            );
-        }
         // modifies PnL of fee receiver
-        _modifyOwedRealizedPnl(_getFeeReceiver(), (_orderLeftFee + _orderRightFee).toInt256());
+        _modifyOwedRealizedPnl(_getFeeReceiver(), (orderFees.orderLeftFee + orderFees.orderRightFee).toInt256());
 
         // modifies positionSize and openNotional
         (internalData.leftPositionSize, internalData.leftOpenNotional) = IAccountBalance(_accountBalance)
@@ -277,69 +268,18 @@ contract Positioning is
             orderLeft.trader,
             baseToken,
             internalData.leftExchangedPositionSize,
-            internalData.leftExchangedPositionNotional - _orderLeftFee.toInt256()
+            internalData.leftExchangedPositionNotional - orderFees.orderLeftFee.toInt256()
         );
         (internalData.rightPositionSize, internalData.rightOpenNotional) = IAccountBalance(_accountBalance)
             .modifyTakerBalance(
             orderRight.trader,
             baseToken,
             internalData.rightExchangedPositionSize,
-            internalData.rightExchangedPositionNotional - _orderRightFee.toInt256()
+            internalData.rightExchangedPositionNotional - orderFees.orderRightFee.toInt256()
         );
 
         if (_firstTradedTimestampMap[baseToken] == 0) {
             _firstTradedTimestampMap[baseToken] = _blockTimestamp();
-        }
-
-        address liquidator = liquidatorData.decodeAddress();
-        if (isLeftLiquidation) {
-            uint256 liquidationFee;
-            // trader's pnl-- as liquidation penalty
-            liquidationFee = internalData.leftExchangedPositionNotional.abs().mulRatio(
-                IPositioningConfig(_positioningConfig).getLiquidationPenaltyRatio()
-            );
-
-            //2.5 % liquidation fees to fee receiver
-            _modifyOwedRealizedPnl(_getFeeReceiver(), liquidationFee.toInt256());
-
-            //2.5 % liquidation fees to liquidator, increase liquidator's pnl liquidation reward
-            _modifyOwedRealizedPnl(liquidator, liquidationFee.toInt256());
-
-            _modifyOwedRealizedPnl(orderLeft.trader, (liquidationFee * 2).neg256());
-
-            emit PositionLiquidated(
-                orderLeft.trader,
-                baseToken,
-                internalData.leftExchangedPositionNotional.abs(),
-                internalData.leftExchangedPositionSize,
-                liquidationFee,
-                liquidator
-            );
-        }
-
-        if (isRightLiquidation) {
-            uint256 liquidationFee;
-            // trader's pnl-- as liquidation penalty
-            liquidationFee = internalData.rightExchangedPositionNotional.abs().mulRatio(
-                IPositioningConfig(_positioningConfig).getLiquidationPenaltyRatio()
-            );
-
-            //2.5 % liquidation fees to fee receiver
-            _modifyOwedRealizedPnl(_getFeeReceiver(), liquidationFee.toInt256());
-
-            //2.5 % liquidation fees to liquidator, increase liquidator's pnl liquidation reward
-            _modifyOwedRealizedPnl(liquidator, liquidationFee.toInt256());
-
-            _modifyOwedRealizedPnl(orderRight.trader, (liquidationFee * 2).neg256());
-
-            emit PositionLiquidated(
-                orderRight.trader,
-                baseToken,
-                internalData.rightExchangedPositionNotional.abs(),
-                internalData.rightExchangedPositionSize,
-                liquidationFee,
-                liquidator
-            );
         }
 
         // if not closing a position, check margin ratio after swap
@@ -356,7 +296,7 @@ contract Positioning is
             baseToken,
             internalData.leftExchangedPositionSize,
             internalData.leftExchangedPositionNotional,
-            _orderLeftFee,
+            orderFees.orderLeftFee,
             internalData.leftOpenNotional
         );
 
@@ -365,26 +305,83 @@ contract Positioning is
             baseToken,
             internalData.rightExchangedPositionSize,
             internalData.rightExchangedPositionNotional,
-            _orderRightFee,
+            orderFees.orderRightFee,
             internalData.rightOpenNotional
         );
 
         IAccountBalance(_accountBalance).deregisterBaseToken(orderLeft.trader, baseToken);
         IAccountBalance(_accountBalance).deregisterBaseToken(orderRight.trader, baseToken);
-        return newFill;
+        return internalData;
     }
 
     function registerBaseToken(address trader, address token) external {
         IAccountBalance(_accountBalance).registerBaseToken(trader, token);
     }
 
+    function _takeLiquidationFees(
+        LibOrder.Order memory order,
+        int256 exchangedPositionNotional,
+        int256 exchangedPositionSize,
+        address baseToken,
+        address liquidator
+    ) internal {
+        uint256 liquidationFee;
+        // trader's pnl-- as liquidation penalty
+        liquidationFee = exchangedPositionNotional.abs().mulRatio(
+            IPositioningConfig(_positioningConfig).getLiquidationPenaltyRatio()
+        );
+
+        //2.5 % liquidation fees to fee receiver
+        _modifyOwedRealizedPnl(_getFeeReceiver(), liquidationFee.toInt256());
+
+        //2.5 % liquidation fees to liquidator, increase liquidator's pnl liquidation reward
+        _modifyOwedRealizedPnl(liquidator, liquidationFee.toInt256());
+        _modifyOwedRealizedPnl(order.trader, (liquidationFee * 2).neg256());
+
+        emit PositionLiquidated(
+            order.trader,
+            baseToken,
+            exchangedPositionNotional.abs(),
+            exchangedPositionSize,
+            liquidationFee,
+            liquidator
+        );
+    }
+
     //
     // INTERNAL VIEW
     //
 
+    function _validateOrder(
+        LibOrder.Order memory order,
+        bytes memory signature,
+        address baseToken
+    ) internal view returns (bool isLiquidation) {
+        LibOrder.validate(order);
+        if (_isAccountLiquidatable(order.trader)) {
+            _isOrderLiquidatable(order, baseToken);
+            return true;
+        }
+        _validateFull(order, signature);
+        return false;
+    }
+
+    function _calculateFees(
+        bool isLeftMaker,
+        int256 leftExchangedPositionNotional,
+        int256 rightExchangedPositionNotional
+    ) internal view returns (OrderFees memory orderFees) {
+        orderFees.orderLeftFee = isLeftMaker
+            ? leftExchangedPositionNotional.abs().mulRatio(IMarketRegistry(_marketRegistry).getMakerFeeRatio())
+            : leftExchangedPositionNotional.abs().mulRatio(IMarketRegistry(_marketRegistry).getTakerFeeRatio());
+
+        orderFees.orderRightFee = isLeftMaker
+            ? rightExchangedPositionNotional.abs().mulRatio(IMarketRegistry(_marketRegistry).getTakerFeeRatio())
+            : rightExchangedPositionNotional.abs().mulRatio(IMarketRegistry(_marketRegistry).getMakerFeeRatio());
+    }
+
     /// @dev this function validate the signature of order
     function _validateFull(LibOrder.Order memory order, bytes memory signature) internal view {
-        LibOrder.validate(order);
         _validate(order, signature);
     }
 
@@ -404,10 +401,7 @@ contract Positioning is
 
         int256 maxLiquidation = getMaxLiquidationAmount(order.trader);
 
-        uint256 orderAmount =
-            order.isShort
-                ? order.makeAsset.value
-                : order.takeAsset.value;
+        uint256 orderAmount = order.isShort ? order.makeAsset.value : order.takeAsset.value;
 
         require(orderAmount >= amount && orderAmount <= maxLiquidation.abs(), "P_WTV");
     }
@@ -443,17 +437,11 @@ contract Positioning is
         return IVaultController(_vaultController).getFreeCollateralByRatio(trader, ratio);
     }
 
-    function _msgSender() internal view override(OwnerPausable, ContextUpgradeable) 
-    returns (address) {
+    function _msgSender() internal view override(OwnerPausable, ContextUpgradeable) returns (address) {
         return super._msgSender();
     }
 
-    function _msgData() 
-    internal 
-    view 
-    virtual 
-    override(ContextUpgradeable)
-    returns (bytes calldata) {
+    function _msgData() internal view virtual override(ContextUpgradeable) returns (bytes calldata) {
         return msg.data;
     }
 
