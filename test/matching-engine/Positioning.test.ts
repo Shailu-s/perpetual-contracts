@@ -260,7 +260,7 @@ describe.only("Positioning", function () {
               0,
             ],
             {
-              initializer: "__PositioningTest_init",
+              initializer: "initialize",
             },
           ),
         ).to.be.revertedWith("CH_PCNC")
@@ -282,7 +282,7 @@ describe.only("Positioning", function () {
               0,
             ],
             {
-              initializer: "__PositioningTest_init",
+              initializer: "initialize",
             },
           ),
         ).to.be.revertedWith("CH_VANC")
@@ -304,7 +304,7 @@ describe.only("Positioning", function () {
               0,
             ],
             {
-              initializer: "__PositioningTest_init",
+              initializer: "initialize",
             },
           ),
         ).to.be.revertedWith("CH_ABNC")
@@ -326,7 +326,7 @@ describe.only("Positioning", function () {
               0,
             ],
             {
-              initializer: "__PositioningTest_init",
+              initializer: "initialize",
             },
           ),
         ).to.be.revertedWith("CH_MENC")
