@@ -306,18 +306,18 @@ contract VolmexPerpPeriphery is Initializable, RoleManager, IVolmexPerpPeriphery
         if (_limitOrder.orderType == LibOrder.STOP_LOSS_LIMIT_ORDER) {
             if (_limitOrder.isShort) {
                 // Sell Stop Limit Order Trigger Price Not Matched
-                return triggeredPrice <= _limitOrder.triggerPrice ? true : false;
+                return triggeredPrice <= _limitOrder.triggerPrice;
             } else {
                 // Buy Stop Limit Order Trigger Price Not Matched
-                return triggeredPrice >= _limitOrder.triggerPrice ? true : false;
+                return triggeredPrice >= _limitOrder.triggerPrice;
             }
         } else if (_limitOrder.orderType == LibOrder.TAKE_PROFIT_LIMIT_ORDER) {
             if (_limitOrder.isShort) {
                 // Sell Take-profit Limit Order Trigger Price Not Matched
-                return triggeredPrice >= _limitOrder.triggerPrice ? true : false;
+                return triggeredPrice >= _limitOrder.triggerPrice;
             } else {
                 // Buy Take-profit Limit Order Trigger Price Not Matched
-                return triggeredPrice <= _limitOrder.triggerPrice ? true : false;
+                return triggeredPrice <= _limitOrder.triggerPrice;
             }
         }
         return false;
