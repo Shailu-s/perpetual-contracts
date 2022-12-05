@@ -67,7 +67,7 @@ contract Positioning is
         address markPriceArg,
         address indexPriceArg,
         uint64 underlyingPriceIndex
-    ) public initializer {
+    ) external initializer {
         // CH_VANC: Vault address is not contract
         require(vaultControllerArg.isContract(), "CH_VANC");
         // PositioningConfig address is not contract

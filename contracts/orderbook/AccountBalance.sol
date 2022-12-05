@@ -12,12 +12,12 @@ import { LibSafeCastUint } from "../libs/LibSafeCastUint.sol";
 import { IAccountBalance } from "../interfaces/IAccountBalance.sol";
 import { IIndexPrice } from "../interfaces/IIndexPrice.sol";
 import { IPositioningConfig } from "../interfaces/IPositioningConfig.sol";
+import { IVirtualToken } from "../interfaces/IVirtualToken.sol";
 
 import { AccountBalanceStorageV1 } from "../storage/AccountBalanceStorage.sol";
 import { BlockContext } from "../helpers/BlockContext.sol";
 import { RoleManager } from "../helpers/RoleManager.sol";
 import { PositioningCallee } from "../helpers/PositioningCallee.sol";
-import "hardhat/console.sol";
 
 // never inherit any new stateful contract. never change the orders of parent stateful contracts
 contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, AccountBalanceStorageV1 {
@@ -103,6 +103,7 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
     /// @inheritdoc IAccountBalance
     function registerBaseToken(address trader, address baseToken) external override {
         _requireOnlyPositioning();
+        require(IVirtualToken(baseToken).isBase(), "AccountBalance: not base token");
         address[] storage tokensStorage = _baseTokensMap[trader];
         if (_hasBaseToken(tokensStorage, baseToken)) {
             return;
