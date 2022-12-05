@@ -125,15 +125,9 @@ abstract contract MatchingEngineCore is
 
         newFill = _getFillSetNew(orderLeft, orderRight);
 
-        address makeToken = orderLeft.isShort ? orderLeft.makeAsset.virtualToken : orderLeft.takeAsset.virtualToken;
-        address takeToken = orderRight.isShort ? orderRight.makeAsset.virtualToken : orderRight.takeAsset.virtualToken;
-
-        //TODO: This could be optimised
-        bool isLeftBase = IVirtualToken(makeToken).isBase();
-
-        isLeftBase
-            ? _updateObservation(newFill.rightValue, newFill.leftValue, makeToken)
-            : _updateObservation(newFill.leftValue, newFill.rightValue, takeToken);
+        orderLeft.isShort
+            ? _updateObservation(newFill.rightValue, newFill.leftValue, orderLeft.makeAsset.virtualToken)
+            : _updateObservation(newFill.leftValue, newFill.rightValue, orderRight.makeAsset.virtualToken);
 
         emit Matched(
             [orderLeft.trader, orderRight.trader],
