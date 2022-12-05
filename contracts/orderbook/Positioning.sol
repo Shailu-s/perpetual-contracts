@@ -17,6 +17,7 @@ import { LibPerpMath } from "../libs/LibPerpMath.sol";
 import { LibSafeCastInt } from "../libs/LibSafeCastInt.sol";
 import { LibSafeCastUint } from "../libs/LibSafeCastUint.sol";
 import { LibSignature } from "../libs/LibSignature.sol";
+import { EncodeDecode } from "../libs/EncodeDecode.sol";
 
 import { IAccountBalance } from "../interfaces/IAccountBalance.sol";
 import { IERC1271 } from "../interfaces/IERC1271.sol";
@@ -54,6 +55,7 @@ contract Positioning is
     using LibPerpMath for uint256;
     using LibPerpMath for int256;
     using LibSignature for bytes32;
+    using EncodeDecode for bytes;
 
     /// @dev this function is public for testing
     // solhint-disable-next-line func-order
@@ -122,6 +124,7 @@ contract Positioning is
         LibOrder.Order memory orderRight,
         bytes memory signatureRight
     ) external override whenNotPaused nonReentrant {
+
         // short = selling base token
         address baseToken = orderLeft.isShort ? orderLeft.makeAsset.virtualToken : orderLeft.takeAsset.virtualToken;
 
