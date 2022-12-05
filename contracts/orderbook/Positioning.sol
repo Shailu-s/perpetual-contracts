@@ -17,6 +17,7 @@ import { LibPerpMath } from "../libs/LibPerpMath.sol";
 import { LibSafeCastInt } from "../libs/LibSafeCastInt.sol";
 import { LibSafeCastUint } from "../libs/LibSafeCastUint.sol";
 import { LibSignature } from "../libs/LibSignature.sol";
+import { EncodeDecode } from "../libs/EncodeDecode.sol";
 
 import { IAccountBalance } from "../interfaces/IAccountBalance.sol";
 import { IERC1271 } from "../interfaces/IERC1271.sol";
@@ -54,6 +55,7 @@ contract Positioning is
     using LibPerpMath for uint256;
     using LibPerpMath for int256;
     using LibSignature for bytes32;
+    using EncodeDecode for bytes;
 
 
     /// @dev this function is public for testing
@@ -122,7 +124,8 @@ contract Positioning is
         LibOrder.Order memory orderLeft,
         bytes memory signatureLeft,
         LibOrder.Order memory orderRight,
-        bytes memory signatureRight
+        bytes memory signatureRight,
+        bytes memory liquidator
     ) public override whenNotPaused nonReentrant returns (LibFill.FillResult memory newFill) {
         // short = selling base token
         address baseToken = orderLeft.isShort ? orderLeft.makeAsset.virtualToken : orderLeft.takeAsset.virtualToken;
@@ -149,7 +152,7 @@ contract Positioning is
         bool isRightLiquidation = _isAccountLiquidatable(orderRight.trader);
         isRightLiquidation ? _isOrderLiquidatable(orderRight, baseToken) : _validateFull(orderRight, signatureRight);
 
-        newFill = _openPosition(orderLeft, orderRight, isLeftLiquidation, isRightLiquidation, baseToken);
+        newFill = _openPosition(orderLeft, orderRight, isLeftLiquidation, isRightLiquidation, baseToken, liquidator);
     }
 
     /// @inheritdoc IPositioning
@@ -221,7 +224,8 @@ contract Positioning is
         LibOrder.Order memory orderRight,
         bool isLeftLiquidation,
         bool isRightLiquidation,
-        address baseToken
+        address baseToken,
+        bytes memory liquidatorData
     ) internal returns (LibFill.FillResult memory newFill) {
         newFill =
             IMatchingEngine(_matchingEngine).matchOrders(orderLeft, orderRight);
@@ -287,9 +291,9 @@ contract Positioning is
             _firstTradedTimestampMap[baseToken] = _blockTimestamp();
         }
 
+        address liquidator = liquidatorData.decodeAddress();
         if (isLeftLiquidation) {
             uint256 liquidationFee;
-            address liquidator;
             // trader's pnl-- as liquidation penalty
             liquidationFee = internalData.leftExchangedPositionNotional.abs().mulRatio(
                 IPositioningConfig(_positioningConfig).getLiquidationPenaltyRatio()
@@ -299,7 +303,6 @@ contract Positioning is
             _modifyOwedRealizedPnl(_getFeeReceiver(), liquidationFee.toInt256());
 
             //2.5 % liquidation fees to liquidator, increase liquidator's pnl liquidation reward
-            liquidator = _msgSender();
             _modifyOwedRealizedPnl(liquidator, liquidationFee.toInt256());
 
             _modifyOwedRealizedPnl(orderLeft.trader, (liquidationFee * 2).neg256());
@@ -316,7 +319,6 @@ contract Positioning is
 
         if (isRightLiquidation) {
             uint256 liquidationFee;
-            address liquidator;
             // trader's pnl-- as liquidation penalty
             liquidationFee = internalData.rightExchangedPositionNotional.abs().mulRatio(
                 IPositioningConfig(_positioningConfig).getLiquidationPenaltyRatio()
@@ -326,7 +328,6 @@ contract Positioning is
             _modifyOwedRealizedPnl(_getFeeReceiver(), liquidationFee.toInt256());
 
             //2.5 % liquidation fees to liquidator, increase liquidator's pnl liquidation reward
-            liquidator = _msgSender();
             _modifyOwedRealizedPnl(liquidator, liquidationFee.toInt256());
 
             _modifyOwedRealizedPnl(orderRight.trader, (liquidationFee * 2).neg256());
