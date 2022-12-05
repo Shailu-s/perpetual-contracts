@@ -26,6 +26,10 @@ contract VolmexPerpPeriphery is Initializable, RoleManager, IVolmexPerpPeriphery
     // Store the addresses of vaultControllers { index => vaultController address }
     mapping(uint256 => IVaultController) public vaultControllers;
 
+    // Store the whitelist Vaults
+    mapping(address => bool) private _isVaultWhitelist;
+
+    // Uused to fetch base token price according to market
     IMarkPriceOracle public markPriceOracle;
 
     // Store the address of relayer
@@ -43,6 +47,7 @@ contract VolmexPerpPeriphery is Initializable, RoleManager, IVolmexPerpPeriphery
         IPositioning[2] memory _positioning,
         IVaultController[2] memory _vaultController,
         IMarkPriceOracle _markPriceOracle,
+        address[2] memory _vaults,
         address _owner,
         address _relayer
     ) external initializer {
@@ -53,6 +58,7 @@ contract VolmexPerpPeriphery is Initializable, RoleManager, IVolmexPerpPeriphery
         for (uint256 i = 0; i < 2; i++) {
             positionings[i] = _positioning[i];
             vaultControllers[i] = _vaultController[i];
+            _isVaultWhitelist[_vaults[i]] = true;
         }
         // Since we are adding two addresses, hence updating indexes to 2
         positioningIndex = 2;
@@ -61,7 +67,6 @@ contract VolmexPerpPeriphery is Initializable, RoleManager, IVolmexPerpPeriphery
         _grantRole(VOLMEX_PERP_PERIPHERY, _owner);
         _grantRole(RELAYER_MULTISIG, _relayer);
     }
-
 
     function setMarkPriceOracle(IMarkPriceOracle _markPriceOracle) external {
         _requireVolmexPerpPeripheryAdmin();
@@ -74,6 +79,12 @@ contract VolmexPerpPeriphery is Initializable, RoleManager, IVolmexPerpPeriphery
         address oldRelayerAddress = relayer;
         relayer = _relayer;
         emit RelayerUpdated(oldRelayerAddress, _relayer);
+    }
+
+    function whitelistVault(address _vault, bool _isWhitelist) external {
+        _requireVolmexPerpPeripheryAdmin();
+        _isVaultWhitelist[_vault] = _isWhitelist;
+        emit VaultWhitelisted(_vault, _isWhitelist);
     }
 
     /**
@@ -298,8 +309,9 @@ contract VolmexPerpPeriphery is Initializable, RoleManager, IVolmexPerpPeriphery
         address _from,
         uint256 _amount
     ) external {
-        // TODO: Add msg.sender is vault require check here - "Periphery: Caller is not vault"
-        _token.transferFrom(_from, _msgSender(), _amount);
+        address caller = _msgSender();
+        require(_isVaultWhitelist[caller], "Periphery: vault not whitelisted");
+        _token.transferFrom(_from, caller, _amount);
     }
 
     /**
