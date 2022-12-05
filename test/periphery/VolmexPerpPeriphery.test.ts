@@ -2,7 +2,7 @@ import { expect } from "chai";
 import { ethers, upgrades } from "hardhat";
 import { smock } from "@defi-wonderland/smock";
 import { parseUnits } from "ethers/lib/utils";
-const { Order, Asset, sign } = require("../order");
+const { Order, Asset, sign, encodeAddress } = require("../order");
 import { BigNumber } from "ethers";
 
 describe("VolmexPerpPeriphery", function () {
@@ -40,6 +40,7 @@ describe("VolmexPerpPeriphery", function () {
   let TestERC20;
   let USDC;
   let owner, account1, account2, account3, account4;
+  let liquidator;
   const deadline = 87654321987654;
   const one = ethers.constants.WeiPerEther; // 1e18
   const two = ethers.constants.WeiPerEther.mul(BigNumber.from("2")); // 2e18
@@ -65,6 +66,7 @@ describe("VolmexPerpPeriphery", function () {
     TestERC20 = await ethers.getContractFactory("TestERC20");
     VolmexBaseToken = await ethers.getContractFactory("VolmexBaseToken");
     [owner, account1, account2, account3, account4] = await ethers.getSigners();
+    liquidator = encodeAddress(owner.address);
   });
 
   this.beforeEach(async () => {
@@ -200,6 +202,7 @@ describe("VolmexPerpPeriphery", function () {
           [positioning.address, positioning2.address], 
           [vaultController.address, vaultController2.address],
           markPriceOracle.address,
+          [vault.address, vault.address],
           owner.address,
       ]
     );
@@ -213,6 +216,7 @@ describe("VolmexPerpPeriphery", function () {
                     [positioning.address, positioning2.address], 
                     [vaultController.address, vaultController2.address],
                     markPriceOracle.address,
+                    [vault.address, vault.address],
                     owner.address,
                 ]
             );
@@ -435,17 +439,11 @@ describe("VolmexPerpPeriphery", function () {
       });
     });
 
-    describe("Add positioning", async () => {
-        it("should add another Positioning", async () => {
-            let receipt = await volmexPerpPeriphery.addPositioning(positioning.address);
-            expect(receipt.confirmations).not.equal(0);
-        });
-    volmexPerpPeriphery = await upgrades.deployProxy(VolmexPerpPeriphery, [
-      [positioning.address, positioning2.address],
-      [vaultController.address, vaultController2.address],
-      owner.address,
-    ]);
-    await volmexPerpPeriphery.deployed();
+  describe("Add positioning", async () => {
+    it("should add another Positioning", async () => {
+      let receipt = await volmexPerpPeriphery.addPositioning(positioning.address);
+      expect(receipt.confirmations).not.equal(0);
+    });
   });
 
   describe("VolmexPerpPeriphery deployment", async () => {
@@ -585,7 +583,7 @@ describe("VolmexPerpPeriphery", function () {
 
       // opening the positions here
       await expect(
-        volmexPerpPeriphery.openPosition(index, orderLeft, signatureLeft, orderRight, signatureRight),
+        volmexPerpPeriphery.openPosition(index, orderLeft, signatureLeft, orderRight, signatureRight, liquidator),
       ).to.emit(positioning, "PositionChanged");
 
       const positionSize = await accountBalance1.getTakerPositionSize(

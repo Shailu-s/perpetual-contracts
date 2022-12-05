@@ -23,6 +23,7 @@ interface IVolmexPerpPeriphery {
         address indexed newPositionings
     );
     event RelayerUpdated(address indexed oldRelayerAddress, address indexed newRelayerAddress);
+    event VaultWhitelisted(address indexed vault, bool isWhitelist);
 
     function depositToVault(
         uint64 _index,
@@ -42,7 +43,8 @@ interface IVolmexPerpPeriphery {
         LibOrder.Order memory _orderLeft,
         bytes memory _signatureLeft,
         LibOrder.Order memory _orderRight,
-        bytes memory _signatureRight
+        bytes memory _signatureRight,
+        bytes memory liquidator
     ) external;
 
     function transferToVault(
