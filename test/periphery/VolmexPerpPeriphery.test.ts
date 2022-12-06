@@ -22,21 +22,20 @@ describe("VolmexPerpPeriphery", function () {
   let vaultController;
   let vaultController2;
   let AccountBalance;
-  let accountBalance;
   let MarkPriceOracle;
   let markPriceOracle;
   let IndexPriceOracle;
   let indexPriceOracle;
   let VolmexBaseToken;
   let volmexBaseToken;
+  let VolmexQuoteToken;
+  let volmexQuoteToken;
   let VolmexPerpPeriphery;
   let volmexPerpPeriphery;
 
   let accountBalance1;
   let MarketRegistry;
   let marketRegistry;
-  let BaseToken;
-  let baseToken;
   let TestERC20;
   let USDC;
   let owner, account1, account2, account3, account4;
@@ -62,9 +61,9 @@ describe("VolmexPerpPeriphery", function () {
     VaultController = await ethers.getContractFactory("VaultController");
     MarketRegistry = await ethers.getContractFactory("MarketRegistry");
     AccountBalance = await ethers.getContractFactory("AccountBalance");
-    BaseToken = await ethers.getContractFactory("VolmexBaseToken");
     TestERC20 = await ethers.getContractFactory("TestERC20");
     VolmexBaseToken = await ethers.getContractFactory("VolmexBaseToken");
+    VolmexQuoteToken = await ethers.getContractFactory("VolmexQuoteToken");
     [owner, account1, account2, account3, account4] = await ethers.getSigners();
     liquidator = encodeAddress(owner.address);
   });
@@ -87,15 +86,23 @@ describe("VolmexPerpPeriphery", function () {
       },
     );
     await volmexBaseToken.deployed();
+    volmexQuoteToken = await upgrades.deployProxy(
+      VolmexQuoteToken,
+      [
+        "VolmexBaseToken", // nameArg
+        "VBT", // symbolArg,
+        false, // isBase
+      ],
+      {
+        initializer: "initialize",
+      },
+    );
+    await volmexQuoteToken.deployed();
 
     markPriceOracle = await upgrades.deployProxy(MarkPriceOracle, [[1000000], [volmexBaseToken.address]], {
       initializer: "initialize",
     });
     await markPriceOracle.deployed();
-
-    accountBalance = await smock.fake("AccountBalance");
-    baseToken = await smock.fake("VolmexBaseToken");
-
     positioningConfig = await upgrades.deployProxy(PositioningConfig, []);
 
     USDC = await TestERC20.deploy();
@@ -130,7 +137,7 @@ describe("VolmexPerpPeriphery", function () {
     vault = await upgrades.deployProxy(Vault, [
       positioningConfig.address,
       accountBalance1.address,
-      virtualToken.address,
+      USDC.address,
       accountBalance1.address,
       false,
     ]);
@@ -170,11 +177,9 @@ describe("VolmexPerpPeriphery", function () {
         initializer: "initialize",
       },
     );
-    marketRegistry = await upgrades.deployProxy(MarketRegistry, [virtualToken.address]);
+    marketRegistry = await upgrades.deployProxy(MarketRegistry, [volmexQuoteToken.address]);
 
     await marketRegistry.connect(owner).addBaseToken(volmexBaseToken.address);
-    await marketRegistry.connect(owner).addBaseToken(baseToken.address);
-    await marketRegistry.connect(owner).addBaseToken(virtualToken.address);
     await marketRegistry.connect(owner).setMakerFeeRatio(0.0004e6);
     await marketRegistry.connect(owner).setTakerFeeRatio(0.0009e6);
 
@@ -182,7 +187,7 @@ describe("VolmexPerpPeriphery", function () {
 
     await vault.connect(owner).setPositioning(positioning.address);
     await vault.connect(owner).setVaultController(vaultController.address);
-    await vaultController.registerVault(vault.address, virtualToken.address);
+    await vaultController.registerVault(vault.address, USDC.address);
     await vaultController.connect(owner).setPositioning(positioning.address);
 
     await positioningConfig.connect(owner).setMaxMarketsPerAccount(5);
@@ -204,6 +209,7 @@ describe("VolmexPerpPeriphery", function () {
           markPriceOracle.address,
           [vault.address, vault.address],
           owner.address,
+          owner.address // replace with replayer address
       ]
     );
   });
@@ -218,6 +224,7 @@ describe("VolmexPerpPeriphery", function () {
                     markPriceOracle.address,
                     [vault.address, vault.address],
                     owner.address,
+                    owner.address // replace with relayer address
                 ]
             );
             let receipt = await volmexPerpPeriphery.deployed();
@@ -234,7 +241,7 @@ describe("VolmexPerpPeriphery", function () {
       it("should fail to set MarkPriceOracle if not admin", async () => {
           await expect(
               volmexPerpPeriphery.connect(account2).setMarkPriceOracle(markPriceOracle.address)
-          ).to.be.revertedWith("VolmexPerpPeriphery: Not admin");
+          ).to.be.revertedWith("Periphery: Not admin");
       });
     });
 
@@ -273,6 +280,7 @@ describe("VolmexPerpPeriphery", function () {
             signatureLeftLimitOrder,
             orderRight,
             signatureRightLimitOrder,
+            owner.address,
             0
         );
         expect(receipt.confirmations).not.equal(0);
@@ -313,9 +321,10 @@ describe("VolmexPerpPeriphery", function () {
             signatureLeftLimitOrder,
             orderRight,
             signatureRightLimitOrder,
+            owner.address,
             0
           )
-        ).to.be.revertedWith("Sell Stop Limit Order Trigger Price Not Matched");
+        ).to.be.revertedWith("Periphery: left order price verification failed");
       });
 
       it("should fail to fill LimitOrder: Buy Stop Limit Order Trigger Price Not Matched", async () => {
@@ -353,9 +362,10 @@ describe("VolmexPerpPeriphery", function () {
             signatureLeftLimitOrder,
             orderRight,
             signatureRightLimitOrder,
+            owner.address,
             0
           )
-        ).to.be.revertedWith("Buy Stop Limit Order Trigger Price Not Matched");
+        ).to.be.revertedWith("Periphery: right order price verification failed");
       });
 
       it("should fail to fill LimitOrder: Sell Take-profit Limit Order Trigger Price Not Matched", async () => {
@@ -393,9 +403,10 @@ describe("VolmexPerpPeriphery", function () {
             signatureLeftLimitOrder,
             orderRight,
             signatureRightLimitOrder,
+            owner.address,
             0
           )
-        ).to.be.revertedWith("Sell Take-profit Limit Order Trigger Price Not Matched");
+        ).to.be.revertedWith("Periphery: left order price verification failed");
       });
 
       it("should fail to fill LimitOrder: Buy Take-profit Limit Order Trigger Price Not Matched", async () => {
@@ -433,9 +444,10 @@ describe("VolmexPerpPeriphery", function () {
             signatureLeftLimitOrder,
             orderRight,
             signatureRightLimitOrder,
+            owner.address,
             0
           )
-        ).to.be.revertedWith("Buy Take-profit Limit Order Trigger Price Not Matched");
+        ).to.be.revertedWith("Periphery: right order price verification failed");
       });
     });
 
@@ -461,7 +473,7 @@ describe("VolmexPerpPeriphery", function () {
 
     it("should fail to add another Positioning if not admin", async () => {
       await expect(volmexPerpPeriphery.connect(account2).addPositioning(positioning.address)).to.be.revertedWith(
-        "VolmexPerpPeriphery: Not admin",
+        "Periphery: Not admin",
       );
     });
   });
@@ -475,7 +487,7 @@ describe("VolmexPerpPeriphery", function () {
     it("should fail to add another VaultController if not admin", async () => {
       await expect(
         volmexPerpPeriphery.connect(account2).addVaultController(vaultController.address),
-      ).to.be.revertedWith("VolmexPerpPeriphery: Not admin");
+      ).to.be.revertedWith("Periphery: Not admin");
     });
   });
 
@@ -519,25 +531,21 @@ describe("VolmexPerpPeriphery", function () {
       index = 0;
       amount = parseUnits("100", await USDC.decimals());
 
-      await positioningConfig.setSettlementTokenBalanceCap("10000000000000");
+      await positioningConfig.setSettlementTokenBalanceCap("1000000000000000");
+      await USDC.connect(owner).approve(volmexPerpPeriphery.address, amount);
 
-      await virtualToken.mint(owner.address, amount);
-      await virtualToken.addWhitelist(owner.address);
-      await virtualToken.approve(volmexPerpPeriphery.address, amount);
-
-      vBalBefore = await virtualToken.balanceOf(vault.address);
-      (await volmexPerpPeriphery.depositToVault(index, virtualToken.address, amount)).wait();
+      vBalBefore = await USDC.balanceOf(vault.address);
+      (await volmexPerpPeriphery.depositToVault(index, USDC.address, amount)).wait();
     });
     it("Should deposit the collateral to the vault", async () => {
-      vBalAfter = await virtualToken.balanceOf(vault.address);
+      vBalAfter = await USDC.balanceOf(vault.address);
       expect(amount).to.equal(vBalAfter.sub(vBalBefore));
     });
     it("Should withdraw the collateral from the vault", async () => {
-      ownerBalBeforeWithdraw = await virtualToken.balanceOf(owner.address);
-      (await virtualToken.addWhitelist(vault.address)).wait();
-      (await volmexPerpPeriphery.withdrawFromVault(index, virtualToken.address, owner.address, amount)).wait();
-      vBalAfterWithdraw = await virtualToken.balanceOf(vault.address);
-      ownerBalAfterWithdraw = await virtualToken.balanceOf(owner.address);
+      ownerBalBeforeWithdraw = await USDC.balanceOf(owner.address);
+      (await volmexPerpPeriphery.withdrawFromVault(index, USDC.address, owner.address, amount)).wait();
+      vBalAfterWithdraw = await USDC.balanceOf(vault.address);
+      ownerBalAfterWithdraw = await USDC.balanceOf(owner.address);
       expect(amount).to.equal(vBalAfter.sub(vBalAfterWithdraw));
       expect(amount).to.equal(ownerBalAfterWithdraw.sub(ownerBalBeforeWithdraw));
     });
