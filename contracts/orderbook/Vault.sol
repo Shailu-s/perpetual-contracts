@@ -148,27 +148,25 @@ contract Vault is IVault, ReentrancyGuardUpgradeable, OwnerPausable, VaultStorag
     ) external virtual override whenNotPaused nonReentrant {
         _requireOnlyVaultController();
         // input requirement checks:
-        //   token: here
-        //   amount: here
+        //   token: here -> TODO: Token is already set, not need to add check
+        //   amount: here -> TODO: Using SafeERC20, not need to add this check
 
-        uint256 amountToTransfer = amount.formatSettlementToken(_decimals);
         if (_isEthVault) {
             // not enough balance
-            require(address(this).balance >= amountToTransfer, "V_NEB");
-            to.transfer(amountToTransfer);
+            require(address(this).balance >= amount, "V_NEB");
+            to.transfer(amount);
         } else {
             // send available funds to trader if vault balance is not enough and emit LowBalance event
             uint256 vaultBalance = IERC20Metadata(_settlementToken).balanceOf(address(this));
             uint256 remainingAmount = 0;
-            if (vaultBalance < amountToTransfer) {
-                remainingAmount = amountToTransfer - vaultBalance;
+            if (vaultBalance < amount) {
+                remainingAmount = amount - vaultBalance;
                 emit LowBalance(remainingAmount);
             }
-            amountToTransfer = amountToTransfer - remainingAmount;
-
-            SafeERC20Upgradeable.safeTransfer(IERC20Upgradeable(_settlementToken), to, amountToTransfer);
+            amount = amount - remainingAmount;
+            SafeERC20Upgradeable.safeTransfer(IERC20Upgradeable(_settlementToken), to, amount);
         }
-        emit Withdrawn(_settlementToken, to, amountToTransfer);
+        emit Withdrawn(_settlementToken, to, amount);
     }
 
     /// @inheritdoc IVault
