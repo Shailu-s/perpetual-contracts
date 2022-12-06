@@ -143,7 +143,7 @@ contract Positioning is
         _settleFunding(orderRight.trader, baseToken);
 
         InternalData memory internalData = _openPosition(orderLeft, orderRight, baseToken);
-        address liquidator = liquidator.decodeAddress();
+        address positionLiquidator = liquidator.decodeAddress();
 
         if (_validateOrder(orderLeft, signatureLeft, baseToken)) {
             _takeLiquidationFees(
@@ -151,7 +151,7 @@ contract Positioning is
                 internalData.leftExchangedPositionNotional,
                 internalData.leftExchangedPositionSize,
                 baseToken,
-                liquidator
+                positionLiquidator
             );
         }
         if (_validateOrder(orderRight, signatureRight, baseToken)) {
@@ -160,7 +160,7 @@ contract Positioning is
                 internalData.rightExchangedPositionNotional,
                 internalData.rightExchangedPositionSize,
                 baseToken,
-                liquidator
+                positionLiquidator
             );
         }
     }

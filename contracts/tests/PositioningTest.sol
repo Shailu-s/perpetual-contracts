@@ -5,15 +5,6 @@ import { Positioning } from "../orderbook/Positioning.sol";
 import "../libs/LibOrder.sol";
 
 contract PositioningTest is Positioning {
-    function openPositionTest( 
-        LibOrder.Order memory orderLeft,
-        bytes memory signatureLeft,
-        LibOrder.Order memory orderRight,
-        bytes memory signatureRight,
-        bytes memory liquidator
-        ) external {
-            openPosition(orderLeft, signatureLeft, orderRight, signatureRight, liquidator);
-        }
 
     function setMakerMinSalt(uint256 _val) external {
         makerMinSalt[_msgSender()] = _val;
