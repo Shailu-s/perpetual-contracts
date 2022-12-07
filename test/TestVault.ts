@@ -144,6 +144,7 @@ describe("Vault tests", function () {
           [positioning.address, ethPositioning.address], 
           [vaultController.address, vaultController.address],
           markPriceFake.address,
+          [vault.address, vault.address],
           owner.address,
           relayer.address,
       ]
@@ -155,6 +156,7 @@ describe("Vault tests", function () {
           [ethPositioning.address, ethPositioning.address], 
           [vaultController.address, vaultController.address],
           markPriceFake.address,
+          [vault.address, vault.address],
           owner.address,
           relayer.address,
       ]

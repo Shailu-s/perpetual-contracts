@@ -135,6 +135,7 @@ describe("Vault Controller tests for withdrawal", function () {
           [positioning.address, positioning.address], 
           [vaultController.address, vaultController.address],
           markPriceOracle.address,
+          [vault.address, vault.address],
           owner.address,
           relayer.address,
       ]
