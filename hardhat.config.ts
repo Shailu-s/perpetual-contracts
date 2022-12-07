@@ -38,10 +38,8 @@ const config: HardhatUserConfig = {
       accounts: [`0x${process.env.PRIVATE_KEY}`],
       throwOnTransactionFailures: true,
       loggingEnabled: true,
-      gas: 5000000,
-      gasPrice: 200000000000,
-      blockGasLimit: 8000000,
-      timeout: 10800000,
+      gasMultiplier: 1.5,
+      timeout: 18000000
     },
     mumbai: {
         url: `https://polygon-mumbai.g.alchemy.com/v2/${process.env.POLYGON_TESTNET_ALCHEMY_API_KEY}`,
