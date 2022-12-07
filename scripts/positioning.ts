@@ -102,6 +102,7 @@ const positioning = async () => {
     vaultController.address,
     false,
   ])
+  await vault.deployed()
 
   console.log("Deploying Positioning ...")
   const positioning = await upgrades.deployProxy(
@@ -154,7 +155,9 @@ const positioning = async () => {
     [positioning.address, positioning2.address],
     [vaultController.address, vaultController2.address],
     markPriceOracle.address,
+    [vault.address, vault.address],
     owner.address,
+    owner.address // replace with relayer
   ])
   await periphery.deployed()
 
@@ -289,6 +292,7 @@ const positioning = async () => {
     ["Periphery: ", periphery.address],
     ["MarketRegistry: ", marketRegistry.address],
     ["Quote token: ", volmexQuoteToken.address],
+    ["Perp Factory: ", factory.address],
   ]
   console.log("\n =====Deployment Successful===== \n")
   console.table(addresses)
