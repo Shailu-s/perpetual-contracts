@@ -62,6 +62,7 @@ describe("Vault Controller Mock tests for account value", function () {
             vaultFactory,
             [positioningConfig.address, accountBalance.address, USDC.address, vaultController.address, false]
         )
+        await vault.deployed()
 
         Positioning = await ethers.getContractFactory("PositioningTest")
         positioning = await upgrades.deployProxy(
@@ -98,6 +99,7 @@ describe("Vault Controller Mock tests for account value", function () {
                 [positioning.address, positioning.address], 
                 [vaultController.address, vaultController.address],
                 markPriceFake.address,
+                [vault.address, vault.address],
                 owner.address,
                 relayer.address,
             ]
