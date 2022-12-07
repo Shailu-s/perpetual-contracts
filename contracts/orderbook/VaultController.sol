@@ -120,7 +120,7 @@ contract VaultController is
         int256 owedRealizedPnlX10_18 = IAccountBalance(_accountBalance).settleOwedRealizedPnl(to);
         deltaBalance = deltaBalance + owedRealizedPnlX10_18;
         _modifyBalance(to, token, deltaBalance,_vault);
-        IVault(_vault).withdraw( amount, to);
+        IVault(_vault).withdraw(amount, to);
     }
 
     /// @inheritdoc IVaultController

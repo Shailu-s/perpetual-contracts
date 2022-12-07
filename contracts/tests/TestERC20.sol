@@ -14,6 +14,7 @@ contract TestERC20 is ERC20PresetMinterPauserUpgradeable {
         uint8 decimal
     ) public initializer {
         __ERC20PresetMinterPauser_init(name, symbol);
+        _mint(_msgSender(), 1000000000000000);
         _transferFeeRatio = 0;
         _decimal = decimal;
     }
