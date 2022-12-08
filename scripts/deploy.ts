@@ -8,6 +8,7 @@ const deploy = async () => {
   const MatchingEngine = await ethers.getContractFactory("MatchingEngine")
   const PerpFactory = await ethers.getContractFactory("PerpFactory")
   const VolmexBaseToken = await ethers.getContractFactory("VolmexBaseToken")
+  const VolmexQuoteToken = await ethers.getContractFactory("VolmexQuoteToken")
   const MarkPriceOracle = await ethers.getContractFactory("MarkPriceOracle")
   const IndexPriceOracle = await ethers.getContractFactory("IndexPriceOracle")
   const VaultController = await ethers.getContractFactory("VaultController")
@@ -15,6 +16,8 @@ const deploy = async () => {
   const AccountBalance = await ethers.getContractFactory("AccountBalance")
   const Positioning = await ethers.getContractFactory("Positioning")
   const Vault = await ethers.getContractFactory("Vault")
+  const MarketRegistry = await ethers.getContractFactory("MarketRegistry")
+  const VolmexPerpPeriphery = await ethers.getContractFactory("VolmexPerpPeriphery")
   const TestERC20 = await ethers.getContractFactory("TestERC20")
 
   console.log("Deploying Index Price Oracle ...")
@@ -23,14 +26,34 @@ const deploy = async () => {
   })
   await indexPriceOracle.deployed()
 
-  console.log("Deploying Base Token Impl ...")
-  const volmexBaseToken = await VolmexBaseToken.deploy()
+  console.log("Deploying Base Token ...")
+  const volmexBaseToken = await upgrades.deployProxy(
+    VolmexBaseToken,
+    [
+      "VolmexBaseToken", // nameArg
+      "VBT", // symbolArg,
+      indexPriceOracle.address, // priceFeedArg
+      true, // isBase
+    ],
+    {
+      initializer: "initialize",
+    },
+  )
   await volmexBaseToken.deployed()
 
-  console.log("Deploying USDC ...")
-  const usdc = await TestERC20.deploy()
-  await usdc.__TestERC20_init("VolmexUSDC", "VUSDC", 6)
-  await usdc.deployed()
+  console.log("Deploying Quote Token ...")
+  const volmexQuoteToken = await upgrades.deployProxy(
+    VolmexQuoteToken,
+    [
+      "VolmexQuoteToken", // nameArg
+      "VBT", // symbolArg,
+      false, // isBase
+    ],
+    {
+      initializer: "initialize",
+    },
+  )
+  await volmexQuoteToken.deployed()
 
   console.log("Deploying Mark Price Oracle ...")
   const markPriceOracle = await upgrades.deployProxy(MarkPriceOracle, [[1000000], [volmexBaseToken.address]], {
@@ -38,47 +61,124 @@ const deploy = async () => {
   })
   await markPriceOracle.deployed()
 
+  console.log("Deploying USDC ...")
+  const usdc = await upgrades.deployProxy(TestERC20, ["VolmexUSDC", "VUSDC", 6], {
+    initializer: "__TestERC20_init",
+  })
+  await usdc.deployed()
+
   console.log("Deploying MatchingEngine ...")
-  const matchingEngine = await upgrades.deployProxy(MatchingEngine, [
-    owner.address,
-    markPriceOracle.address,
-  ])
+  const matchingEngine = await upgrades.deployProxy(MatchingEngine, [owner.address, markPriceOracle.address])
   await matchingEngine.deployed()
   await (await markPriceOracle.setMatchingEngine(matchingEngine.address)).wait()
 
-  console.log("Deploying Positioning Config Impl ...")
+  console.log("Deploying Positioning Config ...")
   const positioningConfig = await upgrades.deployProxy(PositioningConfig, [])
   await positioningConfig.deployed()
-  console.log("Deploying Positioning Config Impl ...", positioningConfig.address)
+  await positioningConfig.setMaxMarketsPerAccount(5)
+  await positioningConfig.setSettlementTokenBalanceCap(1000000)
 
-  console.log("Deploying Account Balance Impl ...")
-  const accountBalance = await AccountBalance.deploy()
+  console.log("Deploying Account Balance ...")
+  const accountBalance = await upgrades.deployProxy(AccountBalance, [positioningConfig.address])
   await accountBalance.deployed()
 
-  console.log("Deploying Positioning Impl ...")
-  const positioning = await Positioning.deploy()
-  await positioning.deployed()
-  await positioning.setPositioning(positioning.address)
+  console.log("Deploying Vault Controller ...")
+  const vaultController = await upgrades.deployProxy(VaultController, [
+    positioningConfig.address,
+    accountBalance.address,
+  ])
+  await vaultController.deployed()
+  const vaultController2 = await upgrades.deployProxy(VaultController, [
+    positioningConfig.address,
+    accountBalance.address,
+  ])
+  await vaultController2.deployed()
 
-  console.log("Deploying Vault Impl ...")
-  const vault = await Vault.deploy()
+  console.log("Deploying Vault ...")
+  const vault = await upgrades.deployProxy(Vault, [
+    positioningConfig.address,
+    accountBalance.address,
+    usdc.address,
+    vaultController.address,
+    false,
+  ])
   await vault.deployed()
 
-  console.log("Deploying Vault Controller Impl ...")
-  const vaultController = await VaultController.deploy()
-  await vaultController.deployed()
+  console.log("Deploying Positioning ...")
+  const positioning = await upgrades.deployProxy(
+    Positioning,
+    [
+      positioningConfig.address,
+      vaultController.address,
+      accountBalance.address,
+      matchingEngine.address,
+      markPriceOracle.address,
+      indexPriceOracle.address,
+      0,
+    ],
+    {
+      initializer: "initialize",
+    },
+  )
+  await positioning.deployed()
+  const positioning2 = await upgrades.deployProxy(
+    Positioning,
+    [
+      positioningConfig.address,
+      vaultController2.address,
+      accountBalance.address,
+      matchingEngine.address,
+      markPriceOracle.address,
+      indexPriceOracle.address,
+      0,
+    ],
+    {
+      initializer: "initialize",
+    },
+  )
+  await positioning2.deployed()
+
+  const marketRegistry = await upgrades.deployProxy(MarketRegistry, [volmexQuoteToken.address])
+  await marketRegistry.deployed()
+  await (await marketRegistry.addBaseToken(volmexBaseToken.address)).wait()
+  await (await positioning.setMarketRegistry(marketRegistry.address)).wait()
+  await (await positioning.setDefaultFeeReceiver(owner.address)).wait()
+  await (await positioning2.setMarketRegistry(marketRegistry.address)).wait()
+  await (await positioning2.setDefaultFeeReceiver(owner.address)).wait()
+  await (await vaultController.setPositioning(positioning.address)).wait()
+  await (await vaultController.registerVault(vault.address, usdc.address)).wait()
+  await (await vaultController2.setPositioning(positioning.address)).wait()
+  await (await vaultController2.registerVault(vault.address, usdc.address)).wait()
+
+  console.log("Deploying Periphery contract ...")
+  const periphery = await upgrades.deployProxy(VolmexPerpPeriphery, [
+    [positioning.address, positioning2.address],
+    [vaultController.address, vaultController2.address],
+    markPriceOracle.address,
+    [vault.address, vault.address],
+    owner.address,
+    owner.address // replace with relayer
+  ])
+  await periphery.deployed()
+
+  const proxyAdmin = await upgrades.admin.getInstance()
 
   console.log("Deploying Perpetual Factory ...")
   const factory = await upgrades.deployProxy(
     PerpFactory,
-    [volmexBaseToken.address, vaultController.address, vault.address, positioning.address, accountBalance.address],
+    [
+      await proxyAdmin.getProxyImplementation(volmexBaseToken.address),
+      await proxyAdmin.getProxyImplementation(vaultController.address),
+      await proxyAdmin.getProxyImplementation(vault.address),
+      await proxyAdmin.getProxyImplementation(positioning.address),
+      await proxyAdmin.getProxyImplementation(accountBalance.address),
+    ],
     {
       initializer: "initialize",
     },
   )
   await factory.deployed()
 
-  const proxyAdmin = await upgrades.admin.getInstance()
   try {
     await run("verify:verify", {
       address: await proxyAdmin.getProxyImplementation(indexPriceOracle.address),
@@ -88,14 +188,21 @@ const deploy = async () => {
   }
   try {
     await run("verify:verify", {
-      address: volmexBaseToken.address,
+      address: await proxyAdmin.getProxyImplementation(volmexBaseToken.address),
     })
   } catch (error) {
     console.log("ERROR - verify - base token!")
   }
   try {
     await run("verify:verify", {
-      address: usdc.address,
+      address: await proxyAdmin.getProxyImplementation(volmexQuoteToken.address),
+    })
+  } catch (error) {
+    console.log("ERROR - verify - quote token!")
+  }
+  try {
+    await run("verify:verify", {
+      address: await proxyAdmin.getProxyImplementation(usdc.address),
     })
   } catch (error) {
     console.log("ERROR - verify - usdc token!")
@@ -123,31 +230,45 @@ const deploy = async () => {
   }
   try {
     await run("verify:verify", {
-      address: accountBalance.address,
+      address: await proxyAdmin.getProxyImplementation(accountBalance.address),
     })
   } catch (error) {
     console.log("ERROR - verify - account balance!")
   }
   try {
     await run("verify:verify", {
-      address: vault.address,
+      address: await proxyAdmin.getProxyImplementation(vault.address),
     })
   } catch (error) {
     console.log("ERROR - verify - vault!")
   }
   try {
     await run("verify:verify", {
-      address: vaultController.address,
+      address: await proxyAdmin.getProxyImplementation(vaultController.address),
     })
   } catch (error) {
     console.log("ERROR - verify - vault controller!")
   }
   try {
     await run("verify:verify", {
-      address: positioning.address,
+      address: await proxyAdmin.getProxyImplementation(positioning.address),
     })
   } catch (error) {
     console.log("ERROR - verify - positioning!")
+  }
+  try {
+    await run("verify:verify", {
+      address: await proxyAdmin.getProxyImplementation(marketRegistry.address),
+    })
+  } catch (error) {
+    console.log("ERROR - verify - market registry!")
+  }
+  try {
+    await run("verify:verify", {
+      address: await proxyAdmin.getProxyImplementation(periphery.address),
+    })
+  } catch (error) {
+    console.log("ERROR - verify - periphery!")
   }
   try {
     await run("verify:verify", {
@@ -157,11 +278,24 @@ const deploy = async () => {
     console.log("ERROR - verify - factory!")
   }
 
+  const addresses = [
+    ["Index Price Oracle: ", indexPriceOracle.address],
+    ["Mark Price Oracle: ", markPriceOracle.address],
+    ["Base Token: ", volmexBaseToken.address],
+    ["USDC: ", usdc.address],
+    ["Matching Engine: ", matchingEngine.address],
+    ["Positioning Cnnfig: ", positioningConfig.address],
+    ["Account Balance: ", accountBalance.address],
+    ["Vault: ", vault.address],
+    ["Vault Controller: ", vaultController.address],
+    ["Positioning: ", positioning.address],
+    ["Periphery: ", periphery.address],
+    ["MarketRegistry: ", marketRegistry.address],
+    ["Quote token: ", volmexQuoteToken.address],
+    ["Perp Factory: ", factory.address],
+  ]
   console.log("\n =====Deployment Successful===== \n")
-  console.log("Index Price Oracle: ", indexPriceOracle.address)
-  console.log("Mark Price Oracle: ", markPriceOracle.address)
-  console.log("Matching Engine: ", matchingEngine.address)
-  console.log("Perpetual Factory: ", factory.address)
+  console.table(addresses)
 }
 
 deploy()
