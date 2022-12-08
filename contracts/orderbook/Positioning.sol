@@ -124,9 +124,7 @@ contract Positioning is
         LibOrder.Order memory orderRight,
         bytes memory signatureRight,
         bytes memory liquidator
-    ) external override whenNotPaused nonReentrant {
-        LibOrder.validate(orderLeft);
-        LibOrder.validate(orderRight);
+    ) public override whenNotPaused nonReentrant {
 
         // short = selling base token
         address baseToken = orderLeft.isShort ? orderLeft.makeAsset.virtualToken : orderLeft.takeAsset.virtualToken;

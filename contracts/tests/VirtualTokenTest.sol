@@ -19,8 +19,4 @@ contract VirtualTokenTest is VirtualToken {
     ) external {
       _beforeTokenTransfer(from, to, amount);
   }
-
-  function approveTest(address owner, address spender, uint256 amount) external {
-    _approve(owner, spender, amount);
-  }
 }

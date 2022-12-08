@@ -24,6 +24,7 @@ import { RoleManager } from "../helpers/RoleManager.sol";
 import { TestERC20 } from "../tests/TestERC20.sol";
 import { Vault } from "./Vault.sol";
 import { VaultControllerStorage } from "../storage/VaultControllerStorage.sol";
+import "hardhat/console.sol";
 
 contract VaultController is
     ReentrancyGuardUpgradeable,
