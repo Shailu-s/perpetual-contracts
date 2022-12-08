@@ -667,7 +667,7 @@ describe.only("Positioning", function () {
         .to.emit(USDCVaultContract, "Withdrawn")
 
         // liquidating the position
-        await expect(positioning.openPosition(orderLeft1, signatureLeft1, orderRight1, signatureRight1, liquidator)).to.emit(
+        await expect(positioning.openPosition(orderLeftNew, signatureLeft1, orderRightNew, signatureRight1, liquidator)).to.emit(
           positioning,
           "PositionLiquidated",
         )
@@ -760,7 +760,7 @@ describe.only("Positioning", function () {
 
       it("should match orders and open position", async () => {
         const [owner, account1, account2] = await ethers.getSigners()
-
+    
         markPriceFake.getCumulativePrice.returns(10)
         await baseToken.getIndexPrice.returns(2)
         await virtualToken.mint(account1.address, 1000000000000000)
