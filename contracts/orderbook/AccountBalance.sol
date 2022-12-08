@@ -236,6 +236,7 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
         // overflow inspection:
         // only overflow when position value in USD(18 decimals) > 2^255 / 10^18
         // TODOCHANGE: Decimal calculation for indexTwap is not as same decimal as Position size
+        // Todo: Should divide by ORACLE_BASE here
         return positionSize * indexTwap.toInt256();
     }
 
@@ -315,6 +316,7 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
     //
 
     function _getIndexPrice(address baseToken) internal view returns (uint256) {
+        // Todo: Multiply first then divide. Remove division from here
         return IIndexPrice(baseToken).getIndexPrice(IPositioningConfig(_positioningConfig).getTwapInterval()) / _ORACLE_BASE ;
     }
 
