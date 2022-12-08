@@ -82,8 +82,9 @@ contract Vault is IVault, ReentrancyGuardUpgradeable, OwnerPausable, VaultStorag
     }
 
     /// @inheritdoc IVault
-    function setPositioning(address PositioningArg) external onlyOwner{
+    function setPositioning(address PositioningArg) external {
         // V_VPMM: Positioning is not contract
+        _requireVaultAdmin();
         require(PositioningArg.isContract(), "V_VPMM");
         _grantRole(CAN_MATCH_ORDERS, PositioningArg);
         _Positioning = PositioningArg;
