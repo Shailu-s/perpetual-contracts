@@ -189,7 +189,9 @@ describe('MarkPriceOracle', function () {
       const txn = await markPriceOracle.getCumulativePrice(10000000, 0);
       expect(Number(txn)).equal(1000000);
     });
-
+    it("should fail to add observation when when cumulative price is zero ", async()=>{
+      await expect(matchingEngine.addObservation(0,0)).to.be.revertedWith("MarkSMA: Not zero")
+    })
     it("Should fail to add observation when caller is not exchange", async () => {
       await expect(
         markPriceOracle.addObservation(1000000, 0)
