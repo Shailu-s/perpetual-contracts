@@ -174,7 +174,7 @@ describe('PerpFactory', function () {
       const vaultClone = await factory.cloneVault(USDC.address,true, positioningConfig.address,accountBalance.address,vault.address,0)
     });
 
-    it.only("should fail to clone vault because or admin access ", async()=>{
+    it("should fail to clone vault because or admin access ", async()=>{
       const [owner,account1] = await ethers.getSigners();
       const index = (await factory.perpIndexCount()).toString();
       await expect(factory.connect(account1).clonePerpEcosystem(
@@ -186,7 +186,7 @@ describe('PerpFactory', function () {
       )).to.be.revertedWith("PF_NCD")
     });
 
-    it.only("Should fail to Clone Vault",async() =>{ 
+    it("Should fail to Clone Vault",async() =>{ 
       const index = (await factory.perpIndexCount()).toString();
       await factory.clonePerpEcosystem(
         positioningConfig.address,

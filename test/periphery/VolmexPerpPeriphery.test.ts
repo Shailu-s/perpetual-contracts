@@ -128,7 +128,7 @@ describe("VolmexPerpPeriphery", function () {
     await virtualToken.deployed();
 
     accountBalance1 = await upgrades.deployProxy(AccountBalance, [positioningConfig.address]);
-    vaultController = await upgrades.deployProxy(VaultController, [positioningConfig.address, accountBalance1.address]);
+   vaultController  = await upgrades.deployProxy(VaultController, [positioningConfig.address, accountBalance1.address]);
     vaultController2 = await upgrades.deployProxy(VaultController, [
       positioningConfig.address,
       accountBalance1.address,
@@ -232,6 +232,29 @@ describe("VolmexPerpPeriphery", function () {
         });
     });
 
+    describe("set Relayer", function(){
+      it("should set relayer",async () => {
+       const [owner, account1] = await ethers.getSigners();
+       expect (await volmexPerpPeriphery.setRelayer(account1.address)).to.emit(volmexPerpPeriphery,"RelayerUpdated").withArgs(owner.address,account1.address);
+      })
+      it("should fail to set relayer",async()=>{
+        const [owner, account1] = await ethers.getSigners();
+        await  expect(volmexPerpPeriphery.setRelayer('0x0000000000000000000000000000000000000000')).to.be.revertedWith("VolmexPerpPeriphery: Not relayer")
+      }) 
+    })
+    describe("Add a vault to white list", function(){
+      it("Add vault to white list",async () => {
+        const vault1 = await upgrades.deployProxy(Vault, [
+          positioningConfig.address,
+          accountBalance1.address,
+          USDC.address,
+          accountBalance1.address,
+          false,
+        ]);
+       expect (await volmexPerpPeriphery.whitelistVault(vault1.address, true)).to.emit(volmexPerpPeriphery,"VaultWhitelisted").withArgs(vault1.address,true);
+      })
+    })
+
     describe("Set MarkPriceOracle", async () => {
       it("should set MarkPriceOracle", async () => {
           let receipt = await volmexPerpPeriphery.setMarkPriceOracle(markPriceOracle.address);
@@ -246,7 +269,7 @@ describe("VolmexPerpPeriphery", function () {
     });
 
     describe("Fill Limit order", async () => {
-      xit("should fill LimitOrder", async () => {
+      it("should fill LimitOrder", async () => {
         const orderLeft = Order(
           STOP_LOSS_LIMIT_ORDER,
           deadline,
@@ -285,7 +308,44 @@ describe("VolmexPerpPeriphery", function () {
         );
         expect(receipt.confirmations).not.equal(0);
       });
+      it("should fail to add order",async()=>{
+        const orderLeft = Order(
+          STOP_LOSS_LIMIT_ORDER,
+          deadline,
+          account1.address,
+          Asset(volmexBaseToken.address, two.toString()),
+          Asset(virtualToken.address, two.toString()),
+          1,
+          1e8.toString(),
+          true,
+        )
+    
+        const orderRight = Order(
+          STOP_LOSS_LIMIT_ORDER,
+          deadline,
+          account2.address,
+          Asset(virtualToken.address, two.toString()),
+          Asset(volmexBaseToken.address, two.toString()),
+          1,
+          1e6.toString(),
+          false,
+        )
 
+        const signatureLeftLimitOrder = await getSignature(orderLeft, account1.address);
+        const signatureRightLimitOrder = await getSignature(orderRight, account2.address);
+
+        await matchingEngine.grantMatchOrders(positioning.address);
+        await matchingEngine.grantMatchOrders(positioning2.address);
+
+        await expect(volmexPerpPeriphery.connect(account1).fillLimitOrder(
+            orderLeft,
+            signatureLeftLimitOrder,
+            orderRight,
+            signatureRightLimitOrder,
+            owner.address,
+            0
+        )).to.be.revertedWith("VolmexPerpPeriphery: Not relayer")
+      })
       it("should fail to fill LimitOrder: Sell Stop Limit Order Trigger Price Not Matched", async () => {
         const orderLeft = Order(
           STOP_LOSS_LIMIT_ORDER,
@@ -477,7 +537,7 @@ describe("VolmexPerpPeriphery", function () {
       );
     });
   });
-
+  
   describe("Add vaultController", async () => {
     it("should add another VaultController", async () => {
       let receipt = await volmexPerpPeriphery.addVaultController(vaultController.address);
@@ -501,7 +561,18 @@ describe("VolmexPerpPeriphery", function () {
       await (await volmexPerpPeriphery.updateVaultControllerAtIndex(oldVaultController, controller.address, 0)).wait();
       expect(await volmexPerpPeriphery.vaultControllers(0)).to.equal(controller.address);
     });
-
+    it("should fail to update vault controller ",async()=>{
+      const vaultControllerx = await upgrades.deployProxy(VaultController, [
+        positioningConfig.address,
+        accountBalance1.address,
+      ]);
+      const vaultControllery = await upgrades.deployProxy(VaultController, [
+        positioningConfig.address,
+        accountBalance1.address,
+      ]);
+      await expect(volmexPerpPeriphery.updateVaultControllerAtIndex(vaultControllerx.address,vaultControllery.address,0)).to.be.revertedWith("Periphery: Incorrect vault controller _index")
+  
+    })
     it("Should update the positioning at index", async () => {
       const newPositioning = await upgrades.deployProxy(Positioning, [
           positioningConfig.address,
@@ -578,6 +649,7 @@ describe("VolmexPerpPeriphery", function () {
         false,
       )
     });
+    
     it("Should open the position", async () => {
       await matchingEngine.grantMatchOrders(positioning.address);
 
@@ -608,8 +680,183 @@ describe("VolmexPerpPeriphery", function () {
       expect(positionSize).to.be.equal("-500000000000000000");
       expect(positionSize1).to.be.equal("500000000000000000");
     });
+    describe("Bulk Methods",function(){
+    it("should open position in batch", async()=>{
+      const ordersLeft = []
+      const ordersRight = []
+      const signaturesLeft = []
+      const signaturesRight = []
+      await matchingEngine.grantMatchOrders(positioning.address);
+      await (await USDC.transfer(account1.address, "1000000000"));
+      await (await USDC.transfer(account2.address, "1000000000"));
+      await USDC.connect(account1).approve(volmexPerpPeriphery.address, "1000000000");
+      await USDC.connect(account2).approve(volmexPerpPeriphery.address, "1000000000");
+      (await volmexPerpPeriphery.connect(account1).depositToVault(index, USDC.address, "1000000000")).wait();
+      (await volmexPerpPeriphery.connect(account2).depositToVault(index, USDC.address, "1000000000")).wait();
+      const orderLeft = Order(
+        ORDER,
+        deadline,
+        account1.address,
+        Asset(volmexBaseToken.address, two.toString()),
+        Asset(virtualToken.address, two.toString()),
+        1,
+        1e6.toString(),
+        true,
+      )
+      ordersLeft.push(orderLeft)
+      const orderRight = Order(
+        ORDER,
+        deadline,
+        account2.address,
+        Asset(virtualToken.address, two.toString()),
+        Asset(volmexBaseToken.address, two.toString()),
+        2,
+        1e6.toString(),
+        false,
+      )
+      ordersRight.push(orderRight);
+      const signatureLeft = await getSignature(orderLeft, account1.address);
+      signaturesLeft.push(signatureLeft);
+  
+      const signatureRight = await getSignature(orderRight, account2.address);
+      signaturesRight.push(signatureRight);
+      await volmexPerpPeriphery.batchOpenPosition(index, ordersLeft,signaturesLeft,ordersRight,signaturesRight,liquidator)
+      });
+    it(" should fill limit order in batch",async()=>{
+      const limitOrdersLeft = []
+      const limitOrdersRight = []
+      const signaturesLeft = []
+      const signaturesRight = []
+      await (await USDC.transfer(account1.address, "1000000000"));
+      await (await USDC.transfer(account2.address, "1000000000"));
+      await USDC.connect(account1).approve(volmexPerpPeriphery.address, "1000000000");
+      await USDC.connect(account2).approve(volmexPerpPeriphery.address, "1000000000");
+      (await volmexPerpPeriphery.connect(account1).depositToVault(index, USDC.address, "1000000000")).wait();
+      (await volmexPerpPeriphery.connect(account2).depositToVault(index, USDC.address, "1000000000")).wait();
+      const orderLeft = Order(
+        STOP_LOSS_LIMIT_ORDER,
+        deadline,
+        account1.address,
+        Asset(volmexBaseToken.address, two.toString()),
+        Asset(virtualToken.address, two.toString()),
+        1,
+        1e8.toString(),
+        true,
+      )
+  
+      const orderRight = Order(
+        STOP_LOSS_LIMIT_ORDER,
+        deadline,
+        account2.address,
+        Asset(virtualToken.address, two.toString()),
+        Asset(volmexBaseToken.address, two.toString()),
+        1,
+        1e6.toString(),
+        false,
+      )
+      limitOrdersLeft.push(orderLeft);
+      limitOrdersRight.push(orderRight);
+      const signatureLeft = await getSignature(orderLeft, account1.address);
+      const signatureRight = await getSignature(orderRight, account2.address);
+      signaturesLeft.push(signatureLeft);
+      signaturesRight.push(signatureRight);
+      await matchingEngine.grantMatchOrders(positioning.address);
+      await matchingEngine.grantMatchOrders(positioning2.address);
+      await volmexPerpPeriphery.batchFillLimitOrders(index,limitOrdersLeft,signaturesLeft,limitOrdersRight,signaturesRight,liquidator);
+
+    })
+    it("should fail to fill batch orders",async()=>{
+      const limitOrdersLeft = []
+      const limitOrdersRight = []
+      const signaturesLeft = []
+      const signaturesRight = []
+      await (await USDC.transfer(account1.address, "1000000000"));
+      await (await USDC.transfer(account2.address, "1000000000"));
+      await USDC.connect(account1).approve(volmexPerpPeriphery.address, "1000000000");
+      await USDC.connect(account2).approve(volmexPerpPeriphery.address, "1000000000");
+      (await volmexPerpPeriphery.connect(account1).depositToVault(index, USDC.address, "1000000000")).wait();
+      (await volmexPerpPeriphery.connect(account2).depositToVault(index, USDC.address, "1000000000")).wait();
+      const orderLeft = Order(
+        STOP_LOSS_LIMIT_ORDER,
+        deadline,
+        account1.address,
+        Asset(volmexBaseToken.address, two.toString()),
+        Asset(virtualToken.address, two.toString()),
+        1,
+        1e8.toString(),
+        true,
+      )
+      const orderRight = Order(
+        STOP_LOSS_LIMIT_ORDER,
+        deadline,
+        account2.address,
+        Asset(virtualToken.address, two.toString()),
+        Asset(volmexBaseToken.address, two.toString()),
+        1,
+        1e6.toString(),
+        false,
+      )
+      limitOrdersLeft.push(orderLeft);
+      limitOrdersRight.push(orderRight);
+      const signatureLeft = await getSignature(orderLeft, account1.address);
+      const signatureRight = await getSignature(orderRight, account2.address);
+      signaturesLeft.push(signatureLeft);
+      signaturesRight.push(signatureRight);
+      limitOrdersLeft.push(orderLeft);
+      await matchingEngine.grantMatchOrders(positioning.address);
+      await matchingEngine.grantMatchOrders(positioning2.address);
+      await expect(volmexPerpPeriphery.batchFillLimitOrders(index,limitOrdersLeft,signaturesLeft,limitOrdersRight,signaturesRight,liquidator))
+      .to.be.revertedWith("Periphery: mismatch limit orders");
+
+    })
+    it("should fail to open position in batch",async()=>{
+      const ordersLeft = []
+      const ordersRight = []
+      const signaturesLeft = []
+      const signaturesRight = []
+      await matchingEngine.grantMatchOrders(positioning.address);
+      await (await USDC.transfer(account1.address, "1000000000"));
+      await (await USDC.transfer(account2.address, "1000000000"));
+      await USDC.connect(account1).approve(volmexPerpPeriphery.address, "1000000000");
+      await USDC.connect(account2).approve(volmexPerpPeriphery.address, "1000000000");
+      (await volmexPerpPeriphery.connect(account1).depositToVault(index, USDC.address, "1000000000")).wait();
+      (await volmexPerpPeriphery.connect(account2).depositToVault(index, USDC.address, "1000000000")).wait();
+      const orderLeft = Order(
+        ORDER,
+        deadline,
+        account1.address,
+        Asset(volmexBaseToken.address, two.toString()),
+        Asset(virtualToken.address, two.toString()),
+        1,
+        1e6.toString(),
+        true,
+      )
+      ordersLeft.push(orderLeft)
+      const orderRight = Order(
+        ORDER,
+        deadline,
+        account2.address,
+        Asset(virtualToken.address, two.toString()),
+        Asset(volmexBaseToken.address, two.toString()),
+        2,
+        1e6.toString(),
+        false,
+      )
+      ordersRight.push(orderRight);
+      ordersRight.push(orderRight);
+      const signatureLeft = await getSignature(orderLeft, account1.address);
+      signaturesLeft.push(signatureLeft);
+  
+      const signatureRight = await getSignature(orderRight, account2.address);
+      signaturesRight.push(signatureRight);
+      await expect( volmexPerpPeriphery.batchOpenPosition(index, ordersLeft,signaturesLeft,ordersRight,signaturesRight,liquidator)).to.be.revertedWith("Periphery: mismatch orders")
+      
+    });
+  })
+  })
+    async function getSignature(orderObj, signer) {
+      return sign(orderObj, signer, positioning.address);
+    }
   });
-  async function getSignature(orderObj, signer) {
-    return sign(orderObj, signer, positioning.address);
-  }
-});
+  
+ 
