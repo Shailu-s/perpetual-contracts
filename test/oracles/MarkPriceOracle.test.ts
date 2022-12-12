@@ -1,7 +1,7 @@
 import { expect } from "chai";
 import { ethers, upgrades } from "hardhat";
 
-describe('MarkPriceOracle', function () {
+describe.only('MarkPriceOracle', function () {
   let MarkPriceOracle;
   let markPriceOracle;
   let ExchangeTest;
@@ -28,7 +28,7 @@ describe('MarkPriceOracle', function () {
   let accountBalance;
   let TestERC20;
   let USDC;
-
+  const ZERO_ADDR = '0x0000000000000000000000000000000000000000'
   this.beforeAll(async () => {
     MarkPriceOracle = await ethers.getContractFactory("MarkPriceOracle");
     MatchingEngine = await ethers.getContractFactory("MatchingEngineTest")
@@ -203,5 +203,22 @@ describe('MarkPriceOracle', function () {
       const txn = await markPriceOracle.getCumulativePrice(1000000, 0);
       expect(Number(txn)).equal(1000000);
     });
+    it("Should fail to  add multiple observations because uneuqal length of inputs", async () => {
+      await expect(matchingEngine.addAssets([10000000, 20000000], [volmexBaseToken.address])).to.be.revertedWith("MarkSMA: Unequal length of prices & assets")
+
+      
+    });
+    it("Should fail to  add multiple observations because 0 address of a token", async () => {
+      await expect(matchingEngine.addAssets([10000000, 20000000], [volmexBaseToken.address,ZERO_ADDR])).to.be.revertedWith("MarkSMA: Asset address can't be 0")
+    });
+    it("should fail to set Matching engine as admin assecc is not provided",async() =>{
+      const [owner, account1] = await ethers.getSigners();
+      await expect(markPriceOracle.connect(account1).setMatchingEngine(MatchingEngine.address)).to.be.revertedWith("MarkPriceOracle: Not admin")
+    })
+    it("should fail to set Matching engine as admin assecc is not provided",async() =>{
+      const [owner, account1] = await ethers.getSigners();
+      await expect(markPriceOracle.connect(account1).setMatchingEngine(ZERO_ADDR)).to.be.revertedWith("V_PERP_M: Can't be 0 address");
+    })
   });
+  
 });
