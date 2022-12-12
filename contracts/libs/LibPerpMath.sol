@@ -44,8 +44,13 @@ library LibPerpMath {
         return -LibSafeCastUint.toInt128(int128(a));
     }
 
-    function mulRatio(uint256 value, uint24 ratio) internal pure returns (uint256) {
+    function mulRatio(uint256 value, uint256 ratio) internal pure returns (uint256) {
         return LibFullMath.mulDiv(value, ratio, 1e6);
+    }
+
+    function mulRatio(int256 value, uint256 ratio) internal pure returns (int256) {
+        uint256 returnValue = LibFullMath.mulDiv(value.toUint256(), ratio, 1e6);
+        return returnValue.toInt256();
     }
 
     /// @param denominator cannot be 0 and is checked in LibFullMath.mulDiv()

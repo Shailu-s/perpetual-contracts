@@ -17,9 +17,25 @@ interface IPositioning {
     }
 
     struct OrderFees {
-            uint256 orderLeftFee;
-            uint256 orderRightFee;
-        }
+        uint256 orderLeftFee;
+        uint256 orderRightFee;
+    }
+
+    struct RealizePnlParams {
+        address trader;
+        address baseToken;
+        int256 base;
+        int256 quote;
+    }
+
+    struct InternalRealizePnlParams {
+        address trader;
+        address baseToken;
+        int256 takerPositionSize;
+        int256 takerOpenNotional;
+        int256 base;
+        int256 quote;
+    }
 
     /// @notice Emitted when taker position is being liquidated
     /// @param trader The trader who has been liquidated
@@ -32,7 +48,7 @@ interface IPositioning {
         address indexed trader,
         address indexed baseToken,
         uint256 positionNotional,
-        int256 positionSize,
+        uint256 positionSize,
         uint256 liquidationFee,
         address liquidator
     );
@@ -100,9 +116,52 @@ interface IPositioning {
         bytes memory signatureRight,
         bytes memory liquidator
     ) external;
-    
+
+    /// @notice Get the pnl that can be realized if trader reduce position
+    /// @dev This function normally won't be needed by traders, but it might be useful for 3rd party
+    /// @param params The params needed to do the query, encoded as `RealizePnlParams` in calldata
+    /// @return pnlToBeRealized The pnl that can be realized if trader reduce position
+    function getPnlToBeRealized(RealizePnlParams memory params) external view returns (int256 pnlToBeRealized);
+
+    /// @notice If trader is underwater, any one can call `liquidate` to liquidate this trader
+    /// @dev If trader has open orders, need to call `cancelAllExcessOrders` first
+    /// @dev If positionSize is greater than maxLiquidatePositionSize, liquidate maxLiquidatePositionSize by default
+    /// @dev If margin ratio >= 0.5 * mmRatio,
+    ///         maxLiquidateRatio = MIN((1, 0.5 * totalAbsPositionValue / absPositionValue)
+    /// @dev If margin ratio < 0.5 * mmRatio, maxLiquidateRatio = 1
+    /// @dev maxLiquidatePositionSize = positionSize * maxLiquidateRatio
+    /// @param trader The address of trader
+    /// @param baseToken The address of baseToken
+    /// @param positionSize the position size to be liquidated by liquidator
+    //    and MUST be the same direction as trader's position size
+    function liquidate(
+        address trader,
+        address baseToken,
+        int256 positionSize
+    ) external;
+
+    /// @notice liquidate trader's position and will liquidate the max possible position size
+    /// @dev If margin ratio >= 0.5 * mmRatio,
+    ///         maxLiquidateRatio = MIN((1, 0.5 * totalAbsPositionValue / absPositionValue)
+    /// @dev If margin ratio < 0.5 * mmRatio, maxLiquidateRatio = 1
+    /// @dev maxLiquidatePositionSize = positionSize * maxLiquidateRatio
+    /// @param trader The address of trader
+    /// @param baseToken The address of baseToken
+    function liquidate(address trader, address baseToken) external;
+
     /// @notice Set Positioning address
     function setPositioning(address positioning) external;
+
+    /// @notice Get position size of a trader to be liquidated
+    /// @param trader The address of trader
+    /// @param baseToken The address of baseToken
+    function getLiquidatablePosition(address trader, address baseToken) external view returns (uint256);
+
+    /// @notice Get the pnl that can be realized if trader reduce position
+    /// @dev This function normally won't be needed by traders, but it might be useful for 3rd party
+    /// @param params The params needed to do the query, encoded as `RealizePnlParams` in calldata
+    /// @return pnlToBeRealized The pnl that can be realized if trader reduce position
+    function getPnlToBeRealized(RealizePnlParams memory params) external view returns (int256 pnlToBeRealized);
 
     /// @notice Get PositioningConfig address
     /// @return PositioningConfig PositioningConfig address

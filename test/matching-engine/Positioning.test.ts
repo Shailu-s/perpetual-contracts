@@ -472,7 +472,7 @@ describe.only("Positioning", function () {
         await expect(positionSize1).to.be.equal("24000000000000000000")
       })
 
-      it.only("should close whole position of both traders", async () => {
+      it("should close whole position of both traders", async () => {
         for (let i = 0; i < 9; i++) {
           await matchingEngine.addObservation(10000000, 0);
         }
@@ -562,7 +562,7 @@ describe.only("Positioning", function () {
         await expect(positionSizeAfter).to.be.equal("0")
       })
 
-      it("should liquidate left trader", async () => {
+      it.only("should liquidate left trader", async () => {
         await virtualToken.mint(account1.address, ten.toString())
         await virtualToken.mint(account2.address, ten.toString())
         await virtualToken.addWhitelist(account1.address)
@@ -609,28 +609,6 @@ describe.only("Positioning", function () {
           false,
           )
 
-          const orderRightNew = Order(
-            ORDER,
-            87654321987654,
-            account1.address,
-            Asset(volmexBaseToken.address, BigNumber.from("2").mul(one).toString()),
-            Asset(virtualToken.address, BigNumber.from("200").mul(one).toString()),
-            1,
-            0,
-            true,
-          )
-  
-          const orderLeftNew = Order(
-            ORDER,
-            87654321987654,
-            account2.address,
-            Asset(virtualToken.address,  BigNumber.from("200").mul(one).toString()),
-            Asset(volmexBaseToken.address,  BigNumber.from("2").mul(one).toString()),
-            1,
-            0,
-            false,
-            )
-
 
         let signatureLeft = await getSignature(orderLeft, account1.address)
         let signatureRight = await getSignature(orderRight, account2.address)
@@ -650,24 +628,23 @@ describe.only("Positioning", function () {
 
         await expect(positionSize.toString()).to.be.equal("-20000000000000000000")
         await expect(positionSize1.toString()).to.be.equal("20000000000000000000")
+
+        // const USDCVaultAddress = await vaultController.getVault(virtualToken.address)
+
+        // const USDCVaultContract = await vault.attach(USDCVaultAddress)
+
+        // await USDCVaultContract.connect(account1).setPositioning(positioning.address)
+
+        // await accountBalance.connect(account1).grantSettleRealizedPnlRole(vaultController.address);
+        // console.log(account1.address, vaultController.address, )
+
+        // await expect(vaultController.connect(account1).withdraw(virtualToken.address, account1.address, BigNumber.from("5").mul(one).toString()))
+        // .to.emit(USDCVaultContract, "Withdrawn")
+
+        const liquidatablePosition = positioning.getLiquidatablePosition(orderLeft.trader,volmexBaseToken.address)
         
-        let signatureLeft1 = await getSignature(orderLeftNew, account1.address)
-        let signatureRight1 = await getSignature(orderRightNew, account2.address)
-
-        const USDCVaultAddress = await vaultController.getVault(virtualToken.address)
-
-        const USDCVaultContract = await vault.attach(USDCVaultAddress)
-
-        await USDCVaultContract.connect(account1).setPositioning(positioning.address)
-
-        await accountBalance.connect(account1).grantSettleRealizedPnlRole(vaultController.address);
-        console.log(account1.address, vaultController.address, )
-
-        await expect(vaultController.connect(account1).withdraw(virtualToken.address, account1.address, BigNumber.from("5").mul(one).toString()))
-        .to.emit(USDCVaultContract, "Withdrawn")
-
         // liquidating the position
-        await expect(positioning.openPosition(orderLeft1, signatureLeft1, orderRight1, signatureRight1, liquidator)).to.emit(
+        await expect(positioning.liquidate(orderLeft.trader, volmexBaseToken.address, liquidatablePosition)).to.emit(
           positioning,
           "PositionLiquidated",
         )

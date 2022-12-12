@@ -2,8 +2,13 @@
 pragma solidity =0.8.12;
 
 import { AddressUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol";
-import { ReentrancyGuardUpgradeable } from "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
-import { SafeERC20Upgradeable, IERC20Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
+import {
+    ReentrancyGuardUpgradeable
+} from "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
+import {
+    SafeERC20Upgradeable,
+    IERC20Upgradeable
+} from "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 import { Context } from "@openzeppelin/contracts/utils/Context.sol";
 import { ContextUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol";
 
@@ -82,7 +87,7 @@ contract Vault is IVault, ReentrancyGuardUpgradeable, OwnerPausable, VaultStorag
     }
 
     /// @inheritdoc IVault
-    function setPositioning(address PositioningArg) external onlyOwner{
+    function setPositioning(address PositioningArg) external onlyOwner {
         // V_VPMM: Positioning is not contract
         require(PositioningArg.isContract(), "V_VPMM");
         _grantRole(CAN_MATCH_ORDERS, PositioningArg);
@@ -142,10 +147,7 @@ contract Vault is IVault, ReentrancyGuardUpgradeable, OwnerPausable, VaultStorag
     }
 
     /// @inheritdoc IVault
-    function withdraw(
-        uint256 amount,
-        address payable to
-    ) external virtual override whenNotPaused nonReentrant {
+    function withdraw(uint256 amount, address payable to) external virtual override whenNotPaused nonReentrant {
         _requireOnlyVaultController();
         // input requirement checks:
         //   token: here -> TODO: Token is already set, not need to add check
