@@ -73,10 +73,9 @@
     "eslint-config-prettier": "8.3.0",
     "ethereum-waffle": "3.4.0",
     "ethers": "5.2.0",
-<<<<<<< HEAD
+
     "hardhat": "2.11.2",
-=======
->>>>>>> test-VOL-1318-TestCase-Coverage-factory
+
     "hardhat-contract-sizer": "2.0.3",
     "hardhat-dependency-compiler": "1.1.1",
     "hardhat-gas-reporter": "1.0.4",
