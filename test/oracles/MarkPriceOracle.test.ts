@@ -1,7 +1,7 @@
 import { expect } from "chai";
 import { ethers, upgrades } from "hardhat";
 
-describe.only('MarkPriceOracle', function () {
+describe('MarkPriceOracle', function () {
   let MarkPriceOracle;
   let markPriceOracle;
   let ExchangeTest;
@@ -63,7 +63,15 @@ describe.only('MarkPriceOracle', function () {
       }
     );
 
-    volmexBaseToken = await VolmexBaseToken.deploy();
+    volmexBaseToken = await VolmexBaseToken.upgrades.deployProxy(
+      VolmexBaseToken,
+      [
+        "MyTestToken",
+        "MKT",
+         indexPriceOracle.address,
+         
+      ]
+    );
     await volmexBaseToken.deployed();
 
     newToken = await VolmexBaseToken.deploy();
