@@ -22,7 +22,6 @@ contract ERC20TransferProxy is
         _requireTransferProxyAdmin();
         _grantRole(TRANSFER_PROXY_CALLER, exchange);
     }
-
     function erc20SafeTransferFrom(
         IERC20Upgradeable token,
         address from,

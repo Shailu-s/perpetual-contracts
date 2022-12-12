@@ -138,6 +138,9 @@ contract Positioning is
         IAccountBalance(_accountBalance).registerBaseToken(orderLeft.trader, baseToken);
         IAccountBalance(_accountBalance).registerBaseToken(orderRight.trader, baseToken);
 
+        bool isLeftLiquidatable = _validateOrder(orderLeft, signatureLeft, baseToken);
+        bool isRightLiquidatable = _validateOrder(orderRight, signatureRight, baseToken);
+
         // must settle funding first
         _settleFunding(orderLeft.trader, baseToken);
         _settleFunding(orderRight.trader, baseToken);
@@ -145,7 +148,7 @@ contract Positioning is
         InternalData memory internalData = _openPosition(orderLeft, orderRight, baseToken);
         address positionLiquidator = liquidator.decodeAddress();
 
-        if (_validateOrder(orderLeft, signatureLeft, baseToken)) {
+        if (isLeftLiquidatable) {
             _takeLiquidationFees(
                 orderLeft,
                 internalData.leftExchangedPositionNotional,
@@ -154,7 +157,7 @@ contract Positioning is
                 positionLiquidator
             );
         }
-        if (_validateOrder(orderRight, signatureRight, baseToken)) {
+        if (isRightLiquidatable) {
             _takeLiquidationFees(
                 orderRight,
                 internalData.rightExchangedPositionNotional,
@@ -180,8 +183,9 @@ contract Positioning is
         return _accountBalance;
     }
 
-    function getMaxLiquidationAmount(address trader) public view returns (int256) {
-        return IAccountBalance(_accountBalance).getMarginRequirementForLiquidation(trader) - _getAccountValue(trader);
+    function getMaxLiquidationAmount(address trader, address baseToken) public view returns (uint256) {
+        uint256 indexPrice = IIndexPrice(baseToken).getIndexPrice(IPositioningConfig(_positioningConfig).getTwapInterval()) / 100000000;
+        return (IAccountBalance(_accountBalance).getMarginRequirementForLiquidation(trader) - _getAccountValue(trader)).toUint256() / indexPrice;
     }
 
     ///@dev this function calculates total pending funding payment of a trader
@@ -397,13 +401,12 @@ contract Positioning is
 
         uint24 partialCloseRatio = IPositioningConfig(_positioningConfig).getPartialLiquidationRatio();
 
-        uint256 amount = positionSize.abs().mulRatio(partialCloseRatio);
+        uint256 partialCloseAmount = positionSize.abs().mulRatio(partialCloseRatio);
 
-        int256 maxLiquidation = getMaxLiquidationAmount(order.trader);
+        uint256 maxLiquidation = getMaxLiquidationAmount(order.trader, baseToken);
 
-        uint256 orderAmount = order.isShort ? order.makeAsset.value : order.takeAsset.value;
-
-        require(orderAmount >= amount && orderAmount <= maxLiquidation.abs(), "P_WTV");
+        uint256 baseAmount = order.isShort ? order.makeAsset.value : order.takeAsset.value;
+        require(baseAmount >= partialCloseAmount && baseAmount <= maxLiquidation, "P_WTV");
     }
 
     /// @dev This function checks if account of trader is eligible for liquidation

@@ -1,7 +1,6 @@
 import { expect } from "chai";
 import { Signer } from "ethers";
 import { ethers, upgrades } from "hardhat";
-
 describe('PerpFactory', function () {
   let MatchingEngine;
   let matchingEngine;
@@ -46,7 +45,7 @@ describe('PerpFactory', function () {
 
   beforeEach(async () => {
     const [owner] = await ethers.getSigners();
-
+    
     indexPriceOracle = await upgrades.deployProxy(
       IndexPriceOracle,
       [
@@ -57,7 +56,6 @@ describe('PerpFactory', function () {
       }
     );
     await indexPriceOracle.deployed();
-
     volmexBaseToken = await VolmexBaseToken.deploy();
     await volmexBaseToken.deployed();
 
@@ -146,6 +144,14 @@ describe('PerpFactory', function () {
       expect(cloneTokenAddress).not.equal(ZERO_ADDR);
     });
 
+    it("should clone Quote token", async() => {
+      console.log(factory.address)
+      await factory.cloneQuoteToken("GoatToken","GTK");
+      const cloneQuoteToken = await factory.getQuoteTokenByIndex(0);
+      expect(cloneQuoteToken).not.equal(ZERO_ADDR);
+    })
+   
+    
     it("Should deploy the complete perp ecosystem", async () => {
       const index = (await factory.perpIndexCount()).toString();
       await (await factory.clonePerpEcosystem(
@@ -154,8 +160,43 @@ describe('PerpFactory', function () {
         markPriceOracle.address,
         indexPriceOracle.address,
         index
-      )).wait();
+      ))
     });
+    it("Should Clone Vault",async() =>{
+      const index = (await factory.perpIndexCount()).toString();
+      await factory.clonePerpEcosystem(
+        positioningConfig.address,
+        matchingEngine.address,
+        markPriceOracle.address,
+        indexPriceOracle.address,
+        index,
+      )
+      const vaultClone = await factory.cloneVault(USDC.address,true, positioningConfig.address,accountBalance.address,vault.address,0)
+    });
+
+    it("should fail to clone vault because or admin access ", async()=>{
+      const [owner,account1] = await ethers.getSigners();
+      const index = (await factory.perpIndexCount()).toString();
+      await expect(factory.connect(account1).clonePerpEcosystem(
+        positioningConfig.address,
+        matchingEngine.address,
+        markPriceOracle.address,
+        indexPriceOracle.address,
+        index,
+      )).to.be.revertedWith("PF_NCD")
+    });
+
+    it("Should fail to Clone Vault",async() =>{ 
+      const index = (await factory.perpIndexCount()).toString();
+      await factory.clonePerpEcosystem(
+        positioningConfig.address,
+        matchingEngine.address,
+        markPriceOracle.address,
+        indexPriceOracle.address,
+        index,
+      )
+     await expect(factory.cloneVault(USDC.address,true, positioningConfig.address,accountBalance.address,vault.address,1)).to.be.revertedWith("PerpFactory: Vault Controller Not Found");
+    })
   });
 
   describe('Price Feed', async () => {
