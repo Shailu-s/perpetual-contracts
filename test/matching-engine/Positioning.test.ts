@@ -563,8 +563,8 @@ describe.only("Positioning", function () {
       })
 
       it("should liquidate left trader", async () => {
-        await virtualToken.mint(account1.address, ten.toString())
-        await virtualToken.mint(account2.address, ten.toString())
+        await virtualToken.mint(account1.address, convert("1000"))
+        await virtualToken.mint(account2.address, convert("1000"))
         await virtualToken.addWhitelist(account1.address)
         await virtualToken.addWhitelist(account2.address)
 
@@ -572,6 +572,14 @@ describe.only("Positioning", function () {
         await virtualToken.connect(account2).approve(vault.address, ten.toString())
         await virtualToken.connect(account1).approve(volmexPerpPeriphery.address, ten.toString())
         await virtualToken.connect(account2).approve(volmexPerpPeriphery.address, ten.toString())
+
+        const USDCVaultAddress = await vaultController.getVault(virtualToken.address)
+
+        const USDCVaultContract = await vault.attach(USDCVaultAddress)
+
+        await USDCVaultContract.setPositioning(positioning.address)
+
+        await accountBalance1.grantSettleRealizedPnlRole(vaultController.address);
 
         // volmexPerpPeriphery.address, USDC.address, alice.address, amount
         await vaultController.connect(account1).deposit(
@@ -607,38 +615,31 @@ describe.only("Positioning", function () {
           1,
           0,
           false,
-          )
+        )
+        // var arr = await indexPriceOracle.getIndexDataPoints(0);
+        // console.log("Index 0");
+        // for (var i = 0; i < arr.length; i++) {
+        //   console.log(arr[i].toString());
+        // }
+        // arr = await indexPriceOracle.getIndexDataPoints(1);
+        // console.log("Index 1");
+        // for (var i = 0; i < arr.length; i++) {
+        //   console.log(arr[i].toString());
+        // }
+        
+        let signatureLeft = await getSignature(orderLeft1, account1.address)
+        let signatureRight = await getSignature(orderRight1, account2.address)
 
-          const orderRightNew = Order(
-            ORDER,
-            87654321987654,
-            account1.address,
-            Asset(volmexBaseToken.address, BigNumber.from("2").mul(one).toString()),
-            Asset(virtualToken.address, BigNumber.from("200").mul(one).toString()),
-            1,
-            0,
-            true,
-          )
-  
-          const orderLeftNew = Order(
-            ORDER,
-            87654321987654,
-            account2.address,
-            Asset(virtualToken.address,  BigNumber.from("200").mul(one).toString()),
-            Asset(volmexBaseToken.address,  BigNumber.from("2").mul(one).toString()),
-            1,
-            0,
-            false,
-            )
+        console.log("\nBefore");
+        console.log("Account 1 value: ", (await positioning.getAccountValue(account1.address)).toString());
+        console.log("Account 2 value: ", (await positioning.getAccountValue(account2.address)).toString());
 
 
-        let signatureLeft = await getSignature(orderLeft, account1.address)
-        let signatureRight = await getSignature(orderRight, account2.address)
-
-        await expect(positioning.openPosition(orderLeft, signatureLeft, orderRight, signatureRight, liquidator)).to.emit(
+        await expect(positioning.openPosition(orderLeft1, signatureLeft, orderRight1, signatureRight, liquidator)).to.emit(
           positioning,
           "PositionChanged",
         )
+
         const positionSize = await accountBalance1.getTakerPositionSize(
           account1.address,
           orderLeft.makeAsset.virtualToken,
@@ -648,35 +649,114 @@ describe.only("Positioning", function () {
           orderLeft.makeAsset.virtualToken,
         )
 
-        await expect(positionSize.toString()).to.be.equal("-20000000000000000000")
-        await expect(positionSize1.toString()).to.be.equal("20000000000000000000")
+        await expect(positionSize.toString()).to.be.equal(convert("-5"))
+        await expect(positionSize1.toString()).to.be.equal(convert("5"))
+
+        console.log("\nAfter");
+        console.log("Account 1 value: ", (await positioning.getAccountValue(account1.address)).toString());
+        console.log("Account 2 value: ", (await positioning.getAccountValue(account2.address)).toString());
+
+        // Index price increase
+        await indexPriceOracle.addIndexDataPoint(0, 300 * 1e6);
+        await indexPriceOracle.addIndexDataPoint(1, 300 * 1e6);
+
+        console.log("\nAfter index price updated to 200");
+        console.log("Account 1 value: ", (await positioning.getAccountValue(account1.address)).toString());
+        console.log("Account 2 value: ", (await positioning.getAccountValue(account2.address)).toString());
+
+        // console.log("latestRoundData");
+        // const ans = await indexPriceOracle.latestRoundData(0);
+        // console.log("ans: ", ans[0].toString());
+
+        // const ans1 = await indexPriceOracle.latestRoundData(1);
+        // console.log("ans1: ", ans1[0].toString());
+
+
+        const orderLeftNew = Order(
+          ORDER,
+          deadline,
+          account1.address,
+          Asset(virtualToken.address, convert("1600")),
+          Asset(volmexBaseToken.address, convert("8")),
+          3,
+          0,
+          false,
+        )
+
+        const orderRightNew = Order(
+          ORDER,
+          deadline,
+          account2.address,
+          Asset(volmexBaseToken.address,  convert("8")),
+          Asset(virtualToken.address,  convert("1600")),
+          4,
+          0,
+          true,
+        )
         
         let signatureLeft1 = await getSignature(orderLeftNew, account1.address)
         let signatureRight1 = await getSignature(orderRightNew, account2.address)
 
-        const USDCVaultAddress = await vaultController.getVault(virtualToken.address)
+        console.log("Account 1 liquidatable: ", (await positioning.isAccountLiquidatable(account1.address)));
+        console.log("Account 2 liquidatable: ", (await positioning.isAccountLiquidatable(account2.address)));
 
-        const USDCVaultContract = await vault.attach(USDCVaultAddress)
+        await expect(positioning.openPosition(orderLeftNew, '0x', orderRightNew, signatureRight1, liquidator)).to.emit(
+          positioning,
+          "PositionLiquidated",
+        );
 
-        await USDCVaultContract.connect(account1).setPositioning(positioning.address)
+        await USDCVaultContract.setPositioning(positioning.address)
 
-        await accountBalance.connect(account1).grantSettleRealizedPnlRole(vaultController.address);
-        console.log(account1.address, vaultController.address, )
+        await accountBalance1.grantSettleRealizedPnlRole(vaultController.address);
 
-        await expect(vaultController.connect(account1).withdraw(virtualToken.address, account1.address, BigNumber.from("5").mul(one).toString()))
-        .to.emit(USDCVaultContract, "Withdrawn")
+        await positioning.openPosition(orderLeftNew, signatureLeft1, orderRightNew, signatureRight1, liquidator);
+        const positionSize2 = await accountBalance1.getTakerPositionSize(
+          account1.address,
+          orderLeft1.makeAsset.virtualToken,
+        )
+        const positionSize3 = await accountBalance1.getTakerPositionSize(
+          account2.address,
+          orderLeft1.makeAsset.virtualToken,
+        )
+
+        console.log("account1: ", account1.address, positionSize2.toString());
+        console.log("account2: ", account2.address, positionSize3.toString());
+
+        console.log("\nAfter 2nd position open");
+        await indexPriceOracle.addIndexDataPoint(0, "800" + "000000");
+        await indexPriceOracle.addIndexDataPoint(1, "800" + "000000");
+
+        console.log("Account 1 value: ", (await positioning.getAccountValue(account1.address)).toString());
+        console.log("Account 2 value: ", (await positioning.getAccountValue(account2.address)).toString());
+
+        console.log("Account 1 liquidatable: ", (await positioning.isAccountLiquidatable(account1.address)));
+        console.log("Account 2 liquidatable: ", (await positioning.isAccountLiquidatable(account2.address)));
+
+        // return;
+
+        // Short order -> convert to long order without signature
+        // Normal order -> match
+
+        console.log("Opening positiong 2");
 
         // liquidating the position
-        await expect(positioning.openPosition(orderLeft1, signatureLeft1, orderRight1, signatureRight1, liquidator)).to.emit(
+        await expect(positioning.openPosition(orderLeftNew, signatureLeft1, orderRightNew, signatureRight1, liquidator)).to.emit(
           positioning,
           "PositionLiquidated",
         )
+
+        
+
+        // Check liquidator pnl after liquidation
+        // check position size
         const positionSizeAfter = await accountBalance1.getTakerPositionSize(
           account1.address,
-          orderLeft.makeAsset.virtualToken,
+          orderLeft1.makeAsset.virtualToken,
         )
 
-        await expect(positionSizeAfter.toString()).to.be.equal("-1800000000000000000")
+        console.log("Postion size after: ", positionSizeAfter.toString());
+
+        await expect(positionSizeAfter.toString()).to.be.equal("0")
       })
 
       it("should liquidate right order", async () => {
