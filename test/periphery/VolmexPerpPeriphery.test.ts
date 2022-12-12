@@ -1,7 +1,7 @@
 import { expect } from "chai";
 import { ethers, upgrades } from "hardhat";
 import { smock } from "@defi-wonderland/smock";
-import { parseUnits } from "ethers/lib/utils";
+import { parseUnits, zeroPad } from "ethers/lib/utils";
 const { Order, Asset, sign, encodeAddress } = require("../order");
 import { BigNumber } from "ethers";
 
@@ -47,7 +47,7 @@ describe("VolmexPerpPeriphery", function () {
   const ORDER = "0xf555eb98";
   const STOP_LOSS_LIMIT_ORDER = "0xeeaed735";
   const TAKE_PROFIT_LIMIT_ORDER = "0xe0fc7f94";
-
+  const ZERO_ADDR = '0x0000000000000000000000000000000000000000';
   this.beforeAll(async () => {
     VolmexPerpPeriphery = await ethers.getContractFactory("VolmexPerpPeriphery");
     MarkPriceOracle = await ethers.getContractFactory("MarkPriceOracle");
@@ -230,6 +230,32 @@ describe("VolmexPerpPeriphery", function () {
             let receipt = await volmexPerpPeriphery.deployed();
             expect(receipt.confirmations).not.equal(0);
         });
+        it("should fail to deploy VolmexPerpPeriphery", async () => {
+        await expect(upgrades.deployProxy(
+              VolmexPerpPeriphery, 
+              [
+                  [positioning.address, positioning2.address], 
+                  [vaultController.address, vaultController2.address],
+                  markPriceOracle.address,
+                  [vault.address, vault.address],
+                  ZERO_ADDR,
+                  owner.address // replace with relayer address
+              ]
+          )).to.be.revertedWith("Admin can't be address(0)");
+        });
+        it("should fail to deploy VolmexPerpPeriphery since relayer address is 0", async () => {
+          await expect(upgrades.deployProxy(
+                VolmexPerpPeriphery, 
+                [
+                    [positioning.address, positioning2.address], 
+                    [vaultController.address, vaultController2.address],
+                    markPriceOracle.address,
+                    [vault.address, vault.address],
+                    owner.address,
+                    ZERO_ADDR // replace with relayer address
+                ]
+            )).to.be.revertedWith("Relayer can't be address(0)");
+          });
     });
 
     describe("set Relayer", function(){
@@ -274,13 +300,13 @@ describe("VolmexPerpPeriphery", function () {
           STOP_LOSS_LIMIT_ORDER,
           deadline,
           account1.address,
-          Asset(volmexBaseToken.address, two.toString()),
-          Asset(virtualToken.address, two.toString()),
+          Asset(volmexBaseToken.address, one.toString()),
+          Asset(virtualToken.address, one.toString()),
           1,
           1e8.toString(),
           true,
         )
-    
+        
         const orderRight = Order(
           STOP_LOSS_LIMIT_ORDER,
           deadline,
@@ -587,6 +613,21 @@ describe("VolmexPerpPeriphery", function () {
       await (await volmexPerpPeriphery.updatePositioningAtIndex(oldPositioning, newPositioning.address, 0)).wait();
       expect(await volmexPerpPeriphery.positionings(0)).to.equal(newPositioning.address);
     });
+    it("Should fail to update the positioning at index", async () => {
+      const newPositioning = await upgrades.deployProxy(Positioning, [
+          positioningConfig.address,
+          vaultController.address,
+          accountBalance1.address,
+          matchingEngine.address,
+          markPriceOracle.address,
+          indexPriceOracle.address,
+          0,
+      ]);
+      const oldPositioning = await volmexPerpPeriphery.positionings(0);
+      await expect( volmexPerpPeriphery.updatePositioningAtIndex(oldPositioning, newPositioning.address, 2))
+      .to.be.revertedWith("Periphery: Incorrect positioning _index")
+      
+    });
   });
 
   describe("Deposit, Withdraw & Open position", async () => {
@@ -620,7 +661,9 @@ describe("VolmexPerpPeriphery", function () {
       expect(amount).to.equal(vBalAfter.sub(vBalAfterWithdraw));
       expect(amount).to.equal(ownerBalAfterWithdraw.sub(ownerBalBeforeWithdraw));
     });
-
+    it("Should fail to tranfer to vault becuase vault address in not white listed",async()=>{
+      await expect(volmexPerpPeriphery.connect(account2).transferToVault(USDC.address,owner.address,"10000000")).to.be.revertedWith("Periphery: vault not whitelisted")
+    })
     let orderLeft;
     let orderRight;
     const deadline = 87654321987654;
