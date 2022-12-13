@@ -325,7 +325,7 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
     //
     // INTERNAL NON-VIEW
     //
-
+    
     function _modifyTakerBalance(
         address trader,
         address baseToken,
@@ -335,7 +335,10 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
         LibAccountMarket.Info storage accountInfo = _accountMarketMap[trader][baseToken];
         accountInfo.takerPositionSize = accountInfo.takerPositionSize + base;
         accountInfo.takerOpenNotional = accountInfo.takerOpenNotional + quote;
-        return (accountInfo.takerPositionSize, accountInfo.takerOpenNotional);
+        if (accountInfo.takerPositionSize.abs() >= _DUST || accountInfo.takerOpenNotional.abs() >= _DUST) {
+            return (accountInfo.takerPositionSize, accountInfo.takerOpenNotional);
+        }
+        return (0, 0);
     }
 
     function _modifyOwedRealizedPnl(address trader, int256 amount) internal {

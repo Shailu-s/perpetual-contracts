@@ -387,23 +387,39 @@ contract Positioning is
                 internalData.rightExchangedPositionNotional
             );
 
-        // modifies PnL of fee receiver
+        int256 leftRealizePnL = _realizePnLChecks(
+            orderLeft,
+            baseToken,
+            internalData.leftExchangedPositionSize,
+            internalData.leftExchangedPositionNotional
+        );
+        int256 rightRealizePnL = _realizePnLChecks(
+            orderRight,
+            baseToken,
+            internalData.rightExchangedPositionSize,
+            internalData.rightExchangedPositionNotional
+        );
+
+        // // modifies PnL of fee receiver
         _modifyOwedRealizedPnl(_getFeeReceiver(), (orderFees.orderLeftFee + orderFees.orderRightFee).toInt256());
 
-        // modifies positionSize and openNotional
-        (internalData.leftPositionSize, internalData.leftOpenNotional) = IAccountBalance(_accountBalance)
-            .modifyTakerBalance(
+        // // modifies positionSize and openNotional
+       _settleBalanceAndDeregister(
             orderLeft.trader,
             baseToken,
             internalData.leftExchangedPositionSize,
-            internalData.leftExchangedPositionNotional - orderFees.orderLeftFee.toInt256()
+            internalData.leftExchangedPositionNotional - orderFees.orderLeftFee.toInt256(),
+            leftRealizePnL,
+            0
         );
-        (internalData.rightPositionSize, internalData.rightOpenNotional) = IAccountBalance(_accountBalance)
-            .modifyTakerBalance(
+
+        _settleBalanceAndDeregister(
             orderRight.trader,
             baseToken,
             internalData.rightExchangedPositionSize,
-            internalData.rightExchangedPositionNotional - orderFees.orderRightFee.toInt256()
+            internalData.rightExchangedPositionNotional - orderFees.orderRightFee.toInt256(),
+            rightRealizePnL,
+            0
         );
 
         if (_firstTradedTimestampMap[baseToken] == 0) {
@@ -444,6 +460,54 @@ contract Positioning is
 
     function _registerBaseToken(address trader, address token) internal {
         IAccountBalance(_accountBalance).registerBaseToken(trader, token);
+    }
+
+    function _getTotalAbsPositionValue(address trader) internal view returns (uint256) {
+        return IAccountBalance(_accountBalance).getTotalAbsPositionValue(trader);
+    }
+
+    function _realizePnLChecks(
+        LibOrder.Order memory order,
+        address baseToken,
+        int256 exchangedPositionSize,
+        int256 exchangedPositionNotional
+    ) internal view returns (int256) {
+        int256 takerPositionSize = _getTakerPosition(order.trader, baseToken);
+        // get openNotional before swap
+        int256 oldTakerOpenNotional = _getTakerOpenNotional(order.trader, baseToken);
+
+        // when takerPositionSize < 0, it's a short position
+        bool isReducingPosition = takerPositionSize == 0 ? false : takerPositionSize < 0 != !order.isShort;
+        // when reducing/not increasing the position size, it's necessary to realize pnl
+        int256 pnlToBeRealized;
+        if (isReducingPosition) {
+            pnlToBeRealized = _getPnlToBeRealized(
+                InternalRealizePnlParams({
+                    trader: order.trader,
+                    baseToken: baseToken,
+                    takerPositionSize: takerPositionSize,
+                    takerOpenNotional: oldTakerOpenNotional,
+                    base: exchangedPositionSize,
+                    quote: exchangedPositionNotional
+                })
+            );
+        }
+
+        if (pnlToBeRealized != 0) {
+            // if realized pnl is not zero, that means trader is reducing or closing position
+            // trader cannot reduce/close position if the remaining account value is less than
+            // accountValue * LiquidationPenaltyRatio, which
+            // enforces traders to keep LiquidationPenaltyRatio of accountValue to
+            // shore the remaining positions and make sure traders having enough money to pay liquidation penalty.
+
+            // CH_NEMRM : not enough minimum required margin after reducing/closing position
+            require(
+                _getAccountValue(order.trader) >=
+                    _getTotalAbsPositionValue(order.trader).mulRatio(_getLiquidationPenaltyRatio()).toInt256(),
+                "CH_NEMRM"
+            );
+        }
+        return pnlToBeRealized;
     }
 
     /// @param positionSizeToBeLiquidated its direction should be the same as taker's existing position
@@ -580,10 +644,7 @@ contract Positioning is
 
     /// @dev This function returns position size of trader
     function _getTakerPosition(address trader, address baseToken) internal view returns (int256) {
-        int256 takerPositionSize = IAccountBalance(_accountBalance).getTakerPositionSize(trader, baseToken);
-        // P_PSZ: position size is zero
-        require(takerPositionSize != 0, "P_PSZ");
-        return takerPositionSize;
+        return IAccountBalance(_accountBalance).getTakerPositionSize(trader, baseToken);;
     }
 
     /// @dev This function checks if free collateral of trader is available
