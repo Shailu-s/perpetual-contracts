@@ -70,14 +70,14 @@ contract Positioning is
         address indexPriceArg,
         uint64 underlyingPriceIndex
     ) external initializer {
-        // CH_VANC: Vault address is not contract
-        require(vaultControllerArg.isContract(), "CH_VANC");
+        // P_VANC: Vault address is not contract
+        require(vaultControllerArg.isContract(), "P_VANC");
         // PositioningConfig address is not contract
-        require(PositioningConfigArg.isContract(), "CH_PCNC");
+        require(PositioningConfigArg.isContract(), "P_PCNC");
         // AccountBalance is not contract
-        require(accountBalanceArg.isContract(), "CH_ABNC");
-        // CH_MENC: Matching Engine is not contract
-        require(matchingEngineArg.isContract(), "CH_MENC");
+        require(accountBalanceArg.isContract(), "P_ABNC");
+        // P_MENC: Matching Engine is not contract
+        require(matchingEngineArg.isContract(), "P_MENC");
 
         __ReentrancyGuard_init();
         __OwnerPausable_init();
@@ -150,12 +150,13 @@ contract Positioning is
         address trader,
         address baseToken,
         int256 positionSize
-    ) external override whenNotPaused nonReentrant {
+    ) public override whenNotPaused nonReentrant {
         _liquidate(trader, baseToken, positionSize);
     }
 
+
     /// @inheritdoc IPositioning
-    function liquidate(address trader, address baseToken) external override whenNotPaused nonReentrant {
+    function liquidateFullPosition(address trader, address baseToken) external override whenNotPaused nonReentrant {
         // positionSizeToBeLiquidated = 0 means liquidating as much as possible
         _liquidate(trader, baseToken, 0);
     }
@@ -247,16 +248,16 @@ contract Positioning is
         address baseToken,
         int256 positionSizeToBeLiquidated
     ) internal {
-        // CH_CLWTISO: cannot liquidate when there is still order
-        // require(!IAccountBalance(_accountBalance).hasOrder(trader), "CH_CLWTISO");
+        // P_CLWTISO: cannot liquidate when there is still order
+        // require(!IAccountBalance(_accountBalance).hasOrder(trader), "P_CLWTISO");
 
-        // CH_EAV: enough account value
-        require(_isAccountLiquidatable(trader), "CH_EAV");
+        // P_EAV: enough account value
+        require(_isAccountLiquidatable(trader), "P_EAV");
 
         int256 positionSize = _getTakerPosition(trader, baseToken);
 
-        // CH_WLD: wrong liquidation direction
-        require(positionSize * positionSizeToBeLiquidated >= 0, "CH_WLD");
+        // P_WLD: wrong liquidation direction
+        require(positionSize * positionSizeToBeLiquidated >= 0, "P_WLD");
 
         address liquidator = _msgSender();
 
@@ -299,8 +300,8 @@ contract Positioning is
         //                 _settlementTokenDecimals
         //             );
 
-        //         // CH_IIC: insufficient insuranceFund capacity
-        //         require(insuranceFundCapacityX10_18 >= accountValueAfterLiquidationX10_18.neg256(), "CH_IIC");
+        //         // P_IIC: insufficient insuranceFund capacity
+        //         require(insuranceFundCapacityX10_18 >= accountValueAfterLiquidationX10_18.neg256(), "P_IIC");
         //     }
         // }
 
@@ -588,8 +589,8 @@ contract Positioning is
 
     /// @dev This function checks if free collateral of trader is available
     function _requireEnoughFreeCollateral(address trader) internal view {
-        // CH_NEFCI: not enough free collateral by imRatio
-        require(_getFreeCollateralByRatio(trader, IPositioningConfig(_positioningConfig).getImRatio()) > 0, "CH_NEFCI");
+        // P_NEFCI: not enough free collateral by imRatio
+        require(_getFreeCollateralByRatio(trader, IPositioningConfig(_positioningConfig).getImRatio()) > 0, "P_NEFCI");
     }
 
     /// @dev this function returns address of the fee receiver

@@ -117,12 +117,6 @@ interface IPositioning {
         bytes memory liquidator
     ) external;
 
-    /// @notice Get the pnl that can be realized if trader reduce position
-    /// @dev This function normally won't be needed by traders, but it might be useful for 3rd party
-    /// @param params The params needed to do the query, encoded as `RealizePnlParams` in calldata
-    /// @return pnlToBeRealized The pnl that can be realized if trader reduce position
-    function getPnlToBeRealized(RealizePnlParams memory params) external view returns (int256 pnlToBeRealized);
-
     /// @notice If trader is underwater, any one can call `liquidate` to liquidate this trader
     /// @dev If trader has open orders, need to call `cancelAllExcessOrders` first
     /// @dev If positionSize is greater than maxLiquidatePositionSize, liquidate maxLiquidatePositionSize by default
@@ -142,12 +136,12 @@ interface IPositioning {
 
     /// @notice liquidate trader's position and will liquidate the max possible position size
     /// @dev If margin ratio >= 0.5 * mmRatio,
-    ///         maxLiquidateRatio = MIN((1, 0.5 * totalAbsPositionValue / absPositionValue)
+    /// maxLiquidateRatio = MIN((1, 0.5 * totalAbsPositionValue / absPositionValue)
     /// @dev If margin ratio < 0.5 * mmRatio, maxLiquidateRatio = 1
     /// @dev maxLiquidatePositionSize = positionSize * maxLiquidateRatio
     /// @param trader The address of trader
     /// @param baseToken The address of baseToken
-    function liquidate(address trader, address baseToken) external;
+    function liquidateFullPosition(address trader, address baseToken) external;
 
     /// @notice Set Positioning address
     function setPositioning(address positioning) external;
