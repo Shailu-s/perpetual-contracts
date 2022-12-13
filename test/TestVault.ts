@@ -162,6 +162,25 @@ describe("Vault tests", function () {
       ]
     );
   })
+  it ("should fail to deploy because  positioning config addres was not contract", async()=>{
+    await expect(upgrades.deployProxy(vaultFactory, [
+      alice.address,
+      accountBalance.address,
+      USDC.address,
+      vaultController.address,
+      false,
+    ])).to.be.revertedWith("V_CHCNC")
+  })
+  it ("should fail to deploy because  account balance address was not contract," ,async()=>{
+    await expect(upgrades.deployProxy(vaultFactory, [
+     positioningConfig.address,
+     alice.address,
+      USDC.address,
+      vaultController.address,
+      false,
+    ])).to.be.revertedWith("V_ABNC")
+    
+  })
   // @SAMPLE - deposit
   it("Positive Test for deposit function", async () => {
     const amount = parseUnits("100", await USDC.decimals())
@@ -187,6 +206,21 @@ describe("Vault tests", function () {
 
     // // update sender's balance
     expect(await vaultController.getBalanceByToken(alice.address, USDC.address)).to.eq("100000000000000000000")
+  })
+  it("Negative Test For desposit from vault",async()=>{
+
+    await positioningConfig.setSettlementTokenBalanceCap(10000)
+
+    const USDCVaultAddress = await vaultController.getVault(ETH.address)
+
+    const USDCVaultContract = await vaultFactory.attach(USDCVaultAddress)
+    await ETH.connect(alice).approve(ETH.address, 10000)
+    await ETH.connect(alice).approve(volmexPerpPeriphery.address, 10000)
+
+    // Check if it is reverted or not with given reason
+    await expect(vaultController.connect(alice).deposit(volmexPerpPeriphery.address,ETH.address, alice.address, 10000,{value:9000}))
+     .to.be.revertedWith("V_ANE")
+
   })
 
   it("should not allow user to withdraw from vault if vault balance is empty", async () => {
