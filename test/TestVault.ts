@@ -4,7 +4,7 @@ import { ethers, upgrades, waffle } from "hardhat"
 import { IndexPriceOracle, MarkPriceOracle, MatchingEngine } from "../typechain"
 import { FakeContract, smock } from "@defi-wonderland/smock"
 
-describe("Vault tests", function () {
+describe.only("Vault tests", function () {
   let USDC
   let positioningConfig
   let accountBalance
@@ -15,9 +15,12 @@ describe("Vault tests", function () {
   let vaultFactory
   let DAI
   let ETH
-  let markPriceFake: FakeContract<MarkPriceOracle>
-  let indexPriceFake: FakeContract<IndexPriceOracle>
-  let matchingEngineFake: FakeContract<MatchingEngine>
+  let MarkPriceOracle
+  let markPriceOracle
+  let IndexPriceOracle
+  let indexPriceOracle
+  let MatchingEngine
+  let matchingEngine
   let Positioning
   let positioning
   let EthPositioning
@@ -30,10 +33,10 @@ describe("Vault tests", function () {
   beforeEach(async function () {
     VolmexPerpPeriphery = await ethers.getContractFactory("VolmexPerpPeriphery");
     [owner, alice, relayer] = await ethers.getSigners()
-    markPriceFake = await smock.fake("MarkPriceOracle")
-    indexPriceFake = await smock.fake("IndexPriceOracle")
-    matchingEngineFake = await smock.fake('MatchingEngine')
-
+    IndexPriceOracle = await ethers.getContractFactory("IndexPriceOracle");
+    MarkPriceOracle =await ethers.getContractFactory("MarkPriceOracle")
+    MatchingEngine = await ethers.getContractFactory("MatchingEngineTest")
+   
     const tokenFactory = await ethers.getContractFactory("TestERC20")
     const USDC1 = await tokenFactory.deploy()
     USDC = await USDC1.deployed()
@@ -60,7 +63,7 @@ describe("Vault tests", function () {
       positioningConfig.address,
       accountBalance.address,
     ])
-
+    
     vaultFactory = await ethers.getContractFactory("Vault")
     vault = await upgrades.deployProxy(vaultFactory, [
       positioningConfig.address,
@@ -83,7 +86,33 @@ describe("Vault tests", function () {
       vaultController.address,
       true,
     ])
-
+    indexPriceOracle = await upgrades.deployProxy(
+      IndexPriceOracle,
+      [
+        owner.address,
+      ],
+      { 
+        initializer: "initialize",
+      }
+    );
+    markPriceOracle = await upgrades.deployProxy(MarkPriceOracle, 
+      [
+        [1000000],
+        [USDC.address]
+      ],
+      { 
+        initializer: "initialize",
+      }
+    );
+    matchingEngine = await upgrades.deployProxy(MatchingEngine, 
+      [
+        owner.address,
+        markPriceOracle.address,
+      ],
+      {
+        initializer: "__MatchingEngineTest_init"
+      }
+    );
     Positioning = await ethers.getContractFactory("PositioningTest")
     positioning = await upgrades.deployProxy(
       Positioning,
@@ -91,9 +120,9 @@ describe("Vault tests", function () {
         positioningConfig.address,
         vaultController.address,
         accountBalance.address,
-        matchingEngineFake.address,
-        markPriceFake.address,
-        indexPriceFake.address,
+        matchingEngine.address,
+        markPriceOracle.address,
+        indexPriceOracle.address,
         0
       ],
       {
@@ -107,9 +136,9 @@ describe("Vault tests", function () {
         positioningConfig.address,
         vaultController.address,
         accountBalance.address,
-        matchingEngineFake.address,
-        markPriceFake.address,
-        indexPriceFake.address,
+        matchingEngine.address,
+        markPriceOracle.address,
+        indexPriceOracle.address,
         1
       ],
       {
@@ -143,7 +172,7 @@ describe("Vault tests", function () {
       [
           [positioning.address, ethPositioning.address], 
           [vaultController.address, vaultController.address],
-          markPriceFake.address,
+           markPriceOracle.address,
           [vault.address, vault.address],
           owner.address,
           relayer.address,
@@ -155,14 +184,15 @@ describe("Vault tests", function () {
       [
           [ethPositioning.address, ethPositioning.address], 
           [vaultController.address, vaultController.address],
-          markPriceFake.address,
+          markPriceOracle.address,
           [vault.address, vault.address],
           owner.address,
           relayer.address,
       ]
     );
   })
-  it ("should fail to deploy because  positioning config addres was not contract", async()=>{
+  describe("deployment", function(){
+  it ("should fail to deploy because  positioning config address was not contract", async()=>{
     await expect(upgrades.deployProxy(vaultFactory, [
       alice.address,
       accountBalance.address,
@@ -181,7 +211,8 @@ describe("Vault tests", function () {
     ])).to.be.revertedWith("V_ABNC")
     
   })
-  // @SAMPLE - deposit
+})
+  describe("Deposit",function(){
   it("Positive Test for deposit function", async () => {
     const amount = parseUnits("100", await USDC.decimals())
 
@@ -223,6 +254,23 @@ describe("Vault tests", function () {
 
   })
 
+  it("should fail to deposit if user tries to perform transaction with value ==0 ", async()=>{
+    const amount = parseUnits("100", await USDC.decimals())
+
+    await positioningConfig.setSettlementTokenBalanceCap(amount)
+
+    const USDCVaultAddress = await vaultController.getVault(USDC.address)
+
+    const USDCVaultContract = await vaultFactory.attach(USDCVaultAddress)
+    await USDC.connect(alice).approve(USDCVaultAddress, amount)
+    await USDC.connect(alice).approve(volmexPerpPeriphery.address, amount)
+
+    // check event has been sent
+    await expect( vaultController.connect(alice).deposit(volmexPerpPeriphery.address, USDC.address, alice.address, amount,{value:0}))
+      .to.be.revertedWith("V_ANA")
+  })
+})
+  describe("Withdraw",function(){
   it("should not allow user to withdraw from vault if vault balance is empty", async () => {
     const amount = parseUnits("100", await USDC.decimals())
     await positioningConfig.setSettlementTokenBalanceCap(amount)
@@ -236,6 +284,22 @@ describe("Vault tests", function () {
           amount
         )
     ).to.be.revertedWith("V_NEFC");
+  })
+  it.only("Negative Test For withdraw  from USDC vault ",async()=>{
+
+    await positioningConfig.setSettlementTokenBalanceCap("10000")
+
+    const USDCVaultAddress = await vaultController.getVault(USDC.address)
+
+    const USDCVaultContract = await vaultFactory.attach(USDCVaultAddress)
+    await USDC.connect(alice).approve(USDC, "10000")
+    await USDC.connect(alice).approve(volmexPerpPeriphery.address, "10000")
+
+    // Check if it is reverted or not with given reason
+    await vaultController.connect(alice).deposit(volmexPerpPeriphery.address,USDC.address, alice.address, "10000");
+    expect(await vaultController.connect(alice).withdraw(USDC.address,alice.address,10000)).to.emit(vault, "Withdrawn").withArgs(USDC.address,alice.address,"10000")
+     
+
   })
 
   it("should allow user to deposit max collateral", async () => {
@@ -338,7 +402,7 @@ describe("Vault tests", function () {
   })
 
   // TODO: Fix this test case
-  xit("should not allow user to deposit USDC to ETH vault", async () => {
+  it("should not allow user to deposit USDC to ETH vault", async () => {
     const userBalance = await USDC.balanceOf(alice.address)
 
     await positioningConfig.setSettlementTokenBalanceCap(userBalance)
@@ -370,6 +434,20 @@ describe("Vault tests", function () {
     await expect(
       vault.deposit(
         volmexPerpPeriphery.address, 
+        userBalance,
+        alice.address
+      )
+    ).to.be.revertedWith("Pausable: paused");
+  })
+  it.only("should not allow user to interact with vault if contract is paused", async () => {
+    await vault.pause();
+
+    const userBalance = await USDC.balanceOf(alice.address)
+    // Deposit max amount equal to balance of the user
+    await expect(
+
+      vaultController.connect(alice).withdraw(
+        USDC.address,
         userBalance,
         alice.address
       )
@@ -415,7 +493,7 @@ describe("Vault tests", function () {
     await expect(vaultController.connect(alice).deposit(volmexPerpPeriphery.address, USDC.address, alice.address, amount)).to.be.revertedWith("V_IBA")
     USDC.setTransferFeeRatio(0)
   })
-
+})
   describe("Test for transfer funds to vault", function () {
     it("Positive Test for transferFundToVault", async () => {
       const [owner, alice] = await ethers.getSigners()
