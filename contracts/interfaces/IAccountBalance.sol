@@ -59,14 +59,14 @@ interface IAccountBalance {
     /// @param takerBase Modified amount of taker base
     /// @param takerQuote Modified amount of taker quote
     /// @param realizedPnl Amount of pnl realized
-    /// @param makerFee Amount of maker fee collected from pool
+    /// @param fee Amount of maker fee collected from pool
     function settleBalanceAndDeregister(
         address trader,
         address baseToken,
         int256 takerBase,
         int256 takerQuote,
         int256 realizedPnl,
-        int256 makerFee
+        int256 fee
     ) external;
 
 
