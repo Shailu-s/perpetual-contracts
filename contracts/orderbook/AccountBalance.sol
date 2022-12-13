@@ -36,7 +36,7 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
     //
 
     uint256 internal constant _DUST = 10 wei;
-    uint256 private constant _ORACLE_BASE = 100000000;
+    int256 private constant _ORACLE_BASE = 100000000;
 
     /// TODONOW, SOlve this
     uint256 internal constant _MIN_PARTIAL_LIQUIDATE_POSITION_VALUE = 100e18 wei; // 100 USD in decimal 18
@@ -206,7 +206,7 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
             }
         }
 
-        return positionSize.mulRatio(maxLiquidateRatio);
+        return positionSize.mulRatio(maxLiquidateRatio.toInt256());
     }
 
     // @inheritdoc IAccountBalance
@@ -221,11 +221,11 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
         int256 takerBase,
         int256 takerQuote,
         int256 realizedPnl,
-        int256 makerFee
+        int256 fee
     ) external override {
         _requireOnlyPositioning();
         _modifyTakerBalance(trader, baseToken, takerBase, takerQuote);
-        _modifyOwedRealizedPnl(trader, makerFee);
+        _modifyOwedRealizedPnl(trader, fee);
 
         // @audit should merge _addOwedRealizedPnl and settleQuoteToOwedRealizedPnl in some way.
         // PnlRealized will be emitted three times when removing trader's liquidity
@@ -250,7 +250,7 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
                 // baseDebtValue = baseDebt * indexPrice
                 //TODOCHANGE: decimal checks for index price
                 // baseDebtValue = baseBalance.mulDiv(_getIndexPrice(baseToken).toInt256(), 1e18);
-                baseDebtValue = baseBalance * _getIndexPrice(baseToken).toInt256();
+                baseDebtValue = baseBalance * _getIndexPrice(baseToken).toInt256() / _ORACLE_BASE;
             }
             totalBaseDebtValue = totalBaseDebtValue + baseDebtValue;
 
@@ -305,7 +305,7 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
         // overflow inspection:
         // only overflow when position value in USD(18 decimals) > 2^255 / 10^18
         // TODOCHANGE: Decimal calculation for indexTwap is not as same decimal as Position size
-        return positionSize * indexTwap.toInt256();
+        return positionSize * indexTwap.toInt256() / _ORACLE_BASE;
     }
 
     /// @inheritdoc IAccountBalance
@@ -385,8 +385,7 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
 
     function _getIndexPrice(address baseToken) internal view returns (uint256) {
         return
-            IIndexPrice(baseToken).getIndexPrice(IPositioningConfig(_positioningConfig).getTwapInterval()) /
-            _ORACLE_BASE;
+            IIndexPrice(baseToken).getIndexPrice(IPositioningConfig(_positioningConfig).getTwapInterval());
     }
 
     /// @return netQuoteBalance = quote.balance

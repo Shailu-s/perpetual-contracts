@@ -154,7 +154,6 @@ contract Positioning is
         _liquidate(trader, baseToken, positionSize);
     }
 
-
     /// @inheritdoc IPositioning
     function liquidateFullPosition(address trader, address baseToken) external override whenNotPaused nonReentrant {
         // positionSizeToBeLiquidated = 0 means liquidating as much as possible
@@ -192,7 +191,7 @@ contract Positioning is
     }
 
     /// @inheritdoc IPositioning
-    function getLiquidatablePosition(address trader, address baseToken) external view override returns(uint256) {
+    function getLiquidatablePosition(address trader, address baseToken) external view override returns (uint256) {
         int256 positionSize = _getTakerPosition(trader, baseToken);
 
         // P_PSZ: position size is zero
