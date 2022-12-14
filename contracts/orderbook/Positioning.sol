@@ -183,8 +183,7 @@ contract Positioning is
         IAccountBalance(_accountBalance).registerBaseToken(orderLeft.trader, baseToken);
         IAccountBalance(_accountBalance).registerBaseToken(orderRight.trader, baseToken);
 
-        bool isLeftLiquidatable = _validateOrder(orderLeft, signatureLeft, baseToken);
-        bool isRightLiquidatable = _validateOrder(orderRight, signatureRight, baseToken);
+      
 
         // must settle funding first
         _settleFunding(orderLeft.trader, baseToken);

@@ -4,7 +4,7 @@ import { ethers, upgrades, waffle } from "hardhat"
 import { IndexPriceOracle, MarkPriceOracle, MatchingEngine } from "../typechain"
 import { FakeContract, smock } from "@defi-wonderland/smock"
 
-describe.only("Vault tests", function () {
+describe("Vault tests", function () {
   let USDC
   let positioningConfig
   let accountBalance
@@ -238,7 +238,7 @@ describe.only("Vault tests", function () {
     // // update sender's balance
     expect(await vaultController.getBalanceByToken(alice.address, USDC.address)).to.eq("100000000000000000000")
   })
-  xit("Negative Test For desposit from vault",async()=>{
+  it("Negative Test For desposit from vault",async()=>{
 
     await positioningConfig.setSettlementTokenBalanceCap(10000)
 
@@ -254,7 +254,7 @@ describe.only("Vault tests", function () {
 
   })
 
-  it("should fail to deposit if user tries to perform transaction with value ==0 ", async()=>{
+  it("should fail to deposit if user tries to perform transaction with value == 0 ", async()=>{
     const amount = parseUnits("100", await USDC.decimals())
 
     await positioningConfig.setSettlementTokenBalanceCap(amount)
@@ -266,7 +266,7 @@ describe.only("Vault tests", function () {
     await USDC.connect(alice).approve(volmexPerpPeriphery.address, amount)
 
     // check event has been sent
-    await expect( vaultController.connect(alice).deposit(volmexPerpPeriphery.address, USDC.address, alice.address, amount,{value:0}))
+    await expect( vaultController.connect(alice).deposit(volmexPerpPeriphery.address, USDC.address, alice.address, amount,{value:45}))
       .to.be.revertedWith("V_ANA")
   })
 })
@@ -527,6 +527,12 @@ describe.only("Vault tests", function () {
     })
 
     it("Check for set position address", async () => {
+      const [owner, alice] = await ethers.getSigners()
+
+      await vault.connect(owner).setPositioning(positioningConfig.address)
+      expect(await vault.connect(owner).getPositioning()).to.be.equal(positioningConfig.address)
+    })
+    it("Should", async () => {
       const [owner, alice] = await ethers.getSigners()
 
       await vault.connect(owner).setPositioning(positioningConfig.address)
