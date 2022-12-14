@@ -150,7 +150,7 @@ contract Positioning is
         address trader,
         address baseToken,
         int256 positionSize
-    ) public override whenNotPaused nonReentrant {
+    ) external override whenNotPaused nonReentrant {
         _liquidate(trader, baseToken, positionSize);
     }
 
@@ -310,8 +310,6 @@ contract Positioning is
             liquidationPenalty,
             liquidator
         );
-
-        // IVault(_vault).settleBadDebt(trader);
     }
 
     /// @dev Settle trader's funding payment to his/her realized pnl.
@@ -433,7 +431,7 @@ contract Positioning is
             orderFees.orderRightFee,
             internalData.rightOpenNotional
         );
-        
+
         return internalData;
     }
 
