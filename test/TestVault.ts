@@ -4,7 +4,7 @@ import { ethers, upgrades, waffle } from "hardhat"
 import { IndexPriceOracle, MarkPriceOracle, MatchingEngine } from "../typechain"
 import { FakeContract, smock } from "@defi-wonderland/smock"
 
-describe("Vault tests", function () {
+describe.only("Vault tests", function () {
   let USDC
   let positioningConfig
   let accountBalance
@@ -238,7 +238,7 @@ describe("Vault tests", function () {
     // // update sender's balance
     expect(await vaultController.getBalanceByToken(alice.address, USDC.address)).to.eq("100000000000000000000")
   })
-  it("Negative Test For desposit from vault",async()=>{
+  xit("Negative Test For desposit from vault",async()=>{
 
     await positioningConfig.setSettlementTokenBalanceCap(10000)
 
