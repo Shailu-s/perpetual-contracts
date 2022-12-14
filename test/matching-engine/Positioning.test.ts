@@ -586,7 +586,7 @@ describe("Positioning", function () {
         await expect(positionSizeAfter).to.be.equal("0")
       })
 
-      it.only("should liquidate left trader", async () => {
+      it("should liquidate left trader", async () => {
         await virtualToken.mint(account1.address, convert("1000"))
         await virtualToken.mint(account2.address, convert("1000"))
         await virtualToken.addWhitelist(account1.address)

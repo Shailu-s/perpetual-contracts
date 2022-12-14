@@ -4,7 +4,7 @@ import { ethers, upgrades, waffle } from "hardhat"
 import { IndexPriceOracle, MarkPriceOracle, MatchingEngine } from "../typechain"
 import { FakeContract, smock } from "@defi-wonderland/smock"
 
-describe.only("Vault tests", function () {
+describe("Vault tests", function () {
   let USDC
   let positioningConfig
   let accountBalance
@@ -285,7 +285,7 @@ describe.only("Vault tests", function () {
         )
     ).to.be.revertedWith("V_NEFC");
   })
-  it.only("Negative Test For withdraw  from USDC vault ",async()=>{
+  it("Negative Test For withdraw  from USDC vault ",async()=>{
 
     await positioningConfig.setSettlementTokenBalanceCap("10000")
 
@@ -439,7 +439,7 @@ describe.only("Vault tests", function () {
       )
     ).to.be.revertedWith("Pausable: paused");
   })
-  it.only("should not allow user to interact with vault if contract is paused", async () => {
+  it("should not allow user to interact with vault if contract is paused", async () => {
     await vault.pause();
 
     const userBalance = await USDC.balanceOf(alice.address)

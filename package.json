@@ -73,9 +73,7 @@
     "eslint-config-prettier": "8.3.0",
     "ethereum-waffle": "3.4.0",
     "ethers": "5.2.0",
-
     "hardhat": "2.11.2",
-
     "hardhat-contract-sizer": "2.0.3",
     "hardhat-dependency-compiler": "1.1.1",
     "hardhat-gas-reporter": "1.0.4",
@@ -111,6 +109,7 @@
     "@defi-wonderland/smock": "^2.2.0",
     "@nomiclabs/hardhat-etherscan": "^3.1.2",
     "@openzeppelin/hardhat-defender": "^1.8.1",
+    "@openzeppelin/test-helpers": "^0.5.16",
     "dotenv": "^16.0.3",
     "eth-sig-util": "3.0.1"
   }
