@@ -191,7 +191,9 @@ describe("Global", function () {
       [positioning.address, positioning2.address],
       [vaultController.address, vaultController2.address],
       markPriceOracle.address,
+      [vault.address, vault.address],
       owner.address,
+      owner.address // replace with relayer
     ]);
     await periphery.deployed();
 
