@@ -247,8 +247,6 @@ contract Positioning is
         address baseToken,
         int256 positionSizeToBeLiquidated
     ) internal {
-        // P_CLWTISO: cannot liquidate when there is still order
-        // require(!IAccountBalance(_accountBalance).hasOrder(trader), "P_CLWTISO");
 
         // P_EAV: enough account value
         require(_isAccountLiquidatable(trader), "P_EAV");
@@ -286,23 +284,6 @@ contract Positioning is
             liquidationFeeToFR = liquidationPenalty - liquidationFeeToLiquidator;
             _modifyOwedRealizedPnl(_getFeeReceiver(), liquidationFeeToFR.toInt256());
         }
-
-        // assume there is no longer any unsettled bad debt in the system
-        // (so that true IF capacity = accountValue(IF) + USDC.balanceOf(IF))
-        // if trader's account value becomes negative, the amount is the bad debt IF must have enough capacity to cover
-        // {
-        //     int256 accountValueAfterLiquidationX10_18 = _getAccountValue(trader);
-
-        //     if (accountValueAfterLiquidationX10_18 < 0) {
-        //         int256 insuranceFundCapacityX10_18 =
-        //             IInsuranceFund(insuranceFund).getInsuranceFundCapacity().parseSettlementToken(
-        //                 _settlementTokenDecimals
-        //             );
-
-        //         // P_IIC: insufficient insuranceFund capacity
-        //         require(insuranceFundCapacityX10_18 >= accountValueAfterLiquidationX10_18.neg256(), "P_IIC");
-        //     }
-        // }
 
         // liquidator opens a position with liquidationFeeToLiquidator as a discount
         // liquidator's openNotional = -liquidatedPositionNotional + liquidationFeeToLiquidator
@@ -452,9 +433,7 @@ contract Positioning is
             orderFees.orderRightFee,
             internalData.rightOpenNotional
         );
-
-        IAccountBalance(_accountBalance).deregisterBaseToken(orderLeft.trader, baseToken);
-        IAccountBalance(_accountBalance).deregisterBaseToken(orderRight.trader, baseToken);
+        
         return internalData;
     }
 
