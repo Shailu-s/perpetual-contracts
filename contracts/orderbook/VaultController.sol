@@ -4,7 +4,9 @@ pragma solidity =0.8.12;
 import "@openzeppelin/contracts/proxy/Clones.sol";
 import { AddressUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol";
 import { ContextUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol";
-import { ReentrancyGuardUpgradeable } from "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
+import {
+    ReentrancyGuardUpgradeable
+} from "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 
 import { LibPerpMath } from "../libs/LibPerpMath.sol";
 import { LibSafeCastInt } from "../libs/LibSafeCastInt.sol";
@@ -73,9 +75,9 @@ contract VaultController is
         require(amount > 0, "VC_CDZA");
 
         IVault(_vault).deposit{ value: msg.value }(periphery, amount, from);
-        
+
         uint256 amountX10_18 = LibSettlementTokenMath.parseSettlementToken(amount, IVault(_vault).decimals());
-        _modifyBalance(from, token, amountX10_18.toInt256(),_vault);
+        _modifyBalance(from, token, amountX10_18.toInt256(), _vault);
     }
 
     function withdraw(
@@ -106,10 +108,8 @@ contract VaultController is
         // settle all funding payments owedRealizedPnl
         IPositioning(_positioning).settleAllFunding(to);
         // by this time there should be no owedRealizedPnl nor pending funding payment in free collateral
-        int256 freeCollateralByImRatio = getFreeCollateralByRatio(
-            to,
-            IPositioningConfig(_positioningConfig).getImRatio()
-        );
+        int256 freeCollateralByImRatio =
+            getFreeCollateralByRatio(to, IPositioningConfig(_positioningConfig).getImRatio());
 
         uint256 amountX10_18 = LibSettlementTokenMath.parseSettlementToken(amount, IVault(_vault).decimals());
         // V_NEFC: not enough freeCollateral
@@ -119,21 +119,18 @@ contract VaultController is
         // settle owedRealizedPnl in AccountBalance
         int256 owedRealizedPnlX10_18 = IAccountBalance(_accountBalance).settleOwedRealizedPnl(to);
         deltaBalance = deltaBalance + owedRealizedPnlX10_18;
-        _modifyBalance(to, token, deltaBalance,_vault);
+        _modifyBalance(to, token, deltaBalance, _vault);
         IVault(_vault).withdraw(amount, to);
     }
 
     /// @inheritdoc IVaultController
     function getAccountValue(address trader) public view override whenNotPaused returns (int256) {
-       _requireOnlyPositioning();
+        _requireOnlyPositioning();
         return _getAccountValue(trader);
     }
 
     /// @inheritdoc IVaultController
-    function getFreeCollateralByRatio(
-        address trader,
-        uint24 ratio
-    ) public view override returns (int256) {
+    function getFreeCollateralByRatio(address trader, uint24 ratio) public view override returns (int256) {
         // conservative config: freeCollateral = min(collateral, accountValue) - margin requirement ratio
         (, int256 unrealizedPnl) = IAccountBalance(_accountBalance).getPnlAndPendingFee(trader);
 
@@ -151,13 +148,13 @@ contract VaultController is
         uint256 len = _vaultList.length;
         for (uint256 i = 0; i < len; i++) {
             if (_vaultList[i] != address(0)) {
-            address token = IVault(_vaultList[i]).getSettlementToken();
-            balanceX10_18 += _balance[trader][token];
+                address token = IVault(_vaultList[i]).getSettlementToken();
+                balanceX10_18 += _balance[trader][token];
             }
         }
     }
 
-     function getBalanceByToken(address trader, address token) public view override returns (int256 balanceX10_18) {
+    function getBalanceByToken(address trader, address token) public view override returns (int256 balanceX10_18) {
         return _balance[trader][token];
     }
 
@@ -194,7 +191,12 @@ contract VaultController is
         return totalDebtValue.mulRatio(ratio);
     }
 
-    function _modifyBalance(address trader, address token, int256 amount, address vaultAddress) internal {
+    function _modifyBalance(
+        address trader,
+        address token,
+        int256 amount,
+        address vaultAddress
+    ) internal {
         address[] storage _vaultList = _tradersVaultMap[trader];
 
         if (_balance[trader][token] == 0) {
@@ -205,7 +207,7 @@ contract VaultController is
         if (_balance[trader][token] <= 0) {
             uint256 len = _vaultList.length;
             for (uint256 i = 0; i < len; i++) {
-                if (_vaultList[i] == vaultAddress){
+                if (_vaultList[i] == vaultAddress) {
                     delete _vaultList[i];
                 }
             }

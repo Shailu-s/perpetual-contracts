@@ -52,6 +52,36 @@ interface IAccountBalance {
         int256 amount
     ) external;
 
+    /// @notice Settle account balance and deregister base token
+    /// @dev Only used by `Positioning` contract
+    /// @param trader The address of the trader
+    /// @param baseToken The address of the baseToken
+    /// @param takerBase Modified amount of taker base
+    /// @param takerQuote Modified amount of taker quote
+    /// @param realizedPnl Amount of pnl realized
+    /// @param fee Amount of maker fee collected from pool
+    function settleBalanceAndDeregister(
+        address trader,
+        address baseToken,
+        int256 takerBase,
+        int256 takerQuote,
+        int256 realizedPnl,
+        int256 fee
+    ) external;
+
+
+    /// @notice Get liquidatable position size of trader's baseToken market
+    /// @param trader The address of trader
+    /// @param baseToken The address of baseToken
+    /// @param accountValue The account value of trader
+    /// @return liquidatablePositionSize The liquidatable position size of trader's baseToken market
+    function getLiquidatablePositionSize(
+        address trader,
+        address baseToken,
+        int256 accountValue
+    ) external view returns (int256);
+
+    
     /// @notice Every time a trader's position value is checked, the base token list of this trader will be traversed;
     /// thus, this list should be kept as short as possible
     /// @dev Only used by `Positioning` contract

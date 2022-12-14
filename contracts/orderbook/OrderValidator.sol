@@ -12,7 +12,6 @@ import "../libs/LibSignature.sol";
 abstract contract OrderValidator is Initializable, ContextUpgradeable, EIP712Upgradeable {
     using LibSignature for bytes32;
     using AddressUpgradeable for address;
-
     bytes4 constant internal MAGICVALUE = 0x1626ba7e;
 
     mapping(address => uint256) public makerMinSalt;
