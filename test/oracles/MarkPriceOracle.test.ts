@@ -93,6 +93,7 @@ describe('MarkPriceOracle', function () {
       PerpFactory,
       [
         volmexBaseToken.address,
+        volmexBaseToken.address,
         vaultController.address,
         vault.address,
         positioning.address,

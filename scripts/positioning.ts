@@ -165,6 +165,7 @@ const positioning = async () => {
     PerpFactory,
     [
       await proxyAdmin.getProxyImplementation(volmexBaseToken.address),
+      await proxyAdmin.getProxyImplementation(volmexQuoteToken.address),
       await proxyAdmin.getProxyImplementation(vaultController.address),
       await proxyAdmin.getProxyImplementation(vault.address),
       await proxyAdmin.getProxyImplementation(positioning.address),

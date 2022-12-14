@@ -8,6 +8,8 @@ describe('PerpFactory', function () {
   let markPriceOracle;
   let VolmexBaseToken;
   let volmexBaseToken;
+  let VolmexQuoteToken;
+  let volmexQuoteToken;
   let VirtualTokenTest;
   let virtualTokenTest;
   let PerpFactory;
@@ -32,6 +34,7 @@ describe('PerpFactory', function () {
     MatchingEngine = await ethers.getContractFactory("MatchingEngine");
     PerpFactory = await ethers.getContractFactory("PerpFactory");
     VolmexBaseToken = await ethers.getContractFactory("VolmexBaseToken");
+    VolmexQuoteToken = await ethers.getContractFactory("VolmexQuoteToken");
     VirtualTokenTest = await ethers.getContractFactory("VirtualTokenTest");
     MarkPriceOracle = await ethers.getContractFactory("MarkPriceOracle");
     IndexPriceOracle = await ethers.getContractFactory("IndexPriceOracle");
@@ -58,6 +61,9 @@ describe('PerpFactory', function () {
     await indexPriceOracle.deployed();
     volmexBaseToken = await VolmexBaseToken.deploy();
     await volmexBaseToken.deployed();
+
+    volmexQuoteToken = await VolmexQuoteToken.deploy();
+    await volmexQuoteToken.deployed();
 
     USDC = await TestERC20.deploy()
     await USDC.__TestERC20_init("TestUSDC", "USDC", 6)
@@ -100,6 +106,7 @@ describe('PerpFactory', function () {
       PerpFactory,
       [
         volmexBaseToken.address,
+        volmexQuoteToken.address,
         vaultController.address,
         vault.address,
         positioning.address,
@@ -129,8 +136,14 @@ describe('PerpFactory', function () {
   describe('Clone:', function() {
     it("Should set token implementation contract correctly", async () => {
       await factory.cloneBaseToken("MyTestToken", "MTK", indexPriceOracle.address);
-      const tokenImplementation = await factory.tokenImplementation();
+      const tokenImplementation = await factory.baseTokenImplementation();
       expect(tokenImplementation).equal(volmexBaseToken.address);
+    });
+
+    it("Should set token implementation contract correctly", async () => {
+      await factory.cloneQuoteToken("VQuote", "VQT");
+      const tokenImplementation = await factory.quoteTokenImplementation();
+      expect(tokenImplementation).equal(volmexQuoteToken.address);
     });
 
     it("Should set vault controller implementation contract correctly", async () => {
@@ -145,9 +158,8 @@ describe('PerpFactory', function () {
     });
 
     it("should clone Quote token", async() => {
-      console.log(factory.address)
       await factory.cloneQuoteToken("GoatToken","GTK");
-      const cloneQuoteToken = await factory.getQuoteTokenByIndex(0);
+      const cloneQuoteToken = await factory.quoteTokenByIndex(0);
       expect(cloneQuoteToken).not.equal(ZERO_ADDR);
     })
    
