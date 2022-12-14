@@ -22,14 +22,17 @@ contract PositioningConfig is
     event MaxMarketsPerAccountChanged(uint8 maxMarketsPerAccount);
     event SettlementTokenBalanceCapChanged(uint256 cap);
     event MaxFundingRateChanged(uint24 rate);
+    event InitialMarginChanged(uint24 imRatio);
+    event MaintenanceMarginChanged(uint24 mmRatio);
+    event PartialLiquidationRatioChanged(uint24 partialLiquidationRatio);
 
     //
     // MODIFIER
     //
 
     modifier checkRatio(uint24 ratio) {
-        // CHC_RO: ratio overflow
-        require(ratio <= 1e6, "CHC_RO");
+        // PositioningConfig: ratio overflow
+        require(ratio <= 1e6, "PC_RO");
         _;
     }
 
@@ -62,8 +65,8 @@ contract PositioningConfig is
 
     function setPartialCloseRatio(uint24 partialCloseRatioArg) external checkRatio(partialCloseRatioArg) {
         _requirePositioningConfigAdmin();
-        // CHC_IPCR: invalid partialCloseRatio
-        require(partialCloseRatioArg > 0, "CHC_IPCR");
+        // PC_IPCR: invalid partialCloseRatio
+        require(partialCloseRatioArg > 0, "PC_IPCR");
 
         _partialCloseRatio = partialCloseRatioArg;
         emit PartialCloseRatioChanged(partialCloseRatioArg);
@@ -71,8 +74,8 @@ contract PositioningConfig is
 
     function setTwapInterval(uint32 twapIntervalArg) external {
         _requirePositioningConfigAdmin();
-        // CHC_ITI: invalid twapInterval
-        require(twapIntervalArg != 0, "CHC_ITI");
+        // PC_ITI: invalid twapInterval
+        require(twapIntervalArg != 0, "PC_ITI");
 
         _twapInterval = twapIntervalArg;
         emit TwapIntervalChanged(twapIntervalArg);
@@ -94,6 +97,32 @@ contract PositioningConfig is
         _requirePositioningConfigAdmin();
         _maxFundingRate = rate;
         emit MaxFundingRateChanged(rate);
+    }
+
+    function setImRatio(uint24 imRatioArg) external checkRatio(imRatioArg) {
+        _requirePositioningConfigAdmin();
+        // PositioningConfig: Invalid Initial Margin Ratio (PC_IIMR)
+        require(imRatioArg > 0, "PC_IIMR");
+        _imRatio = imRatioArg;
+        emit InitialMarginChanged(_imRatio);
+    }
+
+    function setMmRatio(uint24 mmRatioArg) external checkRatio(mmRatioArg) {
+        _requirePositioningConfigAdmin();
+        // PositioningConfig: Invalid Maintenance Margin Ratio (PC_IMMR)
+        require(mmRatioArg > 0, "PC_IMMR");
+        _mmRatio = mmRatioArg;
+        emit MaintenanceMarginChanged(_mmRatio);
+    }
+
+    function setPartialLiquidationRatio(uint24 partialLiquidationRatioArg) 
+    external 
+    checkRatio(partialLiquidationRatioArg) {
+        _requirePositioningConfigAdmin();
+        // PositioningConfig: Invalid Partial Liquidation Ratio (PC_IPLR)
+        require(partialLiquidationRatioArg > 0, "PC_IPLR");
+        _partialLiquidationRatio = partialLiquidationRatioArg;
+        emit PartialLiquidationRatioChanged(_partialLiquidationRatio);
     }
 
     //
