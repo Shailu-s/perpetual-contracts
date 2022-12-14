@@ -154,9 +154,7 @@ const positioning = async () => {
     [positioning.address, positioning2.address],
     [vaultController.address, vaultController2.address],
     markPriceOracle.address,
-    [vault.address, vault.address],
     owner.address,
-    owner.address // replace with relayer address
   ])
   await periphery.deployed()
 
@@ -178,25 +176,6 @@ const positioning = async () => {
   )
   await factory.deployed()
 
-
-  const addresses = {
-    "IndexPriceOracle": indexPriceOracle.address,
-    "MarkPriceOracle": markPriceOracle.address,
-    "BaseToken": volmexBaseToken.address,
-    "USDC": usdc.address,
-    "MatchingEngine": matchingEngine.address,
-    "PositioningConfig": positioningConfig.address,
-    "AccountBalance": accountBalance.address,
-    "Vault": vault.address,
-    "VaultController": vaultController.address,
-    "Positioning": positioning.address,
-    "Periphery": periphery.address,
-    "MarketRegistry": marketRegistry.address,
-    "Quotetoken": volmexQuoteToken.address,
-    "Factory": factory.address
-  }
-  console.log("\n =====Deployment Successful===== \n")
-  console.log(addresses)
   try {
     await run("verify:verify", {
       address: await proxyAdmin.getProxyImplementation(indexPriceOracle.address),
@@ -295,6 +274,24 @@ const positioning = async () => {
   } catch (error) {
     console.log("ERROR - verify - factory!")
   }
+
+  const addresses = [
+    ["Index Price Oracle: ", indexPriceOracle.address],
+    ["Mark Price Oracle: ", markPriceOracle.address],
+    ["Base Token: ", volmexBaseToken.address],
+    ["USDC: ", usdc.address],
+    ["Matching Engine: ", matchingEngine.address],
+    ["Positioning Cnnfig: ", positioningConfig.address],
+    ["Account Balance: ", accountBalance.address],
+    ["Vault: ", vault.address],
+    ["Vault Controller: ", vaultController.address],
+    ["Positioning: ", positioning.address],
+    ["Periphery: ", periphery.address],
+    ["MarketRegistry: ", marketRegistry.address],
+    ["Quote token: ", volmexQuoteToken.address],
+  ]
+  console.log("\n =====Deployment Successful===== \n")
+  console.table(addresses)
 }
 
 positioning()
