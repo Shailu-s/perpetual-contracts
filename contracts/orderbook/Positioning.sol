@@ -621,7 +621,7 @@ contract Positioning is
 
     /// @dev This function returns position size of trader
     function _getTakerPosition(address trader, address baseToken) internal view returns (int256) {
-        return IAccountBalance(_accountBalance).getTakerPositionSize(trader, baseToken);;
+        return IAccountBalance(_accountBalance).getTakerPositionSize(trader, baseToken);
     }
 
     /// @dev This function checks if free collateral of trader is available
