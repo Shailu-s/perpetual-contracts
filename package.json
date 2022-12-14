@@ -111,6 +111,7 @@
     "@openzeppelin/hardhat-defender": "^1.8.1",
     "@openzeppelin/test-helpers": "^0.5.16",
     "dotenv": "^16.0.3",
-    "eth-sig-util": "3.0.1"
+    "eth-sig-util": "3.0.1",
+    "remixd": "^0.2.4"
   }
 }
