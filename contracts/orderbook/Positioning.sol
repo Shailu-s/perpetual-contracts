@@ -183,11 +183,7 @@ contract Positioning is
         IAccountBalance(_accountBalance).registerBaseToken(orderLeft.trader, baseToken);
         IAccountBalance(_accountBalance).registerBaseToken(orderRight.trader, baseToken);
 
-<<<<<<< HEAD
-      
-=======
         
->>>>>>> test/VOL-1319-test-coverage-markPriceOracle-Tokens
 
         // must settle funding first
         _settleFunding(orderLeft.trader, baseToken);
