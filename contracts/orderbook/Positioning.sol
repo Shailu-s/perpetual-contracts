@@ -154,6 +154,7 @@ contract Positioning is
         _liquidate(trader, baseToken, positionSize);
     }
 
+    ///TODO: Test if this function liquidate full position even with when only partial was needed
     /// @inheritdoc IPositioning
     function liquidateFullPosition(address trader, address baseToken) external override whenNotPaused nonReentrant {
         // positionSizeToBeLiquidated = 0 means liquidating as much as possible
