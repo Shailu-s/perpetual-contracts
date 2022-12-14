@@ -275,7 +275,7 @@ describe("Volmex Oracle", function () {
   //     ).wait();
   //   });
     // TODO Handle by Vijay
-    xit("Should fetch the latest timestamp", async () => {
+    it("Should fetch the latest timestamp", async () => {
       let receipt = await volmexOracle.getIndexTwap(volatilityIndexes[0]);
       let priceTimestamp = Number(receipt[2].toString());
       let currentTimestamp = Number((await time.latest()).toString());

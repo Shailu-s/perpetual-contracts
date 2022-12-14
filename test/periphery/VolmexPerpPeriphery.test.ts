@@ -5,7 +5,7 @@ import { parseUnits, zeroPad } from "ethers/lib/utils";
 const { Order, Asset, sign, encodeAddress } = require("../order");
 import { BigNumber } from "ethers";
 
-describe.only("VolmexPerpPeriphery", function () {
+describe("VolmexPerpPeriphery", function () {
   let MatchingEngine;
   let matchingEngine;
   let VirtualToken;
@@ -243,6 +243,14 @@ describe.only("VolmexPerpPeriphery", function () {
               ]
           )).to.be.revertedWith("Admin can't be address(0)");
         });
+        it("should fail to initialize again", async()=>{
+          await expect( volmexPerpPeriphery.initialize([positioning.address, positioning2.address], 
+            [vaultController.address, vaultController2.address],
+            markPriceOracle.address,
+            [vault.address, vault.address],
+            owner.address,
+            owner.address)).to.be.revertedWith("Initializable: contract is already initialized")
+        })
         it("should fail to deploy VolmexPerpPeriphery since relayer address is 0", async () => {
           await expect(upgrades.deployProxy(
                 VolmexPerpPeriphery, 
@@ -334,6 +342,44 @@ describe.only("VolmexPerpPeriphery", function () {
         );
         expect(receipt.confirmations).not.equal(0);
       });
+      it("should fill LimitOrder", async () => {
+        const orderLeft = Order(
+          ORDER,
+          deadline,
+          account1.address,
+          Asset(volmexBaseToken.address, one.toString()),
+          Asset(virtualToken.address, one.toString()),
+          1,
+          1e8.toString(),
+          true,
+        )
+        
+        const orderRight = Order(
+          ORDER,
+          deadline,
+          account2.address,
+          Asset(virtualToken.address, two.toString()),
+          Asset(volmexBaseToken.address, two.toString()),
+          1,
+          1e6.toString(),
+          false,
+        )
+
+        const signatureLeftLimitOrder = await getSignature(orderLeft, account1.address);
+        const signatureRightLimitOrder = await getSignature(orderRight, account2.address);
+
+        await matchingEngine.grantMatchOrders(positioning.address);
+        await matchingEngine.grantMatchOrders(positioning2.address);
+        let receipt = await volmexPerpPeriphery.fillLimitOrder(
+          orderLeft,
+          signatureLeftLimitOrder,
+          orderRight,
+          signatureRightLimitOrder,
+          owner.address,
+          0
+      );
+      expect(receipt.confirmations).not.equal(0);
+    })
       it("should fail to add order",async()=>{
         const orderLeft = Order(
           STOP_LOSS_LIMIT_ORDER,
@@ -902,4 +948,3 @@ describe.only("VolmexPerpPeriphery", function () {
     }
   });
   
- 
