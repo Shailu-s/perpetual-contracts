@@ -8,6 +8,7 @@ import { ContextUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/Co
 import { LibAccountMarket } from "../libs/LibAccountMarket.sol";
 import { LibPerpMath } from "../libs/LibPerpMath.sol";
 import { LibSafeCastUint } from "../libs/LibSafeCastUint.sol";
+import { LibSafeCastInt } from "../libs/LibSafeCastInt.sol";
 
 import { IAccountBalance } from "../interfaces/IAccountBalance.sol";
 import { IIndexPrice } from "../interfaces/IIndexPrice.sol";
@@ -23,6 +24,8 @@ import { PositioningCallee } from "../helpers/PositioningCallee.sol";
 contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, AccountBalanceStorageV1 {
     using AddressUpgradeable for address;
     using LibSafeCastUint for uint256;
+    using LibSafeCastInt for int256;
+
     using LibPerpMath for uint256;
     using LibPerpMath for int256;
     using LibPerpMath for uint160;
@@ -33,8 +36,10 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
     //
 
     uint256 internal constant _DUST = 10 wei;
-    uint256 private constant _ORACLE_BASE = 100000000;
+    int256 private constant _ORACLE_BASE = 100000000;
 
+    /// TODONOW, SOlve this
+    uint256 internal constant _MIN_PARTIAL_LIQUIDATE_POSITION_VALUE = 100e18 wei; // 100 USD in decimal 18
 
     //
     // EXTERNAL NON-VIEW
@@ -159,9 +164,73 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
         return _accountMarketMap[trader][baseToken];
     }
 
+    /// @inheritdoc IAccountBalance
+    function getLiquidatablePositionSize(
+        address trader,
+        address baseToken,
+        int256 accountValue
+    ) external view override returns (int256) {
+        int256 marginRequirement = getMarginRequirementForLiquidation(trader);
+        int256 positionSize = getTakerPositionSize(trader, baseToken);
+
+        // No liquidatable position
+        if (accountValue >= marginRequirement || positionSize == 0) {
+            return 0;
+        }
+
+        // Liquidate the entire position if its value is small enough
+        // to prevent tiny positions left in the system
+        uint256 positionValueAbs = getTotalPositionValue(trader, baseToken).abs();
+        if (positionValueAbs <= _MIN_PARTIAL_LIQUIDATE_POSITION_VALUE) {
+            return positionSize;
+        }
+
+        // Liquidator can only take over partial position if margin ratio is ≥ 3.125% (aka the half of mmRatio).
+        // If margin ratio < 3.125%, liquidator can take over the entire position.
+        //
+        // threshold = mmRatio / 2 = 3.125%
+        // if marginRatio >= threshold, then
+        //    maxLiquidateRatio = MIN(1, 0.5 * totalAbsPositionValue / absPositionValue)
+        // if marginRatio < threshold, then
+        //    maxLiquidateRatio = 1
+        uint256 maxLiquidateRatio = 1e6; // 100%
+        if (accountValue >= marginRequirement / 2) {
+            // maxLiquidateRatio = getTotalAbsPositionValue / ( getTotalPositionValueInMarket.abs * 2 )
+            maxLiquidateRatio = getTotalAbsPositionValue(trader) / (positionValueAbs * 2);
+
+            // FullMath
+            //     .mulDiv(getTotalAbsPositionValue(trader), 1e6, positionValueAbs.mul(2))
+            //     .toUint24();
+            if (maxLiquidateRatio > 1e6) {
+                maxLiquidateRatio = 1e6;
+            }
+        }
+
+        return positionSize.mulRatio(maxLiquidateRatio.toInt256());
+    }
+
     // @inheritdoc IAccountBalance
     function getTakerOpenNotional(address trader, address baseToken) external view override returns (int256) {
         return _accountMarketMap[trader][baseToken].takerOpenNotional;
+    }
+
+    /// @inheritdoc IAccountBalance
+    function settleBalanceAndDeregister(
+        address trader,
+        address baseToken,
+        int256 takerBase,
+        int256 takerQuote,
+        int256 realizedPnl,
+        int256 fee
+    ) external override {
+        _requireOnlyPositioning();
+        _modifyTakerBalance(trader, baseToken, takerBase, takerQuote);
+        _modifyOwedRealizedPnl(trader, fee);
+
+        // @audit should merge _addOwedRealizedPnl and settleQuoteToOwedRealizedPnl in some way.
+        // PnlRealized will be emitted three times when removing trader's liquidity
+        _settleQuoteToOwedRealizedPnl(trader, baseToken, realizedPnl);
+        _deregisterBaseToken(trader, baseToken);
     }
 
     /**
@@ -181,10 +250,10 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
                 // baseDebtValue = baseDebt * indexPrice
                 //TODOCHANGE: decimal checks for index price
                 // baseDebtValue = baseBalance.mulDiv(_getIndexPrice(baseToken).toInt256(), 1e18);
-                baseDebtValue = baseBalance * _getIndexPrice(baseToken).toInt256();
+                baseDebtValue = baseBalance * _getIndexPrice(baseToken).toInt256() / _ORACLE_BASE;
             }
             totalBaseDebtValue = totalBaseDebtValue + baseDebtValue;
-     
+
             // we can't calculate totalQuoteDebtValue until we have totalQuoteBalance
             totalQuoteBalance = totalQuoteBalance + _accountMarketMap[trader][baseToken].takerOpenNotional;
         }
@@ -195,7 +264,7 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
     }
 
     /// @inheritdoc IAccountBalance
-    function getMarginRequirementForLiquidation(address trader) external view override returns (int256) {
+    function getMarginRequirementForLiquidation(address trader) public view override returns (int256) {
         return
             getTotalAbsPositionValue(trader).mulRatio(IPositioningConfig(_positioningConfig).getMmRatio()).toInt256();
     }
@@ -212,7 +281,7 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
         int256 netQuoteBalance = _getNetQuoteBalance(trader);
 
         int256 unrealizedPnl = totalPositionValue + netQuoteBalance;
-        
+
         return (_owedRealizedPnlMap[trader], unrealizedPnl);
     }
 
@@ -237,7 +306,7 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
         // only overflow when position value in USD(18 decimals) > 2^255 / 10^18
         // TODOCHANGE: Decimal calculation for indexTwap is not as same decimal as Position size
         // Todo: Should divide by ORACLE_BASE here
-        return positionSize * indexTwap.toInt256();
+        return positionSize * indexTwap.toInt256() / _ORACLE_BASE;
     }
 
     /// @inheritdoc IAccountBalance
@@ -257,7 +326,7 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
     //
     // INTERNAL NON-VIEW
     //
-
+    
     function _modifyTakerBalance(
         address trader,
         address baseToken,
@@ -267,7 +336,10 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
         LibAccountMarket.Info storage accountInfo = _accountMarketMap[trader][baseToken];
         accountInfo.takerPositionSize = accountInfo.takerPositionSize + base;
         accountInfo.takerOpenNotional = accountInfo.takerOpenNotional + quote;
-        return (accountInfo.takerPositionSize, accountInfo.takerOpenNotional);
+        if (accountInfo.takerPositionSize.abs() >= _DUST || accountInfo.takerOpenNotional.abs() >= _DUST) {
+            return (accountInfo.takerPositionSize, accountInfo.takerOpenNotional);
+        }
+        return (0, 0);
     }
 
     function _modifyOwedRealizedPnl(address trader, int256 amount) internal {
@@ -316,12 +388,12 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
     //
 
     function _getIndexPrice(address baseToken) internal view returns (uint256) {
-        // Todo: Multiply first then divide. Remove division from here
-        return IIndexPrice(baseToken).getIndexPrice(IPositioningConfig(_positioningConfig).getTwapInterval()) / _ORACLE_BASE ;
+        return
+            IIndexPrice(baseToken).getIndexPrice(IPositioningConfig(_positioningConfig).getTwapInterval());
     }
 
     /// @return netQuoteBalance = quote.balance
-    function _getNetQuoteBalance(address trader) internal view returns (int256 ) {
+    function _getNetQuoteBalance(address trader) internal view returns (int256) {
         int256 totalTakerQuoteBalance;
         uint256 tokenLen = _baseTokensMap[trader].length;
         for (uint256 i = 0; i < tokenLen; i++) {
