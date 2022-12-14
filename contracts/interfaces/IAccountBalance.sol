@@ -110,10 +110,6 @@ interface IAccountBalance {
     /// @return PositioningConfig The address of PositioningConfig
     function getPositioningConfig() external view returns (address);
 
-    /// @notice Get `Vault` address
-    /// @return vault The address of Vault
-    function getVault() external view returns (address);
-
     /// @notice Get trader registered baseTokens
     /// @param trader The address of trader
     /// @return baseTokens The array of baseToken address
