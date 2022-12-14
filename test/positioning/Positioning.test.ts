@@ -6,33 +6,36 @@ import { FundingRate, IndexPriceOracle, MarkPriceOracle } from "../../typechain"
 import { BigNumber } from "ethers";
 
 describe("Positioning", function () {
-  let MatchingEngine
-  let matchingEngine
-  let VirtualToken
-  let virtualToken
-  let erc20TransferProxy
-  let ERC20TransferProxy
-  let TransferManagerTest
-  let ERC1271Test
-  let erc1271Test
-  let Positioning
-  let positioning
-  let PositioningConfig
-  let positioningConfig
-  let Vault
-  let vault, vault2
-  let VaultController
-  let vaultController
-  let AccountBalance
-  let accountBalance
-  let MarkPriceOracle
-  let markPriceOracle
-  let IndexPriceOracle
-  let indexPriceOracle
-  let VolmexBaseToken
-  let volmexBaseToken  
+  let MatchingEngine;
+  let matchingEngine;
+  let VirtualToken;
+  let virtualToken;
+  let erc20TransferProxy;
+  let ERC20TransferProxy;
+  let TransferManagerTest;
+  let ERC1271Test;
+  let erc1271Test;
+  let Positioning;
+  let positioning;
+  let PositioningConfig;
+  let positioningConfig;
+  let Vault;
+  let vault;
+  let VaultController;
+  let vaultController;
+  let AccountBalance;
+  let accountBalance;
+  let MarkPriceOracle;
+  let markPriceOracle;
+  let IndexPriceOracle;
+  let indexPriceOracle;
+  let markPriceFake: FakeContract<MarkPriceOracle>;
+  let indexPriceFake: FakeContract<IndexPriceOracle>;
+  let VolmexBaseToken;
+  let volmexBaseToken;
   let VolmexPerpPeriphery;
   let volmexPerpPeriphery;
+
   let transferManagerTest;
   let accountBalance1;
   let MarketRegistry;
@@ -58,9 +61,13 @@ describe("Positioning", function () {
   const TAKE_PROFIT_LIMIT_ORDER = "0xe0fc7f94";
 
   this.beforeAll(async () => {
-    VolmexPerpPeriphery = await ethers.getContractFactory("VolmexPerpPeriphery")
-    MarkPriceOracle = await ethers.getContractFactory("MarkPriceOracle")
-    IndexPriceOracle = await ethers.getContractFactory("IndexPriceOracle")
+    VolmexPerpPeriphery = await ethers.getContractFactory("VolmexPerpPeriphery");
+    MarkPriceOracle = await ethers.getContractFactory("MarkPriceOracle");
+    IndexPriceOracle = await ethers.getContractFactory("IndexPriceOracle");
+    // indexPriceOracle = await smock.fake("IndexPriceOracle")
+    // indexPriceFake = await smock.fake("IndexPriceOracle")
+    // markPriceFake = await smock.fake("IndexPriceOracle")
+
     // fundingRate = await smock.fake("FundingRate")
     MatchingEngine = await ethers.getContractFactory("MatchingEngineTest");
     VirtualToken = await ethers.getContractFactory("VirtualTokenTest");
@@ -87,7 +94,6 @@ describe("Positioning", function () {
       initializer: "initialize",
     });
     await indexPriceOracle.deployed();
-
     volmexBaseToken = await upgrades.deployProxy(
       VolmexBaseToken,
       [
@@ -153,14 +159,6 @@ describe("Positioning", function () {
       false,
     ]);
 
-    vault2 = await upgrades.deployProxy(Vault, [
-      positioningConfig.address,
-      accountBalance.address,
-      virtualToken.address,
-      accountBalance.address,
-      false,
-    ])
-
     transferManagerTest = await upgrades.deployProxy(TransferManagerTest, [erc20TransferProxy.address, owner.address], {
       initializer: "__TransferManager_init",
     });
@@ -193,11 +191,6 @@ describe("Positioning", function () {
     await marketRegistry.connect(owner).setMakerFeeRatio(0.0004e6);
     await marketRegistry.connect(owner).setTakerFeeRatio(0.0009e6);
     await matchingEngine.grantMatchOrders(positioning.address);
-    await marketRegistry.connect(owner).addBaseToken(volmexBaseToken.address)
-    // await marketRegistry.connect(owner).addBaseToken(baseToken.address)
-    await marketRegistry.connect(owner).setMakerFeeRatio(0.0004e6)
-    await marketRegistry.connect(owner).setTakerFeeRatio(0.0009e6)
-    await matchingEngine.grantMatchOrders(positioning.address)
 
     await accountBalance1.connect(owner).setPositioning(positioning.address);
 
@@ -217,8 +210,8 @@ describe("Positioning", function () {
       ORDER,
       deadline,
       account1.address,
-      Asset(virtualToken.address, convert("2400")),
-      Asset(volmexBaseToken.address, convert("24")),
+      Asset(virtualToken.address, BigNumber.from("2400").mul(one).toString()),
+      Asset(volmexBaseToken.address, BigNumber.from("24").mul(one).toString()),
       0,
       0,
       false,
@@ -228,8 +221,8 @@ describe("Positioning", function () {
       ORDER,
       deadline,
       account2.address,
-      Asset(volmexBaseToken.address, convert("24")),
-      Asset(virtualToken.address, convert("2400")),
+      Asset(volmexBaseToken.address, BigNumber.from("24").mul(one).toString()),
+      Asset(virtualToken.address, BigNumber.from("2400").mul(one).toString()),
       1,
       0,
       true,
@@ -248,19 +241,6 @@ describe("Positioning", function () {
       relayer.address,
     ]);
   });
-    volmexPerpPeriphery = await upgrades.deployProxy(
-      VolmexPerpPeriphery, 
-      [
-          [positioning.address, positioning.address], 
-          [vaultController.address, vaultController.address],
-          markPriceOracle.address,
-          [vault.address, vault2.address],
-          owner.address,
-          relayer.address,
-      ]
-    );
-    deadline
-  })
 
   describe.skip("Deployment", function () {
     it("MatchingEngine deployed confirm", async () => {
@@ -283,8 +263,8 @@ describe("Positioning", function () {
               vaultController.address,
               accountBalance1.address,
               matchingEngine.address,
-              markPriceOracle.address,
-              indexPriceOracle.address,
+              markPriceFake.address,
+              indexPriceFake.address,
               0,
             ],
             {
@@ -305,8 +285,8 @@ describe("Positioning", function () {
               account1.address,
               accountBalance1.address,
               matchingEngine.address,
-              markPriceOracle.address,
-              indexPriceOracle.address,
+              markPriceFake.address,
+              indexPriceFake.address,
               0,
             ],
             {
@@ -327,8 +307,8 @@ describe("Positioning", function () {
               vaultController.address,
               account1.address,
               matchingEngine.address,
-              markPriceOracle.address,
-              indexPriceOracle.address,
+              markPriceFake.address,
+              indexPriceFake.address,
               0,
             ],
             {
@@ -349,8 +329,8 @@ describe("Positioning", function () {
               vaultController.address,
               accountBalance1.address,
               account1.address,
-              markPriceOracle.address,
-              indexPriceOracle.address,
+              markPriceFake.address,
+              indexPriceFake.address,
               0,
             ],
             {
@@ -414,23 +394,23 @@ describe("Positioning", function () {
         await virtualToken.addWhitelist(account1.address);
         await virtualToken.addWhitelist(account2.address);
 
-        await virtualToken.connect(account1).approve(vault.address, convert("1000"));
-        await virtualToken.connect(account2).approve(vault.address, convert("1000"));
-        await virtualToken.connect(account1).approve(volmexPerpPeriphery.address, convert("1000"));
-        await virtualToken.connect(account2).approve(volmexPerpPeriphery.address, convert("1000"));
+        await virtualToken.connect(account1).approve(vault.address, ten.toString());
+        await virtualToken.connect(account2).approve(vault.address, ten.toString());
+        await virtualToken.connect(account1).approve(volmexPerpPeriphery.address, ten.toString());
+        await virtualToken.connect(account2).approve(volmexPerpPeriphery.address, ten.toString());
         await vaultController
           .connect(account1)
-          .deposit(volmexPerpPeriphery.address, virtualToken.address, account1.address, convert("1000"));
+          .deposit(volmexPerpPeriphery.address, virtualToken.address, account1.address, ten.toString());
         await vaultController
           .connect(account2)
-          .deposit(volmexPerpPeriphery.address, virtualToken.address, account2.address, convert("1000"));
+          .deposit(volmexPerpPeriphery.address, virtualToken.address, account2.address, ten.toString());
 
         const orderLeftLeverage = Order(
           ORDER,
           deadline,
           account1.address,
-          Asset(virtualToken.address, convert("2400")),
-          Asset(volmexBaseToken.address, convert("24")),
+          Asset(virtualToken.address, BigNumber.from("2400").mul(one).toString()),
+          Asset(volmexBaseToken.address, BigNumber.from("24").mul(one).toString()),
           0,
           0,
           false,
@@ -440,8 +420,8 @@ describe("Positioning", function () {
           ORDER,
           deadline,
           account2.address,
-          Asset(volmexBaseToken.address, convert("24")),
-          Asset(virtualToken.address, convert("2400")),
+          Asset(volmexBaseToken.address, BigNumber.from("24").mul(one).toString()),
+          Asset(virtualToken.address, BigNumber.from("2400").mul(one).toString()),
           1,
           0,
           true,
@@ -503,7 +483,7 @@ describe("Positioning", function () {
 
         const orderLeft1 = Order(
           ORDER,
-          deadline,
+          87654321987654,
           account1.address,
           Asset(volmexBaseToken.address, BigNumber.from("24").mul(one).toString()),
           Asset(virtualToken.address, BigNumber.from("2400").mul(one).toString()),
@@ -514,7 +494,7 @@ describe("Positioning", function () {
 
         const orderRight1 = Order(
           ORDER,
-          deadline,
+          87654321987654,
           account2.address,
           Asset(virtualToken.address, BigNumber.from("2400").mul(one).toString()),
           Asset(volmexBaseToken.address, BigNumber.from("24").mul(one).toString()),
@@ -573,8 +553,6 @@ describe("Positioning", function () {
         await vaultController.connect(account2).deposit(virtualToken.address, 25000);
 
         const orderLeft = Order(
-          ORDER,
-          deadline,
           account1.address,
           87654321987654,
           true,
@@ -587,14 +565,8 @@ describe("Positioning", function () {
           account2.address,
           87654321987654,
           false,
-        )
-    
-        const orderRight = Order(
-          ORDER,
-          deadline,
-          account2.address,
-          Asset(volmexBaseToken.address, convert("2")),
-          Asset(virtualToken.address, convert("200")),
+          Asset(virtualToken.address, "20000"),
+          Asset(baseToken.address, "20000"),
           1,
           0,
           true,
@@ -924,7 +896,7 @@ describe("Positioning", function () {
 
           const orderLeft = Order(
             account1.address,
-            deadline,
+            87654321987654,
             true,
             Asset(baseToken.address, "20"),
             Asset(virtualToken.address, "20"),
@@ -933,7 +905,7 @@ describe("Positioning", function () {
 
           const orderRight = Order(
             account2.address,
-            deadline,
+            87654321987654,
             false,
             Asset(virtualToken.address, "20"),
             Asset(baseToken.address, "20"),
@@ -1017,7 +989,7 @@ describe("Positioning", function () {
 
         const orderLeft = Order(
           ORDER,
-          deadline,
+          87654321987654,
           account1.address,
           Asset(volmexBaseToken.address, "20"),
           Asset(virtualToken.address, "20"),
@@ -1028,7 +1000,7 @@ describe("Positioning", function () {
 
         const orderRight = Order(
           ORDER,
-          deadline,
+          87654321987654,
           account2.address,
           Asset(virtualToken.address, "20"),
           Asset(volmexBaseToken.address, "20"),
@@ -1051,7 +1023,7 @@ describe("Positioning", function () {
 
         const orderLeft = Order(
           ORDER,
-          deadline,
+          87654321987654,
           account1.address,
           Asset(volmexBaseToken.address, "20"),
           Asset(virtualToken.address, "20"),
@@ -1062,7 +1034,7 @@ describe("Positioning", function () {
 
         const orderRight = Order(
           ORDER,
-          deadline,
+          87654321987654,
           account1.address,
           Asset(virtualToken.address, "20"),
           Asset(volmexBaseToken.address, "20"),
@@ -1089,38 +1061,9 @@ describe("Positioning", function () {
 
         erc1271Test = await ERC1271Test.deploy();
 
-        await virtualToken.approveTest(erc1271Test.address, vault.address, convert("1000"));
-        await virtualToken.approveTest(erc1271Test.address, volmexPerpPeriphery.address, convert("1000"));
-
-        await virtualToken.mint(account1.address, convert("1000"))
-        await virtualToken.mint(erc1271Test.address, convert("1000"))
-        await virtualToken.addWhitelist(account1.address)
-        await virtualToken.addWhitelist(erc1271Test.address)
-        await virtualToken.connect(account1).approve(vault.address, convert("1000"))
-        await virtualToken.connect(account2).approve(vault.address, convert("1000"))
-        await virtualToken.connect(account1).approve(volmexPerpPeriphery.address, convert("1000"))
-        await virtualToken.connect(account2).approve(volmexPerpPeriphery.address, convert("1000"))
-
-        
-        await vaultController.connect(account1)
-          .deposit(
-            volmexPerpPeriphery.address, 
-            virtualToken.address, 
-            account1.address, 
-            convert("1000"),
-          )
-        await vaultController.connect(account2)
-          .deposit(
-            volmexPerpPeriphery.address, 
-            virtualToken.address, 
-            erc1271Test.address, 
-            convert("1000"),
-          )
-
-
-        const orderLeft1 = Order(
+        const orderLeft = Order(
           ORDER,
-          deadline,
+          87654321987654,
           account1.address,
           Asset(volmexBaseToken.address, "20"),
           Asset(virtualToken.address, "20"),
@@ -1129,9 +1072,9 @@ describe("Positioning", function () {
           true,
         );
 
-        const orderRight1 = Order(
+        const orderRight = Order(
           ORDER,
-          deadline,
+          87654321987654,
           erc1271Test.address,
           Asset(virtualToken.address, "20"),
           Asset(volmexBaseToken.address, "20"),
@@ -1159,9 +1102,9 @@ describe("Positioning", function () {
 
         await positioning.connect(account1).setMakerMinSalt(100);
 
-        const orderLeft1 = Order(
+        const orderLeft = Order(
           ORDER,
-          deadline,
+          87654321987654,
           account1.address,
           Asset(volmexBaseToken.address, "20"),
           Asset(virtualToken.address, "20"),
@@ -1170,9 +1113,9 @@ describe("Positioning", function () {
           true,
         );
 
-        const orderRight1 = Order(
+        const orderRight = Order(
           ORDER,
-          deadline,
+          87654321987654,
           account2.address,
           Asset(virtualToken.address, "20"),
           Asset(volmexBaseToken.address, "20"),
