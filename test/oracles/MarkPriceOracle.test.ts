@@ -63,13 +63,13 @@ describe('MarkPriceOracle', function () {
       }
     );
 
-    volmexBaseToken = await VolmexBaseToken.upgrades.deployProxy(
+    volmexBaseToken = await upgrades.deployProxy(
       VolmexBaseToken,
       [
         "MyTestToken",
         "MKT",
          indexPriceOracle.address,
-         
+         true
       ]
     );
     await volmexBaseToken.deployed();
