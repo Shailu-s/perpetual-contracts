@@ -69,7 +69,7 @@ describe('MarkPriceOracle', function () {
         "MyTestToken",
         "MKT",
          indexPriceOracle.address,
-         true
+         true 
       ]
     );
     await volmexBaseToken.deployed();
@@ -150,6 +150,22 @@ describe('MarkPriceOracle', function () {
       );
       expect(receipt.confirmations).not.equal(0);
     });
+    it("Should fail to initialize again", async () => {
+      let receipt = await upgrades.deployProxy(
+        MarkPriceOracle,
+        [
+          [10000000],
+          [volmexBaseToken.address],
+        ],
+        { 
+          initializer: "initialize",
+        }
+      );
+      expect(receipt.confirmations).not.equal(0);
+      await expect(receipt.initialize([10000000],
+        [volmexBaseToken.address],)).to.be.revertedWith("Initializable: contract is already initialized")
+    });
+    
 
     it("Should fail to deploy if length of arrays is unequal", async () => {
       await expect(
@@ -212,8 +228,14 @@ describe('MarkPriceOracle', function () {
       const txn = await markPriceOracle.getCumulativePrice(1000000, 0);
       expect(Number(txn)).equal(1000000);
     });
+    
     it("Should fail to  add multiple observations because uneuqal length of inputs", async () => {
       await expect(matchingEngine.addAssets([10000000, 20000000], [volmexBaseToken.address])).to.be.revertedWith("MarkSMA: Unequal length of prices & assets")
+
+      
+    });
+    it("Should fail to  add multiple observations because uneuqal length of inputs", async () => {
+      await expect(markPriceOracle.addAssets([10000000, 20000000], [volmexBaseToken.address])).to.be.revertedWith("MarkSMA: Not MatchingEngine")
 
       
     });
@@ -222,11 +244,11 @@ describe('MarkPriceOracle', function () {
     });
     it("should fail to set Matching engine as admin assecc is not provided",async() =>{
       const [owner, account1] = await ethers.getSigners();
-      await expect(markPriceOracle.connect(account1).setMatchingEngine(MatchingEngine.address)).to.be.revertedWith("MarkPriceOracle: Not admin")
+      await expect(markPriceOracle.connect(account1).setMatchingEngine(matchingEngine.address)).to.be.revertedWith("MarkPriceOracle: Not admin")
     })
     it("should fail to set Matching engine as admin assecc is not provided",async() =>{
       const [owner, account1] = await ethers.getSigners();
-      await expect(markPriceOracle.connect(account1).setMatchingEngine(ZERO_ADDR)).to.be.revertedWith("V_PERP_M: Can't be 0 address");
+      await expect(markPriceOracle.setMatchingEngine(ZERO_ADDR)).to.be.revertedWith("V_PERP_M: Can't be 0 address");
     })
   });
   
