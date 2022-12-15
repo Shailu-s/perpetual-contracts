@@ -222,9 +222,9 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
         int256 takerQuote,
         int256 realizedPnl,
         int256 fee
-    ) external override {
+    ) external override returns (int256 positionSize) {
         _requireOnlyPositioning();
-        _modifyTakerBalance(trader, baseToken, takerBase, takerQuote);
+        (positionSize, ) = _modifyTakerBalance(trader, baseToken, takerBase, takerQuote);
         _modifyOwedRealizedPnl(trader, fee);
 
         // @audit should merge _addOwedRealizedPnl and settleQuoteToOwedRealizedPnl in some way.
