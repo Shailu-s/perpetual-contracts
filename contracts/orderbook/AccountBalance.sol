@@ -55,44 +55,15 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
         _grantRole(ACCOUNT_BALANCE_ADMIN, _msgSender());
     }
 
-    function setVault(address vaultArg) external {
-        _requireAccountBalanceAdmin();
-        // vault address is not contract
-        require(vaultArg.isContract(), "AB_VNC");
-        _vault = vaultArg;
-        emit VaultChanged(vaultArg);
-    }
-
     function grantSettleRealizedPnlRole(address account) external {
         _requireAccountBalanceAdmin();
         _grantRole(CAN_SETTLE_REALIZED_PNL, account);
     }
 
     /// @inheritdoc IAccountBalance
-    function modifyTakerBalance(
-        address trader,
-        address baseToken,
-        int256 base,
-        int256 quote
-    ) external override returns (int256, int256) {
-        _requireOnlyPositioning();
-        return _modifyTakerBalance(trader, baseToken, base, quote);
-    }
-
-    /// @inheritdoc IAccountBalance
     function modifyOwedRealizedPnl(address trader, int256 amount) external override {
         _requireOnlyPositioning();
         _modifyOwedRealizedPnl(trader, amount);
-    }
-
-    /// @inheritdoc IAccountBalance
-    function settleQuoteToOwedRealizedPnl(
-        address trader,
-        address baseToken,
-        int256 amount
-    ) external override {
-        _requireOnlyPositioning();
-        _settleQuoteToOwedRealizedPnl(trader, baseToken, amount);
     }
 
     /// @inheritdoc IAccountBalance
@@ -120,12 +91,6 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
     }
 
     /// @inheritdoc IAccountBalance
-    function deregisterBaseToken(address trader, address baseToken) external override {
-        _requireOnlyPositioning();
-        _deregisterBaseToken(trader, baseToken);
-    }
-
-    /// @inheritdoc IAccountBalance
     function updateTwPremiumGrowthGlobal(
         address trader,
         address baseToken,
@@ -142,11 +107,6 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
     /// @inheritdoc IAccountBalance
     function getPositioningConfig() external view override returns (address) {
         return _positioningConfig;
-    }
-
-    /// @inheritdoc IAccountBalance
-    function getVault() external view override returns (address) {
-        return _vault;
     }
 
     /// @inheritdoc IAccountBalance
@@ -222,9 +182,9 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
         int256 takerQuote,
         int256 realizedPnl,
         int256 fee
-    ) external override {
+    ) external override returns (int256 positionSize) {
         _requireOnlyPositioning();
-        _modifyTakerBalance(trader, baseToken, takerBase, takerQuote);
+        (positionSize, ) = _modifyTakerBalance(trader, baseToken, takerBase, takerQuote);
         _modifyOwedRealizedPnl(trader, fee);
 
         // @audit should merge _addOwedRealizedPnl and settleQuoteToOwedRealizedPnl in some way.

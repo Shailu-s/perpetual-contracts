@@ -161,6 +161,8 @@ contract Positioning is
     }
 
     /// @inheritdoc IPositioning
+    // `liquidator` unused: we are keeping this for future implementation
+    // when trader will be able to directly open position
     function openPosition(
         LibOrder.Order memory orderLeft,
         bytes memory signatureLeft,
@@ -385,7 +387,7 @@ contract Positioning is
         _modifyOwedRealizedPnl(_getFeeReceiver(), (orderFees.orderLeftFee + orderFees.orderRightFee).toInt256());
 
         // // modifies positionSize and openNotional
-       _settleBalanceAndDeregister(
+       internalData.leftPositionSize = _settleBalanceAndDeregister(
             orderLeft.trader,
             baseToken,
             internalData.leftExchangedPositionSize,
@@ -394,7 +396,7 @@ contract Positioning is
             0
         );
 
-        _settleBalanceAndDeregister(
+        internalData.rightPositionSize = _settleBalanceAndDeregister(
             orderRight.trader,
             baseToken,
             internalData.rightExchangedPositionSize,
@@ -538,8 +540,8 @@ contract Positioning is
         int256 takerQuote,
         int256 realizedPnl,
         int256 makerFee
-    ) internal {
-        IAccountBalance(_accountBalance).settleBalanceAndDeregister(
+    ) internal returns (int256) {
+        return IAccountBalance(_accountBalance).settleBalanceAndDeregister(
             trader,
             baseToken,
             takerBase,
