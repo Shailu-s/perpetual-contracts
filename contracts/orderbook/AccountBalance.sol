@@ -55,14 +55,6 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
         _grantRole(ACCOUNT_BALANCE_ADMIN, _msgSender());
     }
 
-    function setVault(address vaultArg) external {
-        _requireAccountBalanceAdmin();
-        // vault address is not contract
-        require(vaultArg.isContract(), "AB_VNC");
-        _vault = vaultArg;
-        emit VaultChanged(vaultArg);
-    }
-
     function grantSettleRealizedPnlRole(address account) external {
         _requireAccountBalanceAdmin();
         _grantRole(CAN_SETTLE_REALIZED_PNL, account);
@@ -142,11 +134,6 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
     /// @inheritdoc IAccountBalance
     function getPositioningConfig() external view override returns (address) {
         return _positioningConfig;
-    }
-
-    /// @inheritdoc IAccountBalance
-    function getVault() external view override returns (address) {
-        return _vault;
     }
 
     /// @inheritdoc IAccountBalance

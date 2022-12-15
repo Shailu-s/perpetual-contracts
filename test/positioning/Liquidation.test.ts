@@ -415,6 +415,35 @@ describe("Liquidation test in Positioning", function () {
           positioning.connect(account2).liquidate(account1.address, volmexBaseToken.address, "10000000000000000000"),
         ).to.be.revertedWith("P_WLD");
       });
+
+      it("should get liquidatable position of a trader", async () => {
+        let signatureLeft = await getSignature(orderLeft, account1.address);
+        let signatureRight = await getSignature(orderRight, account2.address);
+
+        await expect(
+          positioning.openPosition(orderLeft, signatureLeft, orderRight, signatureRight, liquidator),
+        ).to.emit(positioning, "PositionChanged");
+
+        const positionSize = await accountBalance1.getTakerPositionSize(
+          account1.address,
+          orderLeft.makeAsset.virtualToken,
+        );
+        const positionSize1 = await accountBalance1.getTakerPositionSize(
+          account2.address,
+          orderLeft.makeAsset.virtualToken,
+        );
+
+        await expect(positionSize.toString()).to.be.equal("-100000000000000000000");
+        await expect(positionSize1.toString()).to.be.equal("100000000000000000000");
+
+        const liquidatablePosition = await positioning.getLiquidatablePosition(account1.address, volmexBaseToken.address);
+        expect(liquidatablePosition.toString()).to.equal("10000000000000000000");
+      });
+
+      it("should fail to get liquidatable position of a trader if position size is 0", async () => {
+        await expect(positioning.getLiquidatablePosition(account1.address, volmexBaseToken.address))
+          .to.be.revertedWith("P_PSZ");
+      });
     });
   });
   async function getSignature(orderObj, signer) {
