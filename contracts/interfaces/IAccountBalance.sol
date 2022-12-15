@@ -67,7 +67,7 @@ interface IAccountBalance {
         int256 takerQuote,
         int256 realizedPnl,
         int256 fee
-    ) external;
+    ) external returns (int256);
 
 
     /// @notice Get liquidatable position size of trader's baseToken market
