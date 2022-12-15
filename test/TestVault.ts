@@ -4,7 +4,7 @@ import { ethers, upgrades, waffle } from "hardhat"
 import { IndexPriceOracle, MarkPriceOracle, MatchingEngine, VaultController } from "../typechain"
 import { FakeContract, smock } from "@defi-wonderland/smock"
 
-describe("Vault tests", function () {
+describe("Vault", function () {
   let USDC
   let positioningConfig
   let accountBalance
@@ -211,6 +211,14 @@ describe("Vault tests", function () {
     ])).to.be.revertedWith("V_ABNC")
     
   })
+  it("Should fail to reinitialize", async()=>{
+     await expect(vault.initialize(positioningConfig.address,
+      accountBalance.address,
+      USDC.address,
+      vaultController.address,
+      false,))
+      .to.be.revertedWith("Initializable: contract is already initialized")
+  })
 })
   describe("Deposit",function(){
   it("Positive Test for deposit function", async () => {
@@ -254,7 +262,7 @@ describe("Vault tests", function () {
 
   })
 
-  it("should fail to deposit if user tries to perform transaction with value == 0 ", async()=>{
+  it("should fail to deposit if user tries to perform transaction with value != 0 in a non eth vault ", async()=>{
     const amount = parseUnits("100", await USDC.decimals())
 
     await positioningConfig.setSettlementTokenBalanceCap(amount)
@@ -283,25 +291,8 @@ describe("Vault tests", function () {
           alice.address,
           amount
         )
-    ).to.be.revertedWith("V_NEFC");
+    ).to.be.revertedWith("V_NEFC")
   })
-  // it.only("Negative Test For withdraw  from USDC vault ",async()=>{
-
-  //   await positioningConfig.setSettlementTokenBalanceCap("10000")
-
-  //   const USDCVaultAddress = await vaultController.getVault(ETH.address)
-
-  //   const USDCVaultContract = await vaultFactory.attach(USDCVaultAddress)
-  //   await ETH.connect(alice).approve(USDCVaultAddress, "10000")
-  //   await ETH.connect(alice).approve(volmexPerpPeriphery.address, "10000")
-
-  //   // Check if it is reverted or not with given reason
-  //   await vaultController.connect(alice).deposit(volmexPerpPeriphery.address,ETH.address, alice.address, "10000",{value:10000});
-  //   await expect( vaultController.connect(alice).withdraw(ETH.address,alice.address,10000)).to.be.revertedWith("V_NEB")
-     
-
-  // })
-
   it("should not allow user to withdraw from ETH vault if vault balance is empty", async () => {
     const amount = parseUnits("100", await ETH.decimals())
     await positioningConfig.setSettlementTokenBalanceCap(amount)
@@ -416,30 +407,8 @@ describe("Vault tests", function () {
     ).to.be.revertedWith("ERC20: transfer amount exceeds balance");
   })
 
-  // TODO: Fix this test case
-  it("should not allow user to deposit USDC to ETH vault", async () => {
-    const userBalance = await USDC.balanceOf(alice.address)
 
-    await positioningConfig.setSettlementTokenBalanceCap(userBalance)
 
-    const ethVaultAddress = await vaultController.getVault(ETH.address)
-
-    const ethVaultContract = await vaultFactory.attach(ethVaultAddress)
-    await USDC.connect(alice).approve(ethVaultAddress, userBalance)
-    await USDC.connect(alice).approve(volmexPerpPeriphery.address, userBalance)
-
-    // Deposit max amount equal to balance of the user
-    await expect(vaultController
-      .connect(alice)
-      .deposit(
-        volmexPerpPeriphery.address, 
-        ETH.address, 
-        alice.address, 
-        userBalance,
-        { value: userBalance.toString() }
-      )
-    ).to.be.revertedWith("ERC20: transfer amount exceeds balance");
-  })
 
   it("should not allow user to interact with vault if contract is paused", async () => {
     await vault.pause();
@@ -447,27 +416,15 @@ describe("Vault tests", function () {
     const userBalance = await USDC.balanceOf(alice.address)
     // Deposit max amount equal to balance of the user
     await expect(
-      vault.deposit(
+      vaultController.connect(alice).deposit(
         volmexPerpPeriphery.address, 
-        userBalance,
-        alice.address
-      )
-    ).to.be.revertedWith("Pausable: paused");
-  })
-  it("should not allow user to interact with vault if contract is paused", async () => {
-    await vault.pause();
-
-    const userBalance = await USDC.balanceOf(alice.address)
-    // Deposit max amount equal to balance of the user
-    await expect(
-
-      vaultController.connect(alice).withdraw(
         USDC.address,
-        userBalance,
-        alice.address
+        alice.address,
+        userBalance
       )
     ).to.be.revertedWith("Pausable: paused");
   })
+  
 
   it("force error, amount more than allowance", async () => {
     const [owner, alice] = await ethers.getSigners()
@@ -515,15 +472,15 @@ describe("Vault tests", function () {
 
       const amount = parseUnits("100", await USDC.decimals())
       await USDC.connect(owner).approve(vault.address, amount)
-
+      const userBalance =  await USDC.balanceOf(owner.address)
       // send fund to vault
       await expect(vault.connect(owner).transferFundToVault(USDC.address, amount))
         .to.emit(vault, "BorrowFund")
         .withArgs(owner.address, amount)
-
+  
       // reduce owner balance
-      expect(await USDC.balanceOf(owner.address)).to.eq(parseUnits("900", await USDC.decimals()))
-
+      expect(await USDC.balanceOf(owner.address)).to.eq("10000000000000000000900000000")
+      
       // increase vault balance
       expect(await USDC.balanceOf(vault.address)).to.eq(parseUnits("100", await USDC.decimals()))
 
@@ -566,20 +523,20 @@ describe("Vault tests", function () {
       await vault.connect(owner).setPositioning(positioningConfig.address)
       expect(await vault.connect(owner).getPositioning()).to.be.equal(positioningConfig.address)
     })
-    it("Should not be abe to set positiong" , async () => {
+    it("Should not be able to set positiong" , async () => {
       const [owner, alice] = await ethers.getSigners()
       await expect (vault.connect(alice).setPositioning(positioningConfig.address)).to.be.revertedWith("Ownable: caller is not the owner")
     })
 
-    it("Should not be abe to set positiong if positioning address in not contract" , async () => {
+    it("Should not be able to set positiong if positioning address in not contract" , async () => {
       const [owner, alice] = await ethers.getSigners()
-      await expect (vault.connect(alice).setPositioning(alice.address)).to.be.revertedWith("V_VPMM"); 
+      await expect (vault.setPositioning(alice.address)).to.be.revertedWith("V_VPMM"); 
     })
-    it("Should not be abe to set Vault Controller" , async () => {
+    it("Should not be able to set Vault Controller" , async () => {
       const [owner, alice] = await ethers.getSigners()
       await expect (vault.connect(alice).setVaultController(vaultController.address)).to.be.revertedWith("Vault: Not admin"); 
     })
-    it("Should not be abe to set Vault Controller" , async () => {
+    it("Should not be able to set Vault Controller" , async () => {
       const [owner, alice] = await ethers.getSigners()
       await expect (vault.setVaultController(alice.address)).to.be.revertedWith("V_VPMM"); 
     })
@@ -674,3 +631,4 @@ describe("Vault tests", function () {
     })
   })
 })
+

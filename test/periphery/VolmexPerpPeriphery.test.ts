@@ -265,6 +265,9 @@ describe("VolmexPerpPeriphery", function () {
             )).to.be.revertedWith("Relayer can't be address(0)");
           });
     });
+   it("Should fail to initialize quote token again",async()=>{
+     await expect(volmexQuoteToken.initialize("MytestToken","MKT",true)).to.be.revertedWith("Initializable: contract is already initialized")
+    })
 
     describe("set Relayer", function(){
       it("should set relayer",async () => {
@@ -300,10 +303,19 @@ describe("VolmexPerpPeriphery", function () {
               volmexPerpPeriphery.connect(account2).setMarkPriceOracle(markPriceOracle.address)
           ).to.be.revertedWith("Periphery: Not admin");
       });
+
+      
     });
 
     describe("Fill Limit order", async () => {
       it("should fill LimitOrder", async () => {
+        
+        await (await USDC.transfer(account1.address, "1000000000"));
+        await (await USDC.transfer(account2.address, "1000000000"));
+        await USDC.connect(account1).approve(volmexPerpPeriphery.address, "1000000000");
+        await USDC.connect(account2).approve(volmexPerpPeriphery.address, "1000000000");
+        (await volmexPerpPeriphery.connect(account1).depositToVault(0, USDC.address, "1000000000")).wait();
+        (await volmexPerpPeriphery.connect(account2).depositToVault(0, USDC.address, "1000000000")).wait();
         const orderLeft = Order(
           STOP_LOSS_LIMIT_ORDER,
           deadline,
@@ -342,44 +354,7 @@ describe("VolmexPerpPeriphery", function () {
         );
         expect(receipt.confirmations).not.equal(0);
       });
-      it("should fill LimitOrder", async () => {
-        const orderLeft = Order(
-          ORDER,
-          deadline,
-          account1.address,
-          Asset(volmexBaseToken.address, one.toString()),
-          Asset(virtualToken.address, one.toString()),
-          1,
-          1e8.toString(),
-          true,
-        )
-        
-        const orderRight = Order(
-          ORDER,
-          deadline,
-          account2.address,
-          Asset(virtualToken.address, two.toString()),
-          Asset(volmexBaseToken.address, two.toString()),
-          1,
-          1e6.toString(),
-          false,
-        )
-
-        const signatureLeftLimitOrder = await getSignature(orderLeft, account1.address);
-        const signatureRightLimitOrder = await getSignature(orderRight, account2.address);
-
-        await matchingEngine.grantMatchOrders(positioning.address);
-        await matchingEngine.grantMatchOrders(positioning2.address);
-        let receipt = await volmexPerpPeriphery.fillLimitOrder(
-          orderLeft,
-          signatureLeftLimitOrder,
-          orderRight,
-          signatureRightLimitOrder,
-          owner.address,
-          0
-      );
-      expect(receipt.confirmations).not.equal(0);
-    })
+      
       it("should fail to add order",async()=>{
         const orderLeft = Order(
           STOP_LOSS_LIMIT_ORDER,
@@ -707,7 +682,7 @@ describe("VolmexPerpPeriphery", function () {
       expect(amount).to.equal(vBalAfter.sub(vBalAfterWithdraw));
       expect(amount).to.equal(ownerBalAfterWithdraw.sub(ownerBalBeforeWithdraw));
     });
-    it("Should fail to tranfer to vault becuase vault address in not white listed",async()=>{
+    it("Should fail to transfer to vault becuase vault address in not white listed",async()=>{
       await expect(volmexPerpPeriphery.connect(account2).transferToVault(USDC.address,owner.address,"10000000")).to.be.revertedWith("Periphery: vault not whitelisted")
     })
     let orderLeft;
@@ -720,8 +695,8 @@ describe("VolmexPerpPeriphery", function () {
         ORDER,
         deadline,
         account1.address,
-        Asset(volmexBaseToken.address, two.toString()),
-        Asset(virtualToken.address, two.toString()),
+        Asset(volmexBaseToken.address, one.toString()),
+        Asset(virtualToken.address, one.toString()),
         1,
         1e6.toString(),
         true,
@@ -731,8 +706,8 @@ describe("VolmexPerpPeriphery", function () {
         ORDER,
         deadline,
         account2.address,
-        Asset(virtualToken.address, two.toString()),
-        Asset(volmexBaseToken.address, two.toString()),
+        Asset(virtualToken.address, one.toString()),
+        Asset(volmexBaseToken.address, one.toString()),
         2,
         1e6.toString(),
         false,

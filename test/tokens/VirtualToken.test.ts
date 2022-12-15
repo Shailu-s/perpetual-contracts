@@ -2,7 +2,7 @@ import { expect } from "chai";
 import { ethers, upgrades } from "hardhat";
 import { VirtualToken__factory } from "../../typechain";
 
-describe("Virtual Token",function(){
+describe("VirtualToken",function(){
     let VirtualToken;
     let virtualToken;
     let isBase = true;
@@ -22,23 +22,11 @@ describe("Virtual Token",function(){
         "MKT",
         isBase],
         {
-        initializer: "initialize"
-        })    
+          initializer: "initialize"
+        })
         await virtualToken.setMintBurnRole(owner.address) 
     })
     describe("Virtual Token deployment",function(){
-      it("should deploy Virtual Token i.e base token",async () =>  {
-        virtualToken = await upgrades.deployProxy(
-            VirtualToken,
-            ["MyTestToken",
-            "MKT",
-            isBase],
-            {
-            initializer: "initialize"
-        })  
-        const receipt = await virtualToken.deployed();
-        expect(receipt.confirmations).not.equal(0) 
-      })
       it("should deploy Virtual Token i.e not base token",async () =>  {
         virtualToken = await upgrades.deployProxy(
             VirtualToken,
@@ -105,8 +93,6 @@ describe("Virtual Token",function(){
       
     })
    })
-  describe("Parent Token",function(){
-    it(" ")
-  })
+  
 
 })

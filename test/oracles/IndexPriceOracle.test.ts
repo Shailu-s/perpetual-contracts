@@ -74,6 +74,15 @@ describe("IndexPriceOracle", function () {
     assert.equal(await protocol.volatilityCapRatio(), "250");
   });
 
+  it("Should fail to initialize again ",async()=>{
+    await expectRevert(
+      volmexOracle.initialize(
+        owner
+      ),
+      "Initializable: contract is already initialized"
+    )
+  });
+
   it("Should add volatility index datapoints and retrieve TWAP value", async () => {
     const volatilityIndex = "0";
     const volatilityTokenPrice1 = "105000000";

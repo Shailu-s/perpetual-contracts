@@ -1,7 +1,7 @@
 import { expect } from "chai";
 import { ethers, upgrades } from "hardhat";
 
-describe("ERC20 Transfer Proxy", function(){
+describe("ERC20TransferProxy", function(){
   let TransferProxy;
   let transferProxy;
   let TestERC20;
