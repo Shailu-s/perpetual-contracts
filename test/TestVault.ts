@@ -262,7 +262,7 @@ describe("Vault", function () {
 
   })
 
-  it("should fail to deposit if user tries to perform transaction with value == 0 ", async()=>{
+  it("should fail to deposit if user tries to perform transaction with value != 0 in a non eth vault ", async()=>{
     const amount = parseUnits("100", await USDC.decimals())
 
     await positioningConfig.setSettlementTokenBalanceCap(amount)
@@ -523,20 +523,20 @@ describe("Vault", function () {
       await vault.connect(owner).setPositioning(positioningConfig.address)
       expect(await vault.connect(owner).getPositioning()).to.be.equal(positioningConfig.address)
     })
-    it("Should not be abe to set positiong" , async () => {
+    it("Should not be able to set positiong" , async () => {
       const [owner, alice] = await ethers.getSigners()
       await expect (vault.connect(alice).setPositioning(positioningConfig.address)).to.be.revertedWith("Ownable: caller is not the owner")
     })
 
-    it("Should not be abe to set positiong if positioning address in not contract" , async () => {
+    it("Should not be able to set positiong if positioning address in not contract" , async () => {
       const [owner, alice] = await ethers.getSigners()
       await expect (vault.setPositioning(alice.address)).to.be.revertedWith("V_VPMM"); 
     })
-    it("Should not be abe to set Vault Controller" , async () => {
+    it("Should not be able to set Vault Controller" , async () => {
       const [owner, alice] = await ethers.getSigners()
       await expect (vault.connect(alice).setVaultController(vaultController.address)).to.be.revertedWith("Vault: Not admin"); 
     })
-    it("Should not be abe to set Vault Controller" , async () => {
+    it("Should not be able to set Vault Controller" , async () => {
       const [owner, alice] = await ethers.getSigners()
       await expect (vault.setVaultController(alice.address)).to.be.revertedWith("V_VPMM"); 
     })
