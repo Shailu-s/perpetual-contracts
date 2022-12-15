@@ -14,21 +14,6 @@ interface IAccountBalance {
 
     function initialize(address positioningConfigArg) external;
 
-    /// @notice Modify trader account balance
-    /// @dev Only used by `Positioning` contract
-    /// @param trader The address of the trader
-    /// @param baseToken The address of the baseToken
-    /// @param base Modified amount of base
-    /// @param quote Modified amount of quote
-    /// @return takerPositionSize Taker position size after modified
-    /// @return takerOpenNotional Taker open notional after modified
-    function modifyTakerBalance(
-        address trader,
-        address baseToken,
-        int256 base,
-        int256 quote
-    ) external returns (int256, int256);
-
     /// @notice Modify trader owedRealizedPnl
     /// @dev Only used by `Positioning` contract
     /// @param trader The address of the trader
@@ -40,17 +25,6 @@ interface IAccountBalance {
     /// @param trader The address of the trader
     /// @return pnl Settled owedRealizedPnl
     function settleOwedRealizedPnl(address trader) external returns (int256 pnl);
-
-    /// @notice Modify trader owedRealizedPnl
-    /// @dev Only used by `Positioning` contract
-    /// @param trader The address of the trader
-    /// @param baseToken The address of the baseToken
-    /// @param amount Settled quote amount
-    function settleQuoteToOwedRealizedPnl(
-        address trader,
-        address baseToken,
-        int256 amount
-    ) external;
 
     /// @notice Settle account balance and deregister base token
     /// @dev Only used by `Positioning` contract
@@ -88,12 +62,6 @@ interface IAccountBalance {
     /// @param trader The address of the trader
     /// @param baseToken The address of the trader's base token
     function registerBaseToken(address trader, address baseToken) external;
-
-    /// @notice Deregister baseToken from trader accountInfo
-    /// @dev Only used by `Positioning` contract, this function is expensive, due to for loop
-    /// @param trader The address of the trader
-    /// @param baseToken The address of the trader's base token
-    function deregisterBaseToken(address trader, address baseToken) external;
 
     /// @notice Update trader Twap premium info
     /// @dev Only used by `Positioning` contract
