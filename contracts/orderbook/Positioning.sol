@@ -161,6 +161,8 @@ contract Positioning is
     }
 
     /// @inheritdoc IPositioning
+    // `liquidator` unused: we are keeping this for future implementation
+    // when trader will be able to directly open position
     function openPosition(
         LibOrder.Order memory orderLeft,
         bytes memory signatureLeft,
