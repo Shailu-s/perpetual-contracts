@@ -385,7 +385,7 @@ contract Positioning is
         _modifyOwedRealizedPnl(_getFeeReceiver(), (orderFees.orderLeftFee + orderFees.orderRightFee).toInt256());
 
         // // modifies positionSize and openNotional
-       _settleBalanceAndDeregister(
+       internalData.leftPositionSize = _settleBalanceAndDeregister(
             orderLeft.trader,
             baseToken,
             internalData.leftExchangedPositionSize,
@@ -394,7 +394,7 @@ contract Positioning is
             0
         );
 
-        _settleBalanceAndDeregister(
+        internalData.rightPositionSize = _settleBalanceAndDeregister(
             orderRight.trader,
             baseToken,
             internalData.rightExchangedPositionSize,
@@ -538,8 +538,8 @@ contract Positioning is
         int256 takerQuote,
         int256 realizedPnl,
         int256 makerFee
-    ) internal {
-        IAccountBalance(_accountBalance).settleBalanceAndDeregister(
+    ) internal returns (int256) {
+        return IAccountBalance(_accountBalance).settleBalanceAndDeregister(
             trader,
             baseToken,
             takerBase,

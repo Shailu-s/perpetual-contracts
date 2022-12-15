@@ -9,7 +9,6 @@ import { LibAccountMarket } from "../libs/LibAccountMarket.sol";
 abstract contract AccountBalanceStorageV1 {
     address internal _positioningConfig;
     address internal _orderBook;
-    address internal _vault;
 
     // trader => owedRealizedPnl
     mapping(address => int256) internal _owedRealizedPnlMap;

@@ -67,7 +67,7 @@ interface IAccountBalance {
         int256 takerQuote,
         int256 realizedPnl,
         int256 fee
-    ) external;
+    ) external returns (int256);
 
 
     /// @notice Get liquidatable position size of trader's baseToken market
@@ -109,10 +109,6 @@ interface IAccountBalance {
     /// @notice Get `PositioningConfig` address
     /// @return PositioningConfig The address of PositioningConfig
     function getPositioningConfig() external view returns (address);
-
-    /// @notice Get `Vault` address
-    /// @return vault The address of Vault
-    function getVault() external view returns (address);
 
     /// @notice Get trader registered baseTokens
     /// @param trader The address of trader

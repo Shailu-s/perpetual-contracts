@@ -82,7 +82,7 @@ describe("Vault tests", function () {
     ethVault = await upgrades.deployProxy(vaultFactory, [
       positioningConfig.address,
       accountBalance.address,
-      eth.address,
+      ETH.address,
       vaultController.address,
       true,
     ])
@@ -301,6 +301,21 @@ describe("Vault tests", function () {
      
 
   // })
+
+  it("should not allow user to withdraw from ETH vault if vault balance is empty", async () => {
+    const amount = parseUnits("100", await ETH.decimals())
+    await positioningConfig.setSettlementTokenBalanceCap(amount)
+    await accountBalance.grantSettleRealizedPnlRole(vaultController.address)
+
+    await expect(
+      vaultController.connect(alice)
+        .withdraw(
+          ETH.address, 
+          alice.address,
+          amount
+        )
+    ).to.be.revertedWith("V_NEFC");
+  })
 
   it("should allow user to deposit max collateral", async () => {
     const userBalance = await USDC.balanceOf(alice.address)
@@ -620,6 +635,10 @@ describe("Vault tests", function () {
     it("Tests for getAccountBalance", async function () {
       expect(await vault.getAccountBalance()).to.be.equal(accountBalance.address)
     })
+
+    it("should get type of vault", async () => {
+      expect(await vault.isEthVault()).to.be.equal(false);
+    });
   })
 
   describe("Test for setters", function () {

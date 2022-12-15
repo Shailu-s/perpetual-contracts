@@ -113,12 +113,10 @@ describe("Vault Controller tests for withdrawal", function () {
     )
 
     await accountBalance.setPositioning(positioning.address);
-    await positioning.registerBaseToken(alice.address, USDC.address);
     await vaultController.connect(owner).setPositioning(positioning.address)
     await vaultController.registerVault(vault.address, USDC.address)
     await vaultController.registerVault(DAIVault.address, DAI.address)
 
-    await accountBalance.connect(owner).setVault(vault.address)
     const amount = parseUnits("1000", await USDC.decimals())
     await USDC.mint(alice.address, amount)
 
