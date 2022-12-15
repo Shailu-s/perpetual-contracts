@@ -766,8 +766,8 @@ describe("VolmexPerpPeriphery", function () {
         orderLeft.makeAsset.virtualToken,
       );
 
-      expect(positionSize).to.be.equal("-500000000000000000");
-      expect(positionSize1).to.be.equal("500000000000000000");
+      expect(positionSize).to.be.equal("-2000000000000000000");
+      expect(positionSize1).to.be.equal("2000000000000000000");
     });
     describe("Bulk Methods",function(){
     it("should open position in batch", async()=>{
