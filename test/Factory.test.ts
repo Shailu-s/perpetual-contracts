@@ -132,6 +132,14 @@ describe('PerpFactory', function () {
     const receipt = await factory.deployed();
     expect(receipt.confirmations).not.equal(0);
   });
+  it("should fail to initialize again",async() =>{
+    await expect(factory.initialize(volmexBaseToken.address,
+      volmexQuoteToken.address,
+      vaultController.address,
+      vault.address,
+      positioning.address,
+      accountBalance.address)).to.be.revertedWith("Initializable: contract is already initialized")
+  })
 
   describe('Clone:', function() {
     it("Should set token implementation contract correctly", async () => {
