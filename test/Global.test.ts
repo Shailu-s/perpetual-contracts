@@ -191,7 +191,9 @@ describe("Global", function () {
       [positioning.address, positioning2.address],
       [vaultController.address, vaultController2.address],
       markPriceOracle.address,
+      [vault.address, vault.address],
       owner.address,
+      owner.address // replace with relayer
     ]);
     await periphery.deployed();
 
@@ -200,6 +202,7 @@ describe("Global", function () {
       PerpFactory,
       [
         await proxyAdmin.getProxyImplementation(volmexBaseToken.address),
+        await proxyAdmin.getProxyImplementation(volmexQuoteToken.address),
         await proxyAdmin.getProxyImplementation(vaultController.address),
         await proxyAdmin.getProxyImplementation(vault.address),
         await proxyAdmin.getProxyImplementation(positioning.address),

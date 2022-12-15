@@ -305,6 +305,7 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
         // overflow inspection:
         // only overflow when position value in USD(18 decimals) > 2^255 / 10^18
         // TODOCHANGE: Decimal calculation for indexTwap is not as same decimal as Position size
+        // Todo: Should divide by ORACLE_BASE here
         return positionSize * indexTwap.toInt256() / _ORACLE_BASE;
     }
 

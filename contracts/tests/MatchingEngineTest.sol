@@ -44,4 +44,10 @@ contract MatchingEngineTest is MatchingEngine
         _grantRole(CAN_ADD_OBSERVATION, address(this));
         markPriceOracle.addObservation(_priceCumulative, _index);
     }
+    //TODO Should be inculded in matching engine core
+    function pause() external {
+        _requireCanMatchOrders();
+        _pause();
+    }
+
 }

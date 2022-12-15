@@ -183,6 +183,8 @@ contract Positioning is
         IAccountBalance(_accountBalance).registerBaseToken(orderLeft.trader, baseToken);
         IAccountBalance(_accountBalance).registerBaseToken(orderRight.trader, baseToken);
 
+        
+
         // must settle funding first
         _settleFunding(orderLeft.trader, baseToken);
         _settleFunding(orderRight.trader, baseToken);

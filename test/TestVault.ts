@@ -1,7 +1,7 @@
 import { parseUnits } from "ethers/lib/utils"
 import { expect } from "chai"
 import { ethers, upgrades, waffle } from "hardhat"
-import { IndexPriceOracle, MarkPriceOracle, MatchingEngine } from "../typechain"
+import { IndexPriceOracle, MarkPriceOracle, MatchingEngine, VaultController } from "../typechain"
 import { FakeContract, smock } from "@defi-wonderland/smock"
 
 describe("Vault tests", function () {
@@ -15,9 +15,12 @@ describe("Vault tests", function () {
   let vaultFactory
   let DAI
   let ETH
-  let markPriceFake: FakeContract<MarkPriceOracle>
-  let indexPriceFake: FakeContract<IndexPriceOracle>
-  let matchingEngineFake: FakeContract<MatchingEngine>
+  let MarkPriceOracle
+  let markPriceOracle
+  let IndexPriceOracle
+  let indexPriceOracle
+  let MatchingEngine
+  let matchingEngine
   let Positioning
   let positioning
   let EthPositioning
@@ -30,10 +33,10 @@ describe("Vault tests", function () {
   beforeEach(async function () {
     VolmexPerpPeriphery = await ethers.getContractFactory("VolmexPerpPeriphery");
     [owner, alice, relayer] = await ethers.getSigners()
-    markPriceFake = await smock.fake("MarkPriceOracle")
-    indexPriceFake = await smock.fake("IndexPriceOracle")
-    matchingEngineFake = await smock.fake('MatchingEngine')
-
+    IndexPriceOracle = await ethers.getContractFactory("IndexPriceOracle");
+    MarkPriceOracle =await ethers.getContractFactory("MarkPriceOracle")
+    MatchingEngine = await ethers.getContractFactory("MatchingEngineTest")
+   
     const tokenFactory = await ethers.getContractFactory("TestERC20")
     const USDC1 = await tokenFactory.deploy()
     USDC = await USDC1.deployed()
@@ -60,7 +63,7 @@ describe("Vault tests", function () {
       positioningConfig.address,
       accountBalance.address,
     ])
-
+    
     vaultFactory = await ethers.getContractFactory("Vault")
     vault = await upgrades.deployProxy(vaultFactory, [
       positioningConfig.address,
@@ -83,7 +86,33 @@ describe("Vault tests", function () {
       vaultController.address,
       true,
     ])
-
+    indexPriceOracle = await upgrades.deployProxy(
+      IndexPriceOracle,
+      [
+        owner.address,
+      ],
+      { 
+        initializer: "initialize",
+      }
+    );
+    markPriceOracle = await upgrades.deployProxy(MarkPriceOracle, 
+      [
+        [1000000],
+        [USDC.address]
+      ],
+      { 
+        initializer: "initialize",
+      }
+    );
+    matchingEngine = await upgrades.deployProxy(MatchingEngine, 
+      [
+        owner.address,
+        markPriceOracle.address,
+      ],
+      {
+        initializer: "__MatchingEngineTest_init"
+      }
+    );
     Positioning = await ethers.getContractFactory("PositioningTest")
     positioning = await upgrades.deployProxy(
       Positioning,
@@ -91,9 +120,9 @@ describe("Vault tests", function () {
         positioningConfig.address,
         vaultController.address,
         accountBalance.address,
-        matchingEngineFake.address,
-        markPriceFake.address,
-        indexPriceFake.address,
+        matchingEngine.address,
+        markPriceOracle.address,
+        indexPriceOracle.address,
         0
       ],
       {
@@ -107,9 +136,9 @@ describe("Vault tests", function () {
         positioningConfig.address,
         vaultController.address,
         accountBalance.address,
-        matchingEngineFake.address,
-        markPriceFake.address,
-        indexPriceFake.address,
+        matchingEngine.address,
+        markPriceOracle.address,
+        indexPriceOracle.address,
         1
       ],
       {
@@ -143,7 +172,7 @@ describe("Vault tests", function () {
       [
           [positioning.address, ethPositioning.address], 
           [vaultController.address, vaultController.address],
-          markPriceFake.address,
+           markPriceOracle.address,
           [vault.address, vault.address],
           owner.address,
           relayer.address,
@@ -155,14 +184,35 @@ describe("Vault tests", function () {
       [
           [ethPositioning.address, ethPositioning.address], 
           [vaultController.address, vaultController.address],
-          markPriceFake.address,
+          markPriceOracle.address,
           [vault.address, vault.address],
           owner.address,
           relayer.address,
       ]
     );
   })
-  // @SAMPLE - deposit
+  describe("deployment", function(){
+  it ("should fail to deploy because  positioning config address was not contract", async()=>{
+    await expect(upgrades.deployProxy(vaultFactory, [
+      alice.address,
+      accountBalance.address,
+      USDC.address,
+      vaultController.address,
+      false,
+    ])).to.be.revertedWith("V_CHCNC")
+  })
+  it ("should fail to deploy because  account balance address was not contract," ,async()=>{
+    await expect(upgrades.deployProxy(vaultFactory, [
+     positioningConfig.address,
+     alice.address,
+      USDC.address,
+      vaultController.address,
+      false,
+    ])).to.be.revertedWith("V_ABNC")
+    
+  })
+})
+  describe("Deposit",function(){
   it("Positive Test for deposit function", async () => {
     const amount = parseUnits("100", await USDC.decimals())
 
@@ -188,7 +238,39 @@ describe("Vault tests", function () {
     // // update sender's balance
     expect(await vaultController.getBalanceByToken(alice.address, USDC.address)).to.eq("100000000000000000000")
   })
+  it("Negative Test For desposit from vault",async()=>{
 
+    await positioningConfig.setSettlementTokenBalanceCap(10000)
+
+    const USDCVaultAddress = await vaultController.getVault(ETH.address)
+
+    const USDCVaultContract = await vaultFactory.attach(USDCVaultAddress)
+    await ETH.connect(alice).approve(ETH.address, 10000)
+    await ETH.connect(alice).approve(volmexPerpPeriphery.address, 10000)
+
+    // Check if it is reverted or not with given reason
+    await expect(vaultController.connect(alice).deposit(volmexPerpPeriphery.address,ETH.address, alice.address, 10000,{value:9000}))
+     .to.be.revertedWith("V_ANE")
+
+  })
+
+  it("should fail to deposit if user tries to perform transaction with value == 0 ", async()=>{
+    const amount = parseUnits("100", await USDC.decimals())
+
+    await positioningConfig.setSettlementTokenBalanceCap(amount)
+
+    const USDCVaultAddress = await vaultController.getVault(USDC.address)
+
+    const USDCVaultContract = await vaultFactory.attach(USDCVaultAddress)
+    await USDC.connect(alice).approve(USDCVaultAddress, amount)
+    await USDC.connect(alice).approve(volmexPerpPeriphery.address, amount)
+
+    // check event has been sent
+    await expect( vaultController.connect(alice).deposit(volmexPerpPeriphery.address, USDC.address, alice.address, amount,{value:45}))
+      .to.be.revertedWith("V_ANA")
+  })
+})
+  describe("Withdraw",function(){
   it("should not allow user to withdraw from vault if vault balance is empty", async () => {
     const amount = parseUnits("100", await USDC.decimals())
     await positioningConfig.setSettlementTokenBalanceCap(amount)
@@ -203,6 +285,22 @@ describe("Vault tests", function () {
         )
     ).to.be.revertedWith("V_NEFC");
   })
+  // it.only("Negative Test For withdraw  from USDC vault ",async()=>{
+
+  //   await positioningConfig.setSettlementTokenBalanceCap("10000")
+
+  //   const USDCVaultAddress = await vaultController.getVault(ETH.address)
+
+  //   const USDCVaultContract = await vaultFactory.attach(USDCVaultAddress)
+  //   await ETH.connect(alice).approve(USDCVaultAddress, "10000")
+  //   await ETH.connect(alice).approve(volmexPerpPeriphery.address, "10000")
+
+  //   // Check if it is reverted or not with given reason
+  //   await vaultController.connect(alice).deposit(volmexPerpPeriphery.address,ETH.address, alice.address, "10000",{value:10000});
+  //   await expect( vaultController.connect(alice).withdraw(ETH.address,alice.address,10000)).to.be.revertedWith("V_NEB")
+     
+
+  // })
 
   it("should allow user to deposit max collateral", async () => {
     const userBalance = await USDC.balanceOf(alice.address)
@@ -304,7 +402,7 @@ describe("Vault tests", function () {
   })
 
   // TODO: Fix this test case
-  xit("should not allow user to deposit USDC to ETH vault", async () => {
+  it("should not allow user to deposit USDC to ETH vault", async () => {
     const userBalance = await USDC.balanceOf(alice.address)
 
     await positioningConfig.setSettlementTokenBalanceCap(userBalance)
@@ -336,6 +434,20 @@ describe("Vault tests", function () {
     await expect(
       vault.deposit(
         volmexPerpPeriphery.address, 
+        userBalance,
+        alice.address
+      )
+    ).to.be.revertedWith("Pausable: paused");
+  })
+  it("should not allow user to interact with vault if contract is paused", async () => {
+    await vault.pause();
+
+    const userBalance = await USDC.balanceOf(alice.address)
+    // Deposit max amount equal to balance of the user
+    await expect(
+
+      vaultController.connect(alice).withdraw(
+        USDC.address,
         userBalance,
         alice.address
       )
@@ -381,7 +493,7 @@ describe("Vault tests", function () {
     await expect(vaultController.connect(alice).deposit(volmexPerpPeriphery.address, USDC.address, alice.address, amount)).to.be.revertedWith("V_IBA")
     USDC.setTransferFeeRatio(0)
   })
-
+})
   describe("Test for transfer funds to vault", function () {
     it("Positive Test for transferFundToVault", async () => {
       const [owner, alice] = await ethers.getSigners()
@@ -414,11 +526,47 @@ describe("Vault tests", function () {
       await expect(vault.connect(alice).transferFundToVault(USDC.address, amount)).to.be.revertedWith("Vault: Not admin")
     })
 
+    it("Force error, not settlement token", async () => {
+      const [owner, alice] = await ethers.getSigners()
+
+      const amount = parseUnits("100", await USDC.decimals())
+      await USDC.connect(owner).approve(vault.address, amount)
+
+      // caller not owner
+      await expect(vault.transferFundToVault(ETH.address, amount)).to.be.revertedWith("V_OST")
+    })
+    it("Force error, when contract is paused", async () => {
+      const [owner, alice] = await ethers.getSigners()
+
+      const amount = parseUnits("100", await USDC.decimals())
+      await USDC.connect(owner).approve(vault.address, amount)
+      await vault.pause(); 
+      // caller not owner
+      await expect(vault.transferFundToVault(ETH.address, amount)).to.be.revertedWith("Pausable: paused")
+    })
+
     it("Check for set position address", async () => {
       const [owner, alice] = await ethers.getSigners()
 
       await vault.connect(owner).setPositioning(positioningConfig.address)
       expect(await vault.connect(owner).getPositioning()).to.be.equal(positioningConfig.address)
+    })
+    it("Should not be abe to set positiong" , async () => {
+      const [owner, alice] = await ethers.getSigners()
+      await expect (vault.connect(alice).setPositioning(positioningConfig.address)).to.be.revertedWith("Ownable: caller is not the owner")
+    })
+
+    it("Should not be abe to set positiong if positioning address in not contract" , async () => {
+      const [owner, alice] = await ethers.getSigners()
+      await expect (vault.connect(alice).setPositioning(alice.address)).to.be.revertedWith("V_VPMM"); 
+    })
+    it("Should not be abe to set Vault Controller" , async () => {
+      const [owner, alice] = await ethers.getSigners()
+      await expect (vault.connect(alice).setVaultController(vaultController.address)).to.be.revertedWith("Vault: Not admin"); 
+    })
+    it("Should not be abe to set Vault Controller" , async () => {
+      const [owner, alice] = await ethers.getSigners()
+      await expect (vault.setVaultController(alice.address)).to.be.revertedWith("V_VPMM"); 
     })
 
     it("Check for set vault controller", async () => {
