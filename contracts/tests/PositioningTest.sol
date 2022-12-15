@@ -17,4 +17,8 @@ contract PositioningTest is Positioning {
     function registerBaseToken(address trader, address token) external {
         _registerBaseToken(trader, token);
     }
+
+    function getTotalAbsPositionValue(address trader) external view returns (uint256) {
+        return _getTotalAbsPositionValue(trader);
+    }
 }
