@@ -711,6 +711,9 @@ describe("Positioning", function () {
         expect(await positioning.getVaultController()).to.be.equal(vaultController.address)
         expect(await positioning.getPositioningConfig()).to.be.equal(positioningConfig.address)
         expect(await positioning.getAccountBalance()).to.be.equal(accountBalance1.address)
+        expect(await positioning.getTotalAbsPositionValue(account1.address)).to.equal(0);
+        const positioningConfig1 = await accountBalance.getPositioningConfig();
+        expect(positioningConfig1).to.equal(positioningConfig.address);
       })
       
       it("test for settle all funding", async () => {
@@ -727,10 +730,10 @@ describe("Positioning", function () {
 
         await vaultController
           .connect(account1)
-          .deposit(volmexPerpPeriphery.address, virtualToken.address, account1.address, five.toString());
+          .deposit(volmexPerpPeriphery.address, virtualToken.address, account1.address, ten.toString());
         await vaultController
           .connect(account2)
-          .deposit(volmexPerpPeriphery.address, virtualToken.address, account2.address, five.toString());
+          .deposit(volmexPerpPeriphery.address, virtualToken.address, account2.address, ten.toString());
 
         let signatureLeft = await getSignature(orderLeft, account1.address);
         let signatureRight = await getSignature(orderRight, account2.address);

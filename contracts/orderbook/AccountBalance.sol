@@ -61,30 +61,9 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
     }
 
     /// @inheritdoc IAccountBalance
-    function modifyTakerBalance(
-        address trader,
-        address baseToken,
-        int256 base,
-        int256 quote
-    ) external override returns (int256, int256) {
-        _requireOnlyPositioning();
-        return _modifyTakerBalance(trader, baseToken, base, quote);
-    }
-
-    /// @inheritdoc IAccountBalance
     function modifyOwedRealizedPnl(address trader, int256 amount) external override {
         _requireOnlyPositioning();
         _modifyOwedRealizedPnl(trader, amount);
-    }
-
-    /// @inheritdoc IAccountBalance
-    function settleQuoteToOwedRealizedPnl(
-        address trader,
-        address baseToken,
-        int256 amount
-    ) external override {
-        _requireOnlyPositioning();
-        _settleQuoteToOwedRealizedPnl(trader, baseToken, amount);
     }
 
     /// @inheritdoc IAccountBalance
@@ -109,12 +88,6 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
 
         tokensStorage.push(baseToken);
         // AB_MNE: markets number exceeds
-    }
-
-    /// @inheritdoc IAccountBalance
-    function deregisterBaseToken(address trader, address baseToken) external override {
-        _requireOnlyPositioning();
-        _deregisterBaseToken(trader, baseToken);
     }
 
     /// @inheritdoc IAccountBalance
