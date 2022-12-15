@@ -265,6 +265,9 @@ describe("VolmexPerpPeriphery", function () {
             )).to.be.revertedWith("Relayer can't be address(0)");
           });
     });
+   it("Should fail to initialize quote token again",async()=>{
+     await expect(volmexQuoteToken.initialize("MytestToken","MKT",true)).to.be.revertedWith("Initializable: contract is already initialized")
+    })
 
     describe("set Relayer", function(){
       it("should set relayer",async () => {
@@ -300,6 +303,8 @@ describe("VolmexPerpPeriphery", function () {
               volmexPerpPeriphery.connect(account2).setMarkPriceOracle(markPriceOracle.address)
           ).to.be.revertedWith("Periphery: Not admin");
       });
+
+      
     });
 
     describe("Fill Limit order", async () => {
