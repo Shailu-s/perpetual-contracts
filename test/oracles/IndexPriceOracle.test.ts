@@ -4,7 +4,7 @@ const assert = require("assert");
 import { Signer, ContractReceipt, ContractTransaction } from "ethers";
 const { expectRevert, time } = require("@openzeppelin/test-helpers");
 
-describe("IndexPriceOracle", function () {
+describe("volmexOracle", function () {
   let owner: string;
   let accounts: Signer[];
   let volmexOracleFactory: any;
@@ -73,6 +73,9 @@ describe("IndexPriceOracle", function () {
     assert.equal(await protocol.minimumCollateralQty(), "25000000000000000000");
     assert.equal(await protocol.volatilityCapRatio(), "250");
   });
+  it("Should fail to initialize again ",async()=>{
+     await expect(volmexOracle.initialize()).to.be.revertedWith("Initializable: contract is already initialized")
+  })
 
   it("Should add volatility index datapoints and retrieve TWAP value", async () => {
     const volatilityIndex = "0";
@@ -141,7 +144,7 @@ describe("IndexPriceOracle", function () {
         volatilityTokenPrices,
         proofHashes
       ),
-      "VolmexOracle: _volatilityTokenPrice should be smaller than VolatilityCapRatio"
+      "volmexOracle: _volatilityTokenPrice should be smaller than VolatilityCapRatio"
     );
   });
 
@@ -152,7 +155,7 @@ describe("IndexPriceOracle", function () {
         ["105000000"],
         ["0x6c00000000000000000000000000000000000000000000000000000000000000"]
       ),
-      "VolmexOracle: length of input arrays are not equal"
+      "volmexOracle: length of input arrays are not equal"
     );
   });
 
@@ -337,7 +340,7 @@ describe("IndexPriceOracle", function () {
         0,
         "0x6c00000000000000000000000000000000000000000000000000000000000000"
       ),
-      "VolmexOracle: volatility cap ratio should be greater than 1000000"
+      "volmexOracle: volatility cap ratio should be greater than 1000000"
     );
   });
 
@@ -352,7 +355,7 @@ describe("IndexPriceOracle", function () {
         0,
         "0x6c00000000000000000000000000000000000000000000000000000000000000"
       ),
-      "VolmexOracle: protocol address can't be zero"
+      "volmexOracle: protocol address can't be zero"
     );
   });
 
@@ -378,7 +381,7 @@ describe("IndexPriceOracle", function () {
         0,
         "0x6c00000000000000000000000000000000000000000000000000000000000000"
       ),
-      "VolmexOracle: _volatilityTokenPrice should be smaller than VolatilityCapRatio"
+      "volmexOracle: _volatilityTokenPrice should be smaller than VolatilityCapRatio"
     );
   });
 

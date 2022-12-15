@@ -2,7 +2,7 @@ import { expect } from "chai";
 import { ethers, upgrades } from "hardhat";
 import { VirtualToken__factory } from "../../typechain";
 
-describe("Virtual Token",function(){
+describe("VirtualToken",function(){
     let VirtualToken;
     let virtualToken;
     let isBase = true;
@@ -22,7 +22,7 @@ describe("Virtual Token",function(){
         "MKT",
         isBase],
         {
-        initializer: "initialize"
+        initializer: "__VirtualToken_init"
         })    
         await virtualToken.setMintBurnRole(owner.address) 
     })
@@ -34,10 +34,15 @@ describe("Virtual Token",function(){
             "MKT",
             isBase],
             {
-            initializer: "initialize"
+            initializer: "__VirtualToken_init"
         })  
         const receipt = await virtualToken.deployed();
         expect(receipt.confirmations).not.equal(0) 
+      })
+      it("Should fail to initialize again", async() => {
+        await expect(virtualToken.__VirtualToken_init("MyTestToken",
+        "MKT",
+        !isBase)).to.be.revertedWith("Initializable: contract is not initializing")
       })
       it("should deploy Virtual Token i.e not base token",async () =>  {
         virtualToken = await upgrades.deployProxy(
@@ -46,7 +51,7 @@ describe("Virtual Token",function(){
             "MKT",
             !isBase],
             {
-            initializer: "initialize"
+            initializer: "__VirtualToken_init"
         })  
         const receipt = await virtualToken.deployed();
         expect(receipt.confirmations).not.equal(0);
@@ -105,8 +110,6 @@ describe("Virtual Token",function(){
       
     })
    })
-  describe("Parent Token",function(){
-    it(" ")
-  })
+  
 
 })
