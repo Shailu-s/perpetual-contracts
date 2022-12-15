@@ -9,4 +9,8 @@ contract PositioningTest is Positioning {
     function setMakerMinSalt(uint256 _val) external {
         makerMinSalt[_msgSender()] = _val;
     }
+
+    function getAccountValue(address trader) external view returns (int256) {
+        return _getAccountValue(trader);
+    }
 }
