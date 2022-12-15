@@ -10,10 +10,11 @@ contract LibOrderTest {
         LibOrder.validate(order);
     }
 
-    function calculateRemaining(
-        LibOrder.Order calldata order,
-        uint256 fill
-    ) external pure returns (uint256 baseValue, uint256 quoteValue) {
+    function calculateRemaining(LibOrder.Order calldata order, uint256 fill)
+        external
+        pure
+        returns (uint256 baseValue, uint256 quoteValue)
+    {
         return LibOrder.calculateRemaining(order, fill);
     }
 

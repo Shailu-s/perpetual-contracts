@@ -78,10 +78,7 @@ contract IndexPriceOracle is ERC165StorageUpgradeable, IndexTWAP, IIndexPriceOra
      * @param _leverageVolatilityIndex Index of the leverage volatility token
      * @param _newBaseVolatilityIndex Index of the base volatility token
      */
-    function updateBaseVolatilityIndex(
-        uint256 _leverageVolatilityIndex,
-        uint256 _newBaseVolatilityIndex
-    ) external {
+    function updateBaseVolatilityIndex(uint256 _leverageVolatilityIndex, uint256 _newBaseVolatilityIndex) external {
         _requireIndexPriceOracleAdmin();
         baseVolatilityIndex[_leverageVolatilityIndex] = _newBaseVolatilityIndex;
 
@@ -108,10 +105,7 @@ contract IndexPriceOracle is ERC165StorageUpgradeable, IndexTWAP, IIndexPriceOra
         _requireIndexPriceOracleAdmin();
         require(address(_protocol) != address(0), "VolmexOracle: protocol address can't be zero");
         uint256 _volatilityCapRatio = _protocol.volatilityCapRatio() * _VOLATILITY_PRICE_PRECISION;
-        require(
-            _volatilityCapRatio >= 1000000,
-            "VolmexOracle: volatility cap ratio should be greater than 1000000"
-        );
+        require(_volatilityCapRatio >= 1000000, "VolmexOracle: volatility cap ratio should be greater than 1000000");
         uint256 _index = ++indexCount;
         volatilityCapRatioByIndex[_index] = _volatilityCapRatio;
         volatilityIndexBySymbol[_volatilityTokenSymbol] = _index;
@@ -124,10 +118,7 @@ contract IndexPriceOracle is ERC165StorageUpgradeable, IndexTWAP, IIndexPriceOra
             );
             volatilityLeverageByIndex[_index] = _leverage;
             baseVolatilityIndex[_index] = _baseVolatilityIndex;
-            _addIndexDataPoint(
-                _index,
-                _volatilityTokenPriceByIndex[_baseVolatilityIndex] / _leverage
-            );
+            _addIndexDataPoint(_index, _volatilityTokenPriceByIndex[_baseVolatilityIndex] / _leverage);
 
             emit LeveragedVolatilityIndexAdded(
                 _index,
@@ -143,12 +134,7 @@ contract IndexPriceOracle is ERC165StorageUpgradeable, IndexTWAP, IIndexPriceOra
             );
             _updateVolatilityMeta(_index, _volatilityTokenPrice, _proofHash);
 
-            emit VolatilityIndexAdded(
-                _index,
-                _volatilityCapRatio,
-                _volatilityTokenSymbol,
-                _volatilityTokenPrice
-            );
+            emit VolatilityIndexAdded(_index, _volatilityCapRatio, _volatilityTokenSymbol, _volatilityTokenPrice);
         }
     }
 
@@ -183,18 +169,10 @@ contract IndexPriceOracle is ERC165StorageUpgradeable, IndexTWAP, IIndexPriceOra
                 "VolmexOracle: _volatilityTokenPrice should be smaller than VolatilityCapRatio"
             );
 
-            _updateVolatilityMeta(
-                _volatilityIndexes[i],
-                _volatilityTokenPrices[i],
-                _proofHashes[i]
-            );
+            _updateVolatilityMeta(_volatilityIndexes[i], _volatilityTokenPrices[i], _proofHashes[i]);
         }
 
-        emit BatchVolatilityTokenPriceUpdated(
-            _volatilityIndexes,
-            _volatilityTokenPrices,
-            _proofHashes
-        );
+        emit BatchVolatilityTokenPriceUpdated(_volatilityIndexes, _volatilityTokenPrices, _proofHashes);
     }
 
     /**
@@ -222,11 +200,7 @@ contract IndexPriceOracle is ERC165StorageUpgradeable, IndexTWAP, IIndexPriceOra
         )
     {
         uint256 volatilityIndex = volatilityIndexBySymbol[_volatilityTokenSymbol];
-        (
-            volatilityTokenPrice,
-            iVolatilityTokenPrice,
-            lastUpdateTimestamp
-        ) = _getVolatilityTokenPrice(volatilityIndex);
+        (volatilityTokenPrice, iVolatilityTokenPrice, lastUpdateTimestamp) = _getVolatilityTokenPrice(volatilityIndex);
     }
 
     /**
@@ -242,11 +216,7 @@ contract IndexPriceOracle is ERC165StorageUpgradeable, IndexTWAP, IIndexPriceOra
             uint256 lastUpdateTimestamp
         )
     {
-        (
-            volatilityTokenPrice,
-            iVolatilityTokenPrice,
-            lastUpdateTimestamp
-        ) = _getVolatilityTokenPrice(_index);
+        (volatilityTokenPrice, iVolatilityTokenPrice, lastUpdateTimestamp) = _getVolatilityTokenPrice(_index);
     }
 
     /**
@@ -264,11 +234,7 @@ contract IndexPriceOracle is ERC165StorageUpgradeable, IndexTWAP, IIndexPriceOra
             uint256 lastUpdateTimestamp
         )
     {
-        (
-            volatilityTokenTwap,
-            iVolatilityTokenTwap,
-            lastUpdateTimestamp
-        ) = _getVolatilityTokenPrice(_index);
+        (volatilityTokenTwap, iVolatilityTokenTwap, lastUpdateTimestamp) = _getVolatilityTokenPrice(_index);
     }
 
     /**
@@ -341,12 +307,12 @@ contract IndexPriceOracle is ERC165StorageUpgradeable, IndexTWAP, IIndexPriceOra
         iVolatilityTokenTwap = volatilityCapRatioByIndex[_index] - volatilityTokenTwap;
     }
 
-    function supportsInterface(bytes4 interfaceId) 
-    public 
-    view 
-    virtual 
-    override(AccessControlUpgradeable, ERC165StorageUpgradeable) 
-    returns (bool) 
+    function supportsInterface(bytes4 interfaceId)
+        public
+        view
+        virtual
+        override(AccessControlUpgradeable, ERC165StorageUpgradeable)
+        returns (bool)
     {
         return super.supportsInterface(interfaceId);
     }

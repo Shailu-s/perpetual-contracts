@@ -43,7 +43,6 @@ interface IAccountBalance {
         int256 fee
     ) external returns (int256);
 
-
     /// @notice Get liquidatable position size of trader's baseToken market
     /// @param trader The address of trader
     /// @param baseToken The address of baseToken
@@ -55,7 +54,6 @@ interface IAccountBalance {
         int256 accountValue
     ) external view returns (int256);
 
-    
     /// @notice Every time a trader's position value is checked, the base token list of this trader will be traversed;
     /// thus, this list should be kept as short as possible
     /// @dev Only used by `Positioning` contract
@@ -111,13 +109,7 @@ interface IAccountBalance {
     /// @param trader The address of trader
     /// @return owedRealizedPnl the pnl realized already but stored temporarily in AccountBalance
     /// @return unrealizedPnl the pnl not yet realized
-    function getPnlAndPendingFee(address trader)
-        external
-        view
-        returns (
-            int256 owedRealizedPnl,
-            int256 unrealizedPnl
-        );
+    function getPnlAndPendingFee(address trader) external view returns (int256 owedRealizedPnl, int256 unrealizedPnl);
 
     /// @notice Get taker position size of trader's baseToken market
     /// @dev This will only has taker position, can get maker impermanent position through `getTotalPositionSize`

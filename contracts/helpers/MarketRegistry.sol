@@ -43,17 +43,17 @@ contract MarketRegistry is IMarketRegistry, PositioningCallee, MarketRegistrySto
     }
 
     /// @inheritdoc IMarketRegistry
-    function setMakerFeeRatio( uint24 makerFeeRatio) external override checkRatio(makerFeeRatio) {
+    function setMakerFeeRatio(uint24 makerFeeRatio) external override checkRatio(makerFeeRatio) {
         _requireMarketRegistryAdmin();
         _makerFeeRatio = makerFeeRatio;
     }
 
     /// @inheritdoc IMarketRegistry
-    function setTakerFeeRatio( uint24 takerFeeRatio) external override checkRatio(takerFeeRatio) {
+    function setTakerFeeRatio(uint24 takerFeeRatio) external override checkRatio(takerFeeRatio) {
         _requireMarketRegistryAdmin();
         _takerFeeRatio = takerFeeRatio;
     }
-    
+
     /// @inheritdoc IMarketRegistry
     function setMaxOrdersPerMarket(uint8 maxOrdersPerMarketArg) external override {
         _requireMarketRegistryAdmin();
@@ -96,7 +96,6 @@ contract MarketRegistry is IMarketRegistry, PositioningCallee, MarketRegistrySto
     function getTakerFeeRatio() external view override returns (uint24) {
         return _takerFeeRatio;
     }
-
 
     /// @inheritdoc IMarketRegistry
     function checkBaseToken(address baseToken) external view override returns (bool) {

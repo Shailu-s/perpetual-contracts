@@ -185,8 +185,6 @@ contract Positioning is
         IAccountBalance(_accountBalance).registerBaseToken(orderLeft.trader, baseToken);
         IAccountBalance(_accountBalance).registerBaseToken(orderRight.trader, baseToken);
 
-        
-
         // must settle funding first
         _settleFunding(orderLeft.trader, baseToken);
         _settleFunding(orderRight.trader, baseToken);
@@ -251,7 +249,6 @@ contract Positioning is
         address baseToken,
         int256 positionSizeToBeLiquidated
     ) internal {
-
         // P_EAV: enough account value
         require(_isAccountLiquidatable(trader), "P_EAV");
 
@@ -370,24 +367,26 @@ contract Positioning is
                 internalData.rightExchangedPositionNotional
             );
 
-        int256 leftRealizePnL = _realizePnLChecks(
-            orderLeft,
-            baseToken,
-            internalData.leftExchangedPositionSize,
-            internalData.leftExchangedPositionNotional
-        );
-        int256 rightRealizePnL = _realizePnLChecks(
-            orderRight,
-            baseToken,
-            internalData.rightExchangedPositionSize,
-            internalData.rightExchangedPositionNotional
-        );
+        int256 leftRealizePnL =
+            _realizePnLChecks(
+                orderLeft,
+                baseToken,
+                internalData.leftExchangedPositionSize,
+                internalData.leftExchangedPositionNotional
+            );
+        int256 rightRealizePnL =
+            _realizePnLChecks(
+                orderRight,
+                baseToken,
+                internalData.rightExchangedPositionSize,
+                internalData.rightExchangedPositionNotional
+            );
 
         // // modifies PnL of fee receiver
         _modifyOwedRealizedPnl(_getFeeReceiver(), (orderFees.orderLeftFee + orderFees.orderRightFee).toInt256());
 
         // // modifies positionSize and openNotional
-       internalData.leftPositionSize = _settleBalanceAndDeregister(
+        internalData.leftPositionSize = _settleBalanceAndDeregister(
             orderLeft.trader,
             baseToken,
             internalData.leftExchangedPositionSize,
@@ -541,14 +540,15 @@ contract Positioning is
         int256 realizedPnl,
         int256 makerFee
     ) internal returns (int256) {
-        return IAccountBalance(_accountBalance).settleBalanceAndDeregister(
-            trader,
-            baseToken,
-            takerBase,
-            takerQuote,
-            realizedPnl,
-            makerFee
-        );
+        return
+            IAccountBalance(_accountBalance).settleBalanceAndDeregister(
+                trader,
+                baseToken,
+                takerBase,
+                takerQuote,
+                realizedPnl,
+                makerFee
+            );
     }
 
     function _getTakerOpenNotional(address trader, address baseToken) internal view returns (int256) {

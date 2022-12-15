@@ -5,15 +5,8 @@ pragma solidity =0.8.12;
 import "../helpers/RoleManager.sol";
 import "../interfaces/IERC20TransferProxy.sol";
 
-contract ERC20TransferProxy is
-    IERC20TransferProxy,
-    Initializable,
-    RoleManager
-{
-    function erc20TransferProxyInit()
-        external
-        initializer
-    {
+contract ERC20TransferProxy is IERC20TransferProxy, Initializable, RoleManager {
+    function erc20TransferProxyInit() external initializer {
         _grantRole(TRANSFER_PROXY_ADMIN, _msgSender());
     }
 
@@ -21,6 +14,7 @@ contract ERC20TransferProxy is
         _requireTransferProxyAdmin();
         _grantRole(TRANSFER_PROXY_CALLER, exchange);
     }
+
     function erc20SafeTransferFrom(
         IERC20Upgradeable token,
         address from,
@@ -28,10 +22,7 @@ contract ERC20TransferProxy is
         uint256 value
     ) external override {
         _requireTransferProxyCaller();
-        require(
-            token.transferFrom(from, to, value),
-            "ERC20TransferProxy: failure while transferring"
-        );
+        require(token.transferFrom(from, to, value), "ERC20TransferProxy: failure while transferring");
     }
 
     function _requireTransferProxyAdmin() internal view {

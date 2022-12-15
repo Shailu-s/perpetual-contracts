@@ -99,8 +99,7 @@ contract FundingRate is IFundingRate, BlockContext, PositioningCallee, FundingRa
             twapInterval = twapInterval < deltaTimestamp ? deltaTimestamp : twapInterval;
         }
 
-        markTwap =
-            IMarkPriceOracle(_markPriceOracleArg).getCumulativePrice(twapInterval, _underlyingPriceIndex);
+        markTwap = IMarkPriceOracle(_markPriceOracleArg).getCumulativePrice(twapInterval, _underlyingPriceIndex);
 
         //TODOCHANGE: review if we need this formatting
         // markTwap = markTwapX96.formatX96ToX10_18();

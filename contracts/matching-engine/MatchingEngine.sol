@@ -11,10 +11,7 @@ contract MatchingEngine is MatchingEngineCore {
      * @param _owner Owner address
      * @param _markPriceOracle Address of mark price oracle
      */
-    function initialize(
-        address _owner,
-        IMarkPriceOracle _markPriceOracle
-    ) public initializer {
+    function initialize(address _owner, IMarkPriceOracle _markPriceOracle) public initializer {
         __Context_init_unchained();
         __Pausable_init_unchained();
         markPriceOracle = _markPriceOracle;

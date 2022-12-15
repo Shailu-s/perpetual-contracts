@@ -12,27 +12,15 @@ import "../../interfaces/IERC20Modified.sol";
  * @title Protocol Contract
  * @author volmex.finance [security@volmexlabs.com]
  */
-contract VolmexProtocol is
-    Initializable,
-    OwnableUpgradeable,
-    ReentrancyGuardUpgradeable
-{
+contract VolmexProtocol is Initializable, OwnableUpgradeable, ReentrancyGuardUpgradeable {
     event ToggleActivated(bool isActive);
-    event UpdatedVolatilityToken(
-        address indexed positionToken,
-        bool isVolatilityIndexToken
-    );
+    event UpdatedVolatilityToken(address indexed positionToken, bool isVolatilityIndexToken);
     event UpdatedFees(uint256 issuanceFees, uint256 redeemFees);
     event UpdatedMinimumCollateral(uint256 newMinimumCollateralQty);
     event ClaimedFees(uint256 fees);
     event ToggledVolatilityTokenPause(bool isPause);
     event Settled(uint256 settlementPrice);
-    event Collateralized(
-        address indexed sender,
-        uint256 collateralLock,
-        uint256 positionTokensMinted,
-        uint256 fees
-    );
+    event Collateralized(address indexed sender, uint256 collateralLock, uint256 positionTokensMinted, uint256 fees);
     event Redeemed(
         address indexed sender,
         uint256 collateralReleased,
@@ -125,10 +113,7 @@ contract VolmexProtocol is
         __Ownable_init();
         __ReentrancyGuard_init();
 
-        require(
-            _minimumCollateralQty > 0,
-            "Volmex: Minimum collateral quantity should be greater than 0"
-        );
+        require(_minimumCollateralQty > 0, "Volmex: Minimum collateral quantity should be greater than 0");
 
         active = true;
         minimumCollateralQty = _minimumCollateralQty;
@@ -150,15 +135,8 @@ contract VolmexProtocol is
      * @notice Update the `minimumCollateralQty`
      * @param _newMinimumCollQty Provides the new minimum collateral quantity
      */
-    function updateMinimumCollQty(uint256 _newMinimumCollQty)
-        external
-        virtual
-        onlyOwner
-    {
-        require(
-            _newMinimumCollQty > 0,
-            "Volmex: Minimum collateral quantity should be greater than 0"
-        );
+    function updateMinimumCollQty(uint256 _newMinimumCollQty) external virtual onlyOwner {
+        require(_newMinimumCollQty > 0, "Volmex: Minimum collateral quantity should be greater than 0");
         minimumCollateralQty = _newMinimumCollQty;
         emit UpdatedMinimumCollateral(_newMinimumCollQty);
     }
@@ -168,10 +146,7 @@ contract VolmexProtocol is
      * @param _positionToken Address of the new position token
      * @param _isVolatilityIndexToken Type of the position token, { VolatilityIndexToken: true, InverseVolatilityIndexToken: false }
      */
-    function updateVolatilityToken(
-        address _positionToken,
-        bool _isVolatilityIndexToken
-    ) external virtual onlyOwner {
+    function updateVolatilityToken(address _positionToken, bool _isVolatilityIndexToken) external virtual onlyOwner {
         _isVolatilityIndexToken
             ? volatilityToken = IERC20Modified(_positionToken)
             : inverseVolatilityToken = IERC20Modified(_positionToken);
@@ -195,10 +170,7 @@ contract VolmexProtocol is
         onlyNotSettled
         returns (uint256 qtyToBeMinted, uint256 fee)
     {
-        require(
-            _collateralQty >= minimumCollateralQty,
-            "Volmex: CollateralQty > minimum qty required"
-        );
+        require(_collateralQty >= minimumCollateralQty, "Volmex: CollateralQty > minimum qty required");
 
         // Mechanism to calculate the collateral qty using the increase in balance
         // of protocol contract to counter USDT's fee mechanism, which can be enabled in future
@@ -258,14 +230,16 @@ contract VolmexProtocol is
      *
      * Safely transfer the collateral to `msg.sender`
      */
-    function redeemSettled(
-        uint256 _volatilityIndexTokenQty,
-        uint256 _inverseVolatilityIndexTokenQty
-    ) public virtual onlyActive onlySettled returns (uint256 collateralRedeemed, uint256 fee) {
+    function redeemSettled(uint256 _volatilityIndexTokenQty, uint256 _inverseVolatilityIndexTokenQty)
+        public
+        virtual
+        onlyActive
+        onlySettled
+        returns (uint256 collateralRedeemed, uint256 fee)
+    {
         uint256 collQtyToBeRedeemed =
             (_volatilityIndexTokenQty * settlementPrice) +
-                (_inverseVolatilityIndexTokenQty *
-                    (volatilityCapRatio - settlementPrice));
+                (_inverseVolatilityIndexTokenQty * (volatilityCapRatio - settlementPrice));
 
         (collateralRedeemed, fee) = _redeem(
             collQtyToBeRedeemed,
@@ -281,12 +255,7 @@ contract VolmexProtocol is
      *
      * The inverse volatility index token at settlement is worth volatilityCapRatio - volatility index settlement price
      */
-    function settle(uint256 _settlementPrice)
-        external
-        virtual
-        onlyOwner
-        onlyNotSettled
-    {
+    function settle(uint256 _settlementPrice) external virtual onlyOwner onlyNotSettled {
         require(
             _settlementPrice <= volatilityCapRatio,
             "Volmex: _settlementPrice should be less than equal to volatilityCapRatio"
@@ -304,10 +273,7 @@ contract VolmexProtocol is
         address _toWhom,
         uint256 _howMuch
     ) external virtual nonReentrant onlyOwner {
-        require(
-            _token != address(collateral),
-            "Volmex: Collateral token not allowed"
-        );
+        require(_token != address(collateral), "Volmex: Collateral token not allowed");
         IERC20Modified(_token).transfer(_toWhom, _howMuch);
     }
 
@@ -317,11 +283,7 @@ contract VolmexProtocol is
      * @param _issuanceFees Percentage of fees required to collateralize the collateral
      * @param _redeemFees Percentage of fees required to redeem the collateral
      */
-    function updateFees(uint256 _issuanceFees, uint256 _redeemFees)
-        external
-        virtual
-        onlyOwner
-    {
+    function updateFees(uint256 _issuanceFees, uint256 _redeemFees) external virtual onlyOwner {
         require(
             _issuanceFees <= MAX_FEE && _redeemFees <= MAX_FEE,
             "Volmex: issue/redeem fees should be less than MAX_FEE"
@@ -377,20 +339,11 @@ contract VolmexProtocol is
 
         volatilityToken.burn(msg.sender, _volatilityIndexTokenQty);
 
-        inverseVolatilityToken.burn(
-            msg.sender,
-            _inverseVolatilityIndexTokenQty
-        );
+        inverseVolatilityToken.burn(msg.sender, _inverseVolatilityIndexTokenQty);
 
         collateral.transfer(msg.sender, collateralRedeemed);
 
-        emit Redeemed(
-            msg.sender,
-            collateralRedeemed,
-            _volatilityIndexTokenQty,
-            _inverseVolatilityIndexTokenQty,
-            fee
-        );
+        emit Redeemed(msg.sender, collateralRedeemed, _volatilityIndexTokenQty, _inverseVolatilityIndexTokenQty, fee);
 
         return (collateralRedeemed, fee);
     }

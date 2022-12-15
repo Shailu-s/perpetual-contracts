@@ -10,16 +10,11 @@ import "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC20Pausable
  * @title Token Contract
  * @author volmex.finance [security@volmexlabs.com]
  */
-contract VolmexPositionToken is
-    Initializable,
-    AccessControlUpgradeable,
-    ERC20PausableUpgradeable
-{
+contract VolmexPositionToken is Initializable, AccessControlUpgradeable, ERC20PausableUpgradeable {
     event UpdatedTokenMetadata(string name, string symbol);
 
     // Position token role, calculated as keccak256("VOLMEX_PROTOCOL_ROLE")
-    bytes32 public constant VOLMEX_PROTOCOL_ROLE =
-        0x33ba6006595f7ad5c59211bde33456cab351f47602fc04f644c8690bc73c4e16;
+    bytes32 public constant VOLMEX_PROTOCOL_ROLE = 0x33ba6006595f7ad5c59211bde33456cab351f47602fc04f644c8690bc73c4e16;
 
     // Openzepplin's ERC20 name and symbol variables are private
     // To add functionality to update the token metadata, we added another variables
@@ -35,10 +30,7 @@ contract VolmexPositionToken is
      *
      * See {ERC20-constructor}.
      */
-    function initialize(string memory _name, string memory _symbol)
-        external
-        initializer
-    {
+    function initialize(string memory _name, string memory _symbol) external initializer {
         __AccessControl_init_unchained();
 
         __ERC20Pausable_init();
@@ -56,15 +48,11 @@ contract VolmexPositionToken is
      * @param _symbol New string symbol of the VIV token
      */
     function updateTokenMetadata(string memory _name, string memory _symbol) external virtual {
-        require(
-            hasRole(DEFAULT_ADMIN_ROLE, msg.sender),
-            "VolmexPositionToken: not admin"
-        );
+        require(hasRole(DEFAULT_ADMIN_ROLE, msg.sender), "VolmexPositionToken: not admin");
         _vivName = _name;
         _vivSymbol = _symbol;
         emit UpdatedTokenMetadata(_name, _symbol);
     }
-
 
     /**
      * @dev Creates `amount` new tokens for `to`.

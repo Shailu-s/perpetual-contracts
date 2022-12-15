@@ -121,9 +121,9 @@ contract VolmexPerpPeriphery is Initializable, RoleManager, IVolmexPerpPeriphery
     ) external {
         _requireVolmexPerpPeripheryRelayer();
         _fillLimitOrder(
-            _leftLimitOrder, 
-            _signatureLeftLimitOrder, 
-            _rightLimitOrder, 
+            _leftLimitOrder,
+            _signatureLeftLimitOrder,
+            _rightLimitOrder,
             _signatureRightLimitOrder,
             liquidator,
             _index
@@ -143,17 +143,21 @@ contract VolmexPerpPeriphery is Initializable, RoleManager, IVolmexPerpPeriphery
         if (_rightLimitOrder.orderType != LibOrder.ORDER)
             require(_verifyTriggerPrice(_rightLimitOrder), "Periphery: right order price verification failed");
 
-		IPositioning(positionings[_index]).openPosition(
-			_leftLimitOrder, 
-			_signatureLeftLimitOrder, 
-			_rightLimitOrder,
-			_signatureRightLimitOrder,
+        IPositioning(positionings[_index]).openPosition(
+            _leftLimitOrder,
+            _signatureLeftLimitOrder,
+            _rightLimitOrder,
+            _signatureRightLimitOrder,
             liquidator
-		);
+        );
     }
 
     // TODO: Add round id in the Volmex oracle to faciliate the chainlink oracle functionality
-    function _getBaseTokenPrice(LibOrder.Order memory _order, uint256 _twInterval) internal view returns (uint256 price) {
+    function _getBaseTokenPrice(LibOrder.Order memory _order, uint256 _twInterval)
+        internal
+        view
+        returns (uint256 price)
+    {
         // TODO: Add Order validate, similar to -> LibOrder.validate(order);
 
         address makeAsset = _order.makeAsset.virtualToken;
@@ -196,10 +200,7 @@ contract VolmexPerpPeriphery is Initializable, RoleManager, IVolmexPerpPeriphery
         uint256 _index
     ) external {
         _requireVolmexPerpPeripheryAdmin();
-        require(
-            vaultControllers[_index] == _oldVaultController,
-            "Periphery: Incorrect vault controller _index"
-        );
+        require(vaultControllers[_index] == _oldVaultController, "Periphery: Incorrect vault controller _index");
         vaultControllers[_index] = _newVaultController;
     }
 
@@ -252,7 +253,7 @@ contract VolmexPerpPeriphery is Initializable, RoleManager, IVolmexPerpPeriphery
         require(_ordersLeft.length == _ordersRight.length, "Periphery: mismatch orders");
         IPositioning positioning = positionings[_index];
         uint256 ordersLength = _ordersLeft.length;
-        for(uint256 orderIndex = 0; orderIndex < ordersLength; orderIndex++) {
+        for (uint256 orderIndex = 0; orderIndex < ordersLength; orderIndex++) {
             positioning.openPosition(
                 _ordersLeft[orderIndex],
                 _signaturesLeft[orderIndex],
@@ -310,7 +311,7 @@ contract VolmexPerpPeriphery is Initializable, RoleManager, IVolmexPerpPeriphery
     function _verifyTriggerPrice(LibOrder.Order memory _limitOrder) private view returns (bool) {
         // TODO: Add check for round id, when Volmex Oracle updates functionality
         // TODO Ask and update this hardhcoded time reference for tw interval
-        uint256 triggeredPrice = _getBaseTokenPrice(_limitOrder, 15 minutes); 
+        uint256 triggeredPrice = _getBaseTokenPrice(_limitOrder, 15 minutes);
 
         if (_limitOrder.orderType == LibOrder.STOP_LOSS_LIMIT_ORDER) {
             if (_limitOrder.isShort) {

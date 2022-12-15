@@ -12,7 +12,12 @@ contract LibSignatureTest {
         return hash.recover(signature);
     }
 
-    function recoverFromParamsTest(bytes32 hash, uint8 v, bytes32 r, bytes32 s) external pure returns (address) {
+    function recoverFromParamsTest(
+        bytes32 hash,
+        uint8 v,
+        bytes32 r,
+        bytes32 s
+    ) external pure returns (address) {
         return hash.recover(v, r, s);
     }
 

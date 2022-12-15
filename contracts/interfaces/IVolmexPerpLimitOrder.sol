@@ -8,7 +8,6 @@ import "./IPositioning.sol";
 import "./IAccountBalance.sol";
 
 interface IVolmexPerpLimitOrder {
-
     struct LimitOrder {
         bytes4 orderType;
         address trader;

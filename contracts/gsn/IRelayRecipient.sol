@@ -6,7 +6,6 @@ pragma solidity =0.8.12;
  * It is better to inherit the BaseRelayRecipient as its implementation.
  */
 abstract contract IRelayRecipient {
-
     /**
      * return the sender of this call.
      * if the call came through our trusted forwarder, then the real sender is appended as the last 20 bytes
@@ -15,5 +14,4 @@ abstract contract IRelayRecipient {
      * should be used in the contract anywhere instead of msg.sender
      */
     function _msgSender() internal view virtual returns (address);
-
 }

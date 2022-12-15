@@ -13,7 +13,11 @@ contract VirtualToken is IVirtualToken, ERC20Upgradeable, RoleManager {
     event WhitelistAdded(address account);
     event WhitelistRemoved(address account);
 
-    function __VirtualToken_init(string memory nameArg, string memory symbolArg, bool isBaseArg) public onlyInitializing {
+    function __VirtualToken_init(
+        string memory nameArg,
+        string memory symbolArg,
+        bool isBaseArg
+    ) public onlyInitializing {
         isBase = isBaseArg;
         __ERC20_init(nameArg, symbolArg);
         _grantRole(VIRTUAL_TOKEN_ADMIN, _msgSender());

@@ -192,7 +192,7 @@ contract PerpFactory is Initializable, IPerpFactory, RoleManager {
         emit PerpSystemCreated(perpIndexCount, address(positioning), address(vaultController), address(accountBalance));
         perpIndexCount++;
     }
-    
+
     function _cloneVaultController(address _positioningConfig, address _accountBalance)
         private
         returns (IVaultController vaultController)

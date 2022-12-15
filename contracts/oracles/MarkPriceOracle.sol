@@ -30,7 +30,7 @@ contract MarkPriceOracle is Initializable, RoleManager {
 
     mapping(address => uint64) public indexByBaseToken;
 
-    // mapping to store baseToken to Observations 
+    // mapping to store baseToken to Observations
     mapping(uint64 => Observation[]) public observationsByIndex;
 
     /// @param matchingEngine The address of the MatchingEngine contract
@@ -53,14 +53,14 @@ contract MarkPriceOracle is Initializable, RoleManager {
         uint256 assetLength = _asset.length;
         require(priceCumulativeLength == assetLength, "MarkSMA: Unequal length of prices & assets");
 
-        for (uint index; index < priceCumulativeLength; index++) {
+        for (uint256 index; index < priceCumulativeLength; index++) {
             require(_asset[index] != address(0), "MarkSMA: Asset address can't be 0");
         }
 
         Observation memory observation;
         uint64 indexCount = _indexCount;
 
-        for (uint index; index < priceCumulativeLength; index++) {
+        for (uint256 index; index < priceCumulativeLength; index++) {
             observation = Observation({ timestamp: block.timestamp, priceCumulative: _priceCumulative[index] });
             baseTokenByIndex[indexCount] = _asset[index];
             indexByBaseToken[_asset[index]] = indexCount;
@@ -87,14 +87,14 @@ contract MarkPriceOracle is Initializable, RoleManager {
         uint256 assetLength = _asset.length;
         require(priceCumulativeLength == assetLength, "MarkSMA: Unequal length of prices & assets");
 
-        for (uint index; index < priceCumulativeLength; index++) {
+        for (uint256 index; index < priceCumulativeLength; index++) {
             require(_asset[index] != address(0), "MarkSMA: Asset address can't be 0");
         }
-        
+
         Observation memory observation;
         uint64 indexCount = _indexCount;
 
-        for (uint index; index < priceCumulativeLength; index++) {
+        for (uint256 index; index < priceCumulativeLength; index++) {
             observation = Observation({ timestamp: block.timestamp, priceCumulative: _priceCumulative[index] });
             baseTokenByIndex[indexCount] = _asset[index];
             indexByBaseToken[_asset[index]] = indexCount;
@@ -110,7 +110,7 @@ contract MarkPriceOracle is Initializable, RoleManager {
      * @notice Used to add price cumulative of an asset at a given timestamp
      *
      * @param _priceCumulative Price of the asset
-     */    
+     */
     function addObservation(uint256 _priceCumulative, uint64 _index) external {
         _requireCanAddObservation();
         require(_priceCumulative != 0, "MarkSMA: Not zero");

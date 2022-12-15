@@ -50,10 +50,7 @@ interface IVault {
     /// @notice Withdraw collateral from vault
     /// @param amount The amount of the token to withdraw
     /// @param to The address of the trader
-    function withdraw(
-        uint256 amount,
-        address payable to
-    ) external ;
+    function withdraw(uint256 amount, address payable to) external;
 
     /// @notice transfer fund to vault in case of low balance
     /// @dev once multi-collateral is implemented, the token is not limited to settlementToken
@@ -101,6 +98,7 @@ interface IVault {
     /// @notice Get `Positioning` contract address
     /// @return Positioning The address of `Positioning` contract
     function getPositioning() external view returns (address);
+
     function isEthVault() external view returns (bool);
 
     /// @notice Get `Vault controller` contract address

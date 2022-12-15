@@ -7,12 +7,7 @@ import { PositioningConfigStorageV1 } from "../storage/PositioningConfigStorage.
 import { RoleManager } from "../helpers/RoleManager.sol";
 
 // never inherit any new stateful contract. never change the orders of parent stateful contracts
-contract PositioningConfig is
-    IPositioningConfig,
-    Initializable,
-    PositioningConfigStorageV1,
-    RoleManager
-{
+contract PositioningConfig is IPositioningConfig, Initializable, PositioningConfigStorageV1, RoleManager {
     //
     // EVENT
     //
@@ -41,7 +36,6 @@ contract PositioningConfig is
     //
 
     function initialize() external initializer {
-
         _maxMarketsPerAccount = type(uint8).max;
         _imRatio = 0.4e6; // initial-margin ratio, 40% in decimal 6
         _mmRatio = 0.2e6; // minimum-margin ratio, 20% in decimal 6
@@ -115,9 +109,10 @@ contract PositioningConfig is
         emit MaintenanceMarginChanged(_mmRatio);
     }
 
-    function setPartialLiquidationRatio(uint24 partialLiquidationRatioArg) 
-    external 
-    checkRatio(partialLiquidationRatioArg) {
+    function setPartialLiquidationRatio(uint24 partialLiquidationRatioArg)
+        external
+        checkRatio(partialLiquidationRatioArg)
+    {
         _requirePositioningConfigAdmin();
         // PositioningConfig: Invalid Partial Liquidation Ratio (PC_IPLR)
         require(partialLiquidationRatioArg > 0, "PC_IPLR");

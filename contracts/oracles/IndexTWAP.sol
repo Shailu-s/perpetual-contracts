@@ -34,7 +34,7 @@ contract IndexTWAP {
             _datapoints[_index].push(_value);
         } else {
             if (
-                // reset the cursor has reached the maximum allowed storage datapoints 
+                // reset the cursor has reached the maximum allowed storage datapoints
                 // or max allowed datapoints values changed by the owner it's lower than current cursor
                 _datapointsCursor[_index] >= _MAX_DATAPOINTS
             ) {
@@ -70,11 +70,7 @@ contract IndexTWAP {
      * @notice Get all datapoints available for a specific volatility index
      * @param _index Datapoints volatility index id {0}
      */
-    function _getIndexDataPoints(uint256 _index)
-        internal
-        view
-        returns (uint256[] memory datapoints)
-    {
+    function _getIndexDataPoints(uint256 _index) internal view returns (uint256[] memory datapoints) {
         datapoints = _datapoints[_index];
     }
 

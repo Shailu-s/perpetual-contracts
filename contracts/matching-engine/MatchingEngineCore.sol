@@ -12,11 +12,7 @@ import "./AssetMatcher.sol";
 
 // TODO: Add method to pause and unpause matching
 
-abstract contract MatchingEngineCore is
-    PausableUpgradeable,
-    AssetMatcher,
-    RoleManager
-{
+abstract contract MatchingEngineCore is PausableUpgradeable, AssetMatcher, RoleManager {
     uint256 private constant _UINT256_MAX = 2**256 - 1;
     uint256 private constant _ORACLE_BASE = 1000000;
 
@@ -87,9 +83,7 @@ abstract contract MatchingEngineCore is
     function matchOrders(LibOrder.Order memory orderLeft, LibOrder.Order memory orderRight)
         public
         whenNotPaused
-        returns (
-            LibFill.FillResult memory
-        )
+        returns (LibFill.FillResult memory)
     {
         _requireCanMatchOrders();
         if (orderLeft.trader != address(0) && orderRight.trader != address(0)) {

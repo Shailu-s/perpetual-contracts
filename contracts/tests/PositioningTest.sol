@@ -5,7 +5,6 @@ import { Positioning } from "../orderbook/Positioning.sol";
 import "../libs/LibOrder.sol";
 
 contract PositioningTest is Positioning {
-
     function setMakerMinSalt(uint256 _val) external {
         makerMinSalt[_msgSender()] = _val;
     }

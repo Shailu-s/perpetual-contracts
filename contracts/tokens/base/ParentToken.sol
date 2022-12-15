@@ -28,7 +28,6 @@ abstract contract ParentToken is IVolmexBaseToken, IIndexPrice, VirtualToken, Ba
 
     /// @dev This function is only used for emergency shutdown, to set priceFeed to an emergencyPriceFeed
     function setPriceFeed(address priceFeedArg) external override {
-
         _priceFeed = priceFeedArg;
         emit PriceFeedChanged(_priceFeed);
     }
@@ -38,8 +37,13 @@ abstract contract ParentToken is IVolmexBaseToken, IIndexPrice, VirtualToken, Ba
     //
 
     /// @inheritdoc IIndexPrice
-    function getIndexPrice(uint256 interval) external view virtual override(IIndexPrice, IVolmexBaseToken) returns (uint256);
-    
+    function getIndexPrice(uint256 interval)
+        external
+        view
+        virtual
+        override(IIndexPrice, IVolmexBaseToken)
+        returns (uint256);
+
     /// @inheritdoc IVolmexBaseToken
     function getPriceFeed() external view override returns (address) {
         return _priceFeed;

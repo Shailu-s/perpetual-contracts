@@ -2,7 +2,6 @@
 pragma solidity =0.8.12;
 
 interface IMarketRegistry {
-
     /// @notice Emitted when the max orders per market is updated.
     /// @param maxOrdersPerMarket Max orders per market
     event MaxOrdersPerMarketChanged(uint8 maxOrdersPerMarket);
@@ -13,11 +12,11 @@ interface IMarketRegistry {
 
     /// @dev Set maker fee ratio
     /// @param makerFeeRatio The maker fee ratio
-    function setMakerFeeRatio( uint24 makerFeeRatio) external;
+    function setMakerFeeRatio(uint24 makerFeeRatio) external;
 
     /// @dev Set taker fee ratio
     /// @param takerFeeRatio The taker fee ratio
-    function setTakerFeeRatio( uint24 takerFeeRatio) external;
+    function setTakerFeeRatio(uint24 takerFeeRatio) external;
 
     /// @dev Function to add base token in the market
     /// @param baseToken address of the baseToken

@@ -210,7 +210,7 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
                 // baseDebtValue = baseDebt * indexPrice
                 //TODOCHANGE: decimal checks for index price
                 // baseDebtValue = baseBalance.mulDiv(_getIndexPrice(baseToken).toInt256(), 1e18);
-                baseDebtValue = baseBalance * _getIndexPrice(baseToken).toInt256() / _ORACLE_BASE;
+                baseDebtValue = (baseBalance * _getIndexPrice(baseToken).toInt256()) / _ORACLE_BASE;
             }
             totalBaseDebtValue = totalBaseDebtValue + baseDebtValue;
 
@@ -266,7 +266,7 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
         // only overflow when position value in USD(18 decimals) > 2^255 / 10^18
         // TODOCHANGE: Decimal calculation for indexTwap is not as same decimal as Position size
         // Todo: Should divide by ORACLE_BASE here
-        return positionSize * indexTwap.toInt256() / _ORACLE_BASE;
+        return (positionSize * indexTwap.toInt256()) / _ORACLE_BASE;
     }
 
     /// @inheritdoc IAccountBalance
@@ -286,7 +286,7 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
     //
     // INTERNAL NON-VIEW
     //
-    
+
     function _modifyTakerBalance(
         address trader,
         address baseToken,
@@ -348,8 +348,7 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
     //
 
     function _getIndexPrice(address baseToken) internal view returns (uint256) {
-        return
-            IIndexPrice(baseToken).getIndexPrice(IPositioningConfig(_positioningConfig).getTwapInterval());
+        return IIndexPrice(baseToken).getIndexPrice(IPositioningConfig(_positioningConfig).getTwapInterval());
     }
 
     /// @return netQuoteBalance = quote.balance
