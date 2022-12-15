@@ -22,28 +22,11 @@ describe("VirtualToken",function(){
         "MKT",
         isBase],
         {
-        initializer: "__VirtualToken_init"
-        })    
+          initializer: "initialize"
+        })
         await virtualToken.setMintBurnRole(owner.address) 
     })
     describe("Virtual Token deployment",function(){
-      it("should deploy Virtual Token i.e base token",async () =>  {
-        virtualToken = await upgrades.deployProxy(
-            VirtualToken,
-            ["MyTestToken",
-            "MKT",
-            isBase],
-            {
-            initializer: "__VirtualToken_init"
-        })  
-        const receipt = await virtualToken.deployed();
-        expect(receipt.confirmations).not.equal(0) 
-      })
-      it("Should fail to initialize again", async() => {
-        await expect(virtualToken.__VirtualToken_init("MyTestToken",
-        "MKT",
-        !isBase)).to.be.revertedWith("Initializable: contract is not initializing")
-      })
       it("should deploy Virtual Token i.e not base token",async () =>  {
         virtualToken = await upgrades.deployProxy(
             VirtualToken,
@@ -51,7 +34,7 @@ describe("VirtualToken",function(){
             "MKT",
             !isBase],
             {
-            initializer: "__VirtualToken_init"
+            initializer: "initialize"
         })  
         const receipt = await virtualToken.deployed();
         expect(receipt.confirmations).not.equal(0);

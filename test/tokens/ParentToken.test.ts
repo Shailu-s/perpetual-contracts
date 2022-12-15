@@ -38,9 +38,10 @@ describe("ParentToken", function(){
 	})
 	  describe("deployment" ,function(){
 			it("should fail to again", async()=>{
-        await expect(volmexBaseToken.initialize("MyTestToken",
-				"MKT",
-				indexPriceOracle.address,
+        await expect(volmexBaseToken.initialize(
+					"MyTestToken",
+			  	"MKT",
+				  indexPriceOracle.address,
 				true)).to.be.revertedWith("Initializable: contract is already initialized");
 			})
 		})
