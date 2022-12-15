@@ -1145,13 +1145,6 @@ describe("Positioning", function () {
   }
 })
 
-// import { expect } from "chai";
-// import { ethers, upgrades } from "hardhat";
-// const { Order, Asset, sign, encodeAddress } = require("../order");
-// import { FakeContract, smock } from "@defi-wonderland/smock";
-// import { FundingRate, IndexPriceOracle, MarkPriceOracle } from "../../typechain";
-// import { BigNumber } from "ethers";
-
 describe("Liquidation test in Positioning", function () {
   let MatchingEngine;
   let matchingEngine;
@@ -1211,11 +1204,6 @@ describe("Liquidation test in Positioning", function () {
     VolmexPerpPeriphery = await ethers.getContractFactory("VolmexPerpPeriphery");
     MarkPriceOracle = await ethers.getContractFactory("MarkPriceOracle");
     IndexPriceOracle = await ethers.getContractFactory("IndexPriceOracle");
-    // indexPriceOracle = await smock.fake("IndexPriceOracle")
-    // indexPriceFake = await smock.fake("IndexPriceOracle")
-    // markPriceFake = await smock.fake("IndexPriceOracle")
-
-    // fundingRate = await smock.fake("FundingRate")
     MatchingEngine = await ethers.getContractFactory("MatchingEngineTest");
     VirtualToken = await ethers.getContractFactory("VirtualTokenTest");
     ERC20TransferProxy = await ethers.getContractFactory("ERC20TransferProxy");
@@ -1312,8 +1300,6 @@ describe("Liquidation test in Positioning", function () {
 
     accountBalance1 = await upgrades.deployProxy(AccountBalance, [positioningConfig.address]);
     vaultController = await upgrades.deployProxy(VaultController, [positioningConfig.address, accountBalance1.address]);
-
-    // vaultController = await upgrades.deployProxy(VaultController, [positioningConfig.address, accountBalance1.address])
 
     positioning = await upgrades.deployProxy(
       Positioning,
