@@ -5,14 +5,14 @@ const upgrade = async () => {
 
   const contractFactory = await ethers.getContractFactory(process.env.CONTRACT_NAME);
 
-  console.log("Upgrading contract ...")
+  console.log("Upgrading contract ...");
   const instance = await upgrades.upgradeProxy(proxyAddress, contractFactory);
   const proxyAdmin = await upgrades.admin.getInstance();
-  console.log("Upgraded!")
+  console.log("Upgraded!");
 
   const implementation = await proxyAdmin.getProxyImplementation(instance.address);
 
-  console.log("Verifying implementation ...", implementation)
+  console.log("Verifying implementation ...", implementation);
   await run("verify:verify", {
     address: implementation,
   });
@@ -22,7 +22,7 @@ const upgrade = async () => {
 
 upgrade()
   .then(() => process.exit(0))
-  .catch((error) => {
+  .catch(error => {
     console.log("Error: ", error);
     process.exit(1);
   });
