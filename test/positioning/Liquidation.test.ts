@@ -139,9 +139,13 @@ describe("Liquidation test in Positioning", function () {
     await USDC.__TestERC20_init("TestUSDC", "USDC", 6);
     await USDC.deployed();
 
-    matchingEngine = await upgrades.deployProxy(MatchingEngine, [owner.address, markPriceOracle.address], {
-      initializer: "__MatchingEngineTest_init",
-    });
+    matchingEngine = await upgrades.deployProxy(
+      MatchingEngine,
+      [owner.address, markPriceOracle.address],
+      {
+        initializer: "__MatchingEngineTest_init",
+      },
+    );
 
     await markPriceOracle.setMatchingEngine(matchingEngine.address);
 
@@ -159,12 +163,19 @@ describe("Liquidation test in Positioning", function () {
       false,
     ]);
 
-    transferManagerTest = await upgrades.deployProxy(TransferManagerTest, [erc20TransferProxy.address, owner.address], {
-      initializer: "__TransferManager_init",
-    });
+    transferManagerTest = await upgrades.deployProxy(
+      TransferManagerTest,
+      [erc20TransferProxy.address, owner.address],
+      {
+        initializer: "__TransferManager_init",
+      },
+    );
 
     accountBalance1 = await upgrades.deployProxy(AccountBalance, [positioningConfig.address]);
-    vaultController = await upgrades.deployProxy(VaultController, [positioningConfig.address, accountBalance1.address]);
+    vaultController = await upgrades.deployProxy(VaultController, [
+      positioningConfig.address,
+      accountBalance1.address,
+    ]);
 
     // vaultController = await upgrades.deployProxy(VaultController, [positioningConfig.address, accountBalance1.address])
 
@@ -226,10 +237,20 @@ describe("Liquidation test in Positioning", function () {
     // volmexPerpPeriphery.address, USDC.address, alice.address, amount
     await vaultController
       .connect(account1)
-      .deposit(volmexPerpPeriphery.address, virtualToken.address, account1.address, ten.toString());
+      .deposit(
+        volmexPerpPeriphery.address,
+        virtualToken.address,
+        account1.address,
+        ten.toString(),
+      );
     await vaultController
       .connect(account2)
-      .deposit(volmexPerpPeriphery.address, virtualToken.address, account2.address, ten.toString());
+      .deposit(
+        volmexPerpPeriphery.address,
+        virtualToken.address,
+        account2.address,
+        ten.toString(),
+      );
 
     orderLeft = Order(
       ORDER,
@@ -265,7 +286,13 @@ describe("Liquidation test in Positioning", function () {
         let signatureRight = await getSignature(orderRight, account2.address);
 
         await expect(
-          positioning.openPosition(orderLeft, signatureLeft, orderRight, signatureRight, liquidator),
+          positioning.openPosition(
+            orderLeft,
+            signatureLeft,
+            orderRight,
+            signatureRight,
+            liquidator,
+          ),
         ).to.emit(positioning, "PositionChanged");
 
         const positionSize = await accountBalance1.getTakerPositionSize(
@@ -294,10 +321,15 @@ describe("Liquidation test in Positioning", function () {
 
         // liquidating the position
         await expect(
-          positioning.connect(account2).liquidate(account1.address, volmexBaseToken.address, "-10000000000000000000"),
+          positioning
+            .connect(account2)
+            .liquidate(account1.address, volmexBaseToken.address, "-10000000000000000000"),
         ).to.emit(positioning, "PositionLiquidated");
 
-        const positionSizeAfter = await accountBalance1.getTakerPositionSize(account1.address, volmexBaseToken.address);
+        const positionSizeAfter = await accountBalance1.getTakerPositionSize(
+          account1.address,
+          volmexBaseToken.address,
+        );
 
         const positionSizeLiquidator = await accountBalance1.getTakerPositionSize(
           account2.address,
@@ -313,7 +345,13 @@ describe("Liquidation test in Positioning", function () {
         let signatureRight = await getSignature(orderRight, account2.address);
 
         await expect(
-          positioning.openPosition(orderLeft, signatureLeft, orderRight, signatureRight, liquidator),
+          positioning.openPosition(
+            orderLeft,
+            signatureLeft,
+            orderRight,
+            signatureRight,
+            liquidator,
+          ),
         ).to.emit(positioning, "PositionChanged");
 
         const positionSize = await accountBalance1.getTakerPositionSize(
@@ -341,10 +379,15 @@ describe("Liquidation test in Positioning", function () {
         }
         // liquidating the position
         await expect(
-          positioning.connect(account2).liquidateFullPosition(account1.address, volmexBaseToken.address),
+          positioning
+            .connect(account2)
+            .liquidateFullPosition(account1.address, volmexBaseToken.address),
         ).to.emit(positioning, "PositionLiquidated");
 
-        const positionSizeAfter = await accountBalance1.getTakerPositionSize(account1.address, volmexBaseToken.address);
+        const positionSizeAfter = await accountBalance1.getTakerPositionSize(
+          account1.address,
+          volmexBaseToken.address,
+        );
 
         const positionSizeLiquidator = await accountBalance1.getTakerPositionSize(
           account2.address,
@@ -360,7 +403,13 @@ describe("Liquidation test in Positioning", function () {
         let signatureRight = await getSignature(orderRight, account2.address);
 
         await expect(
-          positioning.openPosition(orderLeft, signatureLeft, orderRight, signatureRight, liquidator),
+          positioning.openPosition(
+            orderLeft,
+            signatureLeft,
+            orderRight,
+            signatureRight,
+            liquidator,
+          ),
         ).to.emit(positioning, "PositionChanged");
         const positionSize = await accountBalance1.getTakerPositionSize(
           account1.address,
@@ -376,7 +425,9 @@ describe("Liquidation test in Positioning", function () {
 
         // liquidating the position
         await expect(
-          positioning.connect(account2).liquidate(account1.address, volmexBaseToken.address, "10000000000000000000"),
+          positioning
+            .connect(account2)
+            .liquidate(account1.address, volmexBaseToken.address, "10000000000000000000"),
         ).to.be.revertedWith("P_EAV");
       });
       it("should not liquidate in wrong direction", async () => {
@@ -384,7 +435,13 @@ describe("Liquidation test in Positioning", function () {
         let signatureRight = await getSignature(orderRight, account2.address);
 
         await expect(
-          positioning.openPosition(orderLeft, signatureLeft, orderRight, signatureRight, liquidator),
+          positioning.openPosition(
+            orderLeft,
+            signatureLeft,
+            orderRight,
+            signatureRight,
+            liquidator,
+          ),
         ).to.emit(positioning, "PositionChanged");
         const positionSize = await accountBalance1.getTakerPositionSize(
           account1.address,
@@ -412,7 +469,9 @@ describe("Liquidation test in Positioning", function () {
 
         // liquidating the position
         await expect(
-          positioning.connect(account2).liquidate(account1.address, volmexBaseToken.address, "10000000000000000000"),
+          positioning
+            .connect(account2)
+            .liquidate(account1.address, volmexBaseToken.address, "10000000000000000000"),
         ).to.be.revertedWith("P_WLD");
       });
 
@@ -421,7 +480,13 @@ describe("Liquidation test in Positioning", function () {
         let signatureRight = await getSignature(orderRight, account2.address);
 
         await expect(
-          positioning.openPosition(orderLeft, signatureLeft, orderRight, signatureRight, liquidator),
+          positioning.openPosition(
+            orderLeft,
+            signatureLeft,
+            orderRight,
+            signatureRight,
+            liquidator,
+          ),
         ).to.emit(positioning, "PositionChanged");
 
         const positionSize = await accountBalance1.getTakerPositionSize(
@@ -436,13 +501,17 @@ describe("Liquidation test in Positioning", function () {
         await expect(positionSize.toString()).to.be.equal("-100000000000000000000");
         await expect(positionSize1.toString()).to.be.equal("100000000000000000000");
 
-        const liquidatablePosition = await positioning.getLiquidatablePosition(account1.address, volmexBaseToken.address);
+        const liquidatablePosition = await positioning.getLiquidatablePosition(
+          account1.address,
+          volmexBaseToken.address,
+        );
         expect(liquidatablePosition.toString()).to.equal("10000000000000000000");
       });
 
       it("should fail to get liquidatable position of a trader if position size is 0", async () => {
-        await expect(positioning.getLiquidatablePosition(account1.address, volmexBaseToken.address))
-          .to.be.revertedWith("P_PSZ");
+        await expect(
+          positioning.getLiquidatablePosition(account1.address, volmexBaseToken.address),
+        ).to.be.revertedWith("P_PSZ");
       });
     });
   });

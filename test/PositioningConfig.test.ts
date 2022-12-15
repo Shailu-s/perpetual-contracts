@@ -35,8 +35,8 @@ describe("PositioningConfig", function () {
     it("should setLiquidationPenaltyRatio for ratio < 1e6", async () => {
       await expect(positioningConfig.setLiquidationPenaltyRatio(0.05e6))
         .to.emit(positioningConfig, "LiquidationPenaltyRatioChanged")
-          .withArgs(50000);
-      
+        .withArgs(50000);
+
       const liquidationPenaltyRatio = await positioningConfig.getLiquidationPenaltyRatio();
       await expect(liquidationPenaltyRatio).to.be.equal(50000);
     });
@@ -44,15 +44,16 @@ describe("PositioningConfig", function () {
     it("should setLiquidationPenaltyRatio for ratio = 0", async () => {
       await expect(positioningConfig.setLiquidationPenaltyRatio(0))
         .to.emit(positioningConfig, "LiquidationPenaltyRatioChanged")
-          .withArgs(0);
-      
+        .withArgs(0);
+
       const liquidationPenaltyRatio = await positioningConfig.getLiquidationPenaltyRatio();
       await expect(liquidationPenaltyRatio).to.be.equal(0);
     });
 
     it("should setLiquidationPenaltyRatio for ratio = 1e6", async () => {
-      await expect(positioningConfig.setLiquidationPenaltyRatio(1e6)).to.emit(positioningConfig, "LiquidationPenaltyRatioChanged")
-      .withArgs(1000000);
+      await expect(positioningConfig.setLiquidationPenaltyRatio(1e6))
+        .to.emit(positioningConfig, "LiquidationPenaltyRatioChanged")
+        .withArgs(1000000);
       const liquidationPenaltyRatio = await positioningConfig.getLiquidationPenaltyRatio();
       await expect(liquidationPenaltyRatio).to.be.equal(1e6);
     });
@@ -62,19 +63,25 @@ describe("PositioningConfig", function () {
     });
 
     it("should fail to set LiquidationPenaltyRatio as caller is not admin", async () => {
-      await expect(positioningConfig.connect(account1).setLiquidationPenaltyRatio(0.05e6)).to.be.revertedWith("PositioningConfig: Not admin");
+      await expect(
+        positioningConfig.connect(account1).setLiquidationPenaltyRatio(0.05e6),
+      ).to.be.revertedWith("PositioningConfig: Not admin");
     });
   });
 
   describe("setPartialCloseRatio", async () => {
     it("should setPartialCloseRatio for ratio < 1e6", async () => {
-      await expect(positioningConfig.setPartialCloseRatio(0.025e6)).to.emit(positioningConfig, "PartialCloseRatioChanged").withArgs(0.025e6);
+      await expect(positioningConfig.setPartialCloseRatio(0.025e6))
+        .to.emit(positioningConfig, "PartialCloseRatioChanged")
+        .withArgs(0.025e6);
       const partialCloseRatio = await positioningConfig.getPartialCloseRatio();
       await expect(partialCloseRatio).to.equal(0.025e6);
     });
 
     it("should setPartialCloseRatio for ratio = 1e6", async () => {
-      await expect(positioningConfig.setPartialCloseRatio(1e6)).to.emit(positioningConfig, "PartialCloseRatioChanged").withArgs(1e6);
+      await expect(positioningConfig.setPartialCloseRatio(1e6))
+        .to.emit(positioningConfig, "PartialCloseRatioChanged")
+        .withArgs(1e6);
       const partialCloseRatio = await positioningConfig.getPartialCloseRatio();
       await expect(partialCloseRatio).to.equal(1e6);
     });
@@ -84,7 +91,9 @@ describe("PositioningConfig", function () {
     });
 
     it("should fail to setPartialCloseRatio as caller is not admin", async () => {
-      await expect(positioningConfig.connect(account1).setPartialCloseRatio(1e6)).to.be.revertedWith("PositioningConfig: Not admin");
+      await expect(
+        positioningConfig.connect(account1).setPartialCloseRatio(1e6),
+      ).to.be.revertedWith("PositioningConfig: Not admin");
     });
 
     it("should fail to setPartialCloseRatio for ratio = 0", async () => {
@@ -103,13 +112,13 @@ describe("PositioningConfig", function () {
     });
 
     it("should fail to setTwapInterval to 0", async () => {
-      await expect(positioningConfig.setTwapInterval("0"))
-        .to.be.revertedWith("PC_ITI");
+      await expect(positioningConfig.setTwapInterval("0")).to.be.revertedWith("PC_ITI");
     });
 
     it("should fail to setTwapInterval as caller is not admin", async () => {
-      await expect(positioningConfig.connect(account1).setTwapInterval("4294967295"))
-        .to.be.revertedWith("PositioningConfig: Not admin");
+      await expect(
+        positioningConfig.connect(account1).setTwapInterval("4294967295"),
+      ).to.be.revertedWith("PositioningConfig: Not admin");
     });
   });
 
@@ -118,7 +127,7 @@ describe("PositioningConfig", function () {
     it("should setMaxMarketsPerAccount to 0", async () => {
       await expect(positioningConfig.setMaxMarketsPerAccount(0))
         .to.emit(positioningConfig, "MaxMarketsPerAccountChanged")
-          .withArgs(0);
+        .withArgs(0);
       const maxMarketsPerAccount = await positioningConfig.getMaxMarketsPerAccount();
       expect(maxMarketsPerAccount).to.equal(0);
     });
@@ -127,7 +136,7 @@ describe("PositioningConfig", function () {
       // max uint8 = 2^8 - 1 = 255
       await expect(positioningConfig.setMaxMarketsPerAccount(255))
         .to.emit(positioningConfig, "MaxMarketsPerAccountChanged")
-          .withArgs(255);
+        .withArgs(255);
       const maxMarketsPerAccount = await positioningConfig.getMaxMarketsPerAccount();
       expect(maxMarketsPerAccount).to.equal(255);
     });
@@ -135,15 +144,16 @@ describe("PositioningConfig", function () {
     it("should setMaxMarketsPerAccount to a value b/w 0 - max(uint8)", async () => {
       await expect(positioningConfig.setMaxMarketsPerAccount(2))
         .to.emit(positioningConfig, "MaxMarketsPerAccountChanged")
-          .withArgs(2);
+        .withArgs(2);
       const maxMarketsPerAccount = await positioningConfig.getMaxMarketsPerAccount();
       expect(maxMarketsPerAccount).to.equal(2);
     });
 
     // not admin
     it("should fail to setMaxMarketsPerAccount as caller is not admin", async () => {
-      await expect(positioningConfig.connect(account1).setMaxMarketsPerAccount(2))
-        .to.be.revertedWith("PositioningConfig: Not admin");
+      await expect(
+        positioningConfig.connect(account1).setMaxMarketsPerAccount(2),
+      ).to.be.revertedWith("PositioningConfig: Not admin");
     });
   });
 
@@ -151,7 +161,7 @@ describe("PositioningConfig", function () {
     it("should setSettlementTokenBalanceCap to 0", async () => {
       await expect(positioningConfig.setSettlementTokenBalanceCap(0))
         .to.emit(positioningConfig, "SettlementTokenBalanceCapChanged")
-          .withArgs(0);
+        .withArgs(0);
       const settlementTokenBalanceCap = await positioningConfig.getSettlementTokenBalanceCap();
       expect(settlementTokenBalanceCap).to.equal(0);
     });
@@ -159,31 +169,33 @@ describe("PositioningConfig", function () {
     it("should setSettlementTokenBalanceCap to value b/w 0 & uint256", async () => {
       await expect(positioningConfig.setSettlementTokenBalanceCap(1e6))
         .to.emit(positioningConfig, "SettlementTokenBalanceCapChanged")
-          .withArgs(1e6);
+        .withArgs(1e6);
       const settlementTokenBalanceCap = await positioningConfig.getSettlementTokenBalanceCap();
       expect(settlementTokenBalanceCap).to.equal(1e6);
     });
 
     it("should setSettlementTokenBalanceCap to max value uint256", async () => {
-      const maxUint256 = "115792089237316195423570985008687907853269984665640564039457584007913129639935";
+      const maxUint256 =
+        "115792089237316195423570985008687907853269984665640564039457584007913129639935";
       await expect(positioningConfig.setSettlementTokenBalanceCap(maxUint256))
         .to.emit(positioningConfig, "SettlementTokenBalanceCapChanged")
-          .withArgs(maxUint256);
+        .withArgs(maxUint256);
       const settlementTokenBalanceCap = await positioningConfig.getSettlementTokenBalanceCap();
       expect(settlementTokenBalanceCap).to.equal(maxUint256);
     });
 
     it("should fail to setSettlementTokenBalanceCap as caller is not admin", async () => {
-      await expect(positioningConfig.connect(account1).setSettlementTokenBalanceCap(1e6))
-        .to.be.revertedWith("PositioningConfig: Not admin");
+      await expect(
+        positioningConfig.connect(account1).setSettlementTokenBalanceCap(1e6),
+      ).to.be.revertedWith("PositioningConfig: Not admin");
     });
   });
-  
+
   describe("setMaxFundingRate", async () => {
     it("should setMaxFundingRate to 0", async () => {
       await expect(positioningConfig.setMaxFundingRate(0))
         .to.emit(positioningConfig, "MaxFundingRateChanged")
-          .withArgs(0);
+        .withArgs(0);
       const maxFundingRate = await positioningConfig.getMaxFundingRate();
       expect(maxFundingRate).to.equal(0);
     });
@@ -191,7 +203,7 @@ describe("PositioningConfig", function () {
     it("should setMaxFundingRate to value b/w 0 & uint24", async () => {
       await expect(positioningConfig.setMaxFundingRate(1e6))
         .to.emit(positioningConfig, "MaxFundingRateChanged")
-          .withArgs(1e6);
+        .withArgs(1e6);
       const maxFundingRate = await positioningConfig.getMaxFundingRate();
       expect(maxFundingRate).to.equal(1e6);
     });
@@ -200,26 +212,31 @@ describe("PositioningConfig", function () {
       const maxUint24 = 16777215;
       await expect(positioningConfig.setMaxFundingRate(maxUint24))
         .to.emit(positioningConfig, "MaxFundingRateChanged")
-          .withArgs(maxUint24);
+        .withArgs(maxUint24);
       const maxFundingRate = await positioningConfig.getMaxFundingRate();
       expect(maxFundingRate).to.equal(maxUint24);
     });
 
     it("should fail to setMaxFundingRate as caller is not admin", async () => {
-      await expect(positioningConfig.connect(account1).setMaxFundingRate(1e6))
-        .to.be.revertedWith("PositioningConfig: Not admin");
+      await expect(positioningConfig.connect(account1).setMaxFundingRate(1e6)).to.be.revertedWith(
+        "PositioningConfig: Not admin",
+      );
     });
   });
 
   describe("setImRatio", async () => {
     it("should setImRatio for ratio < 1e6", async () => {
-      await expect(positioningConfig.setImRatio(0.025e6)).to.emit(positioningConfig, "InitialMarginChanged").withArgs(0.025e6);
+      await expect(positioningConfig.setImRatio(0.025e6))
+        .to.emit(positioningConfig, "InitialMarginChanged")
+        .withArgs(0.025e6);
       const imRatio = await positioningConfig.getImRatio();
       await expect(imRatio).to.equal(0.025e6);
     });
 
     it("should setImRatio for ratio = 1e6", async () => {
-      await expect(positioningConfig.setImRatio(1e6)).to.emit(positioningConfig, "InitialMarginChanged").withArgs(1e6);
+      await expect(positioningConfig.setImRatio(1e6))
+        .to.emit(positioningConfig, "InitialMarginChanged")
+        .withArgs(1e6);
       const imRatio = await positioningConfig.getImRatio();
       await expect(imRatio).to.equal(1e6);
     });
@@ -229,7 +246,9 @@ describe("PositioningConfig", function () {
     });
 
     it("should fail to setImRatio as caller is not admin", async () => {
-      await expect(positioningConfig.connect(account1).setImRatio(1e6)).to.be.revertedWith("PositioningConfig: Not admin");
+      await expect(positioningConfig.connect(account1).setImRatio(1e6)).to.be.revertedWith(
+        "PositioningConfig: Not admin",
+      );
     });
 
     it("should fail to setImRatio for ratio = 0", async () => {
@@ -239,13 +258,17 @@ describe("PositioningConfig", function () {
 
   describe("setMmRatio", async () => {
     it("should setMmRatio for ratio < 1e6", async () => {
-      await expect(positioningConfig.setMmRatio(0.025e6)).to.emit(positioningConfig, "MaintenanceMarginChanged").withArgs(0.025e6);
+      await expect(positioningConfig.setMmRatio(0.025e6))
+        .to.emit(positioningConfig, "MaintenanceMarginChanged")
+        .withArgs(0.025e6);
       const mmRatio = await positioningConfig.getMmRatio();
       await expect(mmRatio).to.equal(0.025e6);
     });
 
     it("should setMmRatio for ratio = 1e6", async () => {
-      await expect(positioningConfig.setMmRatio(1e6)).to.emit(positioningConfig, "MaintenanceMarginChanged").withArgs(1e6);
+      await expect(positioningConfig.setMmRatio(1e6))
+        .to.emit(positioningConfig, "MaintenanceMarginChanged")
+        .withArgs(1e6);
       const mmRatio = await positioningConfig.getMmRatio();
       await expect(mmRatio).to.equal(1e6);
     });
@@ -255,7 +278,9 @@ describe("PositioningConfig", function () {
     });
 
     it("should fail to setMmRatio as caller is not admin", async () => {
-      await expect(positioningConfig.connect(account1).setMmRatio(1e6)).to.be.revertedWith("PositioningConfig: Not admin");
+      await expect(positioningConfig.connect(account1).setMmRatio(1e6)).to.be.revertedWith(
+        "PositioningConfig: Not admin",
+      );
     });
 
     it("should fail to setMmRatio for ratio = 0", async () => {
@@ -267,7 +292,7 @@ describe("PositioningConfig", function () {
     it("should setPartialLiquidationRatio for ratio < 1e6", async () => {
       await expect(positioningConfig.setPartialLiquidationRatio(0.025e6))
         .to.emit(positioningConfig, "PartialLiquidationRatioChanged")
-          .withArgs(0.025e6);
+        .withArgs(0.025e6);
       const partialLiquidationRatio = await positioningConfig.getPartialLiquidationRatio();
       await expect(partialLiquidationRatio).to.equal(0.025e6);
     });
@@ -275,7 +300,7 @@ describe("PositioningConfig", function () {
     it("should setPartialLiquidationRatio for ratio = 1e6", async () => {
       await expect(positioningConfig.setPartialLiquidationRatio(1e6))
         .to.emit(positioningConfig, "PartialLiquidationRatioChanged")
-          .withArgs(1e6);
+        .withArgs(1e6);
       const partialLiquidationRatio = await positioningConfig.getPartialLiquidationRatio();
       await expect(partialLiquidationRatio).to.equal(1e6);
     });
@@ -285,7 +310,9 @@ describe("PositioningConfig", function () {
     });
 
     it("should fail to setPartialLiquidationRatio as caller is not admin", async () => {
-      await expect(positioningConfig.connect(account1).setPartialLiquidationRatio(1e6)).to.be.revertedWith("PositioningConfig: Not admin");
+      await expect(
+        positioningConfig.connect(account1).setPartialLiquidationRatio(1e6),
+      ).to.be.revertedWith("PositioningConfig: Not admin");
     });
 
     it("should fail to setPartialLiquidationRatio for ratio = 0", async () => {

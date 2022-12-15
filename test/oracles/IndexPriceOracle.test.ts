@@ -31,11 +31,9 @@ describe("IndexPriceOracle", function () {
 
   this.beforeEach(async function () {
     owner = await accounts[0].getAddress();
-    collateral = await upgrades.deployProxy(collateralFactory, [
-      "Volmex Collateral", "VDAI", 18
-    ], {
+    collateral = await upgrades.deployProxy(collateralFactory, ["Volmex Collateral", "VDAI", 18], {
       initializer: "__TestERC20_init",
-    })
+    });
     await collateral.deployed();
 
     volatility = await volatilityFactory.deploy();
@@ -74,13 +72,11 @@ describe("IndexPriceOracle", function () {
     assert.equal(await protocol.volatilityCapRatio(), "250");
   });
 
-  it("Should fail to initialize again ",async()=>{
+  it("Should fail to initialize again ", async () => {
     await expectRevert(
-      volmexOracle.initialize(
-        owner
-      ),
-      "Initializable: contract is already initialized"
-    )
+      volmexOracle.initialize(owner),
+      "Initializable: contract is already initialized",
+    );
   });
 
   it("Should add volatility index datapoints and retrieve TWAP value", async () => {
@@ -90,7 +86,7 @@ describe("IndexPriceOracle", function () {
     const proofHash = "0x6c00000000000000000000000000000000000000000000000000000000000000";
 
     await volmexOracle.updateTwapMaxDatapoints(2);
-  
+
     await volmexOracle.addIndexDataPoint(volatilityIndex, volatilityTokenPrice1);
     await volmexOracle.addIndexDataPoint(volatilityIndex, volatilityTokenPrice2);
     await volmexOracle.addIndexDataPoint(volatilityIndex, volatilityTokenPrice2);
@@ -98,16 +94,20 @@ describe("IndexPriceOracle", function () {
 
     assert.equal((await volmexOracle.getIndexDataPoints(volatilityIndex)).length, 2);
 
-    await (await volmexOracle.updateBatchVolatilityTokenPrice(
-      [volatilityIndex],
-      [volatilityTokenPrice1],
-      [proofHash]
-    )).wait();
-    await (await volmexOracle.updateBatchVolatilityTokenPrice(
-      [volatilityIndex],
-      [volatilityTokenPrice2],
-      [proofHash]
-    )).wait();
+    await (
+      await volmexOracle.updateBatchVolatilityTokenPrice(
+        [volatilityIndex],
+        [volatilityTokenPrice1],
+        [proofHash],
+      )
+    ).wait();
+    await (
+      await volmexOracle.updateBatchVolatilityTokenPrice(
+        [volatilityIndex],
+        [volatilityTokenPrice2],
+        [proofHash],
+      )
+    ).wait();
 
     const indexTwap = await volmexOracle.getIndexTwap(volatilityIndex);
     assert.equal(indexTwap[0].toString(), "110000000");
@@ -120,16 +120,16 @@ describe("IndexPriceOracle", function () {
     volatilityTokenPrices = ["105000000", "105000000"];
     proofHashes = [
       "0x6c00000000000000000000000000000000000000000000000000000000000000",
-      "0x6c00000000000000000000000000000000000000000000000000000000000000"
+      "0x6c00000000000000000000000000000000000000000000000000000000000000",
     ];
     const contractTx = await volmexOracle.updateBatchVolatilityTokenPrice(
       volatilityIndexes,
       volatilityTokenPrices,
-      proofHashes
+      proofHashes,
     );
     const contractReceipt: ContractReceipt = await contractTx.wait();
     const event = contractReceipt.events?.find(
-      (event) => event.event === "BatchVolatilityTokenPriceUpdated"
+      event => event.event === "BatchVolatilityTokenPriceUpdated",
     );
     expect((await contractTx.wait()).confirmations).not.equal(0);
     assert.equal(event?.args?._volatilityIndexes.length, 2);
@@ -148,9 +148,9 @@ describe("IndexPriceOracle", function () {
       volmexOracle.updateBatchVolatilityTokenPrice(
         volatilityIndexes,
         volatilityTokenPrices,
-        proofHashes
+        proofHashes,
       ),
-      "VolmexOracle: _volatilityTokenPrice should be smaller than VolatilityCapRatio"
+      "VolmexOracle: _volatilityTokenPrice should be smaller than VolatilityCapRatio",
     );
   });
 
@@ -159,16 +159,16 @@ describe("IndexPriceOracle", function () {
       volmexOracle.updateBatchVolatilityTokenPrice(
         ["0", "1"],
         ["105000000"],
-        ["0x6c00000000000000000000000000000000000000000000000000000000000000"]
+        ["0x6c00000000000000000000000000000000000000000000000000000000000000"],
       ),
-      "VolmexOracle: length of input arrays are not equal"
+      "VolmexOracle: length of input arrays are not equal",
     );
   });
 
   it("should update index by symbol", async () => {
     const contractTx: ContractTransaction = await volmexOracle.updateIndexBySymbol("ETHV", 3);
     const contractReceipt: ContractReceipt = await contractTx.wait();
-    const event = contractReceipt.events?.find((event) => event.event === "SymbolIndexUpdated");
+    const event = contractReceipt.events?.find(event => event.event === "SymbolIndexUpdated");
     assert.equal(event?.args?._index, 3);
     assert.equal(3, await volmexOracle.volatilityIndexBySymbol("ETHV"));
   });
@@ -188,10 +188,10 @@ describe("IndexPriceOracle", function () {
       "ETHV2X",
       0,
       0,
-      "0x6c00000000000000000000000000000000000000000000000000000000000000"
+      "0x6c00000000000000000000000000000000000000000000000000000000000000",
     );
     const contractReceipt: ContractReceipt = await contractTx.wait();
-    const event = contractReceipt.events?.find((event) => event.event === "VolatilityIndexAdded");
+    const event = contractReceipt.events?.find(event => event.event === "VolatilityIndexAdded");
     const price = await volmexOracle.getVolatilityPriceBySymbol("ETHV2X");
     const price1 = await volmexOracle.getVolatilityTokenPriceByIndex(2);
     assert.equal(event?.args?.volatilityTokenIndex, 2);
@@ -222,7 +222,7 @@ describe("IndexPriceOracle", function () {
           "ETHV2X",
           2,
           0,
-          "0x6c00000000000000000000000000000000000000000000000000000000000000"
+          "0x6c00000000000000000000000000000000000000000000000000000000000000",
         )
       ).wait();
       volatilityIndexes = [2];
@@ -232,7 +232,7 @@ describe("IndexPriceOracle", function () {
         await volmexOracle.updateBatchVolatilityTokenPrice(
           volatilityIndexes,
           volatilityTokenPrices,
-          proofHashes
+          proofHashes,
         )
       ).wait();
     });
@@ -262,12 +262,12 @@ describe("IndexPriceOracle", function () {
       let priceTimestamp = Number(receipt[2].toString());
       currentTimestamp = Number((await time.latest()).toString());
       expect(currentTimestamp - priceTimestamp).to.be.above(1800, "Oracle price is stale");
-  
+
       receipt = await volmexOracle.getVolatilityTokenPriceByIndex(volatilityIndexes[0]);
       priceTimestamp = Number(receipt[2].toString());
       currentTimestamp = Number((await time.latest()).toString());
       expect(currentTimestamp - priceTimestamp).to.be.above(1800, "Oracle price is stale");
-  
+
       receipt = await volmexOracle.getVolatilityPriceBySymbol("ETHV2X");
       priceTimestamp = Number(receipt[2].toString());
       currentTimestamp = Number((await time.latest()).toString());
@@ -291,12 +291,12 @@ describe("IndexPriceOracle", function () {
       "ETHV2X",
       0,
       0,
-      "0x6c00000000000000000000000000000000000000000000000000000000000000"
+      "0x6c00000000000000000000000000000000000000000000000000000000000000",
     );
     const contractTx = await volmexOracle.updateBaseVolatilityIndex(0, 1);
     const contractReceipt: ContractReceipt = await contractTx.wait();
     const event = contractReceipt.events?.find(
-      (event) => event.event === "BaseVolatilityIndexUpdated"
+      event => event.event === "BaseVolatilityIndexUpdated",
     );
     assert.equal(event?.args?.baseVolatilityIndex, 1);
   });
@@ -317,9 +317,9 @@ describe("IndexPriceOracle", function () {
         "ETHV2X",
         2,
         2,
-        "0x6c00000000000000000000000000000000000000000000000000000000000000"
+        "0x6c00000000000000000000000000000000000000000000000000000000000000",
       ),
-      "VolmexOracle: Invalid _baseVolatilityIndex provided"
+      "VolmexOracle: Invalid _baseVolatilityIndex provided",
     );
   });
 
@@ -344,9 +344,9 @@ describe("IndexPriceOracle", function () {
         "ETHV2X",
         2,
         0,
-        "0x6c00000000000000000000000000000000000000000000000000000000000000"
+        "0x6c00000000000000000000000000000000000000000000000000000000000000",
       ),
-      "VolmexOracle: volatility cap ratio should be greater than 1000000"
+      "VolmexOracle: volatility cap ratio should be greater than 1000000",
     );
   });
 
@@ -359,9 +359,9 @@ describe("IndexPriceOracle", function () {
         "ETHV2X",
         2,
         0,
-        "0x6c00000000000000000000000000000000000000000000000000000000000000"
+        "0x6c00000000000000000000000000000000000000000000000000000000000000",
       ),
-      "VolmexOracle: protocol address can't be zero"
+      "VolmexOracle: protocol address can't be zero",
     );
   });
 
@@ -385,9 +385,9 @@ describe("IndexPriceOracle", function () {
         "ETHV2X",
         0,
         0,
-        "0x6c00000000000000000000000000000000000000000000000000000000000000"
+        "0x6c00000000000000000000000000000000000000000000000000000000000000",
       ),
-      "VolmexOracle: _volatilityTokenPrice should be smaller than VolatilityCapRatio"
+      "VolmexOracle: _volatilityTokenPrice should be smaller than VolatilityCapRatio",
     );
   });
 
@@ -397,7 +397,7 @@ describe("IndexPriceOracle", function () {
       let volatilityTokenPrice1 = 125000000;
 
       for (let index = 0; index < 1; index++) {
-        await volmexOracle.addIndexDataPoint(volatilityIndex, volatilityTokenPrice1)
+        await volmexOracle.addIndexDataPoint(volatilityIndex, volatilityTokenPrice1);
         volatilityTokenPrice1 += 500000;
       }
       const datapoints = await volmexOracle.getIndexDataPoints(volatilityIndex);
@@ -410,7 +410,7 @@ describe("IndexPriceOracle", function () {
       let volatilityTokenPrice1 = 125000000;
 
       for (let index = 0; index < 57; index++) {
-        await volmexOracle.addIndexDataPoint(volatilityIndex, volatilityTokenPrice1)
+        await volmexOracle.addIndexDataPoint(volatilityIndex, volatilityTokenPrice1);
         volatilityTokenPrice1 += 500000;
       }
       const datapoints = await volmexOracle.getIndexDataPoints(volatilityIndex);
@@ -423,7 +423,7 @@ describe("IndexPriceOracle", function () {
       let volatilityTokenPrice1 = 125000000;
 
       for (let index = 0; index < 100; index++) {
-        await volmexOracle.addIndexDataPoint(volatilityIndex, volatilityTokenPrice1)
+        await volmexOracle.addIndexDataPoint(volatilityIndex, volatilityTokenPrice1);
         volatilityTokenPrice1 += 500000;
       }
       const datapoints = await volmexOracle.getIndexDataPoints(volatilityIndex);
@@ -436,7 +436,7 @@ describe("IndexPriceOracle", function () {
       let volatilityTokenPrice1 = 125000000;
 
       for (let index = 0; index < 179; index++) {
-        await volmexOracle.addIndexDataPoint(volatilityIndex, volatilityTokenPrice1)
+        await volmexOracle.addIndexDataPoint(volatilityIndex, volatilityTokenPrice1);
         volatilityTokenPrice1 += 500000;
       }
       const datapoints = await volmexOracle.getIndexDataPoints(volatilityIndex);
@@ -444,15 +444,15 @@ describe("IndexPriceOracle", function () {
       const indexTwap = await volmexOracle.getIndexTwap(volatilityIndex);
       assert.equal(indexTwap[0].toString(), "212750000");
     });
-  })
+  });
   describe("variable volatility index data points average", () => {
     it("Should volatility index datapoints for min precision loss", async () => {
       const volatilityIndex = "0";
       let volatilityTokenPrice1 = 125000000;
       let volatilityTokenPrice2 = 126000000;
-      await volmexOracle.addIndexDataPoint(volatilityIndex, volatilityTokenPrice2)
+      await volmexOracle.addIndexDataPoint(volatilityIndex, volatilityTokenPrice2);
       for (let index = 0; index < 178; index++) {
-        await volmexOracle.addIndexDataPoint(volatilityIndex, volatilityTokenPrice1)
+        await volmexOracle.addIndexDataPoint(volatilityIndex, volatilityTokenPrice1);
       }
       const indexTwap = await volmexOracle.getIndexTwap(volatilityIndex);
       assert.equal(indexTwap[0].toString(), "125000000");
@@ -462,11 +462,11 @@ describe("IndexPriceOracle", function () {
       let volatilityTokenPrice1 = 35890000;
 
       for (let index = 0; index < 179; index++) {
-        await volmexOracle.addIndexDataPoint(volatilityIndex, volatilityTokenPrice1)
+        await volmexOracle.addIndexDataPoint(volatilityIndex, volatilityTokenPrice1);
         volatilityTokenPrice1 += 990000;
       }
       const indexTwap = await volmexOracle.getIndexTwap(volatilityIndex);
       assert.equal(indexTwap[0].toString(), "209635000");
     });
-  })
+  });
 });

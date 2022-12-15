@@ -106,9 +106,13 @@ describe("Global", function () {
     );
     await volmexQuoteToken.deployed();
 
-    markPriceOracle = await upgrades.deployProxy(MarkPriceOracle, [[1000000], [volmexBaseToken.address]], {
-      initializer: "initialize",
-    });
+    markPriceOracle = await upgrades.deployProxy(
+      MarkPriceOracle,
+      [[1000000], [volmexBaseToken.address]],
+      {
+        initializer: "initialize",
+      },
+    );
     await markPriceOracle.deployed();
 
     usdc = await upgrades.deployProxy(TestERC20, ["VolmexUSDC", "VUSDC", 6], {
@@ -116,7 +120,10 @@ describe("Global", function () {
     });
     await usdc.deployed();
 
-    matchingEngine = await upgrades.deployProxy(MatchingEngine, [owner.address, markPriceOracle.address]);
+    matchingEngine = await upgrades.deployProxy(MatchingEngine, [
+      owner.address,
+      markPriceOracle.address,
+    ]);
     await matchingEngine.deployed();
     await (await markPriceOracle.setMatchingEngine(matchingEngine.address)).wait();
 
@@ -128,9 +135,15 @@ describe("Global", function () {
     accountBalance = await upgrades.deployProxy(AccountBalance, [positioningConfig.address]);
     await accountBalance.deployed();
 
-    vaultController = await upgrades.deployProxy(VaultController, [positioningConfig.address, accountBalance.address]);
+    vaultController = await upgrades.deployProxy(VaultController, [
+      positioningConfig.address,
+      accountBalance.address,
+    ]);
     await vaultController.deployed();
-    vaultController2 = await upgrades.deployProxy(VaultController, [positioningConfig.address, accountBalance.address]);
+    vaultController2 = await upgrades.deployProxy(VaultController, [
+      positioningConfig.address,
+      accountBalance.address,
+    ]);
     await vaultController2.deployed();
 
     vault = await upgrades.deployProxy(Vault, [
@@ -193,7 +206,7 @@ describe("Global", function () {
       markPriceOracle.address,
       [vault.address, vault.address],
       owner.address,
-      owner.address // replace with relayer
+      owner.address, // replace with relayer
     ]);
     await periphery.deployed();
 
@@ -257,22 +270,40 @@ describe("Global", function () {
     // left 1, 2
     // right 2, 1
     await expect(
-      positioning.connect(account1).openPosition(orderLeft, signatureLeft, orderRight, signatureRight, liquidator),
+      positioning
+        .connect(account1)
+        .openPosition(orderLeft, signatureLeft, orderRight, signatureRight, liquidator),
     ).to.emit(positioning, "PositionChanged");
 
-    let positionSize = await accountBalance.getTakerPositionSize(account1.address, orderLeft.takeAsset.virtualToken);
-    let positionSize1 = await accountBalance.getTakerPositionSize(account2.address, orderLeft.takeAsset.virtualToken);
+    let positionSize = await accountBalance.getTakerPositionSize(
+      account1.address,
+      orderLeft.takeAsset.virtualToken,
+    );
+    let positionSize1 = await accountBalance.getTakerPositionSize(
+      account2.address,
+      orderLeft.takeAsset.virtualToken,
+    );
     console.table([
       ["positionSize", positionSize.toString()],
       [
         "open notional",
-        (await accountBalance.getTakerOpenNotional(account1.address, orderLeft.takeAsset.virtualToken)).toString(),
+        (
+          await accountBalance.getTakerOpenNotional(
+            account1.address,
+            orderLeft.takeAsset.virtualToken,
+          )
+        ).toString(),
       ],
       ["", ""],
       ["positionSize 1", positionSize1.toString()],
       [
         "open notional 1",
-        (await accountBalance.getTakerOpenNotional(account2.address, orderLeft.takeAsset.virtualToken)).toString(),
+        (
+          await accountBalance.getTakerOpenNotional(
+            account2.address,
+            orderLeft.takeAsset.virtualToken,
+          )
+        ).toString(),
       ],
     ]);
     console.log("Another call \n");
@@ -284,7 +315,11 @@ describe("Global", function () {
 
     for (let index = 0; index < 10; index++) {
       await (
-        await indexPriceOracle.updateBatchVolatilityTokenPrice([0, 1], [200000000, 200000000], [proofHash, proofHash])
+        await indexPriceOracle.updateBatchVolatilityTokenPrice(
+          [0, 1],
+          [200000000, 200000000],
+          [proofHash, proofHash],
+        )
       ).wait();
     }
 
@@ -316,22 +351,40 @@ describe("Global", function () {
     // left 1, 2
     // right 2, 1
     await expect(
-      positioning.connect(account1).openPosition(orderLeft, signatureLeft, orderRight, signatureRight, liquidator),
+      positioning
+        .connect(account1)
+        .openPosition(orderLeft, signatureLeft, orderRight, signatureRight, liquidator),
     ).to.emit(positioning, "PositionChanged");
 
-    positionSize = await accountBalance.getTakerPositionSize(account1.address, orderLeft.makeAsset.virtualToken);
-    positionSize1 = await accountBalance.getTakerPositionSize(account2.address, orderLeft.makeAsset.virtualToken);
+    positionSize = await accountBalance.getTakerPositionSize(
+      account1.address,
+      orderLeft.makeAsset.virtualToken,
+    );
+    positionSize1 = await accountBalance.getTakerPositionSize(
+      account2.address,
+      orderLeft.makeAsset.virtualToken,
+    );
     console.table([
       ["positionSize", positionSize.toString()],
       [
         "open notional",
-        (await accountBalance.getTakerOpenNotional(account1.address, orderLeft.makeAsset.virtualToken)).toString(),
+        (
+          await accountBalance.getTakerOpenNotional(
+            account1.address,
+            orderLeft.makeAsset.virtualToken,
+          )
+        ).toString(),
       ],
       ["", ""],
       ["positionSize 1", positionSize1.toString()],
       [
         "open notional 1",
-        (await accountBalance.getTakerOpenNotional(account2.address, orderLeft.makeAsset.virtualToken)).toString(),
+        (
+          await accountBalance.getTakerOpenNotional(
+            account2.address,
+            orderLeft.makeAsset.virtualToken,
+          )
+        ).toString(),
       ],
     ]);
     console.log("Another call \n");
@@ -364,22 +417,40 @@ describe("Global", function () {
     // left 1, 2
     // right 2, 1
     await expect(
-      positioning.connect(account1).openPosition(orderLeft, signatureLeft, orderRight, signatureRight, liquidator),
+      positioning
+        .connect(account1)
+        .openPosition(orderLeft, signatureLeft, orderRight, signatureRight, liquidator),
     ).to.emit(positioning, "PositionChanged");
 
-    positionSize = await accountBalance.getTakerPositionSize(account1.address, orderLeft.makeAsset.virtualToken);
-    positionSize1 = await accountBalance.getTakerPositionSize(account2.address, orderLeft.makeAsset.virtualToken);
+    positionSize = await accountBalance.getTakerPositionSize(
+      account1.address,
+      orderLeft.makeAsset.virtualToken,
+    );
+    positionSize1 = await accountBalance.getTakerPositionSize(
+      account2.address,
+      orderLeft.makeAsset.virtualToken,
+    );
     console.table([
       ["positionSize", positionSize.toString()],
       [
         "open notional",
-        (await accountBalance.getTakerOpenNotional(account1.address, orderLeft.makeAsset.virtualToken)).toString(),
+        (
+          await accountBalance.getTakerOpenNotional(
+            account1.address,
+            orderLeft.makeAsset.virtualToken,
+          )
+        ).toString(),
       ],
       ["", ""],
       ["positionSize 1", positionSize1.toString()],
       [
         "open notional 1",
-        (await accountBalance.getTakerOpenNotional(account2.address, orderLeft.makeAsset.virtualToken)).toString(),
+        (
+          await accountBalance.getTakerOpenNotional(
+            account2.address,
+            orderLeft.makeAsset.virtualToken,
+          )
+        ).toString(),
       ],
     ]);
   });
@@ -427,22 +498,40 @@ describe("Global", function () {
     let signatureRight = await getSignature(orderRight, account2.address);
 
     await expect(
-      positioning.connect(account1).openPosition(orderLeft, signatureLeft, orderRight, signatureRight, liquidator),
+      positioning
+        .connect(account1)
+        .openPosition(orderLeft, signatureLeft, orderRight, signatureRight, liquidator),
     ).to.emit(positioning, "PositionChanged");
 
-    let positionSize = await accountBalance.getTakerPositionSize(account1.address, orderLeft.takeAsset.virtualToken);
-    let positionSize1 = await accountBalance.getTakerPositionSize(account2.address, orderLeft.takeAsset.virtualToken);
+    let positionSize = await accountBalance.getTakerPositionSize(
+      account1.address,
+      orderLeft.takeAsset.virtualToken,
+    );
+    let positionSize1 = await accountBalance.getTakerPositionSize(
+      account2.address,
+      orderLeft.takeAsset.virtualToken,
+    );
     console.table([
       ["positionSize", positionSize.toString()],
       [
         "open notional",
-        (await accountBalance.getTakerOpenNotional(account1.address, orderLeft.takeAsset.virtualToken)).toString(),
+        (
+          await accountBalance.getTakerOpenNotional(
+            account1.address,
+            orderLeft.takeAsset.virtualToken,
+          )
+        ).toString(),
       ],
       ["", ""],
       ["positionSize 1", positionSize1.toString()],
       [
         "open notional 1",
-        (await accountBalance.getTakerOpenNotional(account2.address, orderLeft.takeAsset.virtualToken)).toString(),
+        (
+          await accountBalance.getTakerOpenNotional(
+            account2.address,
+            orderLeft.takeAsset.virtualToken,
+          )
+        ).toString(),
       ],
     ]);
 
@@ -457,7 +546,11 @@ describe("Global", function () {
 
     for (let index = 0; index < 10; index++) {
       await (
-        await indexPriceOracle.updateBatchVolatilityTokenPrice([0, 1], [200000000, 200000000], [proofHash, proofHash])
+        await indexPriceOracle.updateBatchVolatilityTokenPrice(
+          [0, 1],
+          [200000000, 200000000],
+          [proofHash, proofHash],
+        )
       ).wait();
     }
 
@@ -488,22 +581,40 @@ describe("Global", function () {
     signatureRight = await getSignature(orderRight, account2.address);
 
     await expect(
-      positioning.connect(account1).openPosition(orderLeft, signatureLeft, orderRight, signatureRight, liquidator),
+      positioning
+        .connect(account1)
+        .openPosition(orderLeft, signatureLeft, orderRight, signatureRight, liquidator),
     ).to.emit(positioning, "PositionChanged");
 
-    positionSize = await accountBalance.getTakerPositionSize(account1.address, orderLeft.makeAsset.virtualToken);
-    positionSize1 = await accountBalance.getTakerPositionSize(account2.address, orderLeft.makeAsset.virtualToken);
+    positionSize = await accountBalance.getTakerPositionSize(
+      account1.address,
+      orderLeft.makeAsset.virtualToken,
+    );
+    positionSize1 = await accountBalance.getTakerPositionSize(
+      account2.address,
+      orderLeft.makeAsset.virtualToken,
+    );
     console.table([
       ["positionSize", positionSize.toString()],
       [
         "open notional",
-        (await accountBalance.getTakerOpenNotional(account1.address, orderLeft.makeAsset.virtualToken)).toString(),
+        (
+          await accountBalance.getTakerOpenNotional(
+            account1.address,
+            orderLeft.makeAsset.virtualToken,
+          )
+        ).toString(),
       ],
       ["", ""],
       ["positionSize 1", positionSize1.toString()],
       [
         "open notional 1",
-        (await accountBalance.getTakerOpenNotional(account2.address, orderLeft.makeAsset.virtualToken)).toString(),
+        (
+          await accountBalance.getTakerOpenNotional(
+            account2.address,
+            orderLeft.makeAsset.virtualToken,
+          )
+        ).toString(),
       ],
     ]);
 
@@ -538,22 +649,40 @@ describe("Global", function () {
     signatureRight = await getSignature(orderRight, account2.address);
 
     await expect(
-      positioning.connect(account1).openPosition(orderLeft, signatureLeft, orderRight, signatureRight, liquidator),
+      positioning
+        .connect(account1)
+        .openPosition(orderLeft, signatureLeft, orderRight, signatureRight, liquidator),
     ).to.emit(positioning, "PositionChanged");
 
-    positionSize = await accountBalance.getTakerPositionSize(account1.address, orderLeft.makeAsset.virtualToken);
-    positionSize1 = await accountBalance.getTakerPositionSize(account2.address, orderLeft.makeAsset.virtualToken);
+    positionSize = await accountBalance.getTakerPositionSize(
+      account1.address,
+      orderLeft.makeAsset.virtualToken,
+    );
+    positionSize1 = await accountBalance.getTakerPositionSize(
+      account2.address,
+      orderLeft.makeAsset.virtualToken,
+    );
     console.table([
       ["positionSize", positionSize.toString()],
       [
         "open notional",
-        (await accountBalance.getTakerOpenNotional(account1.address, orderLeft.makeAsset.virtualToken)).toString(),
+        (
+          await accountBalance.getTakerOpenNotional(
+            account1.address,
+            orderLeft.makeAsset.virtualToken,
+          )
+        ).toString(),
       ],
       ["", ""],
       ["positionSize 1", positionSize1.toString()],
       [
         "open notional 1",
-        (await accountBalance.getTakerOpenNotional(account2.address, orderLeft.makeAsset.virtualToken)).toString(),
+        (
+          await accountBalance.getTakerOpenNotional(
+            account2.address,
+            orderLeft.makeAsset.virtualToken,
+          )
+        ).toString(),
       ],
     ]);
 

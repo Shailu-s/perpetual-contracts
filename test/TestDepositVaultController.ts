@@ -43,7 +43,9 @@ describe("Vault Controller deposit tests", function () {
     positioningConfig = await upgrades.deployProxy(positioningConfigFactory, []);
 
     const accountBalanceFactory = await ethers.getContractFactory("AccountBalance");
-    accountBalance = await upgrades.deployProxy(accountBalanceFactory, [positioningConfig.address]);
+    accountBalance = await upgrades.deployProxy(accountBalanceFactory, [
+      positioningConfig.address,
+    ]);
 
     const vaultContractFactory = await ethers.getContractFactory("VaultController");
     vaultController = await upgrades.deployProxy(vaultContractFactory, [
@@ -124,7 +126,9 @@ describe("Vault Controller deposit tests", function () {
 
     // check event has been sent
     await expect(
-      vaultController.connect(alice).deposit(volmexPerpPeriphery.address, USDC.address, alice.address, amount),
+      vaultController
+        .connect(alice)
+        .deposit(volmexPerpPeriphery.address, USDC.address, alice.address, amount),
     )
       .to.emit(USDCVaultContract, "Deposited")
       .withArgs(USDC.address, alice.address, amount);
@@ -136,7 +140,9 @@ describe("Vault Controller deposit tests", function () {
     expect(await USDC.balanceOf(USDCVaultAddress)).to.eq(parseUnits("100", await USDC.decimals()));
 
     // // update sender's balance
-    expect(await vaultController.getBalanceByToken(alice.address, USDC.address)).to.eq("100000000000000000000");
+    expect(await vaultController.getBalanceByToken(alice.address, USDC.address)).to.eq(
+      "100000000000000000000",
+    );
   });
 
   it("Negative Test for deposit function", async () => {
@@ -147,7 +153,9 @@ describe("Vault Controller deposit tests", function () {
 
     // test fail for no vault from this token
     await expect(
-      vaultController.connect(alice).deposit(volmexPerpPeriphery.address, USDC.address, alice.address, amount),
+      vaultController
+        .connect(alice)
+        .deposit(volmexPerpPeriphery.address, USDC.address, alice.address, amount),
     ).to.be.revertedWith("ERC20: insufficient allowance");
   });
 
@@ -158,5 +166,4 @@ describe("Vault Controller deposit tests", function () {
 
     expect(USDCVaultAddress).to.not.equal("");
   });
-
 });

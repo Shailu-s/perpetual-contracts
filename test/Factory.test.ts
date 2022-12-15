@@ -1,7 +1,7 @@
 import { expect } from "chai";
 import { Signer } from "ethers";
 import { ethers, upgrades } from "hardhat";
-describe('PerpFactory', function () {
+describe("PerpFactory", function () {
   let MatchingEngine;
   let matchingEngine;
   let MarkPriceOracle;
@@ -28,7 +28,7 @@ describe('PerpFactory', function () {
   let vault;
   let TestERC20;
   let USDC;
-  const ZERO_ADDR = '0x0000000000000000000000000000000000000000';
+  const ZERO_ADDR = "0x0000000000000000000000000000000000000000";
 
   this.beforeAll(async () => {
     MatchingEngine = await ethers.getContractFactory("MatchingEngine");
@@ -48,16 +48,10 @@ describe('PerpFactory', function () {
 
   beforeEach(async () => {
     const [owner] = await ethers.getSigners();
-    
-    indexPriceOracle = await upgrades.deployProxy(
-      IndexPriceOracle,
-      [
-        owner.address,
-      ],
-      { 
-        initializer: "initialize",
-      }
-    );
+
+    indexPriceOracle = await upgrades.deployProxy(IndexPriceOracle, [owner.address], {
+      initializer: "initialize",
+    });
     await indexPriceOracle.deployed();
     volmexBaseToken = await VolmexBaseToken.deploy();
     await volmexBaseToken.deployed();
@@ -65,18 +59,16 @@ describe('PerpFactory', function () {
     volmexQuoteToken = await VolmexQuoteToken.deploy();
     await volmexQuoteToken.deployed();
 
-    USDC = await TestERC20.deploy()
-    await USDC.__TestERC20_init("TestUSDC", "USDC", 6)
+    USDC = await TestERC20.deploy();
+    await USDC.__TestERC20_init("TestUSDC", "USDC", 6);
     await USDC.deployed();
 
-    markPriceOracle = await upgrades.deployProxy(MarkPriceOracle, 
-      [
-        [1000000],
-        [volmexBaseToken.address]
-      ],
-      { 
+    markPriceOracle = await upgrades.deployProxy(
+      MarkPriceOracle,
+      [[1000000], [volmexBaseToken.address]],
+      {
         initializer: "initialize",
-      }
+      },
     );
     await markPriceOracle.deployed();
 
@@ -86,17 +78,17 @@ describe('PerpFactory', function () {
     ]);
     await matchingEngine.deployed();
 
-    positioningConfig = await PositioningConfig.deploy()
+    positioningConfig = await PositioningConfig.deploy();
     await positioningConfig.deployed();
 
-    accountBalance = await AccountBalance.deploy()
+    accountBalance = await AccountBalance.deploy();
     await accountBalance.deployed();
 
-    positioning = await Positioning.deploy()    
+    positioning = await Positioning.deploy();
     await positioning.deployed();
     await positioning.setPositioning(positioning.address);
 
-    vault = await Vault.deploy()
+    vault = await Vault.deploy();
     await vault.deployed();
 
     vaultController = await VaultController.deploy();
@@ -110,11 +102,11 @@ describe('PerpFactory', function () {
         vaultController.address,
         vault.address,
         positioning.address,
-        accountBalance.address
+        accountBalance.address,
       ],
       {
-        initializer: "initialize"
-      }
+        initializer: "initialize",
+      },
     );
     await factory.deployed();
 
@@ -122,8 +114,8 @@ describe('PerpFactory', function () {
       VirtualTokenTest,
       ["VirtualToken", "VTK", true],
       {
-        initializer: "initialize"
-      }
+        initializer: "initialize",
+      },
     );
     await virtualTokenTest.deployed();
   });
@@ -132,16 +124,20 @@ describe('PerpFactory', function () {
     const receipt = await factory.deployed();
     expect(receipt.confirmations).not.equal(0);
   });
-  it("should fail to initialize again",async() =>{
-    await expect(factory.initialize(volmexBaseToken.address,
-      volmexQuoteToken.address,
-      vaultController.address,
-      vault.address,
-      positioning.address,
-      accountBalance.address)).to.be.revertedWith("Initializable: contract is already initialized")
-  })
+  it("should fail to initialize again", async () => {
+    await expect(
+      factory.initialize(
+        volmexBaseToken.address,
+        volmexQuoteToken.address,
+        vaultController.address,
+        vault.address,
+        positioning.address,
+        accountBalance.address,
+      ),
+    ).to.be.revertedWith("Initializable: contract is already initialized");
+  });
 
-  describe('Clone:', function() {
+  describe("Clone:", function () {
     it("Should set token implementation contract correctly", async () => {
       await factory.cloneBaseToken("MyTestToken", "MTK", indexPriceOracle.address);
       const tokenImplementation = await factory.baseTokenImplementation();
@@ -165,24 +161,23 @@ describe('PerpFactory', function () {
       expect(cloneTokenAddress).not.equal(ZERO_ADDR);
     });
 
-    it("should clone Quote token", async() => {
-      await factory.cloneQuoteToken("GoatToken","GTK");
+    it("should clone Quote token", async () => {
+      await factory.cloneQuoteToken("GoatToken", "GTK");
       const cloneQuoteToken = await factory.quoteTokenByIndex(0);
       expect(cloneQuoteToken).not.equal(ZERO_ADDR);
-    })
-   
-    
+    });
+
     it("Should deploy the complete perp ecosystem", async () => {
       const index = (await factory.perpIndexCount()).toString();
-      await (await factory.clonePerpEcosystem(
+      await await factory.clonePerpEcosystem(
         positioningConfig.address,
         matchingEngine.address,
         markPriceOracle.address,
         indexPriceOracle.address,
-        index
-      ))
+        index,
+      );
     });
-    it("Should Clone Vault",async() =>{
+    it("Should Clone Vault", async () => {
       const index = (await factory.perpIndexCount()).toString();
       await factory.clonePerpEcosystem(
         positioningConfig.address,
@@ -190,23 +185,34 @@ describe('PerpFactory', function () {
         markPriceOracle.address,
         indexPriceOracle.address,
         index,
-      )
-      const vaultClone = await factory.cloneVault(USDC.address,true, positioningConfig.address,accountBalance.address,vault.address,0)
-    });
-
-    it("should fail to clone vault because or admin access ", async()=>{
-      const [owner,account1] = await ethers.getSigners();
-      const index = (await factory.perpIndexCount()).toString();
-      await expect(factory.connect(account1).clonePerpEcosystem(
+      );
+      const vaultClone = await factory.cloneVault(
+        USDC.address,
+        true,
         positioningConfig.address,
-        matchingEngine.address,
-        markPriceOracle.address,
-        indexPriceOracle.address,
-        index,
-      )).to.be.revertedWith("PF_NCD")
+        accountBalance.address,
+        vault.address,
+        0,
+      );
     });
 
-    it("Should fail to Clone Vault",async() =>{ 
+    it("should fail to clone vault because or admin access ", async () => {
+      const [owner, account1] = await ethers.getSigners();
+      const index = (await factory.perpIndexCount()).toString();
+      await expect(
+        factory
+          .connect(account1)
+          .clonePerpEcosystem(
+            positioningConfig.address,
+            matchingEngine.address,
+            markPriceOracle.address,
+            indexPriceOracle.address,
+            index,
+          ),
+      ).to.be.revertedWith("PF_NCD");
+    });
+
+    it("Should fail to Clone Vault", async () => {
       const index = (await factory.perpIndexCount()).toString();
       await factory.clonePerpEcosystem(
         positioningConfig.address,
@@ -214,12 +220,21 @@ describe('PerpFactory', function () {
         markPriceOracle.address,
         indexPriceOracle.address,
         index,
-      )
-     await expect(factory.cloneVault(USDC.address,true, positioningConfig.address,accountBalance.address,vault.address,1)).to.be.revertedWith("PerpFactory: Vault Controller Not Found");
-    })
+      );
+      await expect(
+        factory.cloneVault(
+          USDC.address,
+          true,
+          positioningConfig.address,
+          accountBalance.address,
+          vault.address,
+          1,
+        ),
+      ).to.be.revertedWith("PerpFactory: Vault Controller Not Found");
+    });
   });
 
-  describe('Price Feed', async () => {
+  describe("Price Feed", async () => {
     const newVolmexBaseToken = await upgrades.deployProxy(
       VolmexBaseToken,
       [
@@ -229,22 +244,19 @@ describe('PerpFactory', function () {
       ],
       {
         initializer: "initialize",
-      }
+      },
     );
 
     it("Should update the priceFeed", async () => {
       const [owner] = await ethers.getSigners();
 
-      let newIndexPriceOracle = await upgrades.deployProxy(
-        IndexPriceOracle,
-        [owner.address],
-        { 
-          initializer: "initialize",
-        }
-      );
+      let newIndexPriceOracle = await upgrades.deployProxy(IndexPriceOracle, [owner.address], {
+        initializer: "initialize",
+      });
 
       await expect(newVolmexBaseToken.setPriceFeed(newIndexPriceOracle.address))
-        .to.emit(newVolmexBaseToken, "PriceFeedChanged").withArgs(newIndexPriceOracle.address);
+        .to.emit(newVolmexBaseToken, "PriceFeedChanged")
+        .withArgs(newIndexPriceOracle.address);
     });
 
     it("Should return the current priceFeed", async () => {
@@ -253,7 +265,7 @@ describe('PerpFactory', function () {
     });
   });
 
-  describe('Index Price', () => {
+  describe("Index Price", () => {
     it("Should return the current index price", async () => {
       await indexPriceOracle.addIndexDataPoint(0, 250000000);
       const newVolmexBaseToken = await upgrades.deployProxy(
@@ -262,11 +274,11 @@ describe('PerpFactory', function () {
           "VolmexBaseToken", // nameArg
           "VBT", // symbolArg,
           indexPriceOracle.address, // priceFeedArg
-          true
+          true,
         ],
         {
           initializer: "initialize",
-        }
+        },
       );
 
       const volmexBaseTokenIndexPrice = await newVolmexBaseToken.getIndexPrice(0);
@@ -275,15 +287,15 @@ describe('PerpFactory', function () {
     });
   });
 
-  describe('Virtual Token', () => {
-    describe('Deployment', () => {
+  describe("Virtual Token", () => {
+    describe("Deployment", () => {
       it("Should deploy VirtualToken", async () => {
         virtualTokenTest = await upgrades.deployProxy(
           VirtualTokenTest,
           ["VirtualToken", "VTK", true],
           {
-            initializer: "initialize"
-          }
+            initializer: "initialize",
+          },
         );
 
         let receipt = await virtualTokenTest.deployed();
@@ -291,36 +303,35 @@ describe('PerpFactory', function () {
       });
     });
 
-    describe('Mint', () => {
+    describe("Mint", () => {
       it("Should mint max tokens to account", async () => {
         const [owner, account1] = await ethers.getSigners();
-        
+
         await expect(virtualTokenTest.mintMaximumTo(account1.address))
-        .to.emit(virtualTokenTest, "Transfer").withArgs(
-          ZERO_ADDR,
-          account1.address,
-          '115792089237316195423570985008687907853269984665640564039457584007913129639935' // type(uint256).max
-        );
+          .to.emit(virtualTokenTest, "Transfer")
+          .withArgs(
+            ZERO_ADDR,
+            account1.address,
+            "115792089237316195423570985008687907853269984665640564039457584007913129639935", // type(uint256).max
+          );
       });
     });
 
-    describe('White list', () => {
+    describe("White list", () => {
       it("Should add account to white list", async () => {
         const [owner, account1] = await ethers.getSigners();
-        
+
         await expect(virtualTokenTest.addWhitelist(account1.address))
-        .to.emit(virtualTokenTest, "WhitelistAdded").withArgs(
-          account1.address
-        );
+          .to.emit(virtualTokenTest, "WhitelistAdded")
+          .withArgs(account1.address);
       });
 
       it("Should return true if white listed account is present", async () => {
         const [owner, account1] = await ethers.getSigners();
-        
+
         await expect(virtualTokenTest.addWhitelist(account1.address))
-        .to.emit(virtualTokenTest, "WhitelistAdded").withArgs(
-          account1.address
-        );
+          .to.emit(virtualTokenTest, "WhitelistAdded")
+          .withArgs(account1.address);
 
         let isInWhitelist = await virtualTokenTest.isInWhitelist(account1.address);
         expect(isInWhitelist).to.equal(true);
@@ -337,10 +348,9 @@ describe('PerpFactory', function () {
         const [owner, account1] = await ethers.getSigners();
 
         await expect(virtualTokenTest.addWhitelist(account1.address))
-        .to.emit(virtualTokenTest, "WhitelistAdded").withArgs(
-          account1.address
-        );
-        
+          .to.emit(virtualTokenTest, "WhitelistAdded")
+          .withArgs(account1.address);
+
         expect(await virtualTokenTest.removeWhitelist(account1.address))
           .to.emit(virtualTokenTest, "WhitelistRemoved")
           .withArgs(account1.address);
@@ -350,30 +360,27 @@ describe('PerpFactory', function () {
         const [owner, account1] = await ethers.getSigners();
 
         await expect(virtualTokenTest.addWhitelist(account1.address))
-        .to.emit(virtualTokenTest, "WhitelistAdded").withArgs(
-          account1.address
-        );
+          .to.emit(virtualTokenTest, "WhitelistAdded")
+          .withArgs(account1.address);
 
         await expect(virtualTokenTest.mintMaximumTo(account1.address))
-        .to.emit(virtualTokenTest, "Transfer").withArgs(
-          ZERO_ADDR,
-          account1.address,
-          '115792089237316195423570985008687907853269984665640564039457584007913129639935' // type(uint256).max
+          .to.emit(virtualTokenTest, "Transfer")
+          .withArgs(
+            ZERO_ADDR,
+            account1.address,
+            "115792089237316195423570985008687907853269984665640564039457584007913129639935", // type(uint256).max
+          );
+
+        await expect(virtualTokenTest.removeWhitelist(account1.address)).to.be.revertedWith(
+          "VT_BNZ",
         );
-        
-        await expect(virtualTokenTest.removeWhitelist(account1.address))
-          .to.be.revertedWith("VT_BNZ");
       });
 
       it("Should fail while calling token transfer when from address is not whitelisted", async () => {
         const [owner, account1] = await ethers.getSigners();
 
         await expect(
-          virtualTokenTest.beforeTokenTransfer(
-            owner.address,
-            account1.address,
-            10,
-          )
+          virtualTokenTest.beforeTokenTransfer(owner.address, account1.address, 10),
         ).to.be.revertedWith("VT_NW");
       });
 
@@ -381,9 +388,8 @@ describe('PerpFactory', function () {
         const [owner, account1] = await ethers.getSigners();
 
         await expect(virtualTokenTest.addWhitelist(owner.address))
-        .to.emit(virtualTokenTest, "WhitelistAdded").withArgs(
-          owner.address
-        );
+          .to.emit(virtualTokenTest, "WhitelistAdded")
+          .withArgs(owner.address);
 
         let receipt = await virtualTokenTest.beforeTokenTransfer(
           owner.address,
@@ -397,15 +403,10 @@ describe('PerpFactory', function () {
         const [owner, account1] = await ethers.getSigners();
 
         await expect(virtualTokenTest.addWhitelist(owner.address))
-        .to.emit(virtualTokenTest, "WhitelistAdded").withArgs(
-          owner.address
-        );
-        
-        let receipt = await virtualTokenTest.beforeTokenTransfer(
-          ZERO_ADDR,
-          account1.address,
-          10,
-        );
+          .to.emit(virtualTokenTest, "WhitelistAdded")
+          .withArgs(owner.address);
+
+        let receipt = await virtualTokenTest.beforeTokenTransfer(ZERO_ADDR, account1.address, 10);
         expect(receipt.confirmations).not.equal(0);
       });
     });
