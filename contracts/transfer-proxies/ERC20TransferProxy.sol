@@ -2,7 +2,6 @@
 
 pragma solidity =0.8.12;
 
-import "../helpers/OperatorRole.sol";
 import "../helpers/RoleManager.sol";
 import "../interfaces/IERC20TransferProxy.sol";
 
