@@ -58,5 +58,10 @@ describe("ParentToken", function(){
         expect(await volmexBaseToken.getPriceFeed()).to.equal(volmexPriceOracle.address);
         
 			})
+		describe("Getters", function(){
+			it("Should get index price",async()=>{
+				expect(await volmexBaseToken.getIndexPrice(0)).to.eq(10000000000)
+			})
+		})	
 	})
 })

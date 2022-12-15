@@ -291,9 +291,8 @@ describe("Vault", function () {
           alice.address,
           amount
         )
-    ).to.be.revertedWith("V_NEFC");
-  
-
+    ).to.be.revertedWith("V_NEFC")
+  })
   it("should not allow user to withdraw from ETH vault if vault balance is empty", async () => {
     const amount = parseUnits("100", await ETH.decimals())
     await positioningConfig.setSettlementTokenBalanceCap(amount)
@@ -478,13 +477,13 @@ describe("Vault", function () {
       await expect(vault.connect(owner).transferFundToVault(USDC.address, amount))
         .to.emit(vault, "BorrowFund")
         .withArgs(owner.address, amount)
-      console.log(" here")
+  
       // reduce owner balance
       expect(await USDC.balanceOf(owner.address)).to.eq("10000000000000000000900000000")
       
       // increase vault balance
       expect(await USDC.balanceOf(vault.address)).to.eq(parseUnits("100", await USDC.decimals()))
-      console.log(" here")
+
       // Debt increases on vault
       expect(await vault.getTotalDebt()).to.eq(parseUnits("100", await USDC.decimals()))
     })
@@ -631,4 +630,5 @@ describe("Vault", function () {
       expect(await vault.getSettlementToken()).to.be.equal(NewUSDC.address)
     })
   })
+})
 })

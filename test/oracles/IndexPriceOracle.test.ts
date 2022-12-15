@@ -23,7 +23,7 @@ describe("volmexOracle", function () {
 
   this.beforeAll(async function () {
     accounts = await ethers.getSigners();
-    volmexOracleFactory = await ethers.getContractFactory("volmexOracle");
+    volmexOracleFactory = await ethers.getContractFactory("IndexPriceOracle");
     collateralFactory = await ethers.getContractFactory("TestERC20");
     volatilityFactory = await ethers.getContractFactory("VolmexPositionToken");
     protocolFactory = await ethers.getContractFactory("VolmexProtocol");
