@@ -2,7 +2,7 @@ import { expect } from "chai";
 import { ethers, upgrades } from "hardhat";
 import { VirtualToken__factory } from "../../typechain";
 
-describe("Virtual Token",function(){
+describe("VirtualToken",function(){
     let VirtualToken;
     let virtualToken;
     let isBase = true;

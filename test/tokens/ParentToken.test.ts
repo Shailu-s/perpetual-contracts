@@ -2,7 +2,7 @@ import { expect } from "chai";
 import { ethers, upgrades } from "hardhat";
 import { initial } from "lodash";
 
-describe("Parent Token", function(){
+describe("ParentToken", function(){
   let VolmexBaseToken
   let volmexBaseToken
   let IndexPriceOracle
@@ -21,7 +21,7 @@ describe("Parent Token", function(){
         ],
         {
          initializer : "initialize"   
-    })
+     })
    
 	  volmexBaseToken = await upgrades.deployProxy(
 			VolmexBaseToken,
@@ -36,6 +36,14 @@ describe("Parent Token", function(){
 			}
 		)
 	})
+	  describe("deployment" ,function(){
+			it("should fail to again", async()=>{
+        await expect(volmexBaseToken.initialize("MyTestToken",
+				"MKT",
+				indexPriceOracle.address,
+				true)).to.be.revertedWith("Initializable: contract is already initialized");
+			})
+		})
 		describe("setter and getter methods",function(){
 			it("Should set price feed", async()=>{
         const  volmexPriceOracle = await upgrades.deployProxy(
@@ -48,7 +56,7 @@ describe("Parent Token", function(){
 			  })
 				expect(await volmexBaseToken.setPriceFeed(volmexPriceOracle.address)).to.emit(volmexBaseToken,"PriceFeedChanged").withArgs(volmexPriceOracle.address);
         expect(await volmexBaseToken.getPriceFeed()).to.equal(volmexPriceOracle.address);
-
+        
 			})
 	})
 })

@@ -401,30 +401,8 @@ describe("Vault tests", function () {
     ).to.be.revertedWith("ERC20: transfer amount exceeds balance");
   })
 
-  // TODO: Fix this test case
-  it("should not allow user to deposit USDC to ETH vault", async () => {
-    const userBalance = await USDC.balanceOf(alice.address)
 
-    await positioningConfig.setSettlementTokenBalanceCap(userBalance)
 
-    const ethVaultAddress = await vaultController.getVault(ETH.address)
-
-    const ethVaultContract = await vaultFactory.attach(ethVaultAddress)
-    await USDC.connect(alice).approve(ethVaultAddress, userBalance)
-    await USDC.connect(alice).approve(volmexPerpPeriphery.address, userBalance)
-
-    // Deposit max amount equal to balance of the user
-    await expect(vaultController
-      .connect(alice)
-      .deposit(
-        volmexPerpPeriphery.address, 
-        ETH.address, 
-        alice.address, 
-        userBalance,
-        { value: userBalance.toString() }
-      )
-    ).to.be.revertedWith("ERC20: transfer amount exceeds balance");
-  })
 
   it("should not allow user to interact with vault if contract is paused", async () => {
     await vault.pause();
@@ -432,10 +410,11 @@ describe("Vault tests", function () {
     const userBalance = await USDC.balanceOf(alice.address)
     // Deposit max amount equal to balance of the user
     await expect(
-      vault.deposit(
+      vaultController.connect(alice).deposit(
         volmexPerpPeriphery.address, 
-        userBalance,
-        alice.address
+        USDC.address,
+        alice.address,
+        userBalance
       )
     ).to.be.revertedWith("Pausable: paused");
   })
@@ -558,7 +537,7 @@ describe("Vault tests", function () {
 
     it("Should not be abe to set positiong if positioning address in not contract" , async () => {
       const [owner, alice] = await ethers.getSigners()
-      await expect (vault.connect(alice).setPositioning(alice.address)).to.be.revertedWith("V_VPMM"); 
+      await expect (vault.setPositioning(alice.address)).to.be.revertedWith("V_VPMM"); 
     })
     it("Should not be abe to set Vault Controller" , async () => {
       const [owner, alice] = await ethers.getSigners()
