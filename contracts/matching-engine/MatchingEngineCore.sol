@@ -5,13 +5,12 @@ pragma solidity =0.8.12;
 import { PausableUpgradeable } from "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
 
 import "../libs/LibFill.sol";
-
 import "../interfaces/IMarkPriceOracle.sol";
 import "../interfaces/IMatchingEngine.sol";
-
-import "./AssetMatcher.sol";
-import "../helpers/OwnerPausable.sol";
 import "../helpers/RoleManager.sol";
+import "./AssetMatcher.sol";
+
+// TODO: Add method to pause and unpause matching
 
 abstract contract MatchingEngineCore is
     PausableUpgradeable,

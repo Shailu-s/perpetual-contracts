@@ -20,8 +20,11 @@ import "../helpers/RoleManager.sol";
  * @author volmex.finance [security@volmexlabs.com]
  */
 contract PerpFactory is Initializable, IPerpFactory, RoleManager {
-    // Volatility token implementation contract for factory
-    address public tokenImplementation;
+    // virtual base token implementation contract for factory
+    address public baseTokenImplementation;
+
+    // virtual quote token implementation contract for factory
+    address public quoteTokenImplementation;
 
     // Vault Controller implementation contract for factory
     address public vaultControllerImplementation;
@@ -66,13 +69,15 @@ contract PerpFactory is Initializable, IPerpFactory, RoleManager {
      * @notice Intializes the Factory and stores the implementations
      */
     function initialize(
-        address _tokenImplementation,
+        address _baseTokenImplementation,
+        address _quoteTokenImplementation,
         address _vaultControllerImplementation,
         address _vaultImplementation,
         address _positioningImplementation,
         address _accountBalanceImplementation
     ) external initializer {
-        tokenImplementation = _tokenImplementation;
+        baseTokenImplementation = _baseTokenImplementation;
+        quoteTokenImplementation = _quoteTokenImplementation;
         vaultControllerImplementation = _vaultControllerImplementation;
         vaultImplementation = _vaultImplementation;
         positioningImplementation = _positioningImplementation;
@@ -98,7 +103,7 @@ contract PerpFactory is Initializable, IPerpFactory, RoleManager {
     ) external returns (IVolmexBaseToken volmexBaseToken) {
         _requireClonesDeployer();
         bytes32 salt = keccak256(abi.encodePacked(baseTokenIndexCount, _name, _symbol));
-        volmexBaseToken = IVolmexBaseToken(Clones.cloneDeterministic(tokenImplementation, salt));
+        volmexBaseToken = IVolmexBaseToken(Clones.cloneDeterministic(baseTokenImplementation, salt));
         volmexBaseToken.initialize(_name, _symbol, _priceFeed, true);
         baseTokenByIndex[baseTokenIndexCount] = volmexBaseToken;
         emit TokenCreated(baseTokenIndexCount, address(volmexBaseToken));
@@ -122,7 +127,7 @@ contract PerpFactory is Initializable, IPerpFactory, RoleManager {
     {
         _requireClonesDeployer();
         bytes32 salt = keccak256(abi.encodePacked(quoteTokenIndexCount, _name, _symbol));
-        volmexQuoteToken = IVolmexQuoteToken(Clones.cloneDeterministic(tokenImplementation, salt));
+        volmexQuoteToken = IVolmexQuoteToken(Clones.cloneDeterministic(quoteTokenImplementation, salt));
         volmexQuoteToken.initialize(_name, _symbol, false);
         quoteTokenByIndex[quoteTokenIndexCount] = volmexQuoteToken;
         emit TokenCreated(quoteTokenIndexCount, address(volmexQuoteToken));

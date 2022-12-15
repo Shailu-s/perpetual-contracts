@@ -10,7 +10,6 @@ import "@openzeppelin/hardhat-defender"
 import "@nomiclabs/hardhat-etherscan"
 import { HardhatUserConfig } from "hardhat/config"
 import "solidity-coverage"
-import "./mocha-test"
 
 import { config as dotEnvConfig } from "dotenv"
 dotEnvConfig()
@@ -61,12 +60,6 @@ const config: HardhatUserConfig = {
     enabled: true,
     currency: "USD",
     gasPrice: 21,
-  },
-  mocha: {
-    require: ["ts-node/register/files"],
-    jobs: 4,
-    timeout: 120000,
-    color: true,
   },
   etherscan: {
     apiKey: process.env.ETHERSCAN_API_KEY,

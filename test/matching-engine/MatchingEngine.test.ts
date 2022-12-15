@@ -36,7 +36,9 @@ describe("MatchingEngine", function () {
   const ORDER = "0xf555eb98";
   const STOP_LOSS_LIMIT_ORDER = "0xeeaed735";
   const TAKE_PROFIT_LIMIT_ORDER = "0xe0fc7f94";
-
+  async function getSignature(orderObj, signer) {
+    return sign(orderObj, signer, matchingEngine.address)
+  }
   this.beforeAll(async () => {
     MatchingEngine = await ethers.getContractFactory("MatchingEngineTest")
     MarkPriceOracle = await ethers.getContractFactory("MarkPriceOracle")
@@ -114,7 +116,7 @@ describe("MatchingEngine", function () {
       ORDER,
       deadline,
       account1.address,
-      Asset(virtualToken.address, one.toString()),
+      Asset(virtualToken.address, two.toString()),
       Asset(volmexBaseToken.address, two.toString()),
       1,
       0,
@@ -126,7 +128,7 @@ describe("MatchingEngine", function () {
       deadline,
       account2.address,
       Asset(volmexBaseToken.address, one.toString()),
-      Asset(virtualToken.address, two.toString()),
+      Asset(virtualToken.address, one.toString()),
       2,
       0,
       false,
@@ -160,7 +162,30 @@ describe("MatchingEngine", function () {
       const order1 = Order(ORDER, deadline, owner.address, orderLeft.makeAsset, orderLeft.takeAsset, 0, 0, true);
       await expect(matchingEngine.cancelOrder(order1)).to.be.revertedWith("V_PERP_M: 0 salt can't be used")
     })
+    it("should fail to cancel order", async () => {
+      const [owner, account1,accoun2] = await ethers.getSigners()
 
+      const order = Order(
+        ORDER,
+        10,
+        account1.address,
+        Asset(virtualToken.address, "20"),
+        Asset(virtualToken.address, "20"),
+        1,
+        0,
+        true,
+      )
+
+      let ordersList = []
+
+      for (let index = 0; index < 171; index++) {
+        ordersList.push(order);
+      }
+      
+
+      await expect( matchingEngine.connect(account2).cancelAllOrders(0)).to.be.revertedWith("MEC_NCCAO")
+      
+    })
     // TODO: Need to check for event or something else
     it("should cancel multiple orders", async () => {
       const order1 = Order(ORDER, deadline, owner.address, orderLeft.makeAsset, orderLeft.takeAsset, 1, 0, true);
@@ -186,7 +211,7 @@ describe("MatchingEngine", function () {
 
   describe("Match orders:", function () {
     describe("Failure:", function () {
-      xit("should fail to match orders as left order assets don't match", async () => {
+      it("should fail to match orders as left order assets don't match", async () => {
         const [owner, account1, account2] = await ethers.getSigners()
 
         await virtualToken.addWhitelist(account1.address)
@@ -209,8 +234,8 @@ describe("MatchingEngine", function () {
           ORDER,
           deadline,
           account2.address,
-          Asset("0x0000000000000000000000000000000000000000", "20"),
           Asset(virtualToken.address, "20"),
+          Asset(volmexBaseToken.address, "20"),
           1,
           0,
           false,
@@ -220,11 +245,10 @@ describe("MatchingEngine", function () {
         let signatureRight = await getSignature(orderRight, account2.address)
 
         await expect(matchingEngine.matchOrders(orderLeft, orderRight)).to.be.revertedWith(
-          "V_PERP_M: make assets don't match",
+          "V_PERP_M: left make assets don't match",
         )
       })
-
-      xit("should fail to match orders as right order assets don't match", async () => {
+      it("should fail to match orders as left order .takevalue == 0", async () => {
         const [owner, account1, account2] = await ethers.getSigners()
 
         await virtualToken.addWhitelist(account1.address)
@@ -236,7 +260,81 @@ describe("MatchingEngine", function () {
           ORDER,
           deadline,
           account1.address,
+          Asset(volmexBaseToken.address, "20"),
+          Asset(virtualToken.address, "0"),
+          1,
+          0,
+          true,
+        )
+
+        const orderRight = Order(
+          ORDER,
+          deadline,
+          account2.address,
           Asset(virtualToken.address, "20"),
+          Asset(volmexBaseToken.address, "20"),
+          1,
+          0,
+          false,
+        )
+
+        let signatureLeft = await getSignature(orderLeft, account1.address)
+        let signatureRight = await getSignature(orderRight, account2.address)
+
+        await expect(matchingEngine.matchOrders(orderLeft, orderRight)).to.be.revertedWith(
+          "V_PERP_M: nothing to fill",
+        )
+      })
+      it (" should fail if trader for both the orders in same" ,async()=>{
+        const [owner, account1] = await ethers.getSigners()
+
+        await virtualToken.addWhitelist(account1.address)
+        await virtualToken.addWhitelist(account2.address)
+        await virtualToken.connect(account1).approve(matchingEngine.address, 1000000000000000)
+        await virtualToken.connect(account2).approve(matchingEngine.address, 1000000000000000)
+
+        const orderLeft = Order(
+          ORDER,
+          deadline,
+          account1.address,
+          Asset(virtualToken.address, "30"),
+          Asset(virtualToken.address, "20"),
+          1,
+          0,
+          true,
+        )
+
+        const orderRight = Order(
+          ORDER,
+          deadline,
+          account1.address,
+          Asset(virtualToken.address, "20"),
+          Asset(virtualToken.address, "20"),
+          1,
+          0,
+          false,
+        )
+
+        let signatureLeft = await getSignature(orderLeft, account1.address)
+        let signatureRight = await getSignature(orderRight, account1.address)
+        await expect(matchingEngine.matchOrders(orderLeft, orderRight)).to.be.revertedWith(
+          "V_PERP_M: order verification failed",
+        )
+        console.log("Here at failing order due to same traders")
+      })
+      it("Should Not match orders since executer in not authorised",async ()=>{
+      const [owner, account1, account2] = await ethers.getSigners()
+
+        await virtualToken.addWhitelist(account1.address)
+        await virtualToken.addWhitelist(account2.address)
+        await virtualToken.connect(account1).approve(matchingEngine.address, 1000000000000000)
+        await virtualToken.connect(account2).approve(matchingEngine.address, 1000000000000000)
+
+        const orderLeft = Order(
+          ORDER,
+          deadline,
+          account1.address,
+          Asset(virtualToken.address, "30"),
           Asset(virtualToken.address, "20"),
           1,
           0,
@@ -257,8 +355,48 @@ describe("MatchingEngine", function () {
         let signatureLeft = await getSignature(orderLeft, account1.address)
         let signatureRight = await getSignature(orderRight, account2.address)
 
+        await expect(matchingEngine.connect(account1).matchOrders(orderLeft, orderRight)).to.be.revertedWith(
+          "MEC_NCMO",
+        )
+        console.log(" Access not provided")
+      })
+    
+
+      it("should fail to match orders as left order take assets don't match", async () => {
+        const [owner, account1, account2] = await ethers.getSigners()
+
+        await virtualToken.addWhitelist(account1.address)
+        await virtualToken.addWhitelist(account2.address)
+        await virtualToken.connect(account1).approve(matchingEngine.address, 1000000000000000)
+        await virtualToken.connect(account2).approve(matchingEngine.address, 1000000000000000)
+
+        const orderLeft = Order(
+          ORDER,
+          deadline,
+          account1.address,
+          Asset(volmexBaseToken.address, "20"),
+          Asset(volmexBaseToken.address, "20"),
+          1,
+          0,
+          true,
+        )
+
+        const orderRight = Order(
+          ORDER,
+          deadline,
+          account2.address,
+          Asset(virtualToken.address, "20"),
+          Asset(volmexBaseToken.address, "20"),
+          1,
+          0,
+          false,
+        )
+
+        let signatureLeft = await getSignature(orderLeft, account1.address)
+        let signatureRight = await getSignature(orderRight, account2.address)
+
         await expect(matchingEngine.matchOrders(orderLeft, orderRight)).to.be.revertedWith(
-          "V_PERP_M: assets don't match",
+          "V_PERP_M: left take assets don't match",
         )
       })
     })
@@ -274,6 +412,68 @@ describe("MatchingEngine", function () {
       it("should match orders & emit event when orderRight salt is 0", async () => {
         orderRight.salt = 0;
 
+        await expect(matchingEngine.matchOrders(orderLeft, orderRight)).to.emit(
+          matchingEngine,
+          "Matched",
+        )
+      })
+      it("should match orders & emit event when orderleft salt is 0", async () => {
+        orderLeft.salt = 0;
+
+        await expect(matchingEngine.matchOrders(orderLeft, orderRight)).to.emit(
+          matchingEngine,
+          "Matched",
+        )
+      })
+      it("Should match orders when when orderRight is short",async()=>{
+        const orderLeft = Order(
+          ORDER,
+          deadline,
+          account1.address,
+          Asset(volmexBaseToken.address, "40"),
+          Asset(virtualToken.address, "20"),
+          1,
+          0,
+          false,
+        )
+
+        const orderRight = Order(
+          ORDER,
+          deadline,
+          account2.address,
+          Asset(virtualToken.address, "20"),
+          Asset(volmexBaseToken.address, "20"),
+          1,
+          0,
+          true,
+        )
+        await expect(matchingEngine.matchOrders(orderLeft, orderRight)).to.emit(
+          matchingEngine,
+          "Matched",
+        )
+      })
+      it("Should match orders when left order address is 0",async()=>{
+        const orderLeft = Order(
+          ORDER,
+          deadline,
+          '0x0000000000000000000000000000000000000000',
+          Asset(volmexBaseToken.address, "40"),
+          Asset(virtualToken.address, "20"),
+          1,
+          0,
+          false,
+        )
+
+        const orderRight = Order(
+          ORDER,
+          deadline,
+          account2.address,
+          Asset(virtualToken.address, "20"),
+          Asset(volmexBaseToken.address, "20"),
+          1,
+          0,
+          true,
+        )
         await expect(matchingEngine.matchOrders(orderLeft, orderRight)).to.emit(
           matchingEngine,
           "Matched",
@@ -334,8 +534,8 @@ describe("MatchingEngine", function () {
           ORDER,
           deadline,
           account1.address,
-          Asset(virtualToken.address, one.toString()),
-          Asset(volmexBaseToken.address, two.toString()),
+          Asset(virtualToken.address, two.toString()),
+          Asset(volmexBaseToken.address, one.toString()),
           salt,
           0,
           true,
@@ -347,7 +547,7 @@ describe("MatchingEngine", function () {
           deadline,
           account2.address,
           Asset(volmexBaseToken.address, one.toString()),
-          Asset(virtualToken.address, two.toString()),
+          Asset(virtualToken.address, one.toString()),
           salt,
           0,
           true,
@@ -380,13 +580,57 @@ describe("MatchingEngine", function () {
       for (let index = 0; index < 171; index++) {
         ordersList.push(order);
       }
+      
 
       const receipt = await (await matchingEngine.connect(account1).cancelOrdersInBatch(ordersList)).wait()
       expect(receipt.confirmations).not.equal(0)
     })
+    
   })
 
-  async function getSignature(orderObj, signer) {
-    return sign(orderObj, signer, matchingEngine.address)
-  }
+  describe("Grant Access methods:", function(){
+    it("should fail to grant access", async()=>{
+      const [owner, account1] = await ethers.getSigners()
+      await expect(matchingEngine.connect(account1).grantMatchOrders(account1.address)).to.be.revertedWith("MatchingEngineCore: Not admin")
+    })
+  })
+
+  describe("pausable contract", function(){
+    it("should fail to match orders when contract is paused", async()=>{
+      await matchingEngine.pause()
+      await expect(matchingEngine.matchOrders(orderLeft, orderRight)).to.be.revertedWith("Pausable: paused")
+    })
+    it("should fail to match order in batch when contract is paused", async()=>{
+      await matchingEngine.pause();
+      let ordersLeft = [];
+      let ordersRight = [];
+      let salt = 3;
+      for (let index = 0; index < 46; index++) {
+        ordersLeft.push(Order(
+          ORDER,
+          deadline,
+          account1.address,
+          Asset(virtualToken.address, two.toString()),
+          Asset(volmexBaseToken.address, one.toString()),
+          salt,
+          0,
+          true,
+        ));
+        salt++;
+        
+        ordersRight.push(Order(
+          ORDER,
+          deadline,
+          account2.address,
+          Asset(volmexBaseToken.address, one.toString()),
+          Asset(virtualToken.address, one.toString()),
+          salt,
+          0,
+          true,
+        ));
+        salt++;
+      }
+      await expect(matchingEngine.matchOrderInBatch(ordersLeft, ordersRight)).to.be.revertedWith("Pausable: paused")
+    })
+  })
 })
