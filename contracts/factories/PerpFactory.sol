@@ -140,7 +140,7 @@ contract PerpFactory is Initializable, IPerpFactory, RoleManager {
      */
     function cloneVault(
         address _token,
-        bool isEthVault,
+        bool _isEthVault,
         address _positioningConfig,
         address _accountBalance,
         address _vaultImplementation,
@@ -152,7 +152,7 @@ contract PerpFactory is Initializable, IPerpFactory, RoleManager {
 
         bytes32 salt = keccak256(abi.encodePacked(_token, vaultIndexCount));
         vault = IVault(Clones.cloneDeterministic(_vaultImplementation, salt));
-        vault.initialize(_positioningConfig, _accountBalance, _token, address(vaultController), isEthVault);
+        vault.initialize(_positioningConfig, _accountBalance, _token, address(vaultController), _isEthVault);
         vaultIndexCount++;
 
         vaultController.registerVault(address(vault), _token);
