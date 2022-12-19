@@ -228,11 +228,9 @@ describe("Global", function () {
 
     await usdc.connect(account1).approve(periphery.address, "1000000000000000");
     await usdc.connect(account2).approve(periphery.address, "1000000000000000");
-    console.log("Depositing ...")
     await periphery.connect(account1).depositToVault(0, usdc.address, "10000000000");
-    console.log("Deposited-1 !!")
     await periphery.connect(account2).depositToVault(0, usdc.address, "10000000000");
-console.log("Deposited!!")
+
     orderLeft = Order(
       ORDER,
       deadline,

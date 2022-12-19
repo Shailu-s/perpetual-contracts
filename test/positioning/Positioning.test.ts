@@ -42,6 +42,7 @@ describe("Positioning", function () {
   let baseToken;
   let TestERC20;
   let USDC;
+  let perpViewFake;
   let orderLeft, orderRight;
   const deadline = 87654321987654;
   let owner, account1, account2, account3, account4, relayer;
@@ -251,10 +252,9 @@ describe("Positioning", function () {
     // for (let i = 0; i < 9; i++) {
     //   await matchingEngine.addObservation(10000000, 0)
     // }
-
+    perpViewFake = await smock.fake("VolmexPerpView");
     volmexPerpPeriphery = await upgrades.deployProxy(VolmexPerpPeriphery, [
-      [positioning.address, positioning.address],
-      [vaultController.address, vaultController.address],
+      perpViewFake.address,
       markPriceOracle.address,
       [vault.address, vault2.address],
       owner.address,
@@ -1267,6 +1267,7 @@ describe("Liquidation test in Positioning", function () {
   let volmexBaseToken;
   let VolmexPerpPeriphery;
   let volmexPerpPeriphery;
+  let perpViewFake
 
   let transferManagerTest;
   let accountBalance1;
@@ -1420,10 +1421,9 @@ describe("Liquidation test in Positioning", function () {
       },
     );
     marketRegistry = await upgrades.deployProxy(MarketRegistry, [virtualToken.address]);
-
+    perpViewFake = await smock.fake("VolmexPerpView");
     volmexPerpPeriphery = await upgrades.deployProxy(VolmexPerpPeriphery, [
-      [positioning.address, positioning.address],
-      [vaultController.address, vaultController.address],
+      perpViewFake.address,
       markPriceOracle.address,
       [vault.address, vault.address],
       owner.address,

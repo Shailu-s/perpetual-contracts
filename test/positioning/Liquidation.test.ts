@@ -10,8 +10,6 @@ describe("Liquidation test in Positioning", function () {
   let matchingEngine;
   let VirtualToken;
   let virtualToken;
-  let erc20TransferProxy;
-  let ERC20TransferProxy;
   let TransferManagerTest;
   let ERC1271Test;
   let erc1271Test;
@@ -44,6 +42,7 @@ describe("Liquidation test in Positioning", function () {
   let baseToken;
   let TestERC20;
   let USDC;
+  let perpViewFake
   let orderLeft, orderRight;
   const deadline = 87654321987654;
   let owner, account1, account2, account3, account4, relayer;
@@ -71,7 +70,6 @@ describe("Liquidation test in Positioning", function () {
     // fundingRate = await smock.fake("FundingRate")
     MatchingEngine = await ethers.getContractFactory("MatchingEngineTest");
     VirtualToken = await ethers.getContractFactory("VirtualTokenTest");
-    ERC20TransferProxy = await ethers.getContractFactory("ERC20TransferProxy");
     TransferManagerTest = await ethers.getContractFactory("TransferManagerTest");
     ERC1271Test = await ethers.getContractFactory("ERC1271Test");
     Positioning = await ethers.getContractFactory("PositioningTest");
@@ -120,13 +118,6 @@ describe("Liquidation test in Positioning", function () {
     );
     await markPriceOracle.deployed();
 
-    baseToken = await smock.fake("VolmexBaseToken");
-
-    erc20TransferProxy = await upgrades.deployProxy(ERC20TransferProxy, [], {
-      initializer: "erc20TransferProxyInit",
-    });
-    await erc20TransferProxy.deployed();
-
     erc1271Test = await ERC1271Test.deploy();
 
     positioningConfig = await upgrades.deployProxy(PositioningConfig, []);
@@ -163,21 +154,11 @@ describe("Liquidation test in Positioning", function () {
       false,
     ]);
 
-    transferManagerTest = await upgrades.deployProxy(
-      TransferManagerTest,
-      [erc20TransferProxy.address, owner.address],
-      {
-        initializer: "__TransferManager_init",
-      },
-    );
-
     accountBalance1 = await upgrades.deployProxy(AccountBalance, [positioningConfig.address]);
     vaultController = await upgrades.deployProxy(VaultController, [
       positioningConfig.address,
       accountBalance1.address,
     ]);
-
-    // vaultController = await upgrades.deployProxy(VaultController, [positioningConfig.address, accountBalance1.address])
 
     positioning = await upgrades.deployProxy(
       Positioning,
@@ -195,10 +176,9 @@ describe("Liquidation test in Positioning", function () {
       },
     );
     marketRegistry = await upgrades.deployProxy(MarketRegistry, [virtualToken.address]);
-
+    perpViewFake = await smock.fake("VolmexPerpView");
     volmexPerpPeriphery = await upgrades.deployProxy(VolmexPerpPeriphery, [
-      [positioning.address, positioning.address],
-      [vaultController.address, vaultController.address],
+      perpViewFake.address,
       markPriceOracle.address,
       [vault.address, vault.address],
       owner.address,

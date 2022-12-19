@@ -13,14 +13,12 @@ describe("VolmexPerpPeriphery", function () {
   let ERC20TransferProxyTest;
   let Positioning;
   let positioning;
-  let positioning2;
   let PositioningConfig;
   let positioningConfig;
   let Vault;
   let vault;
   let VaultController;
   let vaultController;
-  let vaultController2;
   let AccountBalance;
   let MarkPriceOracle;
   let markPriceOracle;
@@ -32,6 +30,8 @@ describe("VolmexPerpPeriphery", function () {
   let volmexQuoteToken;
   let VolmexPerpPeriphery;
   let volmexPerpPeriphery;
+  let VolmexPerpView;
+  let perpView;
 
   let accountBalance1;
   let MarketRegistry;
@@ -48,6 +48,7 @@ describe("VolmexPerpPeriphery", function () {
   const STOP_LOSS_LIMIT_ORDER = "0xeeaed735";
   const TAKE_PROFIT_LIMIT_ORDER = "0xe0fc7f94";
   const ZERO_ADDR = "0x0000000000000000000000000000000000000000";
+
   this.beforeAll(async () => {
     VolmexPerpPeriphery = await ethers.getContractFactory("VolmexPerpPeriphery");
     MarkPriceOracle = await ethers.getContractFactory("MarkPriceOracle");
@@ -64,6 +65,7 @@ describe("VolmexPerpPeriphery", function () {
     TestERC20 = await ethers.getContractFactory("TestERC20");
     VolmexBaseToken = await ethers.getContractFactory("VolmexBaseToken");
     VolmexQuoteToken = await ethers.getContractFactory("VolmexQuoteToken");
+    VolmexPerpView = await ethers.getContractFactory("VolmexPerpView");
     [owner, account1, account2, account3, account4] = await ethers.getSigners();
     liquidator = encodeAddress(owner.address);
   });
@@ -72,6 +74,9 @@ describe("VolmexPerpPeriphery", function () {
     indexPriceOracle = await upgrades.deployProxy(IndexPriceOracle, [owner.address], {
       initializer: "initialize",
     });
+    perpView = await upgrades.deployProxy(VolmexPerpView, [owner.address]);
+    await perpView.deployed();
+    await (await perpView.grantViewStatesRole(owner.address)).wait();
 
     volmexBaseToken = await upgrades.deployProxy(
       VolmexBaseToken,
@@ -86,6 +91,8 @@ describe("VolmexPerpPeriphery", function () {
       },
     );
     await volmexBaseToken.deployed();
+    await (await perpView.setBaseToken(volmexBaseToken.address)).wait();
+
     volmexQuoteToken = await upgrades.deployProxy(
       VolmexQuoteToken,
       [
@@ -98,6 +105,7 @@ describe("VolmexPerpPeriphery", function () {
       },
     );
     await volmexQuoteToken.deployed();
+    await (await perpView.setQuoteToken(volmexQuoteToken.address)).wait();
 
     markPriceOracle = await upgrades.deployProxy(
       MarkPriceOracle,
@@ -128,14 +136,14 @@ describe("VolmexPerpPeriphery", function () {
     await virtualToken.deployed();
 
     accountBalance1 = await upgrades.deployProxy(AccountBalance, [positioningConfig.address]);
+    await accountBalance1.deployed();
+    await (await perpView.setAccount(accountBalance1.address)).wait();
     vaultController = await upgrades.deployProxy(VaultController, [
       positioningConfig.address,
       accountBalance1.address,
     ]);
-    vaultController2 = await upgrades.deployProxy(VaultController, [
-      positioningConfig.address,
-      accountBalance1.address,
-    ]);
+    await vaultController.deployed();
+    await (await perpView.setVaultController(vaultController.address)).wait();
 
     vault = await upgrades.deployProxy(Vault, [
       positioningConfig.address,
@@ -145,9 +153,10 @@ describe("VolmexPerpPeriphery", function () {
       false,
     ]);
     await vault.deployed();
+    await (await perpView.incrementVaultIndex()).wait();
+
     (await accountBalance1.grantSettleRealizedPnlRole(vault.address)).wait();
     (await accountBalance1.grantSettleRealizedPnlRole(vaultController.address)).wait();
-    (await accountBalance1.grantSettleRealizedPnlRole(vaultController2.address)).wait();
 
     positioning = await upgrades.deployProxy(
       Positioning,
@@ -164,22 +173,10 @@ describe("VolmexPerpPeriphery", function () {
         initializer: "initialize",
       },
     );
+    await positioning.deployed();
+    await (await perpView.setPositioning(positioning.address)).wait();
+    await (await perpView.incrementPerpIndex()).wait();
 
-    positioning2 = await upgrades.deployProxy(
-      Positioning,
-      [
-        positioningConfig.address,
-        vaultController.address,
-        accountBalance1.address,
-        matchingEngine.address,
-        markPriceOracle.address,
-        indexPriceOracle.address,
-        0,
-      ],
-      {
-        initializer: "initialize",
-      },
-    );
     marketRegistry = await upgrades.deployProxy(MarketRegistry, [volmexQuoteToken.address]);
 
     await marketRegistry.connect(owner).addBaseToken(volmexBaseToken.address);
@@ -205,8 +202,7 @@ describe("VolmexPerpPeriphery", function () {
     }
 
     volmexPerpPeriphery = await upgrades.deployProxy(VolmexPerpPeriphery, [
-      [positioning.address, positioning2.address],
-      [vaultController.address, vaultController2.address],
+      perpView.address,
       markPriceOracle.address,
       [vault.address, vault.address],
       owner.address,
@@ -217,8 +213,7 @@ describe("VolmexPerpPeriphery", function () {
   describe("VolmexPerpPeriphery deployment", async () => {
     it("should deploy VolmexPerpPeriphery", async () => {
       volmexPerpPeriphery = await upgrades.deployProxy(VolmexPerpPeriphery, [
-        [positioning.address, positioning2.address],
-        [vaultController.address, vaultController2.address],
+        perpView.address,
         markPriceOracle.address,
         [vault.address, vault.address],
         owner.address,
@@ -230,20 +225,18 @@ describe("VolmexPerpPeriphery", function () {
     it("should fail to deploy VolmexPerpPeriphery", async () => {
       await expect(
         upgrades.deployProxy(VolmexPerpPeriphery, [
-          [positioning.address, positioning2.address],
-          [vaultController.address, vaultController2.address],
+          perpView.address,
           markPriceOracle.address,
           [vault.address, vault.address],
           ZERO_ADDR,
           owner.address, // replace with relayer address
         ]),
-      ).to.be.revertedWith("Admin can't be address(0)");
+      ).to.be.revertedWith("VolmexPerpPeriphery: Admin can't be address(0)");
     });
     it("should fail to initialize again", async () => {
       await expect(
         volmexPerpPeriphery.initialize(
-          [positioning.address, positioning2.address],
-          [vaultController.address, vaultController2.address],
+          perpView.address,
           markPriceOracle.address,
           [vault.address, vault.address],
           owner.address,
@@ -254,14 +247,13 @@ describe("VolmexPerpPeriphery", function () {
     it("should fail to deploy VolmexPerpPeriphery since relayer address is 0", async () => {
       await expect(
         upgrades.deployProxy(VolmexPerpPeriphery, [
-          [positioning.address, positioning2.address],
-          [vaultController.address, vaultController2.address],
+          perpView.address,
           markPriceOracle.address,
           [vault.address, vault.address],
           owner.address,
           ZERO_ADDR, // replace with relayer address
         ]),
-      ).to.be.revertedWith("Relayer can't be address(0)");
+      ).to.be.revertedWith("VolmexPerpPeriphery: Relayer can't be address(0)");
     });
   });
   it("Should fail to initialize quote token again", async () => {
@@ -350,7 +342,6 @@ describe("VolmexPerpPeriphery", function () {
       const signatureRightLimitOrder = await getSignature(orderRight, account2.address);
 
       await matchingEngine.grantMatchOrders(positioning.address);
-      await matchingEngine.grantMatchOrders(positioning2.address);
 
       let receipt = await volmexPerpPeriphery.fillLimitOrder(
         orderLeft,
@@ -390,7 +381,6 @@ describe("VolmexPerpPeriphery", function () {
       const signatureRightLimitOrder = await getSignature(orderRight, account2.address);
 
       await matchingEngine.grantMatchOrders(positioning.address);
-      await matchingEngine.grantMatchOrders(positioning2.address);
 
       await expect(
         volmexPerpPeriphery
@@ -432,7 +422,6 @@ describe("VolmexPerpPeriphery", function () {
       const signatureRightLimitOrder = await getSignature(orderRight, account2.address);
 
       await matchingEngine.grantMatchOrders(positioning.address);
-      await matchingEngine.grantMatchOrders(positioning2.address);
 
       await expect(
         volmexPerpPeriphery.fillLimitOrder(
@@ -473,7 +462,6 @@ describe("VolmexPerpPeriphery", function () {
       const signatureRightLimitOrder = await getSignature(orderRight, account2.address);
 
       await matchingEngine.grantMatchOrders(positioning.address);
-      await matchingEngine.grantMatchOrders(positioning2.address);
 
       await expect(
         volmexPerpPeriphery.fillLimitOrder(
@@ -514,7 +502,6 @@ describe("VolmexPerpPeriphery", function () {
       const signatureRightLimitOrder = await getSignature(orderRight, account2.address);
 
       await matchingEngine.grantMatchOrders(positioning.address);
-      await matchingEngine.grantMatchOrders(positioning2.address);
 
       await expect(
         volmexPerpPeriphery.fillLimitOrder(
@@ -555,7 +542,6 @@ describe("VolmexPerpPeriphery", function () {
       const signatureRightLimitOrder = await getSignature(orderRight, account2.address);
 
       await matchingEngine.grantMatchOrders(positioning.address);
-      await matchingEngine.grantMatchOrders(positioning2.address);
 
       await expect(
         volmexPerpPeriphery.fillLimitOrder(
@@ -570,113 +556,10 @@ describe("VolmexPerpPeriphery", function () {
     });
   });
 
-  describe("Add positioning", async () => {
-    it("should add another Positioning", async () => {
-      let receipt = await volmexPerpPeriphery.addPositioning(positioning.address);
-      expect(receipt.confirmations).not.equal(0);
-    });
-  });
-
   describe("VolmexPerpPeriphery deployment", async () => {
     it("should deploy VolmexPerpPeriphery", async () => {
       let receipt = await volmexPerpPeriphery.deployed();
       expect(receipt.confirmations).not.equal(0);
-    });
-  });
-
-  describe("Add positioning", async () => {
-    it("should add another Positioning", async () => {
-      let receipt = await volmexPerpPeriphery.addPositioning(positioning.address);
-      expect(receipt.confirmations).not.equal(0);
-    });
-
-    it("should fail to add another Positioning if not admin", async () => {
-      await expect(
-        volmexPerpPeriphery.connect(account2).addPositioning(positioning.address),
-      ).to.be.revertedWith("Periphery: Not admin");
-    });
-  });
-
-  describe("Add vaultController", async () => {
-    it("should add another VaultController", async () => {
-      let receipt = await volmexPerpPeriphery.addVaultController(vaultController.address);
-      expect(receipt.confirmations).not.equal(0);
-    });
-
-    it("should fail to add another VaultController if not admin", async () => {
-      await expect(
-        volmexPerpPeriphery.connect(account2).addVaultController(vaultController.address),
-      ).to.be.revertedWith("Periphery: Not admin");
-    });
-  });
-
-  describe("Update Vault controller and Positioning by index", async () => {
-    it("Should update the vault controller at index", async () => {
-      const controller = await upgrades.deployProxy(VaultController, [
-        positioningConfig.address,
-        accountBalance1.address,
-      ]);
-      const oldVaultController = await volmexPerpPeriphery.vaultControllers(0);
-      await (
-        await volmexPerpPeriphery.updateVaultControllerAtIndex(
-          oldVaultController,
-          controller.address,
-          0,
-        )
-      ).wait();
-      expect(await volmexPerpPeriphery.vaultControllers(0)).to.equal(controller.address);
-    });
-    it("should fail to update vault controller ", async () => {
-      const vaultControllerx = await upgrades.deployProxy(VaultController, [
-        positioningConfig.address,
-        accountBalance1.address,
-      ]);
-      const vaultControllery = await upgrades.deployProxy(VaultController, [
-        positioningConfig.address,
-        accountBalance1.address,
-      ]);
-      await expect(
-        volmexPerpPeriphery.updateVaultControllerAtIndex(
-          vaultControllerx.address,
-          vaultControllery.address,
-          0,
-        ),
-      ).to.be.revertedWith("Periphery: Incorrect vault controller _index");
-    });
-    it("Should update the positioning at index", async () => {
-      const newPositioning = await upgrades.deployProxy(Positioning, [
-        positioningConfig.address,
-        vaultController.address,
-        accountBalance1.address,
-        matchingEngine.address,
-        markPriceOracle.address,
-        indexPriceOracle.address,
-        0,
-      ]);
-      const oldPositioning = await volmexPerpPeriphery.positionings(0);
-      await (
-        await volmexPerpPeriphery.updatePositioningAtIndex(
-          oldPositioning,
-          newPositioning.address,
-          0,
-        )
-      ).wait();
-      expect(await volmexPerpPeriphery.positionings(0)).to.equal(newPositioning.address);
-    });
-    it("Should fail to update the positioning at index", async () => {
-      const newPositioning = await upgrades.deployProxy(Positioning, [
-        positioningConfig.address,
-        vaultController.address,
-        accountBalance1.address,
-        matchingEngine.address,
-        markPriceOracle.address,
-        indexPriceOracle.address,
-        0,
-      ]);
-      const oldPositioning = await volmexPerpPeriphery.positionings(0);
-      await expect(
-        volmexPerpPeriphery.updatePositioningAtIndex(oldPositioning, newPositioning.address, 2),
-      ).to.be.revertedWith("Periphery: Incorrect positioning _index");
     });
   });
 
@@ -898,7 +781,6 @@ describe("VolmexPerpPeriphery", function () {
         signaturesLeft.push(signatureLeft);
         signaturesRight.push(signatureRight);
         await matchingEngine.grantMatchOrders(positioning.address);
-        await matchingEngine.grantMatchOrders(positioning2.address);
         await volmexPerpPeriphery.batchFillLimitOrders(
           index,
           limitOrdersLeft,
@@ -955,7 +837,6 @@ describe("VolmexPerpPeriphery", function () {
         signaturesRight.push(signatureRight);
         limitOrdersLeft.push(orderLeft);
         await matchingEngine.grantMatchOrders(positioning.address);
-        await matchingEngine.grantMatchOrders(positioning2.address);
         await expect(
           volmexPerpPeriphery.batchFillLimitOrders(
             index,

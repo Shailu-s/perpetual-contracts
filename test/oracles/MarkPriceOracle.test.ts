@@ -1,5 +1,6 @@
 import { expect } from "chai";
 import { ethers, upgrades } from "hardhat";
+import { FakeContract, smock } from "@defi-wonderland/smock";
 
 describe("MarkPriceOracle", function () {
   let MarkPriceOracle;
@@ -28,6 +29,7 @@ describe("MarkPriceOracle", function () {
   let accountBalance;
   let TestERC20;
   let USDC;
+  let perpViewFake;
   const ZERO_ADDR = "0x0000000000000000000000000000000000000000";
   this.beforeAll(async () => {
     MarkPriceOracle = await ethers.getContractFactory("MarkPriceOracle");
@@ -48,6 +50,7 @@ describe("MarkPriceOracle", function () {
     const [owner, account1, account2, account3, account4] = await ethers.getSigners();
 
     exchangeTest = await ExchangeTest.deploy();
+    perpViewFake = await smock.fake("VolmexPerpView");
 
     erc20TransferProxy = await ERC20TransferProxyTest.deploy();
     community = account4.address;
@@ -88,6 +91,7 @@ describe("MarkPriceOracle", function () {
         vault.address,
         positioning.address,
         accountBalance.address,
+        perpViewFake.address
       ],
       {
         initializer: "initialize",

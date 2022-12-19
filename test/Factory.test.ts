@@ -28,6 +28,8 @@ describe("PerpFactory", function () {
   let vault;
   let TestERC20;
   let USDC;
+  let VolmexPerpView;
+  let perpView;
   const ZERO_ADDR = "0x0000000000000000000000000000000000000000";
 
   this.beforeAll(async () => {
@@ -44,11 +46,15 @@ describe("PerpFactory", function () {
     Positioning = await ethers.getContractFactory("Positioning");
     Vault = await ethers.getContractFactory("Vault");
     TestERC20 = await ethers.getContractFactory("TestERC20");
+    VolmexPerpView = await ethers.getContractFactory("VolmexPerpView");
   });
 
   beforeEach(async () => {
     const [owner] = await ethers.getSigners();
 
+    perpView = await upgrades.deployProxy(VolmexPerpView, [owner.address]);
+    await perpView.deployed();
+    await (await perpView.grantViewStatesRole(owner.address)).wait();
     indexPriceOracle = await upgrades.deployProxy(IndexPriceOracle, [owner.address], {
       initializer: "initialize",
     });
@@ -103,12 +109,14 @@ describe("PerpFactory", function () {
         vault.address,
         positioning.address,
         accountBalance.address,
+        perpView.address
       ],
       {
         initializer: "initialize",
       },
     );
     await factory.deployed();
+    await (await perpView.grantViewStatesRole(factory.address)).wait();
 
     virtualTokenTest = await upgrades.deployProxy(
       VirtualTokenTest,
@@ -133,6 +141,7 @@ describe("PerpFactory", function () {
         vault.address,
         positioning.address,
         accountBalance.address,
+        perpView.address
       ),
     ).to.be.revertedWith("Initializable: contract is already initialized");
   });
@@ -157,18 +166,18 @@ describe("PerpFactory", function () {
 
     it("Should clone base token", async () => {
       await factory.cloneBaseToken("MyTestToken", "MTK", indexPriceOracle.address);
-      const cloneTokenAddress = await factory.baseTokenByIndex(0);
+      const cloneTokenAddress = await perpView.baseTokens(0);
       expect(cloneTokenAddress).not.equal(ZERO_ADDR);
     });
 
     it("should clone Quote token", async () => {
       await factory.cloneQuoteToken("GoatToken", "GTK");
-      const cloneQuoteToken = await factory.quoteTokenByIndex(0);
+      const cloneQuoteToken = await perpView.quoteTokens(0);
       expect(cloneQuoteToken).not.equal(ZERO_ADDR);
     });
 
     it("Should deploy the complete perp ecosystem", async () => {
-      const index = (await factory.perpIndexCount()).toString();
+      const index = (await perpView.perpIndexCount()).toString();
       await await factory.clonePerpEcosystem(
         positioningConfig.address,
         matchingEngine.address,
@@ -178,7 +187,7 @@ describe("PerpFactory", function () {
       );
     });
     it("Should Clone Vault", async () => {
-      const index = (await factory.perpIndexCount()).toString();
+      const index = (await perpView.perpIndexCount()).toString();
       await factory.clonePerpEcosystem(
         positioningConfig.address,
         matchingEngine.address,
@@ -198,7 +207,7 @@ describe("PerpFactory", function () {
 
     it("should fail to clone vault because or admin access ", async () => {
       const [owner, account1] = await ethers.getSigners();
-      const index = (await factory.perpIndexCount()).toString();
+      const index = (await perpView.perpIndexCount()).toString();
       await expect(
         factory
           .connect(account1)
@@ -213,7 +222,7 @@ describe("PerpFactory", function () {
     });
 
     it("Should fail to Clone Vault", async () => {
-      const index = (await factory.perpIndexCount()).toString();
+      const index = (await perpView.perpIndexCount()).toString();
       await factory.clonePerpEcosystem(
         positioningConfig.address,
         matchingEngine.address,
