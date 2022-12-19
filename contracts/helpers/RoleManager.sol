@@ -32,4 +32,6 @@ contract RoleManager is AccessControlUpgradeable {
     bytes32 public constant MINTER = keccak256("MINTER");
     bytes32 public constant BURNER = keccak256("BURNER");
     bytes32 public constant RELAYER_MULTISIG = keccak256("RELAYER_MULTISIG");
+    bytes32 public constant VOLMEX_PERP_VIEW = keccak256("VOLMEX_PERP_VIEW");
+    bytes32 public constant PERP_VIEW_STATES = keccak256("PERP_VIEW_STATES");
 }
