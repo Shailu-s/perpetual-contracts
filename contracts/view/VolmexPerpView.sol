@@ -86,10 +86,10 @@ contract VolmexPerpView is Initializable, RoleManager {
     }
 
     function _requireVolmexPerpViewAdmin() internal view {
-        require(hasRole(VOLMEX_PERP_VIEW, _msgSender()), "VolmexPerpPeriphery: Not admin");
+        require(hasRole(VOLMEX_PERP_VIEW, _msgSender()), "VolmexPerpView: Not admin");
     }
 
     function _requireVolmexPerpViewCaller() internal view {
-        require(hasRole(PERP_VIEW_STATES, _msgSender()), "VolmexPerpPeriphery: Not state update caller");
+        require(hasRole(PERP_VIEW_STATES, _msgSender()), "VolmexPerpView: Not state update caller");
     }
 }
