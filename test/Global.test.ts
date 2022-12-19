@@ -19,6 +19,7 @@ describe("Global", function () {
   let Vault;
   let MarketRegistry;
   let VolmexPerpPeriphery;
+  let VolmexPerpView;
   let TestERC20;
   let indexPriceOracle;
   let volmexBaseToken;
@@ -34,6 +35,7 @@ describe("Global", function () {
   let positioning2;
   let marketRegistry;
   let periphery;
+  let perpView;
   let factory;
   let matchingEngine;
   let orderLeft, orderRight;
@@ -70,6 +72,7 @@ describe("Global", function () {
     Vault = await ethers.getContractFactory("Vault");
     MarketRegistry = await ethers.getContractFactory("MarketRegistry");
     VolmexPerpPeriphery = await ethers.getContractFactory("VolmexPerpPeriphery");
+    VolmexPerpView = await ethers.getContractFactory("VolmexPerpView");
     TestERC20 = await ethers.getContractFactory("TestERC20");
   });
 
@@ -78,6 +81,10 @@ describe("Global", function () {
       initializer: "initialize",
     });
     await indexPriceOracle.deployed();
+
+    perpView = await upgrades.deployProxy(VolmexPerpView, [owner.address]);
+    await perpView.deployed();
+    await (await perpView.grantViewStatesRole(owner.address)).wait();
 
     volmexBaseToken = await upgrades.deployProxy(
       VolmexBaseToken,
@@ -92,6 +99,7 @@ describe("Global", function () {
       },
     );
     await volmexBaseToken.deployed();
+    await (await perpView.setBaseToken(volmexBaseToken.address)).wait();
 
     volmexQuoteToken = await upgrades.deployProxy(
       VolmexQuoteToken,
@@ -105,6 +113,7 @@ describe("Global", function () {
       },
     );
     await volmexQuoteToken.deployed();
+    await (await perpView.setQuoteToken(volmexQuoteToken.address)).wait();
 
     markPriceOracle = await upgrades.deployProxy(
       MarkPriceOracle,
@@ -134,17 +143,14 @@ describe("Global", function () {
 
     accountBalance = await upgrades.deployProxy(AccountBalance, [positioningConfig.address]);
     await accountBalance.deployed();
+    await (await perpView.setAccount(accountBalance.address)).wait();
 
     vaultController = await upgrades.deployProxy(VaultController, [
       positioningConfig.address,
       accountBalance.address,
     ]);
     await vaultController.deployed();
-    vaultController2 = await upgrades.deployProxy(VaultController, [
-      positioningConfig.address,
-      accountBalance.address,
-    ]);
-    await vaultController2.deployed();
+    await (await perpView.setVaultController(vaultController.address)).wait();
 
     vault = await upgrades.deployProxy(Vault, [
       positioningConfig.address,
@@ -153,6 +159,8 @@ describe("Global", function () {
       vaultController.address,
       false,
     ]);
+    await vault.deployed();
+    await (await perpView.incrementVaultIndex()).wait();
 
     positioning = await upgrades.deployProxy(
       Positioning,
@@ -170,39 +178,20 @@ describe("Global", function () {
       },
     );
     await positioning.deployed();
-    positioning2 = await upgrades.deployProxy(
-      Positioning,
-      [
-        positioningConfig.address,
-        vaultController2.address,
-        accountBalance.address,
-        matchingEngine.address,
-        markPriceOracle.address,
-        indexPriceOracle.address,
-        0,
-      ],
-      {
-        initializer: "initialize",
-      },
-    );
-    await positioning2.deployed();
+    await (await perpView.setPositioning(positioning.address)).wait();
+    await (await perpView.incrementPerpIndex()).wait();
 
     marketRegistry = await upgrades.deployProxy(MarketRegistry, [volmexQuoteToken.address]);
     await marketRegistry.deployed();
     await (await marketRegistry.addBaseToken(volmexBaseToken.address)).wait();
     await (await positioning.setMarketRegistry(marketRegistry.address)).wait();
     await (await positioning.setDefaultFeeReceiver(owner.address)).wait();
-    await (await positioning2.setMarketRegistry(marketRegistry.address)).wait();
-    await (await positioning2.setDefaultFeeReceiver(owner.address)).wait();
     await (await vaultController.setPositioning(positioning.address)).wait();
     await (await vaultController.registerVault(vault.address, usdc.address)).wait();
-    await (await vaultController2.setPositioning(positioning.address)).wait();
-    await (await vaultController2.registerVault(vault.address, usdc.address)).wait();
     await (await accountBalance.setPositioning(positioning.address)).wait();
 
     periphery = await upgrades.deployProxy(VolmexPerpPeriphery, [
-      [positioning.address, positioning2.address],
-      [vaultController.address, vaultController2.address],
+      perpView.address,
       markPriceOracle.address,
       [vault.address, vault.address],
       owner.address,
@@ -220,6 +209,7 @@ describe("Global", function () {
         await proxyAdmin.getProxyImplementation(vault.address),
         await proxyAdmin.getProxyImplementation(positioning.address),
         await proxyAdmin.getProxyImplementation(accountBalance.address),
+        perpView.address
       ],
       {
         initializer: "initialize",
@@ -238,10 +228,11 @@ describe("Global", function () {
 
     await usdc.connect(account1).approve(periphery.address, "1000000000000000");
     await usdc.connect(account2).approve(periphery.address, "1000000000000000");
-
+    console.log("Depositing ...")
     await periphery.connect(account1).depositToVault(0, usdc.address, "10000000000");
+    console.log("Deposited-1 !!")
     await periphery.connect(account2).depositToVault(0, usdc.address, "10000000000");
-
+console.log("Deposited!!")
     orderLeft = Order(
       ORDER,
       deadline,
