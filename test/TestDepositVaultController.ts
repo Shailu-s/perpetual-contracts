@@ -20,6 +20,7 @@ describe("Vault Controller deposit tests", function () {
   let positioning;
   let VolmexPerpPeriphery;
   let volmexPerpPeriphery;
+  let prepViewFake;
   let owner, alice, relayer;
 
   beforeEach(async function () {
@@ -28,6 +29,7 @@ describe("Vault Controller deposit tests", function () {
     markPriceFake = await smock.fake("MarkPriceOracle");
     indexPriceFake = await smock.fake("IndexPriceOracle");
     matchingEngineFake = await smock.fake("MatchingEngine");
+    prepViewFake = await smock.fake("VolmexPerpView");
 
     const tokenFactory = await ethers.getContractFactory("TestERC20");
     const USDC1 = await tokenFactory.deploy();
@@ -102,8 +104,7 @@ describe("Vault Controller deposit tests", function () {
     await USDC.mint(owner.address, DAIAmount);
 
     volmexPerpPeriphery = await upgrades.deployProxy(VolmexPerpPeriphery, [
-      [positioning.address, positioning.address],
-      [vaultController.address, vaultController.address],
+      prepViewFake.address,
       markPriceFake.address,
       [vault.address, vault.address],
       owner.address,
