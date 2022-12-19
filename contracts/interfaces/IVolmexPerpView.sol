@@ -7,6 +7,7 @@ import "./IVaultController.sol";
 import "./IVolmexBaseToken.sol";
 import "./IVolmexQuoteToken.sol";
 import "./IAccountBalance.sol";
+import "./IMarketRegistry.sol";
 
 interface IVolmexPerpView {
     function perpIndexCount() external view returns (uint256);
@@ -17,12 +18,14 @@ interface IVolmexPerpView {
     function vaultControllers(uint256 _index) external view returns (IVaultController);
     function baseTokens(uint256 _index) external view returns (IVolmexBaseToken);
     function quoteTokens(uint256 _index) external view returns (IVolmexQuoteToken);
-    function accounts(uint256 _index) external view returns (address);
+    function accounts(uint256 _index) external view returns (IAccountBalance);
+    function marketRegistries(uint256 _index) external view returns (IMarketRegistry);
     function setBaseToken(IVolmexBaseToken _baseToken) external;
     function setQuoteToken(IVolmexQuoteToken _quoteToken) external;
     function setPositioning(IPositioning _positioning) external;
     function setVaultController(IVaultController _vaultController) external;
     function setAccount(IAccountBalance _account) external;
+    function setMarketRegistry(IMarketRegistry _marketRegistry) external;
     function incrementPerpIndex() external;
     function incrementVaultIndex() external;
 }

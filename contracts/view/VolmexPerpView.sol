@@ -10,8 +10,10 @@ import "../interfaces/IVaultController.sol";
 import "../interfaces/IVolmexBaseToken.sol";
 import "../interfaces/IVolmexQuoteToken.sol";
 import "../interfaces/IAccountBalance.sol";
+import "../interfaces/IMarketRegistry.sol";
+import "../interfaces/IVolmexPerpView.sol";
 
-contract VolmexPerpView is Initializable, RoleManager {
+contract VolmexPerpView is IVolmexPerpView, Initializable, RoleManager {
     // Store the addresses of positionings { index => positioning address }
     mapping(uint256 => IPositioning) public positionings;
 
@@ -26,6 +28,9 @@ contract VolmexPerpView is Initializable, RoleManager {
 
     // Store the addresses of account balance by index
     mapping(uint256 => IAccountBalance) public accounts;
+
+    // Store the addresses of market regsitry by index
+    mapping(uint256 => IMarketRegistry) public marketRegistries;
 
     // Used to set the index of positioning
     uint256 public perpIndexCount;
@@ -73,6 +78,11 @@ contract VolmexPerpView is Initializable, RoleManager {
     function setAccount(IAccountBalance _account) external {
         _requireVolmexPerpViewCaller();
         accounts[perpIndexCount] = _account;
+    }
+
+    function setMarketRegistry(IMarketRegistry _marketRegistry) external {
+        _requireVolmexPerpViewCaller();
+        marketRegistries[perpIndexCount] = _marketRegistry;
     }
 
     function incrementPerpIndex() external {

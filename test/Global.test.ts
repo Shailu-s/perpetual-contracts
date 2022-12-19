@@ -209,7 +209,8 @@ describe("Global", function () {
         await proxyAdmin.getProxyImplementation(vault.address),
         await proxyAdmin.getProxyImplementation(positioning.address),
         await proxyAdmin.getProxyImplementation(accountBalance.address),
-        perpView.address
+        perpView.address,
+        await proxyAdmin.getProxyImplementation(marketRegistry.address),
       ],
       {
         initializer: "initialize",
