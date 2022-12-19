@@ -45,6 +45,7 @@ contract VolmexPerpPeriphery is Initializable, RoleManager, IVolmexPerpPeriphery
         require(_relayer != address(0), "Relayer can't be address(0)");
         require(address(_perpView) != address(0), "VolmexPerpPeriphery: zero address");
         markPriceOracle = _markPriceOracle;
+        perpView = _perpView;
 
         for (uint256 i = 0; i < 2; i++) {
             _isVaultWhitelist[_vaults[i]] = true;
