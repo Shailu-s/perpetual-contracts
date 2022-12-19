@@ -10,27 +10,17 @@ import "../interfaces/IMarkPriceOracle.sol";
 import "../interfaces/IPositioning.sol";
 import "../interfaces/IVaultController.sol";
 import "../interfaces/IVolmexPerpPeriphery.sol";
+import "../interfaces/IVolmexPerpView.sol";
 
 contract VolmexPerpPeriphery is Initializable, RoleManager, IVolmexPerpPeriphery {
-    // Save positioning & vaulcontroller
-
-    // Used to set the index of positioning
-    uint256 public positioningIndex;
-
-    // Used to set the index of vaultController
-    uint256 public vaultControllerIndex;
-
-    // Store the addresses of positionings { index => positioning address }
-    mapping(uint256 => IPositioning) public positionings;
-
-    // Store the addresses of vaultControllers { index => vaultController address }
-    mapping(uint256 => IVaultController) public vaultControllers;
-
     // Store the whitelist Vaults
     mapping(address => bool) private _isVaultWhitelist;
 
     // Uused to fetch base token price according to market
     IMarkPriceOracle public markPriceOracle;
+
+    // Stores the address of VolmexPerpView contract
+    IVolmexPerpView public perpView;
 
     // Store the address of relayer
     address public relayer;
@@ -40,12 +30,12 @@ contract VolmexPerpPeriphery is Initializable, RoleManager, IVolmexPerpPeriphery
      *
      * @dev Sets the positioning & vaultControllers
      *
-     * @param _positioning Array of the positioning contract
-     * @param _vaultController Array of the vaultController contract
+     * @param _perpView Address of PerpView contractt
+     * @param _owner Address of the admin EOA
+     * @param _relayer Address of relayer to execute open position
      */
     function initialize(
-        IPositioning[2] memory _positioning,
-        IVaultController[2] memory _vaultController,
+        IVolmexPerpView _perpView,
         IMarkPriceOracle _markPriceOracle,
         address[2] memory _vaults,
         address _owner,
@@ -53,16 +43,12 @@ contract VolmexPerpPeriphery is Initializable, RoleManager, IVolmexPerpPeriphery
     ) external initializer {
         require(_owner != address(0), "Admin can't be address(0)");
         require(_relayer != address(0), "Relayer can't be address(0)");
+        require(address(_perpView) != address(0), "VolmexPerpPeriphery: zero address");
         markPriceOracle = _markPriceOracle;
 
         for (uint256 i = 0; i < 2; i++) {
-            positionings[i] = _positioning[i];
-            vaultControllers[i] = _vaultController[i];
             _isVaultWhitelist[_vaults[i]] = true;
         }
-        // Since we are adding two addresses, hence updating indexes to 2
-        positioningIndex = 2;
-        vaultControllerIndex = 2;
         relayer = _relayer;
         _grantRole(VOLMEX_PERP_PERIPHERY, _owner);
         _grantRole(RELAYER_MULTISIG, _relayer);
@@ -85,30 +71,6 @@ contract VolmexPerpPeriphery is Initializable, RoleManager, IVolmexPerpPeriphery
         _requireVolmexPerpPeripheryAdmin();
         _isVaultWhitelist[_vault] = _isWhitelist;
         emit VaultWhitelisted(_vault, _isWhitelist);
-    }
-
-    /**
-     * @notice Used to set the Positioning on new index
-     *
-     * @param _positioning Address of the positioning contract
-     */
-    function addPositioning(IPositioning _positioning) external {
-        _requireVolmexPerpPeripheryAdmin();
-        positionings[positioningIndex] = _positioning;
-        emit PositioningAdded(positioningIndex, address(_positioning));
-        positioningIndex++;
-    }
-
-    /**
-     * @notice Used to set the VaultController on new index
-     *
-     * @param _vaultController Address of the vaultController contract
-     */
-    function addVaultController(IVaultController _vaultController) external {
-        _requireVolmexPerpPeripheryAdmin();
-        vaultControllers[vaultControllerIndex] = _vaultController;
-        emit VaultControllerAdded(vaultControllerIndex, address(_vaultController));
-        vaultControllerIndex++;
     }
 
     function fillLimitOrder(
@@ -143,7 +105,8 @@ contract VolmexPerpPeriphery is Initializable, RoleManager, IVolmexPerpPeriphery
         if (_rightLimitOrder.orderType != LibOrder.ORDER)
             require(_verifyTriggerPrice(_rightLimitOrder), "Periphery: right order price verification failed");
 
-        IPositioning(positionings[_index]).openPosition(
+        IPositioning positioning = perpView.positionings(_index);
+        positioning.openPosition(
             _leftLimitOrder,
             _signatureLeftLimitOrder,
             _rightLimitOrder,
@@ -169,41 +132,6 @@ contract VolmexPerpPeriphery is Initializable, RoleManager, IVolmexPerpPeriphery
         return markPriceOracle.getCumulativePrice(_twInterval, _index);
     }
 
-    /**
-     * @notice Used to update the Positioning at index
-     *
-     * @param _oldPositioning Address of the old positioning contract
-     * @param _newPositioning Address of the new positioning contract
-     * @param _index Index of positioning to update
-     */
-    function updatePositioningAtIndex(
-        IPositioning _oldPositioning,
-        IPositioning _newPositioning,
-        uint256 _index
-    ) external {
-        _requireVolmexPerpPeripheryAdmin();
-        require(positionings[_index] == _oldPositioning, "Periphery: Incorrect positioning _index");
-        positionings[_index] = _newPositioning;
-        emit PositioningUpdated(_index, address(_oldPositioning), address(_newPositioning));
-    }
-
-    /**
-     * @notice Used to update the VaultController at index
-     *
-     * @param _oldVaultController Address of the old vaultController contract
-     * @param _newVaultController Address of the new vaultController contract
-     * @param _index Index of vault controller to update
-     */
-    function updateVaultControllerAtIndex(
-        IVaultController _oldVaultController,
-        IVaultController _newVaultController,
-        uint256 _index
-    ) external {
-        _requireVolmexPerpPeripheryAdmin();
-        require(vaultControllers[_index] == _oldVaultController, "Periphery: Incorrect vault controller _index");
-        vaultControllers[_index] = _newVaultController;
-    }
-
     function depositToVault(
         uint64 _index,
         address _token,
@@ -213,7 +141,8 @@ contract VolmexPerpPeriphery is Initializable, RoleManager, IVolmexPerpPeriphery
         Getter for _isEthVault in Vault contract
             - Check the msg.value and send it to vault controller
          */
-        vaultControllers[_index].deposit{ value: msg.value }(
+        IVaultController vaultController = perpView.vaultControllers(_index);
+        vaultController.deposit{ value: msg.value }(
             IVolmexPerpPeriphery(address(this)),
             _token,
             _msgSender(),
@@ -227,7 +156,8 @@ contract VolmexPerpPeriphery is Initializable, RoleManager, IVolmexPerpPeriphery
         address payable _to,
         uint256 _amount
     ) external {
-        vaultControllers[_index].withdraw(_token, _to, _amount);
+        IVaultController vaultController = perpView.vaultControllers(_index);
+        vaultController.withdraw(_token, _to, _amount);
     }
 
     function openPosition(
@@ -239,7 +169,8 @@ contract VolmexPerpPeriphery is Initializable, RoleManager, IVolmexPerpPeriphery
         bytes memory liquidator
     ) external {
         _requireVolmexPerpPeripheryRelayer();
-        positionings[_index].openPosition(_orderLeft, _signatureLeft, _orderRight, _signatureRight, liquidator);
+        IPositioning positioning = perpView.positionings(_index);
+        positioning.openPosition(_orderLeft, _signatureLeft, _orderRight, _signatureRight, liquidator);
     }
 
     function batchOpenPosition(
@@ -251,7 +182,7 @@ contract VolmexPerpPeriphery is Initializable, RoleManager, IVolmexPerpPeriphery
         bytes memory liquidator
     ) external {
         require(_ordersLeft.length == _ordersRight.length, "Periphery: mismatch orders");
-        IPositioning positioning = positionings[_index];
+        IPositioning positioning = perpView.positionings(_index);
         uint256 ordersLength = _ordersLeft.length;
         for (uint256 orderIndex = 0; orderIndex < ordersLength; orderIndex++) {
             positioning.openPosition(
