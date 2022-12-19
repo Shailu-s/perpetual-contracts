@@ -41,8 +41,8 @@ contract VolmexPerpPeriphery is Initializable, RoleManager, IVolmexPerpPeriphery
         address _owner,
         address _relayer
     ) external initializer {
-        require(_owner != address(0), "Admin can't be address(0)");
-        require(_relayer != address(0), "Relayer can't be address(0)");
+        require(_owner != address(0), "VolmexPerpPeriphery: Admin can't be address(0)");
+        require(_relayer != address(0), "VolmexPerpPeriphery: Relayer can't be address(0)");
         require(address(_perpView) != address(0), "VolmexPerpPeriphery: zero address");
         markPriceOracle = _markPriceOracle;
         perpView = _perpView;
