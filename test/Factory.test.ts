@@ -1,6 +1,8 @@
 import { expect } from "chai";
 import { Signer } from "ethers";
 import { ethers, upgrades } from "hardhat";
+const { expectRevert } = require("@openzeppelin/test-helpers");
+
 describe("PerpFactory", function () {
   let MatchingEngine;
   let matchingEngine;
@@ -30,6 +32,7 @@ describe("PerpFactory", function () {
   let USDC;
   let VolmexPerpView;
   let perpView;
+  let owner, alice;
   const ZERO_ADDR = "0x0000000000000000000000000000000000000000";
 
   this.beforeAll(async () => {
@@ -50,7 +53,7 @@ describe("PerpFactory", function () {
   });
 
   beforeEach(async () => {
-    const [owner] = await ethers.getSigners();
+    [owner, alice] = await ethers.getSigners();
 
     perpView = await upgrades.deployProxy(VolmexPerpView, [owner.address]);
     await perpView.deployed();
@@ -145,6 +148,27 @@ describe("PerpFactory", function () {
       ),
     ).to.be.revertedWith("Initializable: contract is already initialized");
   });
+
+  describe("PerpView", async () => {
+    it("Should fail to initialize", async () => {
+      await expectRevert(
+        perpView.initialize(owner.address),
+        "Initializable: contract is already initialized"
+      );
+    });
+    it("Should fail to set state role", async () => {
+      await expectRevert(
+        perpView.connect(alice).grantViewStatesRole(owner.address),
+        "VolmexPerpView: Not admin"
+      );
+    });
+    it("Should fail to call view role methods", async () => {
+      await expectRevert(
+        perpView.connect(alice).incrementVaultIndex(),
+        "VolmexPerpView: Not state update caller"
+      );
+    });
+  })
 
   describe("Clone:", function () {
     it("Should set token implementation contract correctly", async () => {
