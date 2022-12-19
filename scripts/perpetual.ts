@@ -91,7 +91,7 @@ const positioning = async () => {
   const positioningConfig = await upgrades.deployProxy(PositioningConfig, []);
   await positioningConfig.deployed();
   await positioningConfig.setMaxMarketsPerAccount(5);
-  await positioningConfig.setSettlementTokenBalanceCap(1000000);
+  await positioningConfig.setSettlementTokenBalanceCap("10000000000000");
 
   console.log("Deploying Account Balance ...");
   const accountBalance = await upgrades.deployProxy(AccountBalance, [positioningConfig.address]);
@@ -104,6 +104,7 @@ const positioning = async () => {
     accountBalance.address,
   ]);
   await vaultController.deployed();
+  await (await accountBalance.grantSettleRealizedPnlRole(vaultController.address)).wait();
   await (await perpView.setVaultController(vaultController.address)).wait();
 
   console.log("Deploying Vault ...");
@@ -134,6 +135,8 @@ const positioning = async () => {
     },
   );
   await positioning.deployed();
+  await (await accountBalance.setPositioning(positioning.address)).wait();
+  await (await matchingEngine.grantMatchOrders(positioning.address)).wait();
   await (await perpView.setPositioning(positioning.address)).wait();
   await (await perpView.incrementPerpIndex()).wait();
 
@@ -176,6 +179,25 @@ const positioning = async () => {
   );
   await factory.deployed();
   await (await perpView.grantViewStatesRole(factory.address)).wait();
+
+  const addresses = {
+    "IndexPriceOracle": indexPriceOracle.address,
+    "MarkPriceOracle": markPriceOracle.address,
+    "BaseToken": volmexBaseToken.address,
+    "USDC": usdc.address,
+    "MatchingEngine": matchingEngine.address,
+    "PositioningCnnfig": positioningConfig.address,
+    "AccountBalance": accountBalance.address,
+    "Vault": vault.address,
+    "VaultController": vaultController.address,
+    "Positioning": positioning.address,
+    "Periphery": periphery.address,
+    "MarketRegistry": marketRegistry.address,
+    "QuoteToken": volmexQuoteToken.address,
+    "PerpView": perpView.address,
+  };
+  console.log("\n =====Deployment Successful===== \n");
+  console.log(addresses);
 
   try {
     await run("verify:verify", {
@@ -282,25 +304,6 @@ const positioning = async () => {
   } catch (error) {
     console.log("ERROR - verify - perp view!");
   }
-
-  const addresses = [
-    ["Index Price Oracle: ", indexPriceOracle.address],
-    ["Mark Price Oracle: ", markPriceOracle.address],
-    ["Base Token: ", volmexBaseToken.address],
-    ["USDC: ", usdc.address],
-    ["Matching Engine: ", matchingEngine.address],
-    ["Positioning Cnnfig: ", positioningConfig.address],
-    ["Account Balance: ", accountBalance.address],
-    ["Vault: ", vault.address],
-    ["Vault Controller: ", vaultController.address],
-    ["Positioning: ", positioning.address],
-    ["Periphery: ", periphery.address],
-    ["MarketRegistry: ", marketRegistry.address],
-    ["Quote token: ", volmexQuoteToken.address],
-    ["Perp view: ", perpView.address],
-  ];
-  console.log("\n =====Deployment Successful===== \n");
-  console.table(addresses);
 };
 
 positioning()
