@@ -24,6 +24,7 @@ describe("Vault Controller tests for withdrawal", function () {
   let positioning;
   let VolmexPerpPeriphery;
   let volmexPerpPeriphery;
+  let perpViewFake;
   let owner, alice, relayer;
 
   this.beforeEach(async function () {
@@ -33,6 +34,7 @@ describe("Vault Controller tests for withdrawal", function () {
     MarkPriceOracle = await ethers.getContractFactory("MarkPriceOracle");
     IndexPriceOracle = await ethers.getContractFactory("IndexPriceOracle");
     VolmexBaseToken = await ethers.getContractFactory("VolmexBaseToken");
+    perpViewFake = await smock.fake("VolmexPerpView");
 
     indexPriceOracle = await upgrades.deployProxy(IndexPriceOracle, [owner.address], {
       initializer: "initialize",
@@ -140,8 +142,7 @@ describe("Vault Controller tests for withdrawal", function () {
     await DAI.connect(alice).approve(vaultController.address, DAIAmount);
 
     volmexPerpPeriphery = await upgrades.deployProxy(VolmexPerpPeriphery, [
-      [positioning.address, positioning.address],
-      [vaultController.address, vaultController.address],
+      perpViewFake.address,
       markPriceOracle.address,
       [vault.address, vault.address],
       owner.address,

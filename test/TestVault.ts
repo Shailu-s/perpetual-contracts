@@ -27,6 +27,7 @@ describe("Vault", function () {
   let ethPositioning;
   let VolmexPerpPeriphery;
   let volmexPerpPeriphery;
+  let perpViewFake;
   let volmexPerpPeripheryEth;
   let owner, alice, relayer;
 
@@ -36,6 +37,7 @@ describe("Vault", function () {
     IndexPriceOracle = await ethers.getContractFactory("IndexPriceOracle");
     MarkPriceOracle = await ethers.getContractFactory("MarkPriceOracle");
     MatchingEngine = await ethers.getContractFactory("MatchingEngineTest");
+    perpViewFake = await smock.fake("VolmexPerpView");
 
     const tokenFactory = await ethers.getContractFactory("TestERC20");
     const USDC1 = await tokenFactory.deploy();
@@ -156,8 +158,7 @@ describe("Vault", function () {
     await ETH.connect(alice).approve(ethVault.address, ethAmount);
 
     volmexPerpPeriphery = await upgrades.deployProxy(VolmexPerpPeriphery, [
-      [positioning.address, ethPositioning.address],
-      [vaultController.address, vaultController.address],
+      perpViewFake.address,
       markPriceOracle.address,
       [vault.address, vault.address],
       owner.address,
@@ -165,8 +166,7 @@ describe("Vault", function () {
     ]);
 
     volmexPerpPeripheryEth = await upgrades.deployProxy(VolmexPerpPeriphery, [
-      [ethPositioning.address, ethPositioning.address],
-      [vaultController.address, vaultController.address],
+      perpViewFake.address,
       markPriceOracle.address,
       [vault.address, vault.address],
       owner.address,
