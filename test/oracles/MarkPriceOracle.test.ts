@@ -30,6 +30,8 @@ describe("MarkPriceOracle", function () {
   let TestERC20;
   let USDC;
   let perpViewFake;
+  let MarketRegistry;
+  let marketRegistry;
   const ZERO_ADDR = "0x0000000000000000000000000000000000000000";
   this.beforeAll(async () => {
     MarkPriceOracle = await ethers.getContractFactory("MarkPriceOracle");
@@ -44,6 +46,7 @@ describe("MarkPriceOracle", function () {
     Positioning = await ethers.getContractFactory("Positioning");
     AccountBalance = await ethers.getContractFactory("AccountBalance");
     TestERC20 = await ethers.getContractFactory("TestERC20");
+    MarketRegistry = await ethers.getContractFactory("MarketRegistry");
   });
 
   beforeEach(async () => {
@@ -82,6 +85,13 @@ describe("MarkPriceOracle", function () {
     vaultController = await VaultController.deploy();
     await vaultController.deployed();
 
+    USDC = await TestERC20.deploy();
+    await USDC.__TestERC20_init("TestUSDC", "USDC", 6);
+    await USDC.deployed();
+
+    marketRegistry = await MarketRegistry.deploy();
+    marketRegistry.initialize(USDC.address);
+
     factory = await upgrades.deployProxy(
       PerpFactory,
       [
@@ -91,6 +101,7 @@ describe("MarkPriceOracle", function () {
         vault.address,
         positioning.address,
         accountBalance.address,
+        marketRegistry.address,
         perpViewFake.address
       ],
       {
@@ -107,10 +118,6 @@ describe("MarkPriceOracle", function () {
       },
     );
     await markPriceOracle.deployed();
-
-    USDC = await TestERC20.deploy();
-    await USDC.__TestERC20_init("TestUSDC", "USDC", 6);
-    await USDC.deployed();
 
     matchingEngine = await upgrades.deployProxy(
       MatchingEngine,

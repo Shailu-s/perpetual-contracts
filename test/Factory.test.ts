@@ -32,6 +32,8 @@ describe("PerpFactory", function () {
   let USDC;
   let VolmexPerpView;
   let perpView;
+  let MarketRegistry;
+  let marketRegistry;
   let owner, alice;
   const ZERO_ADDR = "0x0000000000000000000000000000000000000000";
 
@@ -50,6 +52,7 @@ describe("PerpFactory", function () {
     Vault = await ethers.getContractFactory("Vault");
     TestERC20 = await ethers.getContractFactory("TestERC20");
     VolmexPerpView = await ethers.getContractFactory("VolmexPerpView");
+    MarketRegistry = await ethers.getContractFactory("MarketRegistry");
   });
 
   beforeEach(async () => {
@@ -71,6 +74,9 @@ describe("PerpFactory", function () {
     USDC = await TestERC20.deploy();
     await USDC.__TestERC20_init("TestUSDC", "USDC", 6);
     await USDC.deployed();
+
+    marketRegistry = await MarketRegistry.deploy();
+    marketRegistry.initialize(USDC.address);
 
     markPriceOracle = await upgrades.deployProxy(
       MarkPriceOracle,
@@ -112,7 +118,8 @@ describe("PerpFactory", function () {
         vault.address,
         positioning.address,
         accountBalance.address,
-        perpView.address
+        perpView.address,
+        marketRegistry.address,
       ],
       {
         initializer: "initialize",
@@ -144,7 +151,8 @@ describe("PerpFactory", function () {
         vault.address,
         positioning.address,
         accountBalance.address,
-        perpView.address
+        perpView.address,
+        marketRegistry.address
       ),
     ).to.be.revertedWith("Initializable: contract is already initialized");
   });
@@ -202,14 +210,36 @@ describe("PerpFactory", function () {
 
     it("Should deploy the complete perp ecosystem", async () => {
       const index = (await perpView.perpIndexCount()).toString();
-      await await factory.clonePerpEcosystem(
+      await factory.clonePerpEcosystem(
         positioningConfig.address,
         matchingEngine.address,
         markPriceOracle.address,
         indexPriceOracle.address,
+        volmexQuoteToken.address,
         index,
       );
     });
+
+    it("Should set market registry", async () => {
+      const index = (await perpView.perpIndexCount()).toString();
+      expect(
+        await factory.clonePerpEcosystem(
+        positioningConfig.address,
+        matchingEngine.address,
+        markPriceOracle.address,
+        indexPriceOracle.address,
+        volmexQuoteToken.address,
+        index,
+        ),
+      ).to.emit(factory, "").withArgs(
+        index + 1,
+        await perpView.positionings(index),
+        await perpView.vaultControllers(index),
+        await perpView.accounts(index),
+        await perpView.marketRegistries(index)
+      );
+    });
+
     it("Should Clone Vault", async () => {
       const index = (await perpView.perpIndexCount()).toString();
       await factory.clonePerpEcosystem(
@@ -217,6 +247,7 @@ describe("PerpFactory", function () {
         matchingEngine.address,
         markPriceOracle.address,
         indexPriceOracle.address,
+        volmexQuoteToken.address,
         index,
       );
       const vaultClone = await factory.cloneVault(
@@ -240,6 +271,7 @@ describe("PerpFactory", function () {
             matchingEngine.address,
             markPriceOracle.address,
             indexPriceOracle.address,
+            volmexQuoteToken.address,
             index,
           ),
       ).to.be.revertedWith("PF_NCD");
@@ -252,6 +284,7 @@ describe("PerpFactory", function () {
         matchingEngine.address,
         markPriceOracle.address,
         indexPriceOracle.address,
+        volmexQuoteToken.address,
         index,
       );
       await expect(

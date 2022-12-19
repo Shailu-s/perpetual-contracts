@@ -13,6 +13,7 @@ import "../interfaces/IVolmexQuoteToken.sol";
 import "../interfaces/IPerpFactory.sol";
 import "../interfaces/IMatchingEngine.sol";
 import "../interfaces/IVolmexPerpView.sol";
+import "../interfaces/IMarketRegistry.sol";
 
 import "../helpers/RoleManager.sol";
 
@@ -42,6 +43,9 @@ contract PerpFactory is Initializable, IPerpFactory, RoleManager {
     // Address of the Perpetual View and Registry contract
     IVolmexPerpView public perpViewRegistry;
 
+    // Address of the market registry contract implementation
+    address public marketRegistryImplementation;
+
     /**
      * @notice Intializes the Factory and stores the implementations
      */
@@ -52,7 +56,8 @@ contract PerpFactory is Initializable, IPerpFactory, RoleManager {
         address _vaultImplementation,
         address _positioningImplementation,
         address _accountBalanceImplementation,
-        IVolmexPerpView _perpViewRegistry
+        IVolmexPerpView _perpViewRegistry,
+        address _marketRegistryImplementation
     ) external initializer {
         baseTokenImplementation = _baseTokenImplementation;
         quoteTokenImplementation = _quoteTokenImplementation;
@@ -61,6 +66,7 @@ contract PerpFactory is Initializable, IPerpFactory, RoleManager {
         positioningImplementation = _positioningImplementation;
         accountBalanceImplementation = _accountBalanceImplementation;
         perpViewRegistry = _perpViewRegistry;
+        marketRegistryImplementation = _marketRegistryImplementation;
         _grantRole(CLONES_DEPLOYER, _msgSender());
     }
 
@@ -145,13 +151,15 @@ contract PerpFactory is Initializable, IPerpFactory, RoleManager {
         address _matchingEngine,
         address _markPriceOracle,
         address _indexPriceOracle,
+        address _quoteToken,
         uint64 _underlyingPriceIndex
     )
         external
         returns (
             IPositioning positioning,
             IVaultController vaultController,
-            IAccountBalance accountBalance
+            IAccountBalance accountBalance,
+            IMarketRegistry marketRegistry
         )
     {
         _requireClonesDeployer();
@@ -168,8 +176,14 @@ contract PerpFactory is Initializable, IPerpFactory, RoleManager {
             _indexPriceOracle,
             _underlyingPriceIndex
         );
-
-        emit PerpSystemCreated(perpIndex, address(positioning), address(vaultController), address(accountBalance));
+        marketRegistry = _cloneMarketRegistry(perpIndex, _quoteToken);
+        emit PerpSystemCreated(
+            perpIndex, 
+            address(positioning), 
+            address(vaultController), 
+            address(accountBalance), 
+            address(marketRegistry)
+        );
         perpViewRegistry.incrementPerpIndex();
     }
 
@@ -217,6 +231,15 @@ contract PerpFactory is Initializable, IPerpFactory, RoleManager {
         accountBalance = IAccountBalance(Clones.cloneDeterministic(accountBalanceImplementation, salt));
         accountBalance.initialize(_positioningConfig);
         perpViewRegistry.setAccount(accountBalance);
+    }
+
+    function _cloneMarketRegistry(uint256 _perpIndex, address _quoteToken) 
+    private 
+    returns (IMarketRegistry marketRegistry) {
+        bytes32 salt = keccak256(abi.encodePacked(_perpIndex, _quoteToken));
+        marketRegistry = IMarketRegistry(Clones.cloneDeterministic(marketRegistryImplementation, salt));
+        marketRegistry.initialize(_quoteToken);
+        perpViewRegistry.setMarketRegistry(marketRegistry);
     }
 
     function _requireClonesDeployer() internal view {
