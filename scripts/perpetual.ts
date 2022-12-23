@@ -37,7 +37,7 @@ const positioning = async () => {
     VolmexBaseToken,
     [
       "VolmexBaseToken", // nameArg
-      "VBT", // symbolArg,
+      "VEVIV", // symbolArg,
       indexPriceOracle.address, // priceFeedArg
       true, // isBase
     ],
@@ -53,7 +53,7 @@ const positioning = async () => {
     VolmexQuoteToken,
     [
       "VolmexQuoteToken", // nameArg
-      "VBT", // symbolArg,
+      "VUSDC", // symbolArg,
       false, // isBase
     ],
     {
