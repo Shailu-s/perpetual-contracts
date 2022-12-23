@@ -64,6 +64,7 @@ contract MarketRegistry is IMarketRegistry, PositioningCallee, MarketRegistrySto
     ///TODO_V: Add something as you removed onlyOwner
     /// @inheritdoc IMarketRegistry
     function addBaseToken(address baseToken) external override {
+        _requireMarketRegistryAdmin();
         require(IVirtualToken(baseToken).isBase(), "MarketRegistry: not base token");
         address[] storage tokensStorage = _baseTokensMarketMap;
         if (_hasBaseToken(tokensStorage, baseToken)) {
