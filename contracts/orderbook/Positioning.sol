@@ -367,14 +367,15 @@ contract Positioning is
                 internalData.rightExchangedPositionNotional
             );
 
-        int256 leftRealizePnL =
+        int256[2] memory realizedPnL;
+        realizedPnL[0] =
             _realizePnLChecks(
                 orderLeft,
                 baseToken,
                 internalData.leftExchangedPositionSize,
                 internalData.leftExchangedPositionNotional
             );
-        int256 rightRealizePnL =
+        realizedPnL[1] =
             _realizePnLChecks(
                 orderRight,
                 baseToken,
@@ -391,7 +392,7 @@ contract Positioning is
             baseToken,
             internalData.leftExchangedPositionSize,
             internalData.leftExchangedPositionNotional - orderFees.orderLeftFee.toInt256(),
-            leftRealizePnL,
+            realizedPnL[0],
             0
         );
 
@@ -400,7 +401,7 @@ contract Positioning is
             baseToken,
             internalData.rightExchangedPositionSize,
             internalData.rightExchangedPositionNotional - orderFees.orderRightFee.toInt256(),
-            rightRealizePnL,
+            realizedPnL[1],
             0
         );
 
@@ -423,7 +424,9 @@ contract Positioning is
             internalData.leftExchangedPositionSize,
             internalData.leftExchangedPositionNotional,
             orderFees.orderLeftFee,
-            internalData.leftOpenNotional
+            realizedPnL[0],
+            orderLeft.orderType,
+            orderLeft.isShort
         );
 
         emit PositionChanged(
@@ -432,7 +435,9 @@ contract Positioning is
             internalData.rightExchangedPositionSize,
             internalData.rightExchangedPositionNotional,
             orderFees.orderRightFee,
-            internalData.rightOpenNotional
+            realizedPnL[1],
+            orderRight.orderType,
+            orderRight.isShort
         );
 
         return internalData;
@@ -587,15 +592,6 @@ contract Positioning is
             exchangedPositionNotional, // takerQuote
             realizedPnl,
             makerFee.toInt256()
-        );
-
-        emit PositionChanged(
-            trader,
-            baseToken,
-            exchangedPositionSize,
-            exchangedPositionNotional,
-            takerFee, // fee
-            _getTakerOpenNotional(trader, baseToken) // openNotional
         );
     }
 
