@@ -67,14 +67,12 @@ interface IPositioning {
     /// @param exchangedPositionSize The actual amount swap to uniswapV3 pool
     /// @param exchangedPositionNotional The cost of position, include fee
     /// @param fee The fee of open/close position
-    /// @param openNotional The cost of open/close position, < 0: long, > 0: short
     event PositionChanged(
         address indexed trader,
         address indexed baseToken,
         int256 exchangedPositionSize,
         int256 exchangedPositionNotional,
         uint256 fee,
-        int256 openNotional,
         int256 realisedPnL,
         bytes4 orderType,
         bool isShort
