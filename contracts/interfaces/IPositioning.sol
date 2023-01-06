@@ -74,7 +74,10 @@ interface IPositioning {
         int256 exchangedPositionSize,
         int256 exchangedPositionNotional,
         uint256 fee,
-        int256 openNotional
+        int256 openNotional,
+        int256 realisedPnL,
+        bytes4 orderType,
+        bool isShort
     );
 
     /// @notice Emitted when settling a trader's funding payment

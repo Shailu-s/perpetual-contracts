@@ -423,7 +423,10 @@ contract Positioning is
             internalData.leftExchangedPositionSize,
             internalData.leftExchangedPositionNotional,
             orderFees.orderLeftFee,
-            internalData.leftOpenNotional
+            internalData.leftOpenNotional,
+            leftRealizePnL,
+            orderLeft.orderType,
+            orderLeft.isShort
         );
 
         emit PositionChanged(
@@ -432,7 +435,10 @@ contract Positioning is
             internalData.rightExchangedPositionSize,
             internalData.rightExchangedPositionNotional,
             orderFees.orderRightFee,
-            internalData.rightOpenNotional
+            internalData.rightOpenNotional,
+            rightRealizePnL,
+            orderRight.orderType,
+            orderRight.isShort
         );
 
         return internalData;
@@ -587,15 +593,6 @@ contract Positioning is
             exchangedPositionNotional, // takerQuote
             realizedPnl,
             makerFee.toInt256()
-        );
-
-        emit PositionChanged(
-            trader,
-            baseToken,
-            exchangedPositionSize,
-            exchangedPositionNotional,
-            takerFee, // fee
-            _getTakerOpenNotional(trader, baseToken) // openNotional
         );
     }
 
