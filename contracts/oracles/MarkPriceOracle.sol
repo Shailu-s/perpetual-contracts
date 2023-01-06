@@ -139,6 +139,17 @@ contract MarkPriceOracle is Initializable, RoleManager {
         priceCumulative = priceCumulative.div(observations.length.sub(index));
     }
 
+    /**
+     * @notice Get latest price of asset
+     *
+     * @param _index Index of the observation, the index base token mapping
+     */
+    function getLatestPrice(uint64 _index) external view returns (uint256 latestPrice) {
+        Observation[] memory observations = observationsByIndex[_index];
+        uint256 index = observations.length - 1;
+        latestPrice = observations[index].priceCumulative;
+    }
+
     function _requireCanAddObservation() internal view {
         // MarkPriceOracle: Not Can Add Observation
         require(hasRole(CAN_ADD_OBSERVATION, _msgSender()), "MPO_NCAO");
