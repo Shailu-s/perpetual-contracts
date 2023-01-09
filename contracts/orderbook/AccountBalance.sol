@@ -245,6 +245,11 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
         return (_owedRealizedPnlMap[trader], unrealizedPnl);
     }
 
+    /// @dev this function is used to fetch index price of base token
+    function getIndexPrice(address baseToken) external view returns (uint256 indexPrice) {
+        indexPrice = _getIndexPrice(baseToken);
+    }
+
     //
     // PUBLIC VIEW
     //

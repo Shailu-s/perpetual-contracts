@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: BUSL - 1.1
 pragma solidity =0.8.12;
 
 import { AddressUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol";
@@ -234,6 +235,11 @@ contract Positioning is
             pendingFundingPayment = pendingFundingPayment + (getPendingFundingPayment(trader, baseTokens[i]));
         }
         return pendingFundingPayment;
+    }
+
+    /// @dev this function is used to fetch index price of base token
+    function getIndexPrice(address baseToken) external view returns (uint256 indexPrice) {
+        indexPrice = _getIndexPrice(baseToken);
     }
 
     //
