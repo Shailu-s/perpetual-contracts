@@ -22,9 +22,6 @@ contract VolmexPerpPeriphery is Initializable, RoleManager, IVolmexPerpPeriphery
     // Stores the address of VolmexPerpView contract
     IVolmexPerpView public perpView;
 
-    // Store the address of relayer
-    address public relayer;
-
     /**
      * @notice Initializes the contract
      *
@@ -50,7 +47,6 @@ contract VolmexPerpPeriphery is Initializable, RoleManager, IVolmexPerpPeriphery
         for (uint256 i = 0; i < 2; i++) {
             _isVaultWhitelist[_vaults[i]] = true;
         }
-        relayer = _relayer;
         _grantRole(VOLMEX_PERP_PERIPHERY, _owner);
         _grantRole(RELAYER_MULTISIG, _relayer);
     }
@@ -63,9 +59,8 @@ contract VolmexPerpPeriphery is Initializable, RoleManager, IVolmexPerpPeriphery
     function setRelayer(address _relayer) external {
         _requireVolmexPerpPeripheryAdmin();
         require(_relayer != address(0), "VolmexPerpPeriphery: Not relayer");
-        address oldRelayerAddress = relayer;
-        relayer = _relayer;
-        emit RelayerUpdated(oldRelayerAddress, _relayer);
+        _grantRole(RELAYER_MULTISIG, _relayer);
+        emit RelayerUpdated(_relayer);
     }
 
     function whitelistVault(address _vault, bool _isWhitelist) external {
@@ -183,6 +178,7 @@ contract VolmexPerpPeriphery is Initializable, RoleManager, IVolmexPerpPeriphery
         bytes memory liquidator
     ) external {
         require(_ordersLeft.length == _ordersRight.length, "Periphery: mismatch orders");
+        _requireVolmexPerpPeripheryRelayer();
         IPositioning positioning = perpView.positionings(_index);
         uint256 ordersLength = _ordersLeft.length;
         for (uint256 orderIndex = 0; orderIndex < ordersLength; orderIndex++) {
@@ -205,6 +201,7 @@ contract VolmexPerpPeriphery is Initializable, RoleManager, IVolmexPerpPeriphery
         bytes memory liquidator
     ) external {
         require(_leftLimitOrders.length == _rightLimitOrders.length, "Periphery: mismatch limit orders");
+        _requireVolmexPerpPeripheryRelayer();
         uint256 ordersLength = _leftLimitOrders.length;
         for (uint256 orderIndex = 0; orderIndex < ordersLength; orderIndex++) {
             _fillLimitOrder(

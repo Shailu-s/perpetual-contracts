@@ -267,7 +267,7 @@ describe("VolmexPerpPeriphery", function () {
       const [owner, account1] = await ethers.getSigners();
       expect(await volmexPerpPeriphery.setRelayer(account1.address))
         .to.emit(volmexPerpPeriphery, "RelayerUpdated")
-        .withArgs(owner.address, account1.address);
+        .withArgs(account1.address);
     });
     it("should fail to set relayer", async () => {
       const [owner, account1] = await ethers.getSigners();

@@ -10,7 +10,7 @@ import "./IPositioning.sol";
 import "./IVaultController.sol";
 
 interface IVolmexPerpPeriphery {
-    event RelayerUpdated(address indexed oldRelayerAddress, address indexed newRelayerAddress);
+    event RelayerUpdated(address indexed newRelayerAddress);
     event VaultWhitelisted(address indexed vault, bool isWhitelist);
 
     function depositToVault(
