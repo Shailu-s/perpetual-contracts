@@ -73,7 +73,7 @@ interface IPositioning {
         int256 exchangedPositionSize,
         int256 exchangedPositionNotional,
         uint256 fee,
-        int256 realisedPnL,
+        uint256 orderIndexPrice,
         bytes4 orderType,
         bool isShort
     );
