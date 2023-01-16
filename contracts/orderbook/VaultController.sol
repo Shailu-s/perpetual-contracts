@@ -124,8 +124,7 @@ contract VaultController is
     }
 
     /// @inheritdoc IVaultController
-    function getAccountValue(address trader) public view override whenNotPaused returns (int256) {
-        _requireOnlyPositioning();
+    function getAccountValue(address trader) external view override whenNotPaused returns (int256) {
         return _getAccountValue(trader);
     }
 
