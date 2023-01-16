@@ -36,7 +36,7 @@ const positioning = async () => {
   const volmexBaseToken = await upgrades.deployProxy(
     VolmexBaseToken,
     [
-      "VolmexBaseToken", // nameArg
+      "Virtual ETH Index Token", // nameArg
       "VEVIV", // symbolArg,
       indexPriceOracle.address, // priceFeedArg
       true, // isBase
@@ -52,7 +52,7 @@ const positioning = async () => {
   const volmexQuoteToken = await upgrades.deployProxy(
     VolmexQuoteToken,
     [
-      "VolmexQuoteToken", // nameArg
+      "Virtual USD Coin", // nameArg
       "VUSDC", // symbolArg,
       false, // isBase
     ],
@@ -74,7 +74,7 @@ const positioning = async () => {
   await markPriceOracle.deployed();
 
   console.log("Deploying USDC ...");
-  const usdc = await upgrades.deployProxy(TestERC20, ["VolmexUSDC", "VUSDC", 6], {
+  const usdc = await upgrades.deployProxy(TestERC20, ["USD Coin", "USDC", 6], {
     initializer: "__TestERC20_init",
   });
   await usdc.deployed();
@@ -170,7 +170,7 @@ const positioning = async () => {
       await proxyAdmin.getProxyImplementation(vault.address),
       await proxyAdmin.getProxyImplementation(positioning.address),
       await proxyAdmin.getProxyImplementation(accountBalance.address),
-      perpView.address,
+      await proxyAdmin.getProxyImplementation(perpView.address),
       await proxyAdmin.getProxyImplementation(marketRegistry.address),
     ],
     {

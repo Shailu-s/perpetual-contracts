@@ -13,9 +13,14 @@ const upgrade = async () => {
   const implementation = await proxyAdmin.getProxyImplementation(instance.address);
 
   console.log("Verifying implementation ...", implementation);
-  await run("verify:verify", {
-    address: implementation,
-  });
+
+  try {
+    await run("verify:verify", {
+      address: implementation,
+    });
+  } catch(error) {
+    console.log('Unable to verify')
+  }
 
   console.log("\nVolmex Protocol implementation upgraded");
 };
