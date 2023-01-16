@@ -242,6 +242,16 @@ contract Positioning is
         indexPrice = _getIndexPrice(baseToken);
     }
 
+    /// @dev this function is used to know the trader is liquidateable
+    function isAccountLiquidatable(address trader) external view returns (bool) {
+        return _isAccountLiquidatable(trader);
+    }
+
+    /// @dev Used to fetch account value of a trader
+    function getAccountValue(address trader) external view returns (int256 accountValue) {
+        accountValue = _getAccountValue(trader);
+    }
+
     //
     // INTERNAL
     //
@@ -364,11 +374,9 @@ contract Positioning is
             internalData.rightExchangedPositionNotional = newFill.leftValue.toInt256();
         }
 
-        // TODO: This is hardcoded right now but changes it during relayer development
-        bool isLeftMaker = true;
         OrderFees memory orderFees =
             _calculateFees(
-                isLeftMaker,
+                true, // TODO: This is hardcoded right now but changes it during relayer development
                 internalData.leftExchangedPositionNotional,
                 internalData.rightExchangedPositionNotional
             );
@@ -424,13 +432,15 @@ contract Positioning is
             _requireEnoughFreeCollateral(orderRight.trader);
         }
 
+        uint256 orderIndexPrice = _getIndexPrice(baseToken);
+
         emit PositionChanged(
             orderLeft.trader,
             baseToken,
             internalData.leftExchangedPositionSize,
             internalData.leftExchangedPositionNotional,
             orderFees.orderLeftFee,
-            realizedPnL[0],
+            orderIndexPrice,
             orderLeft.orderType,
             orderLeft.isShort
         );
@@ -441,7 +451,7 @@ contract Positioning is
             internalData.rightExchangedPositionSize,
             internalData.rightExchangedPositionNotional,
             orderFees.orderRightFee,
-            realizedPnL[1],
+            orderIndexPrice,
             orderRight.orderType,
             orderRight.isShort
         );
@@ -523,7 +533,7 @@ contract Positioning is
     }
 
     function _getIndexPrice(address baseToken) internal view returns (uint256) {
-        return IIndexPrice(baseToken).getIndexPrice(IPositioningConfig(_positioningConfig).getTwapInterval());
+        return IIndexPrice(baseToken).getIndexPrice(_underlyingPriceIndex);
     }
 
     function _getPnlToBeRealized(InternalRealizePnlParams memory params) internal pure returns (int256) {
