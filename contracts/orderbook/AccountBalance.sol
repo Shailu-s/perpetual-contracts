@@ -61,9 +61,9 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
     }
 
     /// @inheritdoc IAccountBalance
-    function modifyOwedRealizedPnl(address trader, int256 amount) external override {
+    function modifyOwedRealizedPnl(address trader, int256 amount, address baseToken) external override {
         _requireOnlyPositioning();
-        _modifyOwedRealizedPnl(trader, amount);
+        _modifyOwedRealizedPnl(trader, amount, baseToken);
     }
 
     /// @inheritdoc IAccountBalance
@@ -185,7 +185,7 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
     ) external override returns (int256 positionSize) {
         _requireOnlyPositioning();
         (positionSize, ) = _modifyTakerBalance(trader, baseToken, takerBase, takerQuote);
-        _modifyOwedRealizedPnl(trader, fee);
+        _modifyOwedRealizedPnl(trader, fee, baseToken);
 
         // @audit should merge _addOwedRealizedPnl and settleQuoteToOwedRealizedPnl in some way.
         // PnlRealized will be emitted three times when removing trader's liquidity
@@ -307,10 +307,10 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
         return (0, 0);
     }
 
-    function _modifyOwedRealizedPnl(address trader, int256 amount) internal {
+    function _modifyOwedRealizedPnl(address trader, int256 amount, address baseToken) internal {
         if (amount != 0) {
             _owedRealizedPnlMap[trader] = _owedRealizedPnlMap[trader] + amount;
-            emit PnlRealized(trader, amount);
+            emit PnlRealized(trader, baseToken, amount);
         }
     }
 
@@ -321,7 +321,7 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
     ) internal {
         LibAccountMarket.Info storage accountInfo = _accountMarketMap[trader][baseToken];
         accountInfo.takerOpenNotional = accountInfo.takerOpenNotional - amount;
-        _modifyOwedRealizedPnl(trader, amount);
+        _modifyOwedRealizedPnl(trader, amount, baseToken);
     }
 
     /// @dev this function is expensive
@@ -353,6 +353,7 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
     //
 
     function _getIndexPrice(address baseToken) internal view returns (uint256) {
+        // TODO: use underlying price index
         return IIndexPrice(baseToken).getIndexPrice(IPositioningConfig(_positioningConfig).getTwapInterval());
     }
 

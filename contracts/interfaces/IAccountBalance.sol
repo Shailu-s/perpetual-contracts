@@ -10,7 +10,7 @@ interface IAccountBalance {
     /// @dev Emit whenever a trader's `owedRealizedPnl` is updated
     /// @param trader The address of the trader
     /// @param amount The amount changed
-    event PnlRealized(address indexed trader, int256 amount);
+    event PnlRealized(address indexed trader, address indexed baseToken, int256 amount);
 
     function initialize(address positioningConfigArg) external;
 
@@ -18,7 +18,7 @@ interface IAccountBalance {
     /// @dev Only used by `Positioning` contract
     /// @param trader The address of the trader
     /// @param amount Modified amount of owedRealizedPnl
-    function modifyOwedRealizedPnl(address trader, int256 amount) external;
+    function modifyOwedRealizedPnl(address trader, int256 amount, address baseToken) external;
 
     /// @notice Settle owedRealizedPnl
     /// @dev Only used by `Vault.withdraw()`
