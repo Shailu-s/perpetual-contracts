@@ -22,7 +22,7 @@ const upgrade = async () => {
     console.log('Unable to verify')
   }
 
-  console.log("\nVolmex Protocol implementation upgraded");
+  console.log(`\n${process.env.CONTRACT_NAME} implementation upgraded`);
 };
 
 upgrade()
