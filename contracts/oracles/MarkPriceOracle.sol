@@ -36,6 +36,8 @@ contract MarkPriceOracle is Initializable, RoleManager {
     /// @param matchingEngine The address of the MatchingEngine contract
     event MatchingEngineChanged(address indexed matchingEngine);
 
+    event ObservationAdded(uint64 index, uint256 priceCumulative, uint256 timestamp);
+
     // Used to check the caller is Exchange contract
     modifier onlyMatchingEngine() {
         require(msg.sender == matchingEngine, "MarkSMA: Not MatchingEngine");
@@ -117,6 +119,7 @@ contract MarkPriceOracle is Initializable, RoleManager {
         Observation memory observation = Observation({ timestamp: block.timestamp, priceCumulative: _priceCumulative });
         Observation[] storage observations = observationsByIndex[_index];
         observations.push(observation);
+        emit ObservationAdded(_index, _priceCumulative, block.timestamp);
     }
 
     /**
