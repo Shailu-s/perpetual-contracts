@@ -290,7 +290,7 @@ contract Positioning is
 
         // trader pays liquidation penalty
         uint256 liquidationPenalty = liquidatedPositionNotional.abs().mulRatio(_getLiquidationPenaltyRatio());
-        _modifyOwedRealizedPnl(trader, liquidationPenalty.neg256());
+        _modifyOwedRealizedPnl(trader, liquidationPenalty.neg256(), baseToken);
 
         // if there is bad debt, liquidation fees all go to liquidator; otherwise, split between liquidator & FR
         uint256 liquidationFeeToLiquidator = liquidationPenalty / 2;
@@ -299,7 +299,7 @@ contract Positioning is
             liquidationFeeToLiquidator = liquidationPenalty;
         } else {
             liquidationFeeToFR = liquidationPenalty - liquidationFeeToLiquidator;
-            _modifyOwedRealizedPnl(_getFeeReceiver(), liquidationFeeToFR.toInt256());
+            _modifyOwedRealizedPnl(_getFeeReceiver(), liquidationFeeToFR.toInt256(), baseToken);
         }
 
         // liquidator opens a position with liquidationFeeToLiquidator as a discount
@@ -335,7 +335,7 @@ contract Positioning is
         (fundingPayment, growthTwPremium) = settleFunding(trader, baseToken);
 
         if (fundingPayment != 0) {
-            IAccountBalance(_accountBalance).modifyOwedRealizedPnl(trader, fundingPayment.neg256());
+            IAccountBalance(_accountBalance).modifyOwedRealizedPnl(trader, fundingPayment.neg256(), baseToken);
             emit FundingPaymentSettled(trader, baseToken, fundingPayment);
         }
 
@@ -344,8 +344,8 @@ contract Positioning is
     }
 
     /// @dev Add given amount to PnL of the address provided
-    function _modifyOwedRealizedPnl(address trader, int256 amount) internal {
-        IAccountBalance(_accountBalance).modifyOwedRealizedPnl(trader, amount);
+    function _modifyOwedRealizedPnl(address trader, int256 amount, address baseToken) internal {
+        IAccountBalance(_accountBalance).modifyOwedRealizedPnl(trader, amount, baseToken);
     }
 
     function setPositioning(address PositioningArg) public override(PositioningCallee, IPositioning) {
@@ -398,7 +398,7 @@ contract Positioning is
             );
 
         // // modifies PnL of fee receiver
-        _modifyOwedRealizedPnl(_getFeeReceiver(), (orderFees.orderLeftFee + orderFees.orderRightFee).toInt256());
+        _modifyOwedRealizedPnl(_getFeeReceiver(), (orderFees.orderLeftFee + orderFees.orderRightFee).toInt256(), baseToken);
 
         // // modifies positionSize and openNotional
         internalData.leftPositionSize = _settleBalanceAndDeregister(
