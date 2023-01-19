@@ -145,6 +145,12 @@ contract PerpFactory is Initializable, IPerpFactory, RoleManager {
 
     /**
      * @notice Clones the complete perpetual ecosystem
+     *
+     * @return perpEcosystem Array of-
+     *                      0: AccountBalance
+     *                      1: VaultController
+     *                      2: Positioning
+     *                      3: MarketRegistry
      */
     function clonePerpEcosystem(
         address _positioningConfig,
@@ -152,37 +158,36 @@ contract PerpFactory is Initializable, IPerpFactory, RoleManager {
         address _markPriceOracle,
         address _indexPriceOracle,
         address _quoteToken,
-        uint64 _underlyingPriceIndex
+        uint64 _underlyingPriceIndex,
+        address[] calldata _liquidators
     )
         external
         returns (
-            IPositioning positioning,
-            IVaultController vaultController,
-            IAccountBalance accountBalance,
-            IMarketRegistry marketRegistry
+            address[4] memory perpEcosystem
         )
     {
         _requireClonesDeployer();
         uint256 perpIndex = perpViewRegistry.perpIndexCount();
-        accountBalance = _cloneAccountBalance(perpIndex, _positioningConfig);
-        vaultController = _cloneVaultController(perpIndex, _positioningConfig, address(accountBalance));
-        positioning = _clonePositioning(
+        perpEcosystem[0] = address(_cloneAccountBalance(perpIndex, _positioningConfig));
+        perpEcosystem[1] = address(_cloneVaultController(perpIndex, _positioningConfig, address(perpEcosystem[0])));
+        perpEcosystem[2] = address(_clonePositioning(
             perpIndex,
             _positioningConfig,
-            vaultController,
+            IVaultController(perpEcosystem[1]),
             _matchingEngine,
-            address(accountBalance),
+            perpEcosystem[0],
             _markPriceOracle,
             _indexPriceOracle,
-            _underlyingPriceIndex
-        );
-        marketRegistry = _cloneMarketRegistry(perpIndex, _quoteToken);
+            _underlyingPriceIndex,
+            _liquidators
+        ));
+        perpEcosystem[3] = address(_cloneMarketRegistry(perpIndex, _quoteToken));
         emit PerpSystemCreated(
             perpIndex, 
-            address(positioning), 
-            address(vaultController), 
-            address(accountBalance), 
-            address(marketRegistry)
+            perpEcosystem[2], 
+            perpEcosystem[1], 
+            perpEcosystem[0], 
+            perpEcosystem[3]
         );
         perpViewRegistry.incrementPerpIndex();
     }
@@ -206,7 +211,8 @@ contract PerpFactory is Initializable, IPerpFactory, RoleManager {
         address _accountBalance,
         address _markPriceOracle,
         address _indexPriceOracle,
-        uint64 _underlyingPriceIndex
+        uint64 _underlyingPriceIndex,
+        address[] calldata _liquidators
     ) private returns (IPositioning positioning) {
         bytes32 salt = keccak256(abi.encodePacked(_perpIndex, _positioningConfig));
         positioning = IPositioning(Clones.cloneDeterministic(positioningImplementation, salt));
@@ -217,7 +223,8 @@ contract PerpFactory is Initializable, IPerpFactory, RoleManager {
             _accountBalance,
             _markPriceOracle,
             _indexPriceOracle,
-            _underlyingPriceIndex
+            _underlyingPriceIndex,
+            _liquidators
         );
         _vaultController.setPositioning(address(positioning));
         perpViewRegistry.setPositioning(positioning);
