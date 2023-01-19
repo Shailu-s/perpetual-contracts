@@ -91,13 +91,14 @@ interface IPositioning {
 
     /// @dev this function is public for testing
     function initialize(
-        address PositioningConfigArg,
+        address positioningConfigArg,
         address vaultControllerArg,
         address accountBalanceArg,
         address matchingEngineArg,
         address markPriceArg,
         address indexPriceArg,
-        uint64 underlyingPriceIndex
+        uint64 underlyingPriceIndex,
+        address[] calldata liquidators
     ) external;
 
     /// @notice Settle all markets fundingPayment to owedRealized Pnl
@@ -143,9 +144,6 @@ interface IPositioning {
     /// @param trader The address of trader
     /// @param baseToken The address of baseToken
     function liquidateFullPosition(address trader, address baseToken) external;
-
-    /// @notice Set Positioning address
-    function setPositioning(address positioning) external;
 
     /// @notice Get position size of a trader to be liquidated
     /// @param trader The address of trader

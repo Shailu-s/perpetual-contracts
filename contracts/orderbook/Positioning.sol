@@ -68,7 +68,8 @@ contract Positioning is
         address matchingEngineArg,
         address markPriceArg,
         address indexPriceArg,
-        uint64 underlyingPriceIndex
+        uint64 underlyingPriceIndex,
+        address[] calldata liquidators
     ) external initializer {
         // P_VANC: Vault address is not contract
         require(vaultControllerArg.isContract(), "P_VANC");
@@ -90,9 +91,6 @@ contract Positioning is
         _matchingEngine = matchingEngineArg;
         _underlyingPriceIndex = underlyingPriceIndex;
 
-        // TODO: Set settlement token
-        // _settlementTokenDecimals = 0;
-        setPositioning(address(this));
         _grantRole(POSITIONING_ADMIN, _msgSender());
     }
 
@@ -356,10 +354,6 @@ contract Positioning is
         address baseToken
     ) internal {
         IAccountBalance(_accountBalance).modifyOwedRealizedPnl(trader, amount, baseToken);
-    }
-
-    function setPositioning(address PositioningArg) public override(PositioningCallee, IPositioning) {
-        _Positioning = PositioningArg;
     }
 
     /// @dev this function matches the both orders and opens the position
