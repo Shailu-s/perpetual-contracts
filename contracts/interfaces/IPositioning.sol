@@ -89,6 +89,9 @@ interface IPositioning {
     /// @param forwarder The trusted forwarder address
     event TrustedForwarderChanged(address indexed forwarder);
 
+    /// @notice Emitted when liquidator is whitelisted or removed
+    event LiquidatorWhitelisted(address indexed liquidator, bool isWhitelist);
+
     /// @dev this function is public for testing
     function initialize(
         address positioningConfigArg,
@@ -107,6 +110,10 @@ interface IPositioning {
 
     /// @notice Function to set fee receiver
     function setDefaultFeeReceiver(address newDefaultFeeReceiver) external;
+
+    /// @notice Update whitelist for a liquidator
+    /// @param isWhitelist if true, whitelist. is false remove whitelist
+    function whitelistLiquidator(address liquidator, bool isWhitelist) external;
 
     /// @notice Trader can call `openPosition` to long/short on baseToken market
     /// @param orderLeft PositionParams struct

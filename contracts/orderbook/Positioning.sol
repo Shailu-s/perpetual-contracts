@@ -90,6 +90,9 @@ contract Positioning is
         _accountBalance = accountBalanceArg;
         _matchingEngine = matchingEngineArg;
         _underlyingPriceIndex = underlyingPriceIndex;
+        for (uint256 index = 0; index < 2; index++) {
+            _isLiquidatorWhitelist[liquidators[index]] = true;
+        }
 
         _grantRole(POSITIONING_ADMIN, _msgSender());
     }
@@ -111,11 +114,21 @@ contract Positioning is
     }
 
     /// @inheritdoc IPositioning
-    function setDefaultFeeReceiver(address _newDefaultFeeReceiver) external onlyOwner {
+    function setDefaultFeeReceiver(address newDefaultFeeReceiver) external onlyOwner {
         // Default Fee Receiver is zero
-        require(_newDefaultFeeReceiver != address(0), "PC_DFRZ");
-        defaultFeeReceiver = _newDefaultFeeReceiver;
+        require(newDefaultFeeReceiver != address(0), "PC_DFRZ");
+        defaultFeeReceiver = newDefaultFeeReceiver;
         emit DefaultFeeReceiverChanged(defaultFeeReceiver);
+    }
+
+    /// @inheritdoc IPositioning
+    function whitelistLiquidator(address liquidator, bool isWhitelist) external {
+        _requirePositioningAdmin();
+        _isLiquidatorWhitelist[liquidator] = isWhitelist;
+        if (!isWhitelist) {
+            delete _isLiquidatorWhitelist[liquidator];
+        }
+        emit LiquidatorWhitelisted(liquidator, isWhitelist);
     }
 
     /// @inheritdoc IPositioning
@@ -267,13 +280,13 @@ contract Positioning is
     ) internal {
         // P_EAV: enough account value
         require(_isAccountLiquidatable(trader), "P_EAV");
+        address liquidator = _msgSender();
+        _requireWhitelistLiquidator(liquidator);
 
         int256 positionSize = _getTakerPosition(trader, baseToken);
 
         // P_WLD: wrong liquidation direction
         require(positionSize * positionSizeToBeLiquidated >= 0, "P_WLD");
-
-        address liquidator = _msgSender();
 
         _registerBaseToken(liquidator, baseToken);
 
@@ -681,5 +694,9 @@ contract Positioning is
 
     function _requirePositioningAdmin() internal view {
         require(hasRole(POSITIONING_ADMIN, _msgSender()), "Positioning: Not admin");
+    }
+
+    function _requireWhitelistLiquidator(address liquidator) internal view {
+        require(_isLiquidatorWhitelist[liquidator], "Positioning: liquidator not whitelisted");
     }
 }
