@@ -159,7 +159,7 @@ contract PerpFactory is Initializable, IPerpFactory, RoleManager {
         address _indexPriceOracle,
         address _quoteToken,
         uint64 _underlyingPriceIndex,
-        address[] calldata _liquidators
+        address[2] calldata _liquidators
     )
         external
         returns (
@@ -212,7 +212,7 @@ contract PerpFactory is Initializable, IPerpFactory, RoleManager {
         address _markPriceOracle,
         address _indexPriceOracle,
         uint64 _underlyingPriceIndex,
-        address[] calldata _liquidators
+        address[2] calldata _liquidators
     ) private returns (IPositioning positioning) {
         bytes32 salt = keccak256(abi.encodePacked(_perpIndex, _positioningConfig));
         positioning = IPositioning(Clones.cloneDeterministic(positioningImplementation, salt));

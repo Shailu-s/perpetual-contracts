@@ -98,7 +98,7 @@ interface IPositioning {
         address markPriceArg,
         address indexPriceArg,
         uint64 underlyingPriceIndex,
-        address[] calldata liquidators
+        address[2] calldata liquidators
     ) external;
 
     /// @notice Settle all markets fundingPayment to owedRealized Pnl

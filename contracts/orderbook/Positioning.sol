@@ -69,7 +69,7 @@ contract Positioning is
         address markPriceArg,
         address indexPriceArg,
         uint64 underlyingPriceIndex,
-        address[] calldata liquidators
+        address[2] calldata liquidators
     ) external initializer {
         // P_VANC: Vault address is not contract
         require(vaultControllerArg.isContract(), "P_VANC");
