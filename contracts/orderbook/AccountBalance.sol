@@ -61,7 +61,11 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
     }
 
     /// @inheritdoc IAccountBalance
-    function modifyOwedRealizedPnl(address trader, int256 amount, address baseToken) external override {
+    function modifyOwedRealizedPnl(
+        address trader,
+        int256 amount,
+        address baseToken
+    ) external override {
         _requireOnlyPositioning();
         _modifyOwedRealizedPnl(trader, amount, baseToken);
     }
@@ -307,7 +311,11 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
         return (0, 0);
     }
 
-    function _modifyOwedRealizedPnl(address trader, int256 amount, address baseToken) internal {
+    function _modifyOwedRealizedPnl(
+        address trader,
+        int256 amount,
+        address baseToken
+    ) internal {
         if (amount != 0) {
             _owedRealizedPnlMap[trader] = _owedRealizedPnlMap[trader] + amount;
             emit PnlRealized(trader, baseToken, amount);

@@ -113,8 +113,8 @@ contract FundingRate is IFundingRate, BlockContext, PositioningCallee, FundingRa
             growthTwPremium = lastTwPremium;
         } else {
             // deltaTwPremium = (markTwap - indexTwap) * (now - lastSettledTimestamp)
-            int256 deltaTwPremium =
-                _getDeltaTwap(markTwap, indexTwap) * ((timestamp - lastSettledTimestamp).toInt256());
+            int256 deltaTwPremium = _getDeltaTwap(markTwap, indexTwap) *
+                ((timestamp - lastSettledTimestamp).toInt256());
             growthTwPremium = lastTwPremium + deltaTwPremium;
         }
 
