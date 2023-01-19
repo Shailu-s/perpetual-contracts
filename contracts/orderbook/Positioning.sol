@@ -62,7 +62,7 @@ contract Positioning is
     /// @dev this function is public for testing
     // solhint-disable-next-line func-order
     function initialize(
-        address PositioningConfigArg,
+        address positioningConfigArg,
         address vaultControllerArg,
         address accountBalanceArg,
         address matchingEngineArg,
@@ -73,7 +73,7 @@ contract Positioning is
         // P_VANC: Vault address is not contract
         require(vaultControllerArg.isContract(), "P_VANC");
         // PositioningConfig address is not contract
-        require(PositioningConfigArg.isContract(), "P_PCNC");
+        require(positioningConfigArg.isContract(), "P_PCNC");
         // AccountBalance is not contract
         require(accountBalanceArg.isContract(), "P_ABNC");
         // P_MENC: Matching Engine is not contract
@@ -84,7 +84,7 @@ contract Positioning is
         __FundingRate_init(markPriceArg, indexPriceArg);
         __OrderValidator_init_unchained();
 
-        _positioningConfig = PositioningConfigArg;
+        _positioningConfig = positioningConfigArg;
         _vaultController = vaultControllerArg;
         _accountBalance = accountBalanceArg;
         _matchingEngine = matchingEngineArg;
