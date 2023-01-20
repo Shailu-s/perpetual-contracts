@@ -120,6 +120,7 @@ describe("Vault Controller tests for withdrawal", function () {
         markPriceOracle.address,
         indexPriceOracle.address,
         0,
+        [owner.address, alice.address]
       ],
       {
         initializer: "initialize",

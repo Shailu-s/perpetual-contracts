@@ -65,7 +65,7 @@ describe("Positioning", function () {
     ERC20TransferProxy = await ethers.getContractFactory("ERC20TransferProxy");
     TransferManagerTest = await ethers.getContractFactory("TransferManagerTest");
     ERC1271Test = await ethers.getContractFactory("ERC1271Test");
-    Positioning = await ethers.getContractFactory("PositioningTest");
+    Positioning = await ethers.getContractFactory("Positioning");
     PositioningConfig = await ethers.getContractFactory("PositioningConfig");
     Vault = await ethers.getContractFactory("Vault");
     VaultController = await ethers.getContractFactory("VaultController");
@@ -199,6 +199,7 @@ describe("Positioning", function () {
         markPriceOracle.address,
         indexPriceOracle.address,
         0,
+        [owner.address, account2.address]
       ],
       {
         initializer: "initialize",
@@ -287,6 +288,7 @@ describe("Positioning", function () {
               markPriceOracle.address,
               indexPriceOracle.address,
               0,
+              [owner.address, account2.address]
             ],
             {
               initializer: "initialize",
@@ -309,6 +311,7 @@ describe("Positioning", function () {
               markPriceOracle.address,
               indexPriceOracle.address,
               0,
+              [owner.address, account2.address]
             ],
             {
               initializer: "initialize",
@@ -331,6 +334,7 @@ describe("Positioning", function () {
               markPriceOracle.address,
               indexPriceOracle.address,
               0,
+              [owner.address, account2.address]
             ],
             {
               initializer: "initialize",
@@ -353,6 +357,7 @@ describe("Positioning", function () {
               markPriceOracle.address,
               indexPriceOracle.address,
               0,
+              [owner.address, account2.address]
             ],
             {
               initializer: "initialize",
@@ -1415,6 +1420,7 @@ describe("Liquidation test in Positioning", function () {
         markPriceOracle.address,
         indexPriceOracle.address,
         0,
+        [owner.address, account2.address]
       ],
       {
         initializer: "initialize",
@@ -1543,7 +1549,7 @@ describe("Liquidation test in Positioning", function () {
             )
           ).wait();
         }
-
+console.log("Testsssss", account2.address)
         // liquidating the position
         await expect(
           positioning
