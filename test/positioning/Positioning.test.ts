@@ -5,7 +5,7 @@ import { FakeContract, smock } from "@defi-wonderland/smock";
 import { FundingRate, IndexPriceOracle, MarkPriceOracle } from "../../typechain";
 import { BigNumber } from "ethers";
 
-describe("Positioning", function () {
+describe.only("Positioning", function () {
   let MatchingEngine;
   let matchingEngine;
   let VirtualToken;
@@ -479,6 +479,167 @@ describe("Positioning", function () {
           account2.address,
           Asset(volmexBaseToken.address, convert("24")),
           Asset(virtualToken.address, convert("2400")),
+          1,
+          0,
+          true,
+        );
+
+        const vaultAddress = await vaultController.getVault(virtualToken.address);
+
+        const vaultContract = await vault.attach(vaultAddress);
+        let signatureLeft = await getSignature(orderLeftLeverage, account1.address);
+        let signatureRight = await getSignature(orderRightLeverage, account2.address);
+
+        // let a = await indexPriceOracle
+        // opening the position here
+        await expect(
+          positioning
+            .connect(account1)
+            .openPosition(
+              orderLeftLeverage,
+              signatureLeft,
+              orderRightLeverage,
+              signatureRight,
+              liquidator,
+            ),
+        ).to.emit(positioning, "PositionChanged");
+
+        const positionSize = await accountBalance1.getTakerPositionSize(
+          account1.address,
+          orderLeft.takeAsset.virtualToken,
+        );
+        const positionSize1 = await accountBalance1.getTakerPositionSize(
+          account2.address,
+          orderLeft.takeAsset.virtualToken,
+        );
+
+        await expect(positionSize.toString()).to.be.equal(convert("24"));
+        await expect(positionSize1.toString()).to.be.equal(convert("-24"));
+      });
+
+      it("should not open position with more that 5x leverage", async () => {
+        // const txn = await markPriceOracle.getCumulativePrice(10000000, 0);
+
+        await matchingEngine.grantMatchOrders(positioning.address);
+
+        await virtualToken.mint(account1.address, convert("1000"));
+        await virtualToken.mint(account2.address, convert("1000"));
+        await virtualToken.addWhitelist(account1.address);
+        await virtualToken.addWhitelist(account2.address);
+
+        await virtualToken.connect(account1).approve(vault.address, convert("1000"));
+        await virtualToken.connect(account2).approve(vault.address, convert("1000"));
+        await virtualToken.connect(account1).approve(volmexPerpPeriphery.address, convert("1000"));
+        await virtualToken.connect(account2).approve(volmexPerpPeriphery.address, convert("1000"));
+        await vaultController
+          .connect(account1)
+          .deposit(
+            volmexPerpPeriphery.address,
+            virtualToken.address,
+            account1.address,
+            convert("1000"),
+          );
+        await vaultController
+          .connect(account2)
+          .deposit(
+            volmexPerpPeriphery.address,
+            virtualToken.address,
+            account2.address,
+            convert("1000"),
+          );
+
+        const orderLeftLeverage = Order(
+          ORDER,
+          deadline,
+          account1.address,
+          Asset(virtualToken.address, convert("2400")),
+          Asset(volmexBaseToken.address, convert("24")),
+          0,
+          0,
+          false,
+        );
+
+        const orderRightLeverage = Order(
+          ORDER,
+          deadline,
+          account2.address,
+          Asset(volmexBaseToken.address, convert("24")),
+          Asset(virtualToken.address, convert("2400")),
+          1,
+          0,
+          true,
+        );
+
+        const vaultAddress = await vaultController.getVault(virtualToken.address);
+
+        const vaultContract = await vault.attach(vaultAddress);
+        let signatureLeft = await getSignature(orderLeftLeverage, account1.address);
+        let signatureRight = await getSignature(orderRightLeverage, account2.address);
+
+        // let a = await indexPriceOracle
+        // opening the position here
+        await expect(
+          positioning
+            .connect(account1)
+            .openPosition(
+              orderLeftLeverage,
+              signatureLeft,
+              orderRightLeverage,
+              signatureRight,
+              liquidator,
+            ),
+        ).to.be.revertedWith("P_NEFCI");
+
+      });
+
+      it("should match orders and open position with 5x leverage", async () => {
+        // const txn = await markPriceOracle.getCumulativePrice(10000000, 0);
+
+        await matchingEngine.grantMatchOrders(positioning.address);
+
+        await virtualToken.mint(account1.address, convert("1000"));
+        await virtualToken.mint(account2.address, convert("1000"));
+        await virtualToken.addWhitelist(account1.address);
+        await virtualToken.addWhitelist(account2.address);
+
+        await virtualToken.connect(account1).approve(vault.address, convert("1000"));
+        await virtualToken.connect(account2).approve(vault.address, convert("1000"));
+        await virtualToken.connect(account1).approve(volmexPerpPeriphery.address, convert("1000"));
+        await virtualToken.connect(account2).approve(volmexPerpPeriphery.address, convert("1000"));
+        await vaultController
+          .connect(account1)
+          .deposit(
+            volmexPerpPeriphery.address,
+            virtualToken.address,
+            account1.address,
+            convert("1000"),
+          );
+        await vaultController
+          .connect(account2)
+          .deposit(
+            volmexPerpPeriphery.address,
+            virtualToken.address,
+            account2.address,
+            convert("1000"),
+          );
+
+        const orderLeftLeverage = Order(
+          ORDER,
+          deadline,
+          account1.address,
+          Asset(virtualToken.address, convert("4900")),
+          Asset(volmexBaseToken.address, convert("49")),
+          0,
+          0,
+          false,
+        );
+
+        const orderRightLeverage = Order(
+          ORDER,
+          deadline,
+          account2.address,
+          Asset(volmexBaseToken.address, convert("49")),
+          Asset(virtualToken.address, convert("4900")),
           1,
           0,
           true,
