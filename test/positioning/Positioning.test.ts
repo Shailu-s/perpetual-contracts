@@ -5,7 +5,7 @@ import { FakeContract, smock } from "@defi-wonderland/smock";
 import { FundingRate, IndexPriceOracle, MarkPriceOracle } from "../../typechain";
 import { BigNumber } from "ethers";
 
-describe.only("Positioning", function () {
+describe("Positioning", function () {
   let MatchingEngine;
   let matchingEngine;
   let VirtualToken;
