@@ -121,6 +121,14 @@ contract Positioning is
         emit DefaultFeeReceiverChanged(defaultFeeReceiver);
     }
 
+    function setIndexPriceOracle(address indexPriceOracle) external {
+        _requirePositioningAdmin();
+        // P_AZ: Index price oracle is address zero
+        require(indexPriceOracle != address(0), "P_AZ");
+        _indexPriceOracleArg = indexPriceOracle;
+        emit IndexPriceSet(indexPriceOracle);
+    }
+
     /// @inheritdoc IPositioning
     function whitelistLiquidator(address liquidator, bool isWhitelist) external {
         _requirePositioningAdmin();

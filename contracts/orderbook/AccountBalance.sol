@@ -52,12 +52,19 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
         __PositioningCallee_init();
 
         _positioningConfig = PositioningConfigArg;
+        _underlyingPriceIndex = 0;
         _grantRole(ACCOUNT_BALANCE_ADMIN, _msgSender());
     }
 
     function grantSettleRealizedPnlRole(address account) external {
         _requireAccountBalanceAdmin();
         _grantRole(CAN_SETTLE_REALIZED_PNL, account);
+    }
+
+    function setUnderlyingPriceIndex(uint64 underlyingIndex) external {
+        _requireAccountBalanceAdmin();
+        _underlyingPriceIndex = underlyingIndex;
+        emit UnderlyingPriceIndexSet(underlyingIndex);
     }
 
     /// @inheritdoc IAccountBalance
@@ -362,7 +369,7 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
 
     function _getIndexPrice(address baseToken) internal view returns (uint256) {
         // TODO: use underlying price index
-        return IIndexPrice(baseToken).getIndexPrice(IPositioningConfig(_positioningConfig).getTwapInterval());
+        return IIndexPrice(baseToken).getIndexPrice(_underlyingPriceIndex);
     }
 
     /// @return netQuoteBalance = quote.balance

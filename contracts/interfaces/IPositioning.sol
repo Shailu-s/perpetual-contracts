@@ -92,6 +92,8 @@ interface IPositioning {
     /// @notice Emitted when liquidator is whitelisted or removed
     event LiquidatorWhitelisted(address indexed liquidator, bool isWhitelist);
 
+    event IndexPriceSet(address indexed indexPriceOracle);
+
     /// @dev this function is public for testing
     function initialize(
         address positioningConfigArg,
