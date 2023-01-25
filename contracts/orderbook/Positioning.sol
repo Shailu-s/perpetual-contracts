@@ -220,6 +220,27 @@ contract Positioning is
         return _accountBalance;
     }
 
+    function getOrderValidate(LibOrder.Order memory order) public whenNotPaused nonReentrant returns (bool) {
+        address baseToken = order.isShort ? order.makeAsset.virtualToken : order.takeAsset.virtualToken;
+        require(
+            IMarketRegistry(_marketRegistry).checkBaseToken(baseToken),
+            "V_PERP: Basetoken not registered at market"
+        );
+
+        require(order.trader != address(0), "V_PERP_M: order verification failed");
+        require(order.salt != 0, "V_PERP_M: 0 salt can't be used");
+        require(order.salt >= makerMinSalt[_msgSender()], "V_PERP_M: order salt lower");
+
+        LibOrder.validate(order);
+
+        require(
+            int256(order.isShort ? order.takeAsset.value : order.makeAsset.value) <
+                _getFreeCollateralByRatio(order.trader, IPositioningConfig(_positioningConfig).getImRatio()) * 5,
+            "V_PERP_NEFC"
+        );
+        return true;
+    }
+
     ///@dev this function calculates total pending funding payment of a trader
     function getAllPendingFundingPayment(address trader)
         public
@@ -286,7 +307,7 @@ contract Positioning is
         // trader's position is closed at index price and pnl realized
         (int256 liquidatedPositionSize, int256 liquidatedPositionNotional) =
             _getLiquidatedPositionSizeAndNotional(trader, baseToken, accountValue, positionSizeToBeLiquidated);
-        _modifyPositionAndRealizePnl(trader, baseToken, liquidatedPositionSize, liquidatedPositionNotional, 0, 0);
+        _modifyPositionAndRealizePnl(trader, baseToken, liquidatedPositionSize, liquidatedPositionNotional, 0);
 
         // trader pays liquidation penalty
         uint256 liquidationPenalty = liquidatedPositionNotional.abs().mulRatio(_getLiquidationPenaltyRatio());
@@ -313,8 +334,7 @@ contract Positioning is
             baseToken,
             liquidatorExchangedPositionSize, // exchangedPositionSize
             liquidatorExchangedPositionNotional, // exchangedPositionNotional
-            0, // makerFee
-            0 // takerFee
+            0 // makerFee
         );
 
         _requireEnoughFreeCollateral(liquidator);
@@ -344,7 +364,11 @@ contract Positioning is
     }
 
     /// @dev Add given amount to PnL of the address provided
-    function _modifyOwedRealizedPnl(address trader, int256 amount, address baseToken) internal {
+    function _modifyOwedRealizedPnl(
+        address trader,
+        int256 amount,
+        address baseToken
+    ) internal {
         IAccountBalance(_accountBalance).modifyOwedRealizedPnl(trader, amount, baseToken);
     }
 
@@ -382,23 +406,25 @@ contract Positioning is
             );
 
         int256[2] memory realizedPnL;
-        realizedPnL[0] =
-            _realizePnLChecks(
-                orderLeft,
-                baseToken,
-                internalData.leftExchangedPositionSize,
-                internalData.leftExchangedPositionNotional
-            );
-        realizedPnL[1] =
-            _realizePnLChecks(
-                orderRight,
-                baseToken,
-                internalData.rightExchangedPositionSize,
-                internalData.rightExchangedPositionNotional
-            );
+        realizedPnL[0] = _realizePnLChecks(
+            orderLeft,
+            baseToken,
+            internalData.leftExchangedPositionSize,
+            internalData.leftExchangedPositionNotional
+        );
+        realizedPnL[1] = _realizePnLChecks(
+            orderRight,
+            baseToken,
+            internalData.rightExchangedPositionSize,
+            internalData.rightExchangedPositionNotional
+        );
 
         // // modifies PnL of fee receiver
-        _modifyOwedRealizedPnl(_getFeeReceiver(), (orderFees.orderLeftFee + orderFees.orderRightFee).toInt256(), baseToken);
+        _modifyOwedRealizedPnl(
+            _getFeeReceiver(),
+            (orderFees.orderLeftFee + orderFees.orderRightFee).toInt256(),
+            baseToken
+        );
 
         // // modifies positionSize and openNotional
         internalData.leftPositionSize = _settleBalanceAndDeregister(
@@ -478,7 +504,7 @@ contract Positioning is
         int256 oldTakerOpenNotional = _getTakerOpenNotional(order.trader, baseToken);
 
         // when takerPositionSize < 0, it's a short position
-        bool isReducingPosition = takerPositionSize == 0 ? false : takerPositionSize < 0 != !order.isShort;
+        bool isReducingPosition = takerPositionSize == 0 ? false : takerPositionSize < 0 != order.isShort;
         // when reducing/not increasing the position size, it's necessary to realize pnl
         int256 pnlToBeRealized;
         if (isReducingPosition) {
@@ -584,8 +610,7 @@ contract Positioning is
         address baseToken,
         int256 exchangedPositionSize,
         int256 exchangedPositionNotional,
-        uint256 makerFee,
-        uint256 takerFee
+        uint256 makerFee
     ) internal {
         int256 realizedPnl;
         if (exchangedPositionSize != 0) {
