@@ -227,21 +227,21 @@ contract Positioning is
     }
 
     /// @inheritdoc IPositioning
-    function getPositioningConfig() public view override returns (address) {
+    function getPositioningConfig() external view override returns (address) {
         return _positioningConfig;
     }
 
     /// @inheritdoc IPositioning
-    function getVaultController() public view override returns (address) {
+    function getVaultController() external view override returns (address) {
         return _vaultController;
     }
 
     /// @inheritdoc IPositioning
-    function getAccountBalance() public view override returns (address) {
+    function getAccountBalance() external view override returns (address) {
         return _accountBalance;
     }
 
-    function getOrderValidate(LibOrder.Order memory order) public view returns (bool) {
+    function getOrderValidate(LibOrder.Order memory order) external view returns (bool) {
         require(order.trader != address(0), "V_PERP_M: order verification failed");
         require(order.salt != 0, "V_PERP_M: 0 salt can't be used");
         require(order.salt >= makerMinSalt[_msgSender()], "V_PERP_M: order salt lower");
