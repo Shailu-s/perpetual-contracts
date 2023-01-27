@@ -37,7 +37,7 @@ abstract contract ParentToken is IVolmexBaseToken, IIndexPrice, VirtualToken, Ba
     //
 
     /// @inheritdoc IIndexPrice
-    function getIndexPrice(uint256 interval)
+    function getIndexPrice(uint256 index)
         external
         view
         virtual

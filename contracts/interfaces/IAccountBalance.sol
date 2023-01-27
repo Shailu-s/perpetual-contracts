@@ -12,6 +12,9 @@ interface IAccountBalance {
     /// @param amount The amount changed
     event PnlRealized(address indexed trader, address indexed baseToken, int256 amount);
 
+    /// @dev Emit when underlying price index is set
+    event UnderlyingPriceIndexSet(uint64 indexed underlyingIndex);
+
     function initialize(address positioningConfigArg) external;
 
     /// @notice Modify trader owedRealizedPnl

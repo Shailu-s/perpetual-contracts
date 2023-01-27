@@ -168,6 +168,7 @@ describe("VolmexPerpPeriphery", function () {
         markPriceOracle.address,
         indexPriceOracle.address,
         0,
+        [owner.address, account1.address]
       ],
       {
         initializer: "initialize",

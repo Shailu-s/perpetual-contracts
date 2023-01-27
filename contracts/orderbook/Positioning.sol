@@ -62,18 +62,19 @@ contract Positioning is
     /// @dev this function is public for testing
     // solhint-disable-next-line func-order
     function initialize(
-        address PositioningConfigArg,
+        address positioningConfigArg,
         address vaultControllerArg,
         address accountBalanceArg,
         address matchingEngineArg,
         address markPriceArg,
         address indexPriceArg,
-        uint64 underlyingPriceIndex
+        uint64 underlyingPriceIndex,
+        address[2] calldata liquidators
     ) external initializer {
         // P_VANC: Vault address is not contract
         require(vaultControllerArg.isContract(), "P_VANC");
         // PositioningConfig address is not contract
-        require(PositioningConfigArg.isContract(), "P_PCNC");
+        require(positioningConfigArg.isContract(), "P_PCNC");
         // AccountBalance is not contract
         require(accountBalanceArg.isContract(), "P_ABNC");
         // P_MENC: Matching Engine is not contract
@@ -84,15 +85,15 @@ contract Positioning is
         __FundingRate_init(markPriceArg, indexPriceArg);
         __OrderValidator_init_unchained();
 
-        _positioningConfig = PositioningConfigArg;
+        _positioningConfig = positioningConfigArg;
         _vaultController = vaultControllerArg;
         _accountBalance = accountBalanceArg;
         _matchingEngine = matchingEngineArg;
         _underlyingPriceIndex = underlyingPriceIndex;
+        for (uint256 index = 0; index < 2; index++) {
+            isLiquidatorWhitelist[liquidators[index]] = true;
+        }
 
-        // TODO: Set settlement token
-        // _settlementTokenDecimals = 0;
-        setPositioning(address(this));
         _grantRole(POSITIONING_ADMIN, _msgSender());
     }
 
@@ -113,17 +114,37 @@ contract Positioning is
     }
 
     /// @inheritdoc IPositioning
-    function setDefaultFeeReceiver(address _newDefaultFeeReceiver) external onlyOwner {
+    function setDefaultFeeReceiver(address newDefaultFeeReceiver) external onlyOwner {
         // Default Fee Receiver is zero
-        require(_newDefaultFeeReceiver != address(0), "PC_DFRZ");
-        defaultFeeReceiver = _newDefaultFeeReceiver;
+        require(newDefaultFeeReceiver != address(0), "PC_DFRZ");
+        defaultFeeReceiver = newDefaultFeeReceiver;
         emit DefaultFeeReceiverChanged(defaultFeeReceiver);
+    }
+
+    function setIndexPriceOracle(address indexPriceOracle) external {
+        _requirePositioningAdmin();
+        // P_AZ: Index price oracle is address zero
+        require(indexPriceOracle != address(0), "P_AZ");
+        _indexPriceOracleArg = indexPriceOracle;
+        emit IndexPriceSet(indexPriceOracle);
+    }
+
+    /// @inheritdoc IPositioning
+    function whitelistLiquidator(address liquidator, bool isWhitelist) external {
+        _requirePositioningAdmin();
+        isLiquidatorWhitelist[liquidator] = isWhitelist;
+        if (!isWhitelist) {
+            delete isLiquidatorWhitelist[liquidator];
+        }
+        emit LiquidatorWhitelisted(liquidator, isWhitelist);
     }
 
     /// @inheritdoc IPositioning
     function getPnlToBeRealized(RealizePnlParams memory params) public view override returns (int256) {
-        LibAccountMarket.Info memory info =
-            IAccountBalance(_accountBalance).getAccountInfo(params.trader, params.baseToken);
+        LibAccountMarket.Info memory info = IAccountBalance(_accountBalance).getAccountInfo(
+            params.trader,
+            params.baseToken
+        );
 
         int256 takerOpenNotional = info.takerOpenNotional;
         int256 takerPositionSize = info.takerPositionSize;
@@ -206,21 +227,21 @@ contract Positioning is
     }
 
     /// @inheritdoc IPositioning
-    function getPositioningConfig() public view override returns (address) {
+    function getPositioningConfig() external view override returns (address) {
         return _positioningConfig;
     }
 
     /// @inheritdoc IPositioning
-    function getVaultController() public view override returns (address) {
+    function getVaultController() external view override returns (address) {
         return _vaultController;
     }
 
     /// @inheritdoc IPositioning
-    function getAccountBalance() public view override returns (address) {
+    function getAccountBalance() external view override returns (address) {
         return _accountBalance;
     }
 
-    function getOrderValidate(LibOrder.Order memory order) public view returns (bool) {
+    function getOrderValidate(LibOrder.Order memory order) external view returns (bool) {
         require(order.trader != address(0), "V_PERP_M: order verification failed");
         require(order.salt != 0, "V_PERP_M: 0 salt can't be used");
         require(order.salt >= makerMinSalt[_msgSender()], "V_PERP_M: order salt lower");
@@ -284,13 +305,13 @@ contract Positioning is
     ) internal {
         // P_EAV: enough account value
         require(_isAccountLiquidatable(trader), "P_EAV");
+        address liquidator = _msgSender();
+        _requireWhitelistLiquidator(liquidator);
 
         int256 positionSize = _getTakerPosition(trader, baseToken);
 
         // P_WLD: wrong liquidation direction
         require(positionSize * positionSizeToBeLiquidated >= 0, "P_WLD");
-
-        address liquidator = _msgSender();
 
         _registerBaseToken(liquidator, baseToken);
 
@@ -322,8 +343,8 @@ contract Positioning is
         // liquidator opens a position with liquidationFeeToLiquidator as a discount
         // liquidator's openNotional = -liquidatedPositionNotional + liquidationFeeToLiquidator
         int256 liquidatorExchangedPositionSize = liquidatedPositionSize.neg256();
-        int256 liquidatorExchangedPositionNotional =
-            liquidatedPositionNotional.neg256() + liquidationFeeToLiquidator.toInt256();
+        int256 liquidatorExchangedPositionNotional = liquidatedPositionNotional.neg256() +
+            liquidationFeeToLiquidator.toInt256();
         // note that this function will realize pnl if it's reducing liquidator's existing position size
         _modifyPositionAndRealizePnl(
             liquidator,
@@ -368,10 +389,6 @@ contract Positioning is
         IAccountBalance(_accountBalance).modifyOwedRealizedPnl(trader, amount, baseToken);
     }
 
-    function setPositioning(address PositioningArg) public override(PositioningCallee, IPositioning) {
-        _Positioning = PositioningArg;
-    }
-
     /// @dev this function matches the both orders and opens the position
     function _openPosition(
         LibOrder.Order memory orderLeft,
@@ -394,12 +411,11 @@ contract Positioning is
             internalData.rightExchangedPositionNotional = newFill.leftValue.toInt256();
         }
 
-        OrderFees memory orderFees =
-            _calculateFees(
-                true, // TODO: This is hardcoded right now but changes it during relayer development
-                internalData.leftExchangedPositionNotional,
-                internalData.rightExchangedPositionNotional
-            );
+        OrderFees memory orderFees = _calculateFees(
+            true, // TODO: This is hardcoded right now but changes it during relayer development
+            internalData.leftExchangedPositionNotional,
+            internalData.rightExchangedPositionNotional
+        );
 
         int256[2] memory realizedPnL;
         realizedPnL[0] = _realizePnLChecks(
@@ -540,16 +556,21 @@ contract Positioning is
         int256 accountValue,
         int256 positionSizeToBeLiquidated
     ) internal view returns (int256, int256) {
-        int256 maxLiquidatablePositionSize =
-            IAccountBalance(_accountBalance).getLiquidatablePositionSize(trader, baseToken, accountValue);
+        int256 maxLiquidatablePositionSize = IAccountBalance(_accountBalance).getLiquidatablePositionSize(
+            trader,
+            baseToken,
+            accountValue
+        );
 
         if (positionSizeToBeLiquidated.abs() > maxLiquidatablePositionSize.abs() || positionSizeToBeLiquidated == 0) {
             positionSizeToBeLiquidated = maxLiquidatablePositionSize;
         }
 
         int256 liquidatedPositionSize = positionSizeToBeLiquidated.neg256();
-        int256 liquidatedPositionNotional =
-            positionSizeToBeLiquidated.mulDiv(_getIndexPrice(baseToken).toInt256(), _ORACLE_BASE);
+        int256 liquidatedPositionNotional = positionSizeToBeLiquidated.mulDiv(
+            _getIndexPrice(baseToken).toInt256(),
+            _ORACLE_BASE
+        );
 
         return (liquidatedPositionSize, liquidatedPositionNotional);
     }
@@ -693,5 +714,9 @@ contract Positioning is
 
     function _requirePositioningAdmin() internal view {
         require(hasRole(POSITIONING_ADMIN, _msgSender()), "Positioning: Not admin");
+    }
+
+    function _requireWhitelistLiquidator(address liquidator) internal view {
+        require(isLiquidatorWhitelist[liquidator], "Positioning: liquidator not whitelisted");
     }
 }

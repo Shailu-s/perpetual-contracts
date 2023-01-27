@@ -170,6 +170,7 @@ describe("Liquidation test in Positioning", function () {
         markPriceOracle.address,
         indexPriceOracle.address,
         0,
+        [owner.address, account2.address]
       ],
       {
         initializer: "initialize",

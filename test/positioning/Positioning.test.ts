@@ -199,6 +199,7 @@ describe("Positioning", function () {
         markPriceOracle.address,
         indexPriceOracle.address,
         0,
+        [owner.address, account2.address]
       ],
       {
         initializer: "initialize",
@@ -287,6 +288,7 @@ describe("Positioning", function () {
               markPriceOracle.address,
               indexPriceOracle.address,
               0,
+              [owner.address, account2.address]
             ],
             {
               initializer: "initialize",
@@ -309,6 +311,7 @@ describe("Positioning", function () {
               markPriceOracle.address,
               indexPriceOracle.address,
               0,
+              [owner.address, account2.address]
             ],
             {
               initializer: "initialize",
@@ -331,6 +334,7 @@ describe("Positioning", function () {
               markPriceOracle.address,
               indexPriceOracle.address,
               0,
+              [owner.address, account2.address]
             ],
             {
               initializer: "initialize",
@@ -353,6 +357,7 @@ describe("Positioning", function () {
               markPriceOracle.address,
               indexPriceOracle.address,
               0,
+              [owner.address, account2.address]
             ],
             {
               initializer: "initialize",
@@ -1090,6 +1095,50 @@ describe("Positioning", function () {
 
         await positioning.settleAllFunding(account1.address);
       });
+
+      it("test for liquidators", async () => {
+        await expect(
+          await positioning.isLiquidatorWhitelist(owner.address)
+        ).to.equal(true);
+
+        await expect(
+          await positioning.isLiquidatorWhitelist(account2.address)
+        ).to.equal(true);
+
+        await expect(
+          await positioning.isLiquidatorWhitelist(account1.address)
+        ).to.equal(false);
+      });
+
+      it("should whitelist a new liquidator", async () => {
+        await expect(
+          await positioning.whitelistLiquidator(owner.address, false)
+        )
+        .to
+        .emit(positioning, 'LiquidatorWhitelisted')
+        .withArgs(owner.address, false);
+
+        await expect(
+          await positioning.isLiquidatorWhitelist(owner.address)
+        ).to.equal(false);
+
+        await expect(
+          await positioning.whitelistLiquidator(account1.address, true)
+        )
+        .to
+        .emit(positioning, 'LiquidatorWhitelisted')
+        .withArgs(account1.address, true);
+
+        await expect(
+          await positioning.isLiquidatorWhitelist(account1.address)
+        ).to.equal(true);
+      });
+
+      it('should not be able to whitelist liquidator if not have appropriate role', async () => {
+        await expect(
+          positioning.connect(account1).whitelistLiquidator(owner.address, false)
+        ).to.be.revertedWith('Positioning: Not admin');
+      });
     });
     describe("failure", function () {
       it("should not use order validation before opening position", async () => {
@@ -1787,6 +1836,7 @@ describe("Liquidation test in Positioning", function () {
         markPriceOracle.address,
         indexPriceOracle.address,
         0,
+        [owner.address, account2.address]
       ],
       {
         initializer: "initialize",
@@ -1915,7 +1965,7 @@ describe("Liquidation test in Positioning", function () {
             )
           ).wait();
         }
-
+console.log("Testsssss", account2.address)
         // liquidating the position
         await expect(
           positioning

@@ -75,6 +75,7 @@ describe("Vault Controller Mock tests for account value", function () {
         markPriceFake.address,
         indexPriceFake.address,
         0,
+        [owner.address, alice.address]
       ],
       {
         initializer: "initialize",

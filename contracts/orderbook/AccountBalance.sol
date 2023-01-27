@@ -52,6 +52,7 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
         __PositioningCallee_init();
 
         _positioningConfig = PositioningConfigArg;
+        _underlyingPriceIndex = 0;
         _grantRole(ACCOUNT_BALANCE_ADMIN, _msgSender());
     }
 
@@ -60,8 +61,18 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
         _grantRole(CAN_SETTLE_REALIZED_PNL, account);
     }
 
+    function setUnderlyingPriceIndex(uint64 underlyingIndex) external {
+        _requireAccountBalanceAdmin();
+        _underlyingPriceIndex = underlyingIndex;
+        emit UnderlyingPriceIndexSet(underlyingIndex);
+    }
+
     /// @inheritdoc IAccountBalance
-    function modifyOwedRealizedPnl(address trader, int256 amount, address baseToken) external override {
+    function modifyOwedRealizedPnl(
+        address trader,
+        int256 amount,
+        address baseToken
+    ) external override {
         _requireOnlyPositioning();
         _modifyOwedRealizedPnl(trader, amount, baseToken);
     }
@@ -307,7 +318,11 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
         return (0, 0);
     }
 
-    function _modifyOwedRealizedPnl(address trader, int256 amount, address baseToken) internal {
+    function _modifyOwedRealizedPnl(
+        address trader,
+        int256 amount,
+        address baseToken
+    ) internal {
         if (amount != 0) {
             _owedRealizedPnlMap[trader] = _owedRealizedPnlMap[trader] + amount;
             emit PnlRealized(trader, baseToken, amount);
@@ -354,7 +369,7 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
 
     function _getIndexPrice(address baseToken) internal view returns (uint256) {
         // TODO: use underlying price index
-        return IIndexPrice(baseToken).getIndexPrice(IPositioningConfig(_positioningConfig).getTwapInterval());
+        return IIndexPrice(baseToken).getIndexPrice(_underlyingPriceIndex);
     }
 
     /// @return netQuoteBalance = quote.balance
