@@ -101,7 +101,7 @@ describe("PerpFactory", function () {
 
     positioning = await Positioning.deploy();
     await positioning.deployed();
-    await positioning.setPositioning(positioning.address);
+    // await positioning.setPositioning(positioning.address);
 
     vault = await Vault.deploy();
     await vault.deployed();
@@ -217,6 +217,7 @@ describe("PerpFactory", function () {
         indexPriceOracle.address,
         volmexQuoteToken.address,
         index,
+        [owner.address, alice.address]
       );
     });
 
@@ -230,6 +231,7 @@ describe("PerpFactory", function () {
         indexPriceOracle.address,
         volmexQuoteToken.address,
         index,
+        [owner.address, alice.address]
         ),
       ).to.emit(factory, "").withArgs(
         index + 1,
@@ -249,6 +251,7 @@ describe("PerpFactory", function () {
         indexPriceOracle.address,
         volmexQuoteToken.address,
         index,
+        [owner.address, alice.address]
       );
       const vaultClone = await factory.cloneVault(
         USDC.address,
@@ -273,6 +276,7 @@ describe("PerpFactory", function () {
             indexPriceOracle.address,
             volmexQuoteToken.address,
             index,
+            [owner.address, alice.address]
           ),
       ).to.be.revertedWith("PF_NCD");
     });
@@ -286,6 +290,7 @@ describe("PerpFactory", function () {
         indexPriceOracle.address,
         volmexQuoteToken.address,
         index,
+        [owner.address, alice.address]
       );
       await expect(
         factory.cloneVault(

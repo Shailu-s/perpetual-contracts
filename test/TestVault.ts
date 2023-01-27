@@ -114,6 +114,7 @@ describe("Vault", function () {
         markPriceOracle.address,
         indexPriceOracle.address,
         0,
+        [owner.address, alice.address]
       ],
       {
         initializer: "initialize",
@@ -130,6 +131,7 @@ describe("Vault", function () {
         markPriceOracle.address,
         indexPriceOracle.address,
         1,
+        [owner.address, alice.address]
       ],
       {
         initializer: "initialize",
