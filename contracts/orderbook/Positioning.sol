@@ -241,13 +241,7 @@ contract Positioning is
         return _accountBalance;
     }
 
-    function getOrderValidate(LibOrder.Order memory order) public whenNotPaused nonReentrant returns (bool) {
-        address baseToken = order.isShort ? order.makeAsset.virtualToken : order.takeAsset.virtualToken;
-        require(
-            IMarketRegistry(_marketRegistry).checkBaseToken(baseToken),
-            "V_PERP: Basetoken not registered at market"
-        );
-
+    function getOrderValidate(LibOrder.Order memory order) public view returns (bool) {
         require(order.trader != address(0), "V_PERP_M: order verification failed");
         require(order.salt != 0, "V_PERP_M: 0 salt can't be used");
         require(order.salt >= makerMinSalt[_msgSender()], "V_PERP_M: order salt lower");
