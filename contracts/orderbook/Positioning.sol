@@ -233,9 +233,11 @@ contract Positioning is
 
         LibOrder.validate(order);
 
+        uint24 imRatio = IPositioningConfig(_positioningConfig).getImRatio();
+
         require(
             int256(order.isShort ? order.takeAsset.value : order.makeAsset.value) <
-                _getFreeCollateralByRatio(order.trader, IPositioningConfig(_positioningConfig).getImRatio()) * 5,
+                _getFreeCollateralByRatio(order.trader, imRatio) * 1e6 / uint256(imRatio).toInt256(),
             "V_PERP_NEFC"
         );
         return true;
@@ -652,6 +654,7 @@ contract Positioning is
 
     /// @dev this function validate the signature of order
     function _validateFull(LibOrder.Order memory order, bytes memory signature) internal view {
+        LibOrder.validate(order);
         _validate(order, signature);
     }
 
