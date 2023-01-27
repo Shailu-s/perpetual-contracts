@@ -30,6 +30,7 @@ contract FundingRate is IFundingRate, BlockContext, PositioningCallee, FundingRa
         __PositioningCallee_init();
         _markPriceOracleArg = markPriceOracleArg;
         _indexPriceOracleArg = indexPriceOracleArg;
+        _fundingRateInterval = 3;
     }
 
     /// @inheritdoc IFundingRate
@@ -69,11 +70,9 @@ contract FundingRate is IFundingRate, BlockContext, PositioningCallee, FundingRa
         int256 markTwap,
         int256 indexTwap
     ) internal view virtual returns (int256 pendingFundingPayment) {
-        int256 precisionBase = 1000000; // 1e6
-        // TODO: Add setter method to adjust hardcoded 4, which 24/8 hours
-        int256 marketFundingRate = ((markTwap - indexTwap) * precisionBase) / (indexTwap * 4);
+        int256 marketFundingRate = ((markTwap - indexTwap) * _PRECISION_BASE) / (indexTwap * _fundingRateInterval);
         int256 positionSize = IAccountBalance(_accountBalance).getTakerPositionSize(trader, baseToken);
-        pendingFundingPayment = (positionSize * marketFundingRate) / precisionBase;
+        pendingFundingPayment = (positionSize * marketFundingRate) / _PRECISION_BASE;
     }
 
     /// @dev this function calculates the up-to-date growthTwPremium and twaps and pass them out
