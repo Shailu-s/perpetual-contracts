@@ -65,7 +65,7 @@ describe("Positioning", function () {
     ERC20TransferProxy = await ethers.getContractFactory("ERC20TransferProxy");
     TransferManagerTest = await ethers.getContractFactory("TransferManagerTest");
     ERC1271Test = await ethers.getContractFactory("ERC1271Test");
-    Positioning = await ethers.getContractFactory("Positioning");
+    Positioning = await ethers.getContractFactory("PositioningTest");
     PositioningConfig = await ethers.getContractFactory("PositioningConfig");
     Vault = await ethers.getContractFactory("Vault");
     VaultController = await ethers.getContractFactory("VaultController");
@@ -1094,6 +1094,50 @@ describe("Positioning", function () {
         await markPriceOracle.connect(account1).addObservation(10000000000, 1);
 
         await positioning.settleAllFunding(account1.address);
+      });
+
+      it("test for liquidators", async () => {
+        await expect(
+          await positioning.isLiquidatorWhitelist(owner.address)
+        ).to.equal(true);
+
+        await expect(
+          await positioning.isLiquidatorWhitelist(account2.address)
+        ).to.equal(true);
+
+        await expect(
+          await positioning.isLiquidatorWhitelist(account1.address)
+        ).to.equal(false);
+      });
+
+      it("should whitelist a new liquidator", async () => {
+        await expect(
+          await positioning.whitelistLiquidator(owner.address, false)
+        )
+        .to
+        .emit(positioning, 'LiquidatorWhitelisted')
+        .withArgs(owner.address, false);
+
+        await expect(
+          await positioning.isLiquidatorWhitelist(owner.address)
+        ).to.equal(false);
+
+        await expect(
+          await positioning.whitelistLiquidator(account1.address, true)
+        )
+        .to
+        .emit(positioning, 'LiquidatorWhitelisted')
+        .withArgs(account1.address, true);
+
+        await expect(
+          await positioning.isLiquidatorWhitelist(account1.address)
+        ).to.equal(true);
+      });
+
+      it('should not be able to whitelist liquidator if not have appropriate role', async () => {
+        await expect(
+          positioning.connect(account1).whitelistLiquidator(owner.address, false)
+        ).to.be.revertedWith('Positioning: Not admin');
       });
     });
     describe("failure", function () {

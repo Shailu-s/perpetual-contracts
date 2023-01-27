@@ -91,7 +91,7 @@ contract Positioning is
         _matchingEngine = matchingEngineArg;
         _underlyingPriceIndex = underlyingPriceIndex;
         for (uint256 index = 0; index < 2; index++) {
-            _isLiquidatorWhitelist[liquidators[index]] = true;
+            isLiquidatorWhitelist[liquidators[index]] = true;
         }
 
         _grantRole(POSITIONING_ADMIN, _msgSender());
@@ -132,9 +132,9 @@ contract Positioning is
     /// @inheritdoc IPositioning
     function whitelistLiquidator(address liquidator, bool isWhitelist) external {
         _requirePositioningAdmin();
-        _isLiquidatorWhitelist[liquidator] = isWhitelist;
+        isLiquidatorWhitelist[liquidator] = isWhitelist;
         if (!isWhitelist) {
-            delete _isLiquidatorWhitelist[liquidator];
+            delete isLiquidatorWhitelist[liquidator];
         }
         emit LiquidatorWhitelisted(liquidator, isWhitelist);
     }
@@ -723,6 +723,6 @@ contract Positioning is
     }
 
     function _requireWhitelistLiquidator(address liquidator) internal view {
-        require(_isLiquidatorWhitelist[liquidator], "Positioning: liquidator not whitelisted");
+        require(isLiquidatorWhitelist[liquidator], "Positioning: liquidator not whitelisted");
     }
 }
