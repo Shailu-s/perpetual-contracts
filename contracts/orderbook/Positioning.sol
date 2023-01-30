@@ -140,6 +140,14 @@ contract Positioning is
     }
 
     /// @inheritdoc IPositioning
+    function setFundingInterval(int256 interval) external {
+        _requirePositioningAdmin();
+        _fundingRateInterval = interval;
+
+        emit FundingIntervalSet(interval);
+    }
+
+    /// @inheritdoc IPositioning
     function getPnlToBeRealized(RealizePnlParams memory params) public view override returns (int256) {
         LibAccountMarket.Info memory info = IAccountBalance(_accountBalance).getAccountInfo(
             params.trader,

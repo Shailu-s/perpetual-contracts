@@ -43,7 +43,7 @@ contract PositioningConfig is IPositioningConfig, Initializable, PositioningConf
         _partialCloseRatio = 0.25e6; // partial close ratio, 25% in decimal 6
         _partialLiquidationRatio = 0.1e6; // partial liquidation ratio, 10% in decimal 6
         _maxFundingRate = 0.1e6; // max funding rate, 10% in decimal 6
-        _twapInterval = 0;
+        _twapInterval = 14400;
         _settlementTokenBalanceCap = 0;
         _grantRole(POSITIONING_CONFIG_ADMIN, _msgSender());
     }
