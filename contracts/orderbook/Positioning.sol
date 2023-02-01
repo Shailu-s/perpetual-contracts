@@ -89,7 +89,6 @@ contract Positioning is
         _matchingEngine = matchingEngineArg;
         _underlyingPriceIndex = underlyingPriceIndex;
 
-        setPositioning(address(this));
         _grantRole(POSITIONING_ADMIN, _msgSender());
     }
 
