@@ -57,6 +57,7 @@ contract Positioning is
     using EncodeDecode for bytes;
     uint256 private constant _ORACLE_BASE = 100000000;
     uint256 internal constant _FULLY_CLOSED_RATIO = 1e18;
+    uint256 private constant _UINT256_MAX = 2**256 - 1;
 
     /// @dev this function is public for testing
     // solhint-disable-next-line func-order
@@ -224,7 +225,7 @@ contract Positioning is
         bytes32 orderHashKey = LibOrder.hashKey(order);
         uint256 fills = IMatchingEngine(_matchingEngine).fills(orderHashKey);
 
-        require(fills < 2**256 - 1, "V_PERP_M: order is cancelled");
+        require(fills < _UINT256_MAX, "V_PERP_M: order is cancelled");
         LibOrder.validate(order);
 
         uint24 imRatio = IPositioningConfig(_positioningConfig).getImRatio();
