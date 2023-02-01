@@ -18,4 +18,6 @@ interface IMatchingEngine {
         returns (LibFill.FillResult memory);
 
     function grantMatchOrders(address account) external;
+    function fills(bytes32 orderHashKey) external view returns(uint256);
+
 }

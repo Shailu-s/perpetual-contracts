@@ -37,7 +37,6 @@ import { OrderValidator } from "./OrderValidator.sol";
 import { PositioningStorageV1 } from "../storage/PositioningStorage.sol";
 import { PositioningCallee } from "../helpers/PositioningCallee.sol";
 
-// TODO : Create bulk match order for perp
 // never inherit any new stateful contract. never change the orders of parent stateful contracts
 contract Positioning is
     IPositioning,
@@ -90,8 +89,6 @@ contract Positioning is
         _matchingEngine = matchingEngineArg;
         _underlyingPriceIndex = underlyingPriceIndex;
 
-        // TODO: Set settlement token
-        // _settlementTokenDecimals = 0;
         setPositioning(address(this));
         _grantRole(POSITIONING_ADMIN, _msgSender());
     }
@@ -224,7 +221,11 @@ contract Positioning is
         require(order.trader != address(0), "V_PERP_M: order verification failed");
         require(order.salt != 0, "V_PERP_M: 0 salt can't be used");
         require(order.salt >= makerMinSalt[_msgSender()], "V_PERP_M: order salt lower");
+        // require(order.fill >= , "V_PERP_M: order salt lower");
+        bytes32 orderHashKey = LibOrder.hashKey(order);
+        uint256 fills = IMatchingEngine(_matchingEngine).fills(orderHashKey);
 
+        require(fills < 2**256 - 1, "V_PERP_M: order is cancelled");
         LibOrder.validate(order);
 
         uint24 imRatio = IPositioningConfig(_positioningConfig).getImRatio();
