@@ -10,7 +10,6 @@ import "../interfaces/IMatchingEngine.sol";
 import "../helpers/RoleManager.sol";
 import "./AssetMatcher.sol";
 
-// TODO: Add method to pause and unpause matching
 
 abstract contract MatchingEngineCore is PausableUpgradeable, AssetMatcher, RoleManager {
     uint256 private constant _UINT256_MAX = 2**256 - 1;

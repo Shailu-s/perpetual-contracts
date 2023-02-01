@@ -95,15 +95,11 @@ contract FundingRate is IFundingRate, BlockContext, PositioningCallee, FundingRa
         if (_firstTradedTimestampMap[baseToken] != 0) {
             twapInterval = IPositioningConfig(_positioningConfig).getTwapInterval();
             uint256 deltaTimestamp = (timestamp - _firstTradedTimestampMap[baseToken]);
-            // TODO: this differs from perp-curie
             twapInterval = twapInterval < deltaTimestamp ? deltaTimestamp : twapInterval;
         }
 
         markTwap = IMarkPriceOracle(_markPriceOracleArg).getCumulativePrice(twapInterval, _underlyingPriceIndex);
 
-        //TODOCHANGE: review if we need this formatting
-        // markTwap = markTwapX96.formatX96ToX10_18();
-        // TODO: getIndexTwap method takes _index of underlying to fetch the price, not the time interval
         (indexTwap, , ) = IIndexPriceOracle(_indexPriceOracleArg).getIndexTwap(_underlyingPriceIndex);
 
         uint256 lastSettledTimestamp = _lastSettledTimestampMap[baseToken];

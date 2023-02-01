@@ -149,9 +149,6 @@ contract Vault is IVault, ReentrancyGuardUpgradeable, OwnerPausable, VaultStorag
     /// @inheritdoc IVault
     function withdraw(uint256 amount, address payable to) external virtual override whenNotPaused nonReentrant {
         _requireOnlyVaultController();
-        // input requirement checks:
-        //   token: here -> TODO: Token is already set, not need to add check
-        //   amount: here -> TODO: Using SafeERC20, not need to add this check
 
         if (_isEthVault) {
             // not enough balance

@@ -68,8 +68,6 @@ contract VaultController is
 
         // positioning not set
         require(_positioning != address(0), "VC_PNS");
-        // TODO From should be external user not periphery
-        // address from = _msgSender();
 
         // VC_CWZA: can't deposit zero amount
         require(amount > 0, "VC_CDZA");
@@ -101,9 +99,6 @@ contract VaultController is
 
         // VC_CWZA: can't withdraw zero amount
         require(amount > 0, "VC_CWZA");
-
-        // TODO: Get from the periphery contract
-        // address payable to = payable(_msgSender());
 
         // settle all funding payments owedRealizedPnl
         IPositioning(_positioning).settleAllFunding(to);
