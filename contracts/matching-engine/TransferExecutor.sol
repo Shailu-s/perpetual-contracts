@@ -12,6 +12,7 @@ import "../libs/LibAsset.sol";
 import "../helpers/RoleManager.sol";
 
 abstract contract TransferExecutor is RoleManager {
+    bytes32 public constant TRANSFER_EXECUTOR = keccak256("TRANSFER_EXECUTOR");
     address internal _proxy;
 
     event ProxyChanged(address proxy);

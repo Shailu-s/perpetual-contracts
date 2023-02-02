@@ -7,6 +7,9 @@ import { IVirtualToken } from "../interfaces/IVirtualToken.sol";
 import { RoleManager } from "../helpers/RoleManager.sol";
 
 contract VirtualToken is IVirtualToken, ERC20Upgradeable, RoleManager {
+    bytes32 public constant VIRTUAL_TOKEN_ADMIN = keccak256("VIRTUAL_TOKEN_ADMIN");
+    bytes32 public constant MINTER = keccak256("MINTER");
+    bytes32 public constant BURNER = keccak256("BURNER");
     mapping(address => bool) internal _whitelistMap;
     bool public isBase;
 

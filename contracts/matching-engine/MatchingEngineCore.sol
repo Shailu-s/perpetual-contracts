@@ -12,6 +12,10 @@ import "./AssetMatcher.sol";
 
 
 abstract contract MatchingEngineCore is PausableUpgradeable, AssetMatcher, RoleManager {
+    // admin of matching engine
+    bytes32 public constant MATCHING_ENGINE_CORE_ADMIN = keccak256("MATCHING_ENGINE_CORE_ADMIN");
+    // match orders role, used in matching engine by Positioning
+    bytes32 public constant CAN_MATCH_ORDERS = keccak256("CAN_MATCH_ORDERS");
     uint256 private constant _UINT256_MAX = 2**256 - 1;
     uint256 private constant _ORACLE_BASE = 1000000;
 
@@ -67,7 +71,6 @@ abstract contract MatchingEngineCore is PausableUpgradeable, AssetMatcher, RoleM
         @param minSalt salt in minimum of all orders
      */
     function cancelAllOrders(uint256 minSalt) external {
-        _requireCanCancelAllOrders();
         require(minSalt > makerMinSalt[_msgSender()], "V_PERP_M: salt too low");
         makerMinSalt[_msgSender()] = minSalt;
 
@@ -186,11 +189,6 @@ abstract contract MatchingEngineCore is PausableUpgradeable, AssetMatcher, RoleM
         require(matchToken != address(0), "V_PERP_M: left make assets don't match");
         matchToken = _matchAssets(orderLeft.takeAsset.virtualToken, orderRight.makeAsset.virtualToken);
         require(matchToken != address(0), "V_PERP_M: left take assets don't match");
-    }
-
-    function _requireCanCancelAllOrders() internal view {
-        // MatchingEngineCore: Not Can Cancel All Orders
-        require(hasRole(CAN_CANCEL_ALL_ORDERS, _msgSender()), "MEC_NCCAO");
     }
 
     function _requireCanMatchOrders() internal view {

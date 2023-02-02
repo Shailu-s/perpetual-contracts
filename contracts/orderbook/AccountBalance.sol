@@ -35,6 +35,8 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
     // CONSTANT
     //
 
+    bytes32 public constant ACCOUNT_BALANCE_ADMIN = keccak256("ACCOUNT_BALANCE_ADMIN");
+    bytes32 public constant CAN_SETTLE_REALIZED_PNL = keccak256("CAN_SETTLE_REALIZED_PNL");
     uint256 internal constant _DUST = 10 wei;
     int256 private constant _ORACLE_BASE = 100000000;
 

@@ -14,6 +14,10 @@ import "../interfaces/IVolmexPerpView.sol";
 import "../interfaces/IPositioningConfig.sol";
 
 contract VolmexPerpPeriphery is Initializable, RoleManager, IVolmexPerpPeriphery {
+    // perp periphery role
+    bytes32 public constant VOLMEX_PERP_PERIPHERY = keccak256("VOLMEX_PERP_PERIPHERY");
+    // role of relayer to execute open position
+    bytes32 public constant RELAYER_MULTISIG = keccak256("RELAYER_MULTISIG");
     // Store the whitelist Vaults
     mapping(address => bool) private _isVaultWhitelist;
 

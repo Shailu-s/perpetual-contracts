@@ -22,6 +22,9 @@ import "../helpers/RoleManager.sol";
  * @author volmex.finance [security@volmexlabs.com]
  */
 contract PerpFactory is Initializable, IPerpFactory, RoleManager {
+    // clone deployer role
+    bytes32 public constant CLONES_DEPLOYER = keccak256("CLONES_DEPLOYER");
+
     // virtual base token implementation contract for factory
     address public baseTokenImplementation;
 

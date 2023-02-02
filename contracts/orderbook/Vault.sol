@@ -38,6 +38,8 @@ contract Vault is IVault, ReentrancyGuardUpgradeable, OwnerPausable, VaultStorag
     using LibPerpMath for int256;
     using LibPerpMath for uint256;
 
+    bytes32 public constant VAULT_ADMIN = keccak256("VAULT_ADMIN");
+
     //
     // MODIFIER
     //
@@ -90,7 +92,6 @@ contract Vault is IVault, ReentrancyGuardUpgradeable, OwnerPausable, VaultStorag
     function setPositioning(address PositioningArg) external onlyOwner {
         // V_VPMM: Positioning is not contract
         require(PositioningArg.isContract(), "V_VPMM");
-        _grantRole(CAN_MATCH_ORDERS, PositioningArg);
         _Positioning = PositioningArg;
     }
 

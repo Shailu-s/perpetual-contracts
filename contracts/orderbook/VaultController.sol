@@ -41,6 +41,8 @@ contract VaultController is
     using LibPerpMath for int256;
     using LibSettlementTokenMath for uint256;
 
+    bytes32 public constant VAULT_CONTROLLER_ADMIN = keccak256("VAULT_CONTROLLER_ADMIN");
+
     function initialize(address positioningConfig, address accountBalanceArg) external initializer {
         __ReentrancyGuard_init();
         __OwnerPausable_init();

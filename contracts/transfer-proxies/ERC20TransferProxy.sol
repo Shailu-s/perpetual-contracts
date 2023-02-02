@@ -6,6 +6,9 @@ import "../helpers/RoleManager.sol";
 import "../interfaces/IERC20TransferProxy.sol";
 
 contract ERC20TransferProxy is IERC20TransferProxy, Initializable, RoleManager {
+    bytes32 public constant TRANSFER_PROXY_ADMIN = keccak256("TRANSFER_PROXY_ADMIN");
+    bytes32 public constant TRANSFER_PROXY_CALLER = keccak256("TRANSFER_PROXY_CALLER");
+
     function erc20TransferProxyInit() external initializer {
         _grantRole(TRANSFER_PROXY_ADMIN, _msgSender());
     }

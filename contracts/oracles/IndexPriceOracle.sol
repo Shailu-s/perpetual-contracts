@@ -14,6 +14,8 @@ import "../helpers/RoleManager.sol";
  * @author volmex.finance [security@volmexlabs.com]
  */
 contract IndexPriceOracle is ERC165StorageUpgradeable, IndexTWAP, IIndexPriceOracle, RoleManager {
+    // index price admin role
+    bytes32 public constant INDEX_PRICE_ORACLE_ADMIN = keccak256("INDEX_PRICE_ORACLE_ADMIN");
     // price precision constant upto 6 decimal places
     uint256 private constant _VOLATILITY_PRICE_PRECISION = 1000000;
     // maximum allowed number of index volatility datapoints for calculating twap

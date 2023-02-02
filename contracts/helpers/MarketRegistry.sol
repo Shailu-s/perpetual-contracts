@@ -16,6 +16,9 @@ import { MarketRegistryStorageV1 } from "../storage/MarketRegistryStorage.sol";
 contract MarketRegistry is IMarketRegistry, PositioningCallee, MarketRegistryStorageV1 {
     using AddressUpgradeable for address;
 
+    // admin of market registry
+    bytes32 public constant MARKET_REGISTRY_ADMIN = keccak256("MARKET_REGISTRY_ADMIN");
+
     //
     // MODIFIER
     //

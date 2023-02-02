@@ -21,6 +21,8 @@ contract PositioningConfig is IPositioningConfig, Initializable, PositioningConf
     event MaintenanceMarginChanged(uint24 mmRatio);
     event PartialLiquidationRatioChanged(uint24 partialLiquidationRatio);
 
+    bytes32 public constant POSITIONING_CONFIG_ADMIN = keccak256("POSITIONING_CONFIG_ADMIN");
+
     //
     // MODIFIER
     //

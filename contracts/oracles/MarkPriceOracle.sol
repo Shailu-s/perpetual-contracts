@@ -19,6 +19,11 @@ contract MarkPriceOracle is Initializable, RoleManager {
         uint256 priceCumulative;
     }
 
+    // mark price oracle admin role
+    bytes32 public constant MARK_PRICE_ORACLE_ADMIN = keccak256("MARK_PRICE_ORACLE_ADMIN");
+    // role of observation collection
+    bytes32 public constant CAN_ADD_OBSERVATION = keccak256("CAN_ADD_OBSERVATION");
+
     // Address of the MatchingEngine contract
     address public matchingEngine;
 
@@ -80,7 +85,6 @@ contract MarkPriceOracle is Initializable, RoleManager {
         require(_matchingEngine != address(0), "V_PERP_M: Can't be 0 address");
         matchingEngine = _matchingEngine;
         _grantRole(CAN_ADD_OBSERVATION, _matchingEngine);
-        _grantRole(CAN_CANCEL_ALL_ORDERS, _matchingEngine);
         emit MatchingEngineChanged(_matchingEngine);
     }
 
