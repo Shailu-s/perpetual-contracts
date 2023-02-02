@@ -61,7 +61,6 @@ contract MarketRegistry is IMarketRegistry, PositioningCallee, MarketRegistrySto
         emit MaxOrdersPerMarketChanged(maxOrdersPerMarketArg);
     }
 
-    ///TODO_V: Add something as you removed onlyOwner
     /// @inheritdoc IMarketRegistry
     function addBaseToken(address baseToken) external override {
         _requireMarketRegistryAdmin();
