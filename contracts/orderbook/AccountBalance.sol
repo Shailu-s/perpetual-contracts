@@ -4,6 +4,7 @@ pragma solidity =0.8.12;
 import { AddressUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol";
 import { Context } from "@openzeppelin/contracts/utils/Context.sol";
 import { ContextUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 
 import { LibAccountMarket } from "../libs/LibAccountMarket.sol";
 import { LibPerpMath } from "../libs/LibPerpMath.sol";
@@ -17,7 +18,6 @@ import { IVirtualToken } from "../interfaces/IVirtualToken.sol";
 
 import { AccountBalanceStorageV1 } from "../storage/AccountBalanceStorage.sol";
 import { BlockContext } from "../helpers/BlockContext.sol";
-import { RoleManager } from "../helpers/RoleManager.sol";
 import { PositioningCallee } from "../helpers/PositioningCallee.sol";
 
 // never inherit any new stateful contract. never change the orders of parent stateful contracts

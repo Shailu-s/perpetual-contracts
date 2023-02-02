@@ -3,15 +3,15 @@
 pragma solidity =0.8.12;
 
 import { PausableUpgradeable } from "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 
 import "../libs/LibFill.sol";
 import "../interfaces/IMarkPriceOracle.sol";
 import "../interfaces/IMatchingEngine.sol";
-import "../helpers/RoleManager.sol";
 import "./AssetMatcher.sol";
 
 
-abstract contract MatchingEngineCore is PausableUpgradeable, AssetMatcher, RoleManager {
+abstract contract MatchingEngineCore is PausableUpgradeable, AssetMatcher, AccessControlUpgradeable {
     // admin of matching engine
     bytes32 public constant MATCHING_ENGINE_CORE_ADMIN = keccak256("MATCHING_ENGINE_CORE_ADMIN");
     // match orders role, used in matching engine by Positioning

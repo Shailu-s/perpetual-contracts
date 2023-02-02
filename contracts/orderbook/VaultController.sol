@@ -7,6 +7,7 @@ import { ContextUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/Co
 import {
     ReentrancyGuardUpgradeable
 } from "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 
 import { LibPerpMath } from "../libs/LibPerpMath.sol";
 import { LibSafeCastInt } from "../libs/LibSafeCastInt.sol";
@@ -22,7 +23,6 @@ import { IVaultController } from "../interfaces/IVaultController.sol";
 import { IVolmexPerpPeriphery } from "../interfaces/IVolmexPerpPeriphery.sol";
 
 import { OwnerPausable } from "../helpers/OwnerPausable.sol";
-import { RoleManager } from "../helpers/RoleManager.sol";
 import { TestERC20 } from "../tests/TestERC20.sol";
 import { Vault } from "./Vault.sol";
 import { VaultControllerStorage } from "../storage/VaultControllerStorage.sol";
@@ -33,7 +33,7 @@ contract VaultController is
     OwnerPausable,
     VaultControllerStorage,
     IVaultController,
-    RoleManager
+    AccessControlUpgradeable
 {
     using AddressUpgradeable for address;
     using LibSafeCastUint for uint256;

@@ -2,10 +2,10 @@
 
 pragma solidity =0.8.12;
 
-import "../helpers/RoleManager.sol";
+import "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 import "../interfaces/IERC20TransferProxy.sol";
 
-contract ERC20TransferProxy is IERC20TransferProxy, Initializable, RoleManager {
+contract ERC20TransferProxy is IERC20TransferProxy, Initializable, AccessControlUpgradeable {
     bytes32 public constant TRANSFER_PROXY_ADMIN = keccak256("TRANSFER_PROXY_ADMIN");
     bytes32 public constant TRANSFER_PROXY_CALLER = keccak256("TRANSFER_PROXY_CALLER");
 

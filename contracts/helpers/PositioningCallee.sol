@@ -3,9 +3,9 @@ pragma solidity =0.8.12;
 
 import { Context } from "@openzeppelin/contracts/utils/Context.sol";
 import { ContextUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol";
-import "./RoleManager.sol";
+import "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 
-abstract contract PositioningCallee is RoleManager {
+abstract contract PositioningCallee is AccessControlUpgradeable {
     // positioning callee admin role
     bytes32 public constant POSITIONING_CALLEE_ADMIN = keccak256("POSITIONING_CALLEE_ADMIN");
 

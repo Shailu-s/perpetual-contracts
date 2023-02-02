@@ -11,6 +11,7 @@ import {
 } from "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 import { Context } from "@openzeppelin/contracts/utils/Context.sol";
 import { ContextUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 
 import { LibPerpMath } from "../libs/LibPerpMath.sol";
 import { LibSettlementTokenMath } from "../libs/LibSettlementTokenMath.sol";
@@ -25,11 +26,10 @@ import { IVault } from "../interfaces/IVault.sol";
 import { IVolmexPerpPeriphery } from "../interfaces/IVolmexPerpPeriphery.sol";
 
 import { OwnerPausable } from "../helpers/OwnerPausable.sol";
-import { RoleManager } from "../helpers/RoleManager.sol";
 import { VaultStorageV1 } from "../storage/VaultStorage.sol";
 
 // never inherit any new stateful contract. never change the orders of parent stateful contracts
-contract Vault is IVault, ReentrancyGuardUpgradeable, OwnerPausable, VaultStorageV1, RoleManager {
+contract Vault is IVault, ReentrancyGuardUpgradeable, OwnerPausable, VaultStorageV1, AccessControlUpgradeable {
     using AddressUpgradeable for address;
     using LibSafeCastUint for uint256;
     using LibSafeCastInt for int256;

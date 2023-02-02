@@ -4,14 +4,14 @@ pragma solidity =0.8.12;
 import { AccessControl } from "@openzeppelin/contracts/access/AccessControl.sol";
 import { SafeMathUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/math/SafeMathUpgradeable.sol";
 import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 import "../interfaces/IMatchingEngine.sol";
-import "../helpers/RoleManager.sol";
 
 /**
  * @title Volmex Oracle Mark SMA
  * @author volmex.finance [security@volmexlabs.com]
  */
-contract MarkPriceOracle is Initializable, RoleManager {
+contract MarkPriceOracle is Initializable, AccessControlUpgradeable {
     using SafeMathUpgradeable for uint256;
 
     struct Observation {

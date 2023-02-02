@@ -2,10 +2,9 @@
 pragma solidity =0.8.12;
 
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 
 import "../libs/LibOrder.sol";
-
-import "../helpers/RoleManager.sol";
 import "../interfaces/IMarkPriceOracle.sol";
 import "../interfaces/IPositioning.sol";
 import "../interfaces/IVaultController.sol";
@@ -13,7 +12,7 @@ import "../interfaces/IVolmexPerpPeriphery.sol";
 import "../interfaces/IVolmexPerpView.sol";
 import "../interfaces/IPositioningConfig.sol";
 
-contract VolmexPerpPeriphery is Initializable, RoleManager, IVolmexPerpPeriphery {
+contract VolmexPerpPeriphery is Initializable, AccessControlUpgradeable, IVolmexPerpPeriphery {
     // perp periphery role
     bytes32 public constant VOLMEX_PERP_PERIPHERY = keccak256("VOLMEX_PERP_PERIPHERY");
     // role of relayer to execute open position

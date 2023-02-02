@@ -3,17 +3,17 @@
 pragma solidity =0.8.12;
 
 import "@openzeppelin/contracts-upgradeable/utils/introspection/ERC165StorageUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 
 import "../interfaces/IVolmexProtocol.sol";
 import "../interfaces/IIndexPriceOracle.sol";
 import "./IndexTWAP.sol";
-import "../helpers/RoleManager.sol";
 
 /**
  * @title Volmex Oracle contract
  * @author volmex.finance [security@volmexlabs.com]
  */
-contract IndexPriceOracle is ERC165StorageUpgradeable, IndexTWAP, IIndexPriceOracle, RoleManager {
+contract IndexPriceOracle is ERC165StorageUpgradeable, IndexTWAP, IIndexPriceOracle, AccessControlUpgradeable {
     // index price admin role
     bytes32 public constant INDEX_PRICE_ORACLE_ADMIN = keccak256("INDEX_PRICE_ORACLE_ADMIN");
     // price precision constant upto 6 decimal places
