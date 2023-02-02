@@ -38,7 +38,7 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
     uint256 internal constant _DUST = 10 wei;
     int256 private constant _ORACLE_BASE = 100000000;
 
-    /// TODONOW, SOlve this
+    /// TODO: Discusss _MIN_PARTIAL_LIQUIDATE_POSITION_VALUE and its use cases.
     uint256 internal constant _MIN_PARTIAL_LIQUIDATE_POSITION_VALUE = 100e18 wei; // 100 USD in decimal 18
 
     //
@@ -219,7 +219,6 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
             // baseDebt = baseBalance when it's negative
             if (baseBalance < 0) {
                 // baseDebtValue = baseDebt * indexPrice
-                //TODOCHANGE: decimal checks for index price
                 // baseDebtValue = baseBalance.mulDiv(_getIndexPrice(baseToken).toInt256(), 1e18);
                 baseDebtValue = (baseBalance * _getIndexPrice(baseToken).toInt256()) / _ORACLE_BASE;
             }
@@ -280,8 +279,6 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
         // both positionSize & indexTwap are in 10^18 already
         // overflow inspection:
         // only overflow when position value in USD(18 decimals) > 2^255 / 10^18
-        // TODOCHANGE: Decimal calculation for indexTwap is not as same decimal as Position size
-        // Todo: Should divide by ORACLE_BASE here
         return (positionSize * indexTwap.toInt256()) / _ORACLE_BASE;
     }
 
