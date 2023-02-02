@@ -52,7 +52,7 @@ contract VaultController is
 
     /// @inheritdoc IVaultController
     function registerVault(address _vault, address _token) external override {
-        // TODO: _requireOnlyFactory();
+        _requireOnlyVaultControllerAdmin();
         _vaultAddress[_token] = _vault;
     }
 
@@ -155,7 +155,7 @@ contract VaultController is
 
     /// @inheritdoc IVaultController
     function setPositioning(address PositioningArg) external {
-        require(hasRole(VAULT_CONTROLLER_ADMIN, _msgSender()), "VaultController: Not admin");
+        _requireOnlyVaultControllerAdmin();
         // V_VPMM: Positioning is not contract
         require(PositioningArg.isContract(), "V_VPMM");
         _positioning = PositioningArg;
@@ -211,5 +211,9 @@ contract VaultController is
 
     function _msgSender() internal view override(OwnerPausable, ContextUpgradeable) returns (address) {
         return super._msgSender();
+    }
+
+    function _requireOnlyVaultControllerAdmin() internal view {
+        require(hasRole(VAULT_CONTROLLER_ADMIN, _msgSender()), "VaultController: Not admin");
     }
 }
