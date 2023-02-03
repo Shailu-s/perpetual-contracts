@@ -3,6 +3,7 @@ pragma solidity =0.8.12;
 
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts/proxy/Clones.sol";
+import "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 
 import "../interfaces/IVault.sol";
 import "../interfaces/IVolmexBaseToken.sol";
@@ -15,13 +16,14 @@ import "../interfaces/IMatchingEngine.sol";
 import "../interfaces/IVolmexPerpView.sol";
 import "../interfaces/IMarketRegistry.sol";
 
-import "../helpers/RoleManager.sol";
-
 /**
  * @title Factory Contract
  * @author volmex.finance [security@volmexlabs.com]
  */
-contract PerpFactory is Initializable, IPerpFactory, RoleManager {
+contract PerpFactory is Initializable, IPerpFactory, AccessControlUpgradeable {
+    // clone deployer role
+    bytes32 public constant CLONES_DEPLOYER = keccak256("CLONES_DEPLOYER");
+
     // virtual base token implementation contract for factory
     address public baseTokenImplementation;
 

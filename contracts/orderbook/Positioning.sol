@@ -55,6 +55,8 @@ contract Positioning is
     using LibPerpMath for int256;
     using LibSignature for bytes32;
     using EncodeDecode for bytes;
+
+    bytes32 public constant POSITIONING_ADMIN = keccak256("POSITIONING_ADMIN");
     uint256 private constant _ORACLE_BASE = 100000000;
     uint256 internal constant _FULLY_CLOSED_RATIO = 1e18;
     uint256 private constant _UINT256_MAX = 2**256 - 1;

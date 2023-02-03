@@ -4,7 +4,7 @@ pragma solidity =0.8.12;
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
 import "../libs/LibOrder.sol";
-import "../helpers/RoleManager.sol";
+import "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 import "../interfaces/IPositioning.sol";
 import "../interfaces/IVaultController.sol";
 import "../interfaces/IVolmexBaseToken.sol";
@@ -13,7 +13,12 @@ import "../interfaces/IAccountBalance.sol";
 import "../interfaces/IMarketRegistry.sol";
 import "../interfaces/IVolmexPerpView.sol";
 
-contract VolmexPerpView is IVolmexPerpView, Initializable, RoleManager {
+contract VolmexPerpView is IVolmexPerpView, Initializable, AccessControlUpgradeable {
+    // admin of perp view contract
+    bytes32 public constant VOLMEX_PERP_VIEW = keccak256("VOLMEX_PERP_VIEW");
+    // perp view role to set contracts
+    bytes32 public constant PERP_VIEW_STATES = keccak256("PERP_VIEW_STATES");
+
     // Store the addresses of positionings { index => positioning address }
     mapping(uint256 => IPositioning) public positionings;
 
