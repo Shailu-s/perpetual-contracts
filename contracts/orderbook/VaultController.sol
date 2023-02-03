@@ -7,6 +7,7 @@ import { ContextUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/Co
 import {
     ReentrancyGuardUpgradeable
 } from "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 
 import { LibPerpMath } from "../libs/LibPerpMath.sol";
 import { LibSafeCastInt } from "../libs/LibSafeCastInt.sol";
@@ -22,7 +23,6 @@ import { IVaultController } from "../interfaces/IVaultController.sol";
 import { IVolmexPerpPeriphery } from "../interfaces/IVolmexPerpPeriphery.sol";
 
 import { OwnerPausable } from "../helpers/OwnerPausable.sol";
-import { RoleManager } from "../helpers/RoleManager.sol";
 import { TestERC20 } from "../tests/TestERC20.sol";
 import { Vault } from "./Vault.sol";
 import { VaultControllerStorage } from "../storage/VaultControllerStorage.sol";
@@ -33,13 +33,15 @@ contract VaultController is
     OwnerPausable,
     VaultControllerStorage,
     IVaultController,
-    RoleManager
+    AccessControlUpgradeable
 {
     using AddressUpgradeable for address;
     using LibSafeCastUint for uint256;
     using LibPerpMath for uint256;
     using LibPerpMath for int256;
     using LibSettlementTokenMath for uint256;
+
+    bytes32 public constant VAULT_CONTROLLER_ADMIN = keccak256("VAULT_CONTROLLER_ADMIN");
 
     function initialize(address positioningConfig, address accountBalanceArg) external initializer {
         __ReentrancyGuard_init();
@@ -52,7 +54,7 @@ contract VaultController is
 
     /// @inheritdoc IVaultController
     function registerVault(address _vault, address _token) external override {
-        // TODO: _requireOnlyFactory();
+        _requireOnlyVaultControllerAdmin();
         _vaultAddress[_token] = _vault;
     }
 
@@ -155,7 +157,7 @@ contract VaultController is
 
     /// @inheritdoc IVaultController
     function setPositioning(address PositioningArg) external {
-        require(hasRole(VAULT_CONTROLLER_ADMIN, _msgSender()), "VaultController: Not admin");
+        _requireOnlyVaultControllerAdmin();
         // V_VPMM: Positioning is not contract
         require(PositioningArg.isContract(), "V_VPMM");
         _positioning = PositioningArg;
@@ -211,5 +213,9 @@ contract VaultController is
 
     function _msgSender() internal view override(OwnerPausable, ContextUpgradeable) returns (address) {
         return super._msgSender();
+    }
+
+    function _requireOnlyVaultControllerAdmin() internal view {
+        require(hasRole(VAULT_CONTROLLER_ADMIN, _msgSender()), "VaultController: Not admin");
     }
 }

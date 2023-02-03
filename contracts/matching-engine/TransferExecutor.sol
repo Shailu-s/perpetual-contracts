@@ -3,15 +3,16 @@
 pragma solidity =0.8.12;
 
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 
 import "../interfaces/IERC20TransferProxy.sol";
 import "../interfaces/ITransferExecutor.sol";
 import "../interfaces/IMintBurn.sol";
 import "../interfaces/IVirtualToken.sol";
 import "../libs/LibAsset.sol";
-import "../helpers/RoleManager.sol";
 
-abstract contract TransferExecutor is RoleManager {
+abstract contract TransferExecutor is AccessControlUpgradeable {
+    bytes32 public constant TRANSFER_EXECUTOR = keccak256("TRANSFER_EXECUTOR");
     address internal _proxy;
 
     event ProxyChanged(address proxy);

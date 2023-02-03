@@ -2,12 +2,12 @@
 pragma solidity =0.8.12;
 
 import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 import { IPositioningConfig } from "../interfaces/IPositioningConfig.sol";
 import { PositioningConfigStorageV1 } from "../storage/PositioningConfigStorage.sol";
-import { RoleManager } from "../helpers/RoleManager.sol";
 
 // never inherit any new stateful contract. never change the orders of parent stateful contracts
-contract PositioningConfig is IPositioningConfig, Initializable, PositioningConfigStorageV1, RoleManager {
+contract PositioningConfig is IPositioningConfig, Initializable, PositioningConfigStorageV1, AccessControlUpgradeable {
     //
     // EVENT
     //
@@ -20,6 +20,8 @@ contract PositioningConfig is IPositioningConfig, Initializable, PositioningConf
     event InitialMarginChanged(uint24 imRatio);
     event MaintenanceMarginChanged(uint24 mmRatio);
     event PartialLiquidationRatioChanged(uint24 partialLiquidationRatio);
+
+    bytes32 public constant POSITIONING_CONFIG_ADMIN = keccak256("POSITIONING_CONFIG_ADMIN");
 
     //
     // MODIFIER

@@ -2,17 +2,21 @@
 pragma solidity =0.8.12;
 
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 
 import "../libs/LibOrder.sol";
-
-import "../helpers/RoleManager.sol";
 import "../interfaces/IMarkPriceOracle.sol";
 import "../interfaces/IPositioning.sol";
 import "../interfaces/IVaultController.sol";
 import "../interfaces/IVolmexPerpPeriphery.sol";
 import "../interfaces/IVolmexPerpView.sol";
+import "../interfaces/IPositioningConfig.sol";
 
-contract VolmexPerpPeriphery is Initializable, RoleManager, IVolmexPerpPeriphery {
+contract VolmexPerpPeriphery is Initializable, AccessControlUpgradeable, IVolmexPerpPeriphery {
+    // perp periphery role
+    bytes32 public constant VOLMEX_PERP_PERIPHERY = keccak256("VOLMEX_PERP_PERIPHERY");
+    // role of relayer to execute open position
+    bytes32 public constant RELAYER_MULTISIG = keccak256("RELAYER_MULTISIG");
     // Store the whitelist Vaults
     mapping(address => bool) private _isVaultWhitelist;
 
@@ -86,46 +90,6 @@ contract VolmexPerpPeriphery is Initializable, RoleManager, IVolmexPerpPeriphery
             liquidator,
             _index
         );
-    }
-
-    function _fillLimitOrder(
-        LibOrder.Order memory _leftLimitOrder,
-        bytes memory _signatureLeftLimitOrder,
-        LibOrder.Order memory _rightLimitOrder,
-        bytes memory _signatureRightLimitOrder,
-        bytes memory liquidator,
-        uint256 _index
-    ) internal {
-        if (_leftLimitOrder.orderType != LibOrder.ORDER)
-            require(_verifyTriggerPrice(_leftLimitOrder), "Periphery: left order price verification failed");
-        if (_rightLimitOrder.orderType != LibOrder.ORDER)
-            require(_verifyTriggerPrice(_rightLimitOrder), "Periphery: right order price verification failed");
-
-        IPositioning positioning = perpView.positionings(_index);
-        positioning.openPosition(
-            _leftLimitOrder,
-            _signatureLeftLimitOrder,
-            _rightLimitOrder,
-            _signatureRightLimitOrder,
-            liquidator
-        );
-    }
-
-    // TODO: Add round id in the Volmex oracle to faciliate the chainlink oracle functionality
-    function _getBaseTokenPrice(LibOrder.Order memory _order, uint256 _twInterval)
-        internal
-        view
-        returns (uint256 price)
-    {
-        // TODO: Add Order validate, similar to -> LibOrder.validate(order);
-
-        address makeAsset = _order.makeAsset.virtualToken;
-        address takeAsset = _order.takeAsset.virtualToken;
-
-        address baseToken = IVirtualToken(makeAsset).isBase() ? makeAsset : takeAsset;
-
-        uint64 _index = markPriceOracle.indexByBaseToken(baseToken);
-        return markPriceOracle.getCumulativePrice(_twInterval, _index);
     }
 
     function depositToVault(
@@ -228,6 +192,30 @@ contract VolmexPerpPeriphery is Initializable, RoleManager, IVolmexPerpPeriphery
     /**
         Internal view functions
      */
+
+    function _fillLimitOrder(
+        LibOrder.Order memory _leftLimitOrder,
+        bytes memory _signatureLeftLimitOrder,
+        LibOrder.Order memory _rightLimitOrder,
+        bytes memory _signatureRightLimitOrder,
+        bytes memory liquidator,
+        uint256 _index
+    ) internal {
+        IPositioning positioning = perpView.positionings(_index);
+        if (_leftLimitOrder.orderType != LibOrder.ORDER)
+            require(_verifyTriggerPrice(_leftLimitOrder, positioning), "Periphery: left order price verification failed");
+        if (_rightLimitOrder.orderType != LibOrder.ORDER)
+            require(_verifyTriggerPrice(_rightLimitOrder, positioning), "Periphery: right order price verification failed");
+
+        positioning.openPosition(
+            _leftLimitOrder,
+            _signatureLeftLimitOrder,
+            _rightLimitOrder,
+            _signatureRightLimitOrder,
+            liquidator
+        );
+    }
+
     function _requireVolmexPerpPeripheryAdmin() internal view {
         require(hasRole(VOLMEX_PERP_PERIPHERY, _msgSender()), "Periphery: Not admin");
     }
@@ -237,10 +225,13 @@ contract VolmexPerpPeriphery is Initializable, RoleManager, IVolmexPerpPeriphery
     }
 
     // TODO: Change the logic to round id, if Volmex Oracle implements price by round id functionality
-    function _verifyTriggerPrice(LibOrder.Order memory _limitOrder) private view returns (bool) {
+    function _verifyTriggerPrice(LibOrder.Order memory _limitOrder, IPositioning _positioning) private view returns (bool) {
         // TODO: Add check for round id, when Volmex Oracle updates functionality
-        // TODO Ask and update this hardhcoded time reference for tw interval
-        uint256 triggeredPrice = _getBaseTokenPrice(_limitOrder, 15 minutes);
+
+        address positioningConfig = _positioning.getPositioningConfig();
+        uint32 twInterval = IPositioningConfig(positioningConfig).getTwapInterval();
+
+        uint256 triggeredPrice = _getBaseTokenPrice(_limitOrder, twInterval);
 
         if (_limitOrder.orderType == LibOrder.STOP_LOSS_LIMIT_ORDER) {
             if (_limitOrder.isShort) {
@@ -260,5 +251,20 @@ contract VolmexPerpPeriphery is Initializable, RoleManager, IVolmexPerpPeriphery
             }
         }
         return false;
+    }
+
+    // TODO: Changes might require if we integrate chainlink, which are related to round_id
+    function _getBaseTokenPrice(LibOrder.Order memory _order, uint256 _twInterval)
+        private
+        view
+        returns (uint256 price)
+    {
+        address makeAsset = _order.makeAsset.virtualToken;
+        address takeAsset = _order.takeAsset.virtualToken;
+
+        address baseToken = IVirtualToken(makeAsset).isBase() ? makeAsset : takeAsset;
+
+        uint64 _index = markPriceOracle.indexByBaseToken(baseToken);
+        return markPriceOracle.getCumulativePrice(_twInterval, _index);
     }
 }

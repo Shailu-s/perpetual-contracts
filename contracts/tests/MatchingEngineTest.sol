@@ -11,11 +11,8 @@ contract MatchingEngineTest is MatchingEngine {
     function __MatchingEngineTest_init(address owner, IMarkPriceOracle markPriceOracle) external initializer {
         initialize(owner, markPriceOracle);
         __Ownable_init_unchained();
-        _grantRole(CAN_CANCEL_ALL_ORDERS, address(this));
-        _grantRole(CAN_CANCEL_ALL_ORDERS, _msgSender());
         _grantRole(CAN_MATCH_ORDERS, _msgSender());
         _grantRole(CAN_MATCH_ORDERS, address(this));
-        _grantRole(CAN_ADD_OBSERVATION, address(this));
     }
 
     function matchOrdersTest(LibOrder.Order memory orderLeft, LibOrder.Order memory orderRight) external payable {
@@ -31,7 +28,6 @@ contract MatchingEngineTest is MatchingEngine {
     }
 
     function addObservation(uint256 _priceCumulative, uint64 _index) public {
-        _grantRole(CAN_ADD_OBSERVATION, address(this));
         markPriceOracle.addObservation(_priceCumulative, _index);
     }
 

@@ -2,11 +2,14 @@
 pragma solidity =0.8.12;
 
 import { ERC20Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 
 import { IVirtualToken } from "../interfaces/IVirtualToken.sol";
-import { RoleManager } from "../helpers/RoleManager.sol";
 
-contract VirtualToken is IVirtualToken, ERC20Upgradeable, RoleManager {
+contract VirtualToken is IVirtualToken, ERC20Upgradeable, AccessControlUpgradeable {
+    bytes32 public constant VIRTUAL_TOKEN_ADMIN = keccak256("VIRTUAL_TOKEN_ADMIN");
+    bytes32 public constant MINTER = keccak256("MINTER");
+    bytes32 public constant BURNER = keccak256("BURNER");
     mapping(address => bool) internal _whitelistMap;
     bool public isBase;
 
