@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: BUSL - 1.1
 pragma solidity =0.8.12;
 
+import { IVolmexPerpPeriphery } from "./IVolmexPerpPeriphery.sol";
+
 interface IVault {
     /// @notice Emitted when trader deposit collateral into vault
     /// @param collateralToken The address of token that was deposited
@@ -28,7 +30,6 @@ interface IVault {
     /// @param amount The amount of the fund
     event DebtRepayed(address to, uint256 amount);
 
-
     function initialize(
         address PositioningConfigArg,
         address accountBalanceArg,
@@ -38,24 +39,18 @@ interface IVault {
     ) external;
 
     /// @notice Deposit collateral into vault
-    /// @param token The address of the token to deposit
     /// @param amount The amount of the token to deposit
     /// @param from The address of the trader
     function deposit(
-        address token,
+        IVolmexPerpPeriphery periphery,
         uint256 amount,
         address from
     ) external payable;
 
     /// @notice Withdraw collateral from vault
-    /// @param token The address of the token sender is going to withdraw
     /// @param amount The amount of the token to withdraw
     /// @param to The address of the trader
-    function withdraw(
-        address token,
-        uint256 amount,
-        address payable to
-    ) external ;
+    function withdraw(uint256 amount, address payable to) external;
 
     /// @notice transfer fund to vault in case of low balance
     /// @dev once multi-collateral is implemented, the token is not limited to settlementToken
@@ -78,10 +73,6 @@ interface IVault {
 
     /// @notice Set vault controller contract
     function setVaultController(address vaultControllerArg) external;
-
-    /// @notice Get the balance in vault of specified account
-    /// @return balance The balance amount
-    function getBalance(address account) external view returns (int256 balance);
 
     /// @notice Get settlement token address
     /// @return settlementToken The address of settlement token
@@ -107,6 +98,8 @@ interface IVault {
     /// @notice Get `Positioning` contract address
     /// @return Positioning The address of `Positioning` contract
     function getPositioning() external view returns (address);
+
+    function isEthVault() external view returns (bool);
 
     /// @notice Get `Vault controller` contract address
     function getVaultController() external view returns (address);

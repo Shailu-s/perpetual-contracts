@@ -21,15 +21,7 @@ contract AccountBalanceMock is AccountBalance {
         fakePendingFeeX10_18 = value;
     }
 
-    function getPnlAndPendingFee(address trader)
-        external
-        view
-        override
-        returns (
-            int256,
-            int256
-        )
-    {
+    function getPnlAndPendingFee(address trader) external view override returns (int256, int256) {
         return (fakeOwedRealisedPnlX10_18, fakeUnrealizedPnlX10_18);
     }
 }

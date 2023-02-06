@@ -2,8 +2,8 @@
 
 pragma solidity =0.8.12;
 
-import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/introspection/ERC165StorageUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 
 import "../interfaces/IVolmexProtocol.sol";
 import "../interfaces/IIndexPriceOracle.sol";
@@ -13,11 +13,13 @@ import "./IndexTWAP.sol";
  * @title Volmex Oracle contract
  * @author volmex.finance [security@volmexlabs.com]
  */
-contract IndexPriceOracle is OwnableUpgradeable, ERC165StorageUpgradeable, IndexTWAP, IIndexPriceOracle {
+contract IndexPriceOracle is ERC165StorageUpgradeable, IndexTWAP, IIndexPriceOracle, AccessControlUpgradeable {
+    // index price admin role
+    bytes32 public constant INDEX_PRICE_ORACLE_ADMIN = keccak256("INDEX_PRICE_ORACLE_ADMIN");
     // price precision constant upto 6 decimal places
     uint256 private constant _VOLATILITY_PRICE_PRECISION = 1000000;
     // maximum allowed number of index volatility datapoints for calculating twap
-    uint256 private constant _MAX_ALLOWED_TWAP_DATAPOINTS = 180;
+    uint256 private constant _MAX_ALLOWED_TWAP_DATAPOINTS = 6;
     // Interface ID of VolmexOracle contract, hashId = 0xf9fffc9f
     bytes4 private constant _IVOLMEX_ORACLE_ID = type(IIndexPriceOracle).interfaceId;
 
@@ -45,20 +47,20 @@ contract IndexPriceOracle is OwnableUpgradeable, ERC165StorageUpgradeable, Index
     function initialize(address _owner) external initializer {
         _updateTwapMaxDatapoints(_MAX_ALLOWED_TWAP_DATAPOINTS);
 
-        _updateVolatilityMeta(indexCount, 125000000, "");
+        //TODO: should setting up initial price be in initialise parameter?
+        _updateVolatilityMeta(indexCount, 100000000, "");
         volatilityIndexBySymbol["ETHV"] = indexCount;
-        volatilityCapRatioByIndex[indexCount] = 250000000;
+        volatilityCapRatioByIndex[indexCount] = 400000000;
 
         indexCount++;
 
-        _updateVolatilityMeta(indexCount, 125000000, "");
+        _updateVolatilityMeta(indexCount, 100000000, "");
         volatilityIndexBySymbol["BTCV"] = indexCount;
-        volatilityCapRatioByIndex[indexCount] = 250000000;
+        volatilityCapRatioByIndex[indexCount] = 400000000;
 
-        __Ownable_init();
         __ERC165Storage_init();
         _registerInterface(_IVOLMEX_ORACLE_ID);
-        transferOwnership(_owner);
+        _grantRole(INDEX_PRICE_ORACLE_ADMIN, _owner);
     }
 
     /**
@@ -66,7 +68,8 @@ contract IndexPriceOracle is OwnableUpgradeable, ERC165StorageUpgradeable, Index
      * @param _index Number value of the index. { eg. 0 }
      * @param _tokenSymbol Symbol of the adding volatility token
      */
-    function updateIndexBySymbol(string calldata _tokenSymbol, uint256 _index) external onlyOwner {
+    function updateIndexBySymbol(string calldata _tokenSymbol, uint256 _index) external {
+        _requireIndexPriceOracleAdmin();
         volatilityIndexBySymbol[_tokenSymbol] = _index;
 
         emit SymbolIndexUpdated(_index);
@@ -77,10 +80,8 @@ contract IndexPriceOracle is OwnableUpgradeable, ERC165StorageUpgradeable, Index
      * @param _leverageVolatilityIndex Index of the leverage volatility token
      * @param _newBaseVolatilityIndex Index of the base volatility token
      */
-    function updateBaseVolatilityIndex(
-        uint256 _leverageVolatilityIndex,
-        uint256 _newBaseVolatilityIndex
-    ) external onlyOwner {
+    function updateBaseVolatilityIndex(uint256 _leverageVolatilityIndex, uint256 _newBaseVolatilityIndex) external {
+        _requireIndexPriceOracleAdmin();
         baseVolatilityIndex[_leverageVolatilityIndex] = _newBaseVolatilityIndex;
 
         emit BaseVolatilityIndexUpdated(_newBaseVolatilityIndex);
@@ -102,13 +103,11 @@ contract IndexPriceOracle is OwnableUpgradeable, ERC165StorageUpgradeable, Index
         uint256 _leverage,
         uint256 _baseVolatilityIndex,
         bytes32 _proofHash
-    ) external onlyOwner {
+    ) external {
+        _requireIndexPriceOracleAdmin();
         require(address(_protocol) != address(0), "VolmexOracle: protocol address can't be zero");
         uint256 _volatilityCapRatio = _protocol.volatilityCapRatio() * _VOLATILITY_PRICE_PRECISION;
-        require(
-            _volatilityCapRatio >= 1000000,
-            "VolmexOracle: volatility cap ratio should be greater than 1000000"
-        );
+        require(_volatilityCapRatio >= 1000000, "VolmexOracle: volatility cap ratio should be greater than 1000000");
         uint256 _index = ++indexCount;
         volatilityCapRatioByIndex[_index] = _volatilityCapRatio;
         volatilityIndexBySymbol[_volatilityTokenSymbol] = _index;
@@ -121,10 +120,7 @@ contract IndexPriceOracle is OwnableUpgradeable, ERC165StorageUpgradeable, Index
             );
             volatilityLeverageByIndex[_index] = _leverage;
             baseVolatilityIndex[_index] = _baseVolatilityIndex;
-            _addIndexDataPoint(
-                _index,
-                _volatilityTokenPriceByIndex[_baseVolatilityIndex] / _leverage
-            );
+            _addIndexDataPoint(_index, _volatilityTokenPriceByIndex[_baseVolatilityIndex] / _leverage);
 
             emit LeveragedVolatilityIndexAdded(
                 _index,
@@ -140,12 +136,7 @@ contract IndexPriceOracle is OwnableUpgradeable, ERC165StorageUpgradeable, Index
             );
             _updateVolatilityMeta(_index, _volatilityTokenPrice, _proofHash);
 
-            emit VolatilityIndexAdded(
-                _index,
-                _volatilityCapRatio,
-                _volatilityTokenSymbol,
-                _volatilityTokenPrice
-            );
+            emit VolatilityIndexAdded(_index, _volatilityCapRatio, _volatilityTokenSymbol, _volatilityTokenPrice);
         }
     }
 
@@ -167,7 +158,8 @@ contract IndexPriceOracle is OwnableUpgradeable, ERC165StorageUpgradeable, Index
         uint256[] memory _volatilityIndexes,
         uint256[] memory _volatilityTokenPrices,
         bytes32[] memory _proofHashes
-    ) external onlyOwner {
+    ) external {
+        _requireIndexPriceOracleAdmin();
         require(
             _volatilityIndexes.length == _volatilityTokenPrices.length &&
                 _volatilityIndexes.length == _proofHashes.length,
@@ -179,18 +171,10 @@ contract IndexPriceOracle is OwnableUpgradeable, ERC165StorageUpgradeable, Index
                 "VolmexOracle: _volatilityTokenPrice should be smaller than VolatilityCapRatio"
             );
 
-            _updateVolatilityMeta(
-                _volatilityIndexes[i],
-                _volatilityTokenPrices[i],
-                _proofHashes[i]
-            );
+            _updateVolatilityMeta(_volatilityIndexes[i], _volatilityTokenPrices[i], _proofHashes[i]);
         }
 
-        emit BatchVolatilityTokenPriceUpdated(
-            _volatilityIndexes,
-            _volatilityTokenPrices,
-            _proofHashes
-        );
+        emit BatchVolatilityTokenPriceUpdated(_volatilityIndexes, _volatilityTokenPrices, _proofHashes);
     }
 
     /**
@@ -199,7 +183,8 @@ contract IndexPriceOracle is OwnableUpgradeable, ERC165StorageUpgradeable, Index
      * @param _index Datapoints volatility index id {0}
      * @param _value Datapoint value to add {250000000}
      */
-    function addIndexDataPoint(uint256 _index, uint256 _value) external onlyOwner {
+    function addIndexDataPoint(uint256 _index, uint256 _value) external {
+        _requireIndexPriceOracleAdmin();
         _addIndexDataPoint(_index, _value);
     }
 
@@ -217,11 +202,7 @@ contract IndexPriceOracle is OwnableUpgradeable, ERC165StorageUpgradeable, Index
         )
     {
         uint256 volatilityIndex = volatilityIndexBySymbol[_volatilityTokenSymbol];
-        (
-            volatilityTokenPrice,
-            iVolatilityTokenPrice,
-            lastUpdateTimestamp
-        ) = _getVolatilityTokenPrice(volatilityIndex);
+        (volatilityTokenPrice, iVolatilityTokenPrice, lastUpdateTimestamp) = _getVolatilityTokenPrice(volatilityIndex);
     }
 
     /**
@@ -237,11 +218,7 @@ contract IndexPriceOracle is OwnableUpgradeable, ERC165StorageUpgradeable, Index
             uint256 lastUpdateTimestamp
         )
     {
-        (
-            volatilityTokenPrice,
-            iVolatilityTokenPrice,
-            lastUpdateTimestamp
-        ) = _getVolatilityTokenPrice(_index);
+        (volatilityTokenPrice, iVolatilityTokenPrice, lastUpdateTimestamp) = _getVolatilityTokenPrice(_index);
     }
 
     /**
@@ -259,11 +236,7 @@ contract IndexPriceOracle is OwnableUpgradeable, ERC165StorageUpgradeable, Index
             uint256 lastUpdateTimestamp
         )
     {
-        (
-            volatilityTokenTwap,
-            iVolatilityTokenTwap,
-            lastUpdateTimestamp
-        ) = _getVolatilityTokenPrice(_index);
+        (volatilityTokenTwap, iVolatilityTokenTwap, lastUpdateTimestamp) = _getVolatilityTokenPrice(_index);
     }
 
     /**
@@ -279,7 +252,8 @@ contract IndexPriceOracle is OwnableUpgradeable, ERC165StorageUpgradeable, Index
      *
      * @param _value Max datapoints value {180}
      */
-    function updateTwapMaxDatapoints(uint256 _value) external onlyOwner {
+    function updateTwapMaxDatapoints(uint256 _value) external {
+        _requireIndexPriceOracleAdmin();
         _updateTwapMaxDatapoints(_value);
     }
 
@@ -298,6 +272,10 @@ contract IndexPriceOracle is OwnableUpgradeable, ERC165StorageUpgradeable, Index
         lastUpdateTimestamp = volatilityLeverageByIndex[_index] > 0
             ? volatilityLastUpdateTimestamp[baseVolatilityIndex[_index]]
             : volatilityLastUpdateTimestamp[_index];
+    }
+
+    function _requireIndexPriceOracleAdmin() internal view {
+        require(hasRole(INDEX_PRICE_ORACLE_ADMIN, _msgSender()), "IndexPriceOracle: Not admin");
     }
 
     function _updateVolatilityMeta(
@@ -329,5 +307,15 @@ contract IndexPriceOracle is OwnableUpgradeable, ERC165StorageUpgradeable, Index
             lastUpdateTimestamp = volatilityLastUpdateTimestamp[_index];
         }
         iVolatilityTokenTwap = volatilityCapRatioByIndex[_index] - volatilityTokenTwap;
+    }
+
+    function supportsInterface(bytes4 interfaceId)
+        public
+        view
+        virtual
+        override(AccessControlUpgradeable, ERC165StorageUpgradeable)
+        returns (bool)
+    {
+        return super.supportsInterface(interfaceId);
     }
 }

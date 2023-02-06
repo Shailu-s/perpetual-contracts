@@ -3,24 +3,19 @@
 pragma solidity =0.8.12;
 
 import { PausableUpgradeable } from "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 
 import "../libs/LibFill.sol";
-
 import "../interfaces/IMarkPriceOracle.sol";
-import "../interfaces/ITransferManager.sol";
-
+import "../interfaces/IMatchingEngine.sol";
 import "./AssetMatcher.sol";
-import "./TransferExecutor.sol";
-import "../helpers/OwnerPausable.sol";
 
-abstract contract MatchingEngineCore is
-    Initializable,
-    OwnableUpgradeable,
-    PausableUpgradeable,
-    AssetMatcher,
-    TransferExecutor,
-    ITransferManager
-{
+
+abstract contract MatchingEngineCore is PausableUpgradeable, AssetMatcher, AccessControlUpgradeable {
+    // admin of matching engine
+    bytes32 public constant MATCHING_ENGINE_CORE_ADMIN = keccak256("MATCHING_ENGINE_CORE_ADMIN");
+    // match orders role, used in matching engine by Positioning
+    bytes32 public constant CAN_MATCH_ORDERS = keccak256("CAN_MATCH_ORDERS");
     uint256 private constant _UINT256_MAX = 2**256 - 1;
     uint256 private constant _ORACLE_BASE = 1000000;
 
@@ -34,7 +29,7 @@ abstract contract MatchingEngineCore is
     //events
     event Canceled(bytes32 indexed hash, address trader, address baseToken, uint256 amount, uint256 salt);
     event CanceledAll(address indexed trader, uint256 minSalt);
-    event Matched(uint256 newLeftFill, uint256 newRightFill);
+    event Matched(address[2] traders, uint64[2] deadline, uint256[2] salt, uint256 newLeftFill, uint256 newRightFill);
 
     /**
         @notice Cancels a given order
@@ -53,6 +48,11 @@ abstract contract MatchingEngineCore is
             order.isShort ? order.makeAsset.value : order.takeAsset.value,
             order.salt
         );
+    }
+
+    function grantMatchOrders(address account) public {
+        require(hasRole(MATCHING_ENGINE_CORE_ADMIN, _msgSender()), "MatchingEngineCore: Not admin");
+        _grantRole(CAN_MATCH_ORDERS, account);
     }
 
     /**
@@ -85,24 +85,22 @@ abstract contract MatchingEngineCore is
     function matchOrders(LibOrder.Order memory orderLeft, LibOrder.Order memory orderRight)
         public
         whenNotPaused
-        returns (
-            address,
-            address,
-            LibFill.FillResult memory
-        )
+        returns (LibFill.FillResult memory)
     {
+        _requireCanMatchOrders();
         if (orderLeft.trader != address(0) && orderRight.trader != address(0)) {
             require(orderRight.trader != orderLeft.trader, "V_PERP_M: order verification failed");
         }
         LibFill.FillResult memory newFill = _matchAndTransfer(orderLeft, orderRight);
 
-        return (orderLeft.makeAsset.virtualToken, orderRight.makeAsset.virtualToken, newFill);
+        return (newFill);
     }
 
     function matchOrderInBatch(LibOrder.Order[] memory ordersLeft, LibOrder.Order[] memory ordersRight)
         external
         whenNotPaused
     {
+        _requireCanMatchOrders();
         uint256 ordersLength = ordersLeft.length;
         for (uint256 index = 0; index < ordersLength; index++) {
             matchOrders(ordersLeft[index], ordersRight[index]);
@@ -122,21 +120,17 @@ abstract contract MatchingEngineCore is
 
         newFill = _getFillSetNew(orderLeft, orderRight);
 
-        address makeToken = orderLeft.isShort ? orderLeft.makeAsset.virtualToken : orderLeft.takeAsset.virtualToken;
-        address takeToken = orderRight.isShort ? orderRight.makeAsset.virtualToken : orderRight.takeAsset.virtualToken;
+        orderLeft.isShort
+            ? _updateObservation(newFill.rightValue, newFill.leftValue, orderLeft.makeAsset.virtualToken)
+            : _updateObservation(newFill.leftValue, newFill.rightValue, orderRight.makeAsset.virtualToken);
 
-        bool isLeftBase = IVirtualToken(makeToken).isBase();
-
-        isLeftBase
-            ? _updateObservation(newFill.rightValue, newFill.leftValue, makeToken)
-            : _updateObservation(newFill.leftValue, newFill.rightValue, takeToken);
-
-        _doTransfers(
-            LibDeal.DealSide(LibAsset.Asset(makeToken, newFill.leftValue), _proxy, orderLeft.trader),
-            LibDeal.DealSide(LibAsset.Asset(takeToken, newFill.rightValue), _proxy, orderRight.trader)
+        emit Matched(
+            [orderLeft.trader, orderRight.trader],
+            [orderLeft.deadline, orderRight.deadline],
+            [orderLeft.salt, orderRight.salt],
+            newFill.leftValue,
+            newFill.rightValue
         );
-
-        emit Matched(newFill.leftValue, newFill.rightValue);
     }
 
     function _updateObservation(
@@ -195,6 +189,11 @@ abstract contract MatchingEngineCore is
         require(matchToken != address(0), "V_PERP_M: left make assets don't match");
         matchToken = _matchAssets(orderLeft.takeAsset.virtualToken, orderRight.makeAsset.virtualToken);
         require(matchToken != address(0), "V_PERP_M: left take assets don't match");
+    }
+
+    function _requireCanMatchOrders() internal view {
+        // MatchingEngineCore: Not Can Match Orders
+        require(hasRole(CAN_MATCH_ORDERS, _msgSender()), "MEC_NCMO");
     }
 
     uint256[50] private __gap;

@@ -11,9 +11,6 @@ contract ERC20TransferProxyTest is IERC20TransferProxy {
         address to,
         uint256 value
     ) external override {
-        require(
-            token.transferFrom(from, to, value),
-            "V_PERP_M: failure while transferring"
-        );
+        require(token.transferFrom(from, to, value), "V_PERP_M: failure while transferring");
     }
 }

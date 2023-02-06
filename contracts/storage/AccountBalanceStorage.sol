@@ -7,9 +7,8 @@ import { LibAccountMarket } from "../libs/LibAccountMarket.sol";
 /// contract which implements AccountBalanceStorageV1 and following the naming convention
 /// AccountBalanceStorageVX.
 abstract contract AccountBalanceStorageV1 {
-    address internal _PositioningConfig;
+    address internal _positioningConfig;
     address internal _orderBook;
-    address internal _vault;
 
     // trader => owedRealizedPnl
     mapping(address => int256) internal _owedRealizedPnlMap;
@@ -20,4 +19,6 @@ abstract contract AccountBalanceStorageV1 {
 
     // first key: trader, second key: baseToken
     mapping(address => mapping(address => LibAccountMarket.Info)) internal _accountMarketMap;
+    // Index price oracle underlying index
+    uint64 internal _underlyingPriceIndex;
 }

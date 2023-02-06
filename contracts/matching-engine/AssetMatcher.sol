@@ -2,15 +2,10 @@
 
 pragma solidity =0.8.12;
 
-import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
-abstract contract AssetMatcher is Initializable, OwnableUpgradeable {
-    function _matchAssets(address leftBaseToken, address rightBaseToken)
-        internal
-        pure
-        returns (address baseToken)
-    {
+abstract contract AssetMatcher is OwnableUpgradeable {
+    function _matchAssets(address leftBaseToken, address rightBaseToken) internal pure returns (address baseToken) {
         address result = _matchAssetOneSide(leftBaseToken, rightBaseToken);
         if (result == address(0)) {
             return _matchAssetOneSide(rightBaseToken, leftBaseToken);
@@ -33,11 +28,7 @@ abstract contract AssetMatcher is Initializable, OwnableUpgradeable {
         revert("V_PERP_M: not found");
     }
 
-    function _simpleMatch(address leftBaseToken, address rightBaseToken)
-        private
-        pure
-        returns (address baseToken)
-    {
+    function _simpleMatch(address leftBaseToken, address rightBaseToken) private pure returns (address baseToken) {
         bytes32 leftHash = keccak256(abi.encodePacked(leftBaseToken));
         bytes32 rightHash = keccak256(abi.encodePacked(rightBaseToken));
 

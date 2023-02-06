@@ -10,10 +10,7 @@ contract AssetMatcherTest is Initializable, OwnableUpgradeable, AssetMatcher {
         __Ownable_init_unchained();
     }
 
-    function matchAssetsTest(
-        address leftBaseToken,
-        address rightBaseToken
-    ) external pure returns (address baseToken) {
+    function matchAssetsTest(address leftBaseToken, address rightBaseToken) external pure returns (address baseToken) {
         return _matchAssets(leftBaseToken, rightBaseToken);
     }
 }
