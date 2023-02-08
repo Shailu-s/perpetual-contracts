@@ -381,17 +381,14 @@ contract Positioning is
     }
 
     /// @dev Settle trader's funding payment to his/her realized pnl.
-    function _settleFunding(address trader, address baseToken) internal returns (int256 growthTwPremium) {
+    function _settleFunding(address trader, address baseToken) internal {
         int256 fundingPayment;
-        (fundingPayment, growthTwPremium) = settleFunding(trader, baseToken);
+        fundingPayment = settleFunding(trader, baseToken);
 
         if (fundingPayment != 0) {
             IAccountBalance(_accountBalance).modifyOwedRealizedPnl(trader, fundingPayment.neg256(), baseToken);
             emit FundingPaymentSettled(trader, baseToken, fundingPayment);
         }
-
-        IAccountBalance(_accountBalance).updateTwPremiumGrowthGlobal(trader, baseToken, growthTwPremium);
-        return growthTwPremium;
     }
 
     /// @dev Add given amount to PnL of the address provided
