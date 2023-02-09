@@ -247,7 +247,7 @@ describe("Vault", function () {
         "100000000000000000000",
       );
     });
-    it.only("Negative Test For desposit from vault after setting token balance cap ", async () => {
+    it("Negative Test For desposit from vault after setting token balance cap ", async () => {
       await positioningConfig.setSettlementTokenBalanceCap("5000000000000000000");
       const USDCVaultAddress = await vaultController.getVault(USDC.address);
 
@@ -265,7 +265,7 @@ describe("Vault", function () {
           ),
       ).to.be.revertedWith("V_GTSTBC");
     });
-    it.only("Negative Test For desposit from vault after setting token balance cap for multiple users", async () => {
+    it("Negative Test For desposit from vault after setting token balance cap for multiple users", async () => {
       const amount = parseUnits("2000000000000000000", await USDC.decimals());
       await positioningConfig.setSettlementTokenBalanceCap(
         parseUnits("5000000000000000000", await USDC.decimals()),
@@ -306,7 +306,7 @@ describe("Vault", function () {
           .deposit(volmexPerpPeriphery.address, USDC.address, cole.address, amount),
       ).to.be.revertedWith("V_GTSTBC");
     });
-    it.only("Negative Test For desposit from vault after setting token balance cap for multiple users also with funds withdrawn", async () => {
+    it("Negative Test For desposit from vault after setting token balance cap for multiple users also with funds withdrawn", async () => {
       const amount = parseUnits("2000000000000000000", await USDC.decimals());
       await positioningConfig.setSettlementTokenBalanceCap(
         parseUnits("5000000000000000000", await USDC.decimals()),
