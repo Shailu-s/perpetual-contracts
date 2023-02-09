@@ -38,7 +38,7 @@ describe("VolmexPerpPeriphery", function () {
   let marketRegistry;
   let TestERC20;
   let USDC;
-  let owner, account1, account2, account3, account4;
+  let owner, account1, account2, account3, account4, alice, bob;
   let liquidator;
   const deadline = 87654321987654;
   const one = ethers.constants.WeiPerEther; // 1e18
@@ -53,10 +53,10 @@ describe("VolmexPerpPeriphery", function () {
     VolmexPerpPeriphery = await ethers.getContractFactory("VolmexPerpPeriphery");
     MarkPriceOracle = await ethers.getContractFactory("MarkPriceOracle");
     IndexPriceOracle = await ethers.getContractFactory("IndexPriceOracle");
-    MatchingEngine = await ethers.getContractFactory("MatchingEngineTest");
+    MatchingEngine = await ethers.getContractFactory("MatchingEngine");
     VirtualToken = await ethers.getContractFactory("VirtualTokenTest");
     ERC20TransferProxyTest = await ethers.getContractFactory("ERC20TransferProxyTest");
-    Positioning = await ethers.getContractFactory("PositioningTest");
+    Positioning = await ethers.getContractFactory("Positioning");
     PositioningConfig = await ethers.getContractFactory("PositioningConfig");
     Vault = await ethers.getContractFactory("Vault");
     VaultController = await ethers.getContractFactory("VaultController");
@@ -66,7 +66,7 @@ describe("VolmexPerpPeriphery", function () {
     VolmexBaseToken = await ethers.getContractFactory("VolmexBaseToken");
     VolmexQuoteToken = await ethers.getContractFactory("VolmexQuoteToken");
     VolmexPerpView = await ethers.getContractFactory("VolmexPerpView");
-    [owner, account1, account2, account3, account4] = await ethers.getSigners();
+    [owner, account1, account2, account3, account4, alice, bob] = await ethers.getSigners();
     liquidator = encodeAddress(owner.address);
   });
 
@@ -121,13 +121,10 @@ describe("VolmexPerpPeriphery", function () {
     await USDC.__TestERC20_init("TestUSDC", "USDC", 6);
     await USDC.deployed();
 
-    matchingEngine = await upgrades.deployProxy(
-      MatchingEngine,
-      [owner.address, markPriceOracle.address],
-      {
-        initializer: "__MatchingEngineTest_init",
-      },
-    );
+    matchingEngine = await upgrades.deployProxy(MatchingEngine, [
+      owner.address,
+      markPriceOracle.address,
+    ]);
     await markPriceOracle.setMatchingEngine(matchingEngine.address);
 
     virtualToken = await upgrades.deployProxy(VirtualToken, ["VirtualToken", "VTK", false], {
@@ -149,7 +146,7 @@ describe("VolmexPerpPeriphery", function () {
       positioningConfig.address,
       accountBalance1.address,
       USDC.address,
-      accountBalance1.address,
+      vaultController.address,
       false,
     ]);
     await vault.deployed();
@@ -168,7 +165,7 @@ describe("VolmexPerpPeriphery", function () {
         markPriceOracle.address,
         indexPriceOracle.address,
         0,
-        [owner.address, account1.address]
+        [owner.address, account1.address],
       ],
       {
         initializer: "initialize",
@@ -192,14 +189,16 @@ describe("VolmexPerpPeriphery", function () {
     await vaultController.connect(owner).setPositioning(positioning.address);
 
     await positioningConfig.connect(owner).setMaxMarketsPerAccount(5);
-    await positioningConfig.connect(owner).setSettlementTokenBalanceCap(1000000);
+    await positioningConfig.connect(owner).setSettlementTokenBalanceCap("1000000000000000");
 
     await positioning.connect(owner).setMarketRegistry(marketRegistry.address);
     await positioning.connect(owner).setDefaultFeeReceiver(owner.address);
     await positioning.connect(owner).setPositioning(positioning.address);
 
+    await (await markPriceOracle.setMatchingEngine(owner.address)).wait();
+    await (await matchingEngine.grantMatchOrders(positioning.address)).wait();
     for (let i = 0; i < 9; i++) {
-      await matchingEngine.addObservation(10000000, 0);
+      await markPriceOracle.addObservation(100000000, 0);
     }
 
     volmexPerpPeriphery = await upgrades.deployProxy(VolmexPerpPeriphery, [
@@ -209,6 +208,152 @@ describe("VolmexPerpPeriphery", function () {
       owner.address,
       owner.address, // replace with replayer address
     ]);
+    await volmexPerpPeriphery.deployed();
+  });
+
+  describe("Funding payment", () => {
+    const depositAmount = BigNumber.from("10000000000000");
+    let baseAmount = "50000000000000000000"; //50
+    let quoteAmount = "100000000000000000000"; //100
+    this.beforeEach(async () => {
+      // transfer balances
+      await (await USDC.connect(owner).transfer(alice.address, depositAmount)).wait();
+      await (await USDC.connect(owner).transfer(bob.address, depositAmount)).wait();
+
+      // approve to vault
+      await (await USDC.connect(owner).approve(volmexPerpPeriphery.address, depositAmount)).wait();
+      await (await USDC.connect(alice).approve(volmexPerpPeriphery.address, depositAmount)).wait();
+      await (await USDC.connect(bob).approve(volmexPerpPeriphery.address, depositAmount)).wait();
+
+      // deposit to vault
+      await (
+        await volmexPerpPeriphery.connect(owner).depositToVault(0, USDC.address, depositAmount)
+      ).wait();
+      await (
+        await volmexPerpPeriphery.connect(alice).depositToVault(0, USDC.address, depositAmount)
+      ).wait();
+      await (
+        await volmexPerpPeriphery.connect(bob).depositToVault(0, USDC.address, depositAmount)
+      ).wait();
+    });
+
+    it("Open position", async () => {
+      console.log("Index price: ", (await indexPriceOracle.getIndexTwap(0)).toString());
+      console.log(
+        "Mark price: ",
+        (await markPriceOracle.getCumulativePrice("3600", 0)).toString(),
+      );
+      let salt = 250;
+      let txBefore = [];
+      for (let index = 0; index < 10; index++) {
+        let orderLeft = Order(
+          ORDER,
+          deadline,
+          alice.address,
+          Asset(volmexBaseToken.address, baseAmount),
+          Asset(volmexQuoteToken.address, quoteAmount),
+          salt,
+          0,
+          true,
+        );
+
+        let orderRight = Order(
+          ORDER,
+          deadline,
+          bob.address,
+          Asset(volmexQuoteToken.address, quoteAmount),
+          Asset(volmexBaseToken.address, baseAmount),
+          salt++,
+          0,
+          false,
+        );
+
+        const signatureLeft = await getSignature(orderLeft, alice.address);
+        const signatureRight = await getSignature(orderRight, bob.address);
+
+        const tx = await volmexPerpPeriphery.openPosition(
+          0,
+          orderLeft,
+          signatureLeft,
+          orderRight,
+          signatureRight,
+          liquidator,
+        );
+        const receipt = await tx.wait();
+        console.log("Confirmations", index+1, (await markPriceOracle.getCumulativePrice(3600, 0)).toString());
+        console.log("Alice", (await accountBalance1.getPnlAndPendingFee(alice.address)).toString())
+        console.log("Bob", (await accountBalance1.getPnlAndPendingFee(bob.address)).toString())
+        let txDataBefore = {
+          "Mark price": (await markPriceOracle.getCumulativePrice("3600", 0)).toString(),
+          "Alice position": (
+            await accountBalance1.getTakerPositionSize(alice.address, volmexBaseToken.address)
+          ).toString(),
+          "Alice owed and un realized pnl": (
+            await accountBalance1.getPnlAndPendingFee(alice.address)
+          ).toString(),
+          "Bob position": (
+            await accountBalance1.getTakerPositionSize(bob.address, volmexBaseToken.address)
+          ).toString(),
+          "Bob owed and un realized pnl": (
+            await accountBalance1.getPnlAndPendingFee(bob.address)
+          ).toString(),
+        };
+        txBefore.push(txDataBefore);
+          if (index == 9) {
+            let orderLeft = Order(
+              ORDER,
+              deadline,
+              alice.address,
+              Asset(volmexQuoteToken.address, quoteAmount),
+              Asset(volmexBaseToken.address, baseAmount),
+              salt++,
+              0,
+              false,
+            );
+    
+            let orderRight = Order(
+              ORDER,
+              deadline,
+              bob.address,
+              Asset(volmexBaseToken.address, baseAmount),
+              Asset(volmexQuoteToken.address, quoteAmount),
+              salt++,
+              0,
+              true,
+            );
+    
+            const signatureLeft = await getSignature(orderLeft, alice.address);
+            const signatureRight = await getSignature(orderRight, bob.address);
+    
+            const tx = await volmexPerpPeriphery.openPosition(
+              0,
+              orderLeft,
+              signatureLeft,
+              orderRight,
+              signatureRight,
+              liquidator,
+            );
+            const receipt = await tx.wait();
+            txDataBefore = {
+              "Mark price": (await markPriceOracle.getCumulativePrice("3600", 0)).toString(),
+              "Alice position": (
+                await accountBalance1.getTakerPositionSize(alice.address, volmexBaseToken.address)
+              ).toString(),
+              "Alice owed and un realized pnl": (
+                await accountBalance1.getPnlAndPendingFee(alice.address)
+              ).toString(),
+              "Bob position": (
+                await accountBalance1.getTakerPositionSize(bob.address, volmexBaseToken.address)
+              ).toString(),
+              "Bob owed and un realized pnl": (
+                await accountBalance1.getPnlAndPendingFee(bob.address)
+              ).toString(),
+            };
+            txBefore.push(txDataBefore);
+          }
+      }
+      console.log(txBefore);
+    });
   });
 
   describe("VolmexPerpPeriphery deployment", async () => {
