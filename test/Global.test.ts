@@ -172,7 +172,7 @@ describe("Global", function () {
         markPriceOracle.address,
         indexPriceOracle.address,
         0,
-        [owner.address, account1.address]
+        [owner.address, account1.address],
       ],
       {
         initializer: "initialize",

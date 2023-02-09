@@ -64,29 +64,15 @@ const deposit = async () => {
   console.log("aliceBalance: ", aliceBalance.toString());
   console.log("bobBalance: ", bobBalance.toString());
   console.log("Approve Periphery ...");
-  await (
-    await collateral
-      .connect(alice)
-      .approve(periphery.address, aliceBalance)
-  ).wait();
-  await (
-    await collateral
-      .connect(bob)
-      .approve(periphery.address, bobBalance)
-  ).wait();
+  await (await collateral.connect(alice).approve(periphery.address, aliceBalance)).wait();
+  await (await collateral.connect(bob).approve(periphery.address, bobBalance)).wait();
   console.log("Approved!!!");
   console.log("Depositing 1000 collateral from both accounts ...");
   await (
-    await periphery
-      .connect(alice)
-      .depositToVault(0, collateral.address, "1000000000")
+    await periphery.connect(alice).depositToVault(0, collateral.address, "1000000000")
   ).wait();
   console.log("Deposit in Account 1 successful!!!");
-  await (
-    await periphery
-      .connect(bob)
-      .depositToVault(0, collateral.address, "20000000")
-  ).wait();
+  await (await periphery.connect(bob).depositToVault(0, collateral.address, "20000000")).wait();
   console.log("Deposit in Account 2 successful!!!");
   console.log("Deposited!!!");
   const indexPriceOracle = await ethers.getContractAt("IndexPriceOracle", indexPriceOracleAddress);

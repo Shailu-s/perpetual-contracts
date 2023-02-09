@@ -50,21 +50,27 @@ async function getSignature() {
   const account1 = new ethers.Wallet(`${process.env.PRIVATE_KEY}`, provider);
   const account2 = new ethers.Wallet(`${process.env.PRIVATE_KEY_1}`, provider);
   const account3 = new ethers.Wallet(`${process.env.PRIVATE_KEY_2}`, provider);
-  const markPriceOracle = await ethers.getContractAt("MarkPriceOracle", `${process.env.MARK_PRICE_ORACLE}`);
-  const indexPriceOracle = await ethers.getContractAt("IndexPriceOracle", `${process.env.INDEX_PRICE_ORACLE}`);
+  const markPriceOracle = await ethers.getContractAt(
+    "MarkPriceOracle",
+    `${process.env.MARK_PRICE_ORACLE}`,
+  );
+  const indexPriceOracle = await ethers.getContractAt(
+    "IndexPriceOracle",
+    `${process.env.INDEX_PRICE_ORACLE}`,
+  );
   const indexPrice = (await indexPriceOracle.getIndexTwap(0))[0];
-  const markPrice = await markPriceOracle.getCumulativePrice("14400", 0)
+  const markPrice = await markPriceOracle.getCumulativePrice("14400", 0);
 
-  const time = new Date().getTime()
+  const time = new Date().getTime();
   const deadline = time + 50000000;
   let salt = time;
   console.log("initial index", indexPrice.toString());
   console.log("initial mark", markPrice.toString());
 
   const amounts = {
-    base: BN.from("50000000000000000000").mul('1000000').div(indexPrice), // 50
-    quote: BN.from("50000000000000000000")
-  }
+    base: BN.from("50000000000000000000").mul("1000000").div(indexPrice), // 50
+    quote: BN.from("50000000000000000000"),
+  };
   const isShort = false;
 
   const orderleft = Order(
@@ -99,7 +105,10 @@ async function getSignature() {
   console.log("Signature created !!!");
 
   const Periphery = await ethers.getContractFactory("VolmexPerpPeriphery");
-  const accountBalance = await ethers.getContractAt("AccountBalance", `${process.env.ACCOUNT_BALANCE}`);
+  const accountBalance = await ethers.getContractAt(
+    "AccountBalance",
+    `${process.env.ACCOUNT_BALANCE}`,
+  );
   const positioning = await ethers.getContractAt("Positioning", positioningAddress);
   const periphery = Periphery.attach(peripheryAddress);
   console.log("Opening position ...");
@@ -119,9 +128,13 @@ async function getSignature() {
 
   const requiredData = {
     owedUnRealizedPnl: (await accountBalance.getPnlAndPendingFee(account3.address)).toString(),
-    pendingFundingPayment: (await positioning.getPendingFundingPayment(account3.address, baseToken)).toString(),
-    positionSize: (await accountBalance.getTakerPositionSize(account3.address, baseToken)).toString(),
-  }
+    pendingFundingPayment: (
+      await positioning.getPendingFundingPayment(account3.address, baseToken)
+    ).toString(),
+    positionSize: (
+      await accountBalance.getTakerPositionSize(account3.address, baseToken)
+    ).toString(),
+  };
   console.log("response: ", requiredData);
 }
 

@@ -280,9 +280,16 @@ describe("VolmexPerpPeriphery", function () {
           liquidator,
         );
         const receipt = await tx.wait();
-        console.log("Confirmations", index+1, (await markPriceOracle.getCumulativePrice(3600, 0)).toString());
-        console.log("Alice", (await accountBalance1.getPnlAndPendingFee(alice.address)).toString())
-        console.log("Bob", (await accountBalance1.getPnlAndPendingFee(bob.address)).toString())
+        console.log(
+          "Confirmations",
+          index + 1,
+          (await markPriceOracle.getCumulativePrice(3600, 0)).toString(),
+        );
+        console.log(
+          "Alice",
+          (await accountBalance1.getPnlAndPendingFee(alice.address)).toString(),
+        );
+        console.log("Bob", (await accountBalance1.getPnlAndPendingFee(bob.address)).toString());
         let txDataBefore = {
           "Mark price": (await markPriceOracle.getCumulativePrice("3600", 0)).toString(),
           "Alice position": (
@@ -299,58 +306,58 @@ describe("VolmexPerpPeriphery", function () {
           ).toString(),
         };
         txBefore.push(txDataBefore);
-          if (index == 9) {
-            let orderLeft = Order(
-              ORDER,
-              deadline,
-              alice.address,
-              Asset(volmexQuoteToken.address, quoteAmount),
-              Asset(volmexBaseToken.address, baseAmount),
-              salt++,
-              0,
-              false,
-            );
-    
-            let orderRight = Order(
-              ORDER,
-              deadline,
-              bob.address,
-              Asset(volmexBaseToken.address, baseAmount),
-              Asset(volmexQuoteToken.address, quoteAmount),
-              salt++,
-              0,
-              true,
-            );
-    
-            const signatureLeft = await getSignature(orderLeft, alice.address);
-            const signatureRight = await getSignature(orderRight, bob.address);
-    
-            const tx = await volmexPerpPeriphery.openPosition(
-              0,
-              orderLeft,
-              signatureLeft,
-              orderRight,
-              signatureRight,
-              liquidator,
-            );
-            const receipt = await tx.wait();
-            txDataBefore = {
-              "Mark price": (await markPriceOracle.getCumulativePrice("3600", 0)).toString(),
-              "Alice position": (
-                await accountBalance1.getTakerPositionSize(alice.address, volmexBaseToken.address)
-              ).toString(),
-              "Alice owed and un realized pnl": (
-                await accountBalance1.getPnlAndPendingFee(alice.address)
-              ).toString(),
-              "Bob position": (
-                await accountBalance1.getTakerPositionSize(bob.address, volmexBaseToken.address)
-              ).toString(),
-              "Bob owed and un realized pnl": (
-                await accountBalance1.getPnlAndPendingFee(bob.address)
-              ).toString(),
-            };
-            txBefore.push(txDataBefore);
-          }
+        if (index == 9) {
+          let orderLeft = Order(
+            ORDER,
+            deadline,
+            alice.address,
+            Asset(volmexQuoteToken.address, quoteAmount),
+            Asset(volmexBaseToken.address, baseAmount),
+            salt++,
+            0,
+            false,
+          );
+
+          let orderRight = Order(
+            ORDER,
+            deadline,
+            bob.address,
+            Asset(volmexBaseToken.address, baseAmount),
+            Asset(volmexQuoteToken.address, quoteAmount),
+            salt++,
+            0,
+            true,
+          );
+
+          const signatureLeft = await getSignature(orderLeft, alice.address);
+          const signatureRight = await getSignature(orderRight, bob.address);
+
+          const tx = await volmexPerpPeriphery.openPosition(
+            0,
+            orderLeft,
+            signatureLeft,
+            orderRight,
+            signatureRight,
+            liquidator,
+          );
+          const receipt = await tx.wait();
+          txDataBefore = {
+            "Mark price": (await markPriceOracle.getCumulativePrice("3600", 0)).toString(),
+            "Alice position": (
+              await accountBalance1.getTakerPositionSize(alice.address, volmexBaseToken.address)
+            ).toString(),
+            "Alice owed and un realized pnl": (
+              await accountBalance1.getPnlAndPendingFee(alice.address)
+            ).toString(),
+            "Bob position": (
+              await accountBalance1.getTakerPositionSize(bob.address, volmexBaseToken.address)
+            ).toString(),
+            "Bob owed and un realized pnl": (
+              await accountBalance1.getPnlAndPendingFee(bob.address)
+            ).toString(),
+          };
+          txBefore.push(txDataBefore);
+        }
       }
       console.log(txBefore);
     });

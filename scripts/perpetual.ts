@@ -133,7 +133,7 @@ const positioning = async () => {
       markPriceOracle.address,
       `${process.env.INDEX_PRICE_ORACLE}`,
       0,
-      [owner.address, `${process.env.LIQUIDATOR}`]
+      [owner.address, `${process.env.LIQUIDATOR}`],
     ],
     {
       initializer: "initialize",

@@ -10,14 +10,17 @@ const upgrade = async () => {
   const proxyAdmin = await upgrades.admin.getInstance();
   console.log("Upgraded!");
 
-  console.log("Verifying implementation ...", await proxyAdmin.getProxyImplementation(instance.address));
+  console.log(
+    "Verifying implementation ...",
+    await proxyAdmin.getProxyImplementation(instance.address),
+  );
 
   try {
     await run("verify:verify", {
       address: await proxyAdmin.getProxyImplementation(instance.address),
     });
-  } catch(error) {
-    console.log('Unable to verify', error)
+  } catch (error) {
+    console.log("Unable to verify", error);
   }
 };
 

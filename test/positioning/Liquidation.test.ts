@@ -42,7 +42,7 @@ describe("Liquidation test in Positioning", function () {
   let baseToken;
   let TestERC20;
   let USDC;
-  let perpViewFake
+  let perpViewFake;
   let orderLeft, orderRight;
   const deadline = 87654321987654;
   let owner, account1, account2, account3, account4, relayer;
@@ -170,7 +170,7 @@ describe("Liquidation test in Positioning", function () {
         markPriceOracle.address,
         indexPriceOracle.address,
         0,
-        [owner.address, account2.address]
+        [owner.address, account2.address],
       ],
       {
         initializer: "initialize",
