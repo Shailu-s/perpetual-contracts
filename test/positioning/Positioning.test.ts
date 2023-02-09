@@ -606,7 +606,7 @@ describe("Positioning", function () {
         await expect(positionSize1.toString()).to.be.equal(convert("-40"));
       });
 
-      it.only("should match orders and open position with multiple orders funding rate should not be greator than 0.08", async () => {
+      it("should match orders and open position with multiple orders funding rate should not be greator than 0.08", async () => {
         // const txn = await markPriceOracle.getCumulativePrice(10000000, 0);
 
         await matchingEngine.grantMatchOrders(positioning.address);
@@ -743,7 +743,7 @@ describe("Positioning", function () {
         expect(Math.abs(pendingFunding1 / parseInt(positionSize3))).to.be.lessThan(maxFundingRate);
         expect(Math.abs(pendingFunding2 / parseInt(positionSize2))).to.be.lessThan(maxFundingRate);
       });
-      it.only("should match orders and open position with multiple orders funding rate should not be greator than 0.08 with chnage in prices", async () => {
+      it("should match orders and open position with multiple orders funding rate should not be greator than 0.08 with chnage in prices", async () => {
         // const txn = await markPriceOracle.getCumulativePrice(10000000, 0);
 
         await matchingEngine.grantMatchOrders(positioning.address);
