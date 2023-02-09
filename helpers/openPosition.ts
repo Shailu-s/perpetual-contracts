@@ -4,10 +4,9 @@ const ORDER = "0xf555eb98";
 const STOP_LOSS_LIMIT_ORDER = "0xeeaed735";
 const TAKE_PROFIT_LIMIT_ORDER = "0xe0fc7f94";
 const ZERO_ADDR = "0x0000000000000000000000000000000000000000";
-const deadline = 87654321987654;
 const baseToken = "0x2Cd89960d6dDfAbFbB94aecB8413445d7d3a7208";
 const quoteToken = "0x3B620b9D1A447190C3d77cd6333d8Cc8229a93c0";
-const positioning = "0x930d870A321A740ddA41beD43be034841681eD5c";
+const positioningAddress = "0x930d870A321A740ddA41beD43be034841681eD5c";
 const peripheryAddress = "0x6fB1B380c81e11C3fDf899C1A60Ff2390c496D2C";
 function encodeAddress(account) {
   return web3.eth.abi.encodeParameters(["address"], [account]);
@@ -48,41 +47,60 @@ async function getSignature() {
   const provider = new ethers.providers.JsonRpcProvider(
     `https://polygon-mumbai.g.alchemy.com/v2/${process.env.POLYGON_TESTNET_ALCHEMY_API_KEY}`,
   );
-  const account1 = new ethers.Wallet(`${process.env.PRIVATE_KEY_1}`, provider);
-  const account2 = new ethers.Wallet(`${process.env.PRIVATE_KEY_2}`, provider);
-  const account3 = new ethers.Wallet(`c04483a790a7a12c503982fa6a587ff8b755dba64e74b7435a8470db266c7afc`, provider);
+  const account1 = new ethers.Wallet(`${process.env.PRIVATE_KEY}`, provider);
+  const account2 = new ethers.Wallet(`${process.env.PRIVATE_KEY_1}`, provider);
+  const account3 = new ethers.Wallet(`${process.env.PRIVATE_KEY_2}`, provider);
+  const markPriceOracle = await ethers.getContractAt("MarkPriceOracle", `${process.env.MARK_PRICE_ORACLE}`);
+  const indexPriceOracle = await ethers.getContractAt("IndexPriceOracle", `${process.env.INDEX_PRICE_ORACLE}`);
+  const indexPrice = (await indexPriceOracle.getIndexTwap(0))[0];
+  const markPrice = await markPriceOracle.getCumulativePrice("14400", 0)
+
+  const time = new Date().getTime()
+  const deadline = time + 50000000;
+  let salt = time;
+  console.log("initial index", indexPrice.toString());
+  console.log("initial mark", markPrice.toString());
+
+  const amounts = {
+    base: BN.from("50000000000000000000").mul('1000000').div(indexPrice), // 50
+    quote: BN.from("50000000000000000000")
+  }
+  const isShort = false;
+
   const orderleft = Order(
     ORDER,
-    deadline,
+    deadline.toString(),
     account3.address,
-    Asset(baseToken, BN.from("9000000000000000000")),
-    Asset(quoteToken, BN.from("9000000000000000000")),
-    145,
+    isShort ? Asset(baseToken, amounts.base) : Asset(quoteToken, amounts.quote),
+    isShort ? Asset(quoteToken, amounts.quote) : Asset(baseToken, amounts.base),
+    salt,
     0,
-    true,
+    isShort,
   );
   const orderRight = Order(
     ORDER,
-    deadline,
+    deadline.toString(),
     account2.address,
-    Asset(quoteToken, BN.from("9000000000000000000")),
-    Asset(baseToken, BN.from("9000000000000000000")),
-    146,
+    isShort ? Asset(quoteToken, amounts.quote) : Asset(baseToken, amounts.base),
+    isShort ? Asset(baseToken, amounts.base) : Asset(quoteToken, amounts.quote),
+    salt++,
     0,
-    false,
+    !isShort,
   );
   const chainId = Number(await web3.eth.getChainId());
   const domain = {
     name: "V_PERP",
     version: "1",
     chainId: chainId,
-    verifyingContract: positioning,
+    verifyingContract: positioningAddress,
   };
   const signatureLeft = await account3._signTypedData(domain, Types, orderleft);
   const signatureRight = await account2._signTypedData(domain, Types, orderRight);
   console.log("Signature created !!!");
 
   const Periphery = await ethers.getContractFactory("VolmexPerpPeriphery");
+  const accountBalance = await ethers.getContractAt("AccountBalance", `${process.env.ACCOUNT_BALANCE}`);
+  const positioning = await ethers.getContractAt("Positioning", positioningAddress);
   const periphery = Periphery.attach(peripheryAddress);
   console.log("Opening position ...");
   const tx = await periphery
@@ -97,6 +115,14 @@ async function getSignature() {
     );
   const receipt = await tx.wait();
   console.log("Tx Hash: ", receipt.transactionHash);
+  console.log("final", (await markPriceOracle.getCumulativePrice("14400", 0)).toString());
+
+  const requiredData = {
+    owedUnRealizedPnl: (await accountBalance.getPnlAndPendingFee(account3.address)).toString(),
+    pendingFundingPayment: (await positioning.getPendingFundingPayment(account3.address, baseToken)).toString(),
+    positionSize: (await accountBalance.getTakerPositionSize(account3.address, baseToken)).toString(),
+  }
+  console.log("response: ", requiredData);
 }
 
 getSignature()
