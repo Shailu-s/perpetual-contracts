@@ -4,9 +4,7 @@ pragma solidity =0.8.12;
 import { AddressUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol";
 import { ContextUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol";
 import { EIP712Upgradeable } from "@openzeppelin/contracts-upgradeable/utils/cryptography/draft-EIP712Upgradeable.sol";
-import {
-    ReentrancyGuardUpgradeable
-} from "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
+import { ReentrancyGuardUpgradeable } from "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 
 import { LibAccountMarket } from "../libs/LibAccountMarket.sol";
 import { LibOrder } from "../libs/LibOrder.sol";
@@ -55,11 +53,6 @@ contract Positioning is
     using LibPerpMath for int256;
     using LibSignature for bytes32;
     using EncodeDecode for bytes;
-
-    bytes32 public constant POSITIONING_ADMIN = keccak256("POSITIONING_ADMIN");
-    uint256 private constant _ORACLE_BASE = 100000000;
-    uint256 internal constant _FULLY_CLOSED_RATIO = 1e18;
-    uint256 private constant _UINT256_MAX = 2**256 - 1;
 
     /// @dev this function is public for testing
     // solhint-disable-next-line func-order
@@ -150,33 +143,6 @@ contract Positioning is
     }
 
     /// @inheritdoc IPositioning
-    function getPnlToBeRealized(RealizePnlParams memory params) public view override returns (int256) {
-        LibAccountMarket.Info memory info = IAccountBalance(_accountBalance).getAccountInfo(
-            params.trader,
-            params.baseToken
-        );
-
-        int256 takerOpenNotional = info.takerOpenNotional;
-        int256 takerPositionSize = info.takerPositionSize;
-        // when takerPositionSize < 0, it's a short position; when base < 0, isBaseToQuote(shorting)
-        bool isReducingPosition = takerPositionSize == 0 ? false : takerPositionSize < 0 != params.base < 0;
-
-        return
-            isReducingPosition
-                ? _getPnlToBeRealized(
-                    InternalRealizePnlParams({
-                        trader: params.trader,
-                        baseToken: params.baseToken,
-                        takerPositionSize: takerPositionSize,
-                        takerOpenNotional: takerOpenNotional,
-                        base: params.base,
-                        quote: params.quote
-                    })
-                )
-                : int256(0);
-    }
-
-    /// @inheritdoc IPositioning
     function liquidate(
         address trader,
         address baseToken,
@@ -201,7 +167,7 @@ contract Positioning is
         LibOrder.Order memory orderRight,
         bytes memory signatureRight,
         bytes memory liquidator
-    ) public override whenNotPaused nonReentrant {
+    ) external override whenNotPaused nonReentrant {
         _validateFull(orderLeft, signatureLeft);
         _validateFull(orderRight, signatureRight);
 
@@ -266,7 +232,7 @@ contract Positioning is
 
         require(
             int256(order.isShort ? order.takeAsset.value : order.makeAsset.value) <
-                _getFreeCollateralByRatio(order.trader, imRatio) * 1e6 / uint256(imRatio).toInt256(),
+                (_getFreeCollateralByRatio(order.trader, imRatio) * 1e6) / uint256(imRatio).toInt256(),
             "V_PERP_NEFC"
         );
         return true;
@@ -274,7 +240,7 @@ contract Positioning is
 
     ///@dev this function calculates total pending funding payment of a trader
     function getAllPendingFundingPayment(address trader)
-        public
+        external
         view
         virtual
         override
@@ -304,12 +270,31 @@ contract Positioning is
         accountValue = _getAccountValue(trader);
     }
 
-    //
-    // INTERNAL
-    //
+    /// @inheritdoc IPositioning
+    function getPnlToBeRealized(RealizePnlParams memory params) public view override returns (int256) {
+        LibAccountMarket.Info memory info = IAccountBalance(_accountBalance).getAccountInfo(
+            params.trader,
+            params.baseToken
+        );
 
-    function _getLiquidationPenaltyRatio() internal view returns (uint24) {
-        return IPositioningConfig(_positioningConfig).getLiquidationPenaltyRatio();
+        int256 takerOpenNotional = info.takerOpenNotional;
+        int256 takerPositionSize = info.takerPositionSize;
+        // when takerPositionSize < 0, it's a short position; when base < 0, isBaseToQuote(shorting)
+        bool isReducingPosition = takerPositionSize == 0 ? false : takerPositionSize < 0 != params.base < 0;
+
+        return
+            isReducingPosition
+                ? _getPnlToBeRealized(
+                    InternalRealizePnlParams({
+                        trader: params.trader,
+                        baseToken: params.baseToken,
+                        takerPositionSize: takerPositionSize,
+                        takerOpenNotional: takerOpenNotional,
+                        base: params.base,
+                        quote: params.quote
+                    })
+                )
+                : int256(0);
     }
 
     function _liquidate(
@@ -336,8 +321,12 @@ contract Positioning is
         int256 accountValue = _getAccountValue(trader);
 
         // trader's position is closed at index price and pnl realized
-        (int256 liquidatedPositionSize, int256 liquidatedPositionNotional) =
-            _getLiquidatedPositionSizeAndNotional(trader, baseToken, accountValue, positionSizeToBeLiquidated);
+        (int256 liquidatedPositionSize, int256 liquidatedPositionNotional) = _getLiquidatedPositionSizeAndNotional(
+            trader,
+            baseToken,
+            accountValue,
+            positionSizeToBeLiquidated
+        );
         _modifyPositionAndRealizePnl(trader, baseToken, liquidatedPositionSize, liquidatedPositionNotional, 0);
 
         // trader pays liquidation penalty
@@ -508,8 +497,65 @@ contract Positioning is
         return internalData;
     }
 
+    /// @dev Calculate how much profit/loss we should realize,
+    ///      The profit/loss is calculated by exchangedPositionSize/exchangedPositionNotional amount
+    ///      and existing taker's base/quote amount.
+    function _modifyPositionAndRealizePnl(
+        address trader,
+        address baseToken,
+        int256 exchangedPositionSize,
+        int256 exchangedPositionNotional,
+        uint256 makerFee
+    ) internal {
+        int256 realizedPnl;
+        if (exchangedPositionSize != 0) {
+            realizedPnl = getPnlToBeRealized(
+                RealizePnlParams({
+                    trader: trader,
+                    baseToken: baseToken,
+                    base: exchangedPositionSize,
+                    quote: exchangedPositionNotional
+                })
+            );
+        }
+
+        // realizedPnl is realized here
+        // will deregister baseToken if there is no position
+        _settleBalanceAndDeregister(
+            trader,
+            baseToken,
+            exchangedPositionSize, // takerBase
+            exchangedPositionNotional, // takerQuote
+            realizedPnl,
+            makerFee.toInt256()
+        );
+    }
+
+    function _settleBalanceAndDeregister(
+        address trader,
+        address baseToken,
+        int256 takerBase,
+        int256 takerQuote,
+        int256 realizedPnl,
+        int256 makerFee
+    ) internal returns (int256) {
+        return
+            IAccountBalance(_accountBalance).settleBalanceAndDeregister(
+                trader,
+                baseToken,
+                takerBase,
+                takerQuote,
+                realizedPnl,
+                makerFee
+            );
+    }
+
     function _registerBaseToken(address trader, address token) internal {
         IAccountBalance(_accountBalance).registerBaseToken(trader, token);
+    }
+
+    function _getLiquidationPenaltyRatio() internal view returns (uint24) {
+        return IPositioningConfig(_positioningConfig).getLiquidationPenaltyRatio();
     }
 
     function _getTotalAbsPositionValue(address trader) internal view returns (uint256) {
@@ -590,78 +636,8 @@ contract Positioning is
         return IIndexPrice(baseToken).getIndexPrice(_underlyingPriceIndex);
     }
 
-    function _getPnlToBeRealized(InternalRealizePnlParams memory params) internal pure returns (int256) {
-        // closedRatio is based on the position size
-        uint256 closedRatio = (params.base.abs() * _FULLY_CLOSED_RATIO) / params.takerPositionSize.abs();
-
-        int256 pnlToBeRealized;
-        // if closedRatio <= 1, it's reducing or closing a position; else, it's opening a larger reverse position
-        if (closedRatio <= _FULLY_CLOSED_RATIO) {
-            int256 reducedOpenNotional = params.takerOpenNotional.mulDiv(closedRatio.toInt256(), _FULLY_CLOSED_RATIO);
-            pnlToBeRealized = params.quote + reducedOpenNotional;
-        } else {
-            int256 closedPositionNotional = params.quote.mulDiv(int256(_FULLY_CLOSED_RATIO), closedRatio);
-            pnlToBeRealized = params.takerOpenNotional + closedPositionNotional;
-        }
-
-        return pnlToBeRealized;
-    }
-
-    function _settleBalanceAndDeregister(
-        address trader,
-        address baseToken,
-        int256 takerBase,
-        int256 takerQuote,
-        int256 realizedPnl,
-        int256 makerFee
-    ) internal returns (int256) {
-        return
-            IAccountBalance(_accountBalance).settleBalanceAndDeregister(
-                trader,
-                baseToken,
-                takerBase,
-                takerQuote,
-                realizedPnl,
-                makerFee
-            );
-    }
-
     function _getTakerOpenNotional(address trader, address baseToken) internal view returns (int256) {
         return IAccountBalance(_accountBalance).getTakerOpenNotional(trader, baseToken);
-    }
-
-    /// @dev Calculate how much profit/loss we should realize,
-    ///      The profit/loss is calculated by exchangedPositionSize/exchangedPositionNotional amount
-    ///      and existing taker's base/quote amount.
-    function _modifyPositionAndRealizePnl(
-        address trader,
-        address baseToken,
-        int256 exchangedPositionSize,
-        int256 exchangedPositionNotional,
-        uint256 makerFee
-    ) internal {
-        int256 realizedPnl;
-        if (exchangedPositionSize != 0) {
-            realizedPnl = getPnlToBeRealized(
-                RealizePnlParams({
-                    trader: trader,
-                    baseToken: baseToken,
-                    base: exchangedPositionSize,
-                    quote: exchangedPositionNotional
-                })
-            );
-        }
-
-        // realizedPnl is realized here
-        // will deregister baseToken if there is no position
-        _settleBalanceAndDeregister(
-            trader,
-            baseToken,
-            exchangedPositionSize, // takerBase
-            exchangedPositionNotional, // takerQuote
-            realizedPnl,
-            makerFee.toInt256()
-        );
     }
 
     function _calculateFees(
@@ -729,5 +705,22 @@ contract Positioning is
 
     function _requireWhitelistLiquidator(address liquidator) internal view {
         require(isLiquidatorWhitelist[liquidator], "Positioning: liquidator not whitelisted");
+    }
+
+    function _getPnlToBeRealized(InternalRealizePnlParams memory params) internal pure returns (int256) {
+        // closedRatio is based on the position size
+        uint256 closedRatio = (params.base.abs() * _FULLY_CLOSED_RATIO) / params.takerPositionSize.abs();
+
+        int256 pnlToBeRealized;
+        // if closedRatio <= 1, it's reducing or closing a position; else, it's opening a larger reverse position
+        if (closedRatio <= _FULLY_CLOSED_RATIO) {
+            int256 reducedOpenNotional = params.takerOpenNotional.mulDiv(closedRatio.toInt256(), _FULLY_CLOSED_RATIO);
+            pnlToBeRealized = params.quote + reducedOpenNotional;
+        } else {
+            int256 closedPositionNotional = params.quote.mulDiv(int256(_FULLY_CLOSED_RATIO), closedRatio);
+            pnlToBeRealized = params.takerOpenNotional + closedPositionNotional;
+        }
+
+        return pnlToBeRealized;
     }
 }

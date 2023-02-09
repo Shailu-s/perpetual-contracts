@@ -16,22 +16,12 @@ import { MarketRegistryStorageV1 } from "../storage/MarketRegistryStorage.sol";
 contract MarketRegistry is IMarketRegistry, PositioningCallee, MarketRegistryStorageV1 {
     using AddressUpgradeable for address;
 
-    // admin of market registry
-    bytes32 public constant MARKET_REGISTRY_ADMIN = keccak256("MARKET_REGISTRY_ADMIN");
-
-    //
-    // MODIFIER
-    //
     // As seen externally, ratio can not be greater than one
     modifier checkRatio(uint24 ratio) {
         // ratio overflow
         require(ratio <= 1e6, "MR_RO");
         _;
     }
-
-    //
-    // EXTERNAL NON-VIEW
-    //
 
     function initialize(address quoteTokenArg) external initializer {
         __PositioningCallee_init();
@@ -75,10 +65,6 @@ contract MarketRegistry is IMarketRegistry, PositioningCallee, MarketRegistrySto
 
         tokensStorage.push(baseToken);
     }
-
-    //
-    // EXTERNAL VIEW
-    //
 
     /// @inheritdoc IMarketRegistry
     function getQuoteToken() external view override returns (address) {

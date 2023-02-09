@@ -25,35 +25,21 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
     using AddressUpgradeable for address;
     using LibSafeCastUint for uint256;
     using LibSafeCastInt for int256;
-
     using LibPerpMath for uint256;
     using LibPerpMath for int256;
     using LibPerpMath for uint160;
     using LibAccountMarket for LibAccountMarket.Info;
 
-    //
-    // CONSTANT
-    //
-
-    bytes32 public constant ACCOUNT_BALANCE_ADMIN = keccak256("ACCOUNT_BALANCE_ADMIN");
-    bytes32 public constant CAN_SETTLE_REALIZED_PNL = keccak256("CAN_SETTLE_REALIZED_PNL");
-    uint256 internal constant _DUST = 10 wei;
-    int256 private constant _ORACLE_BASE = 100000000;
-
     /// TODO: Discusss _MIN_PARTIAL_LIQUIDATE_POSITION_VALUE and its use cases.
     uint256 internal constant _MIN_PARTIAL_LIQUIDATE_POSITION_VALUE = 100e18 wei; // 100 USD in decimal 18
 
-    //
-    // EXTERNAL NON-VIEW
-    //
-
-    function initialize(address PositioningConfigArg) external initializer {
+    function initialize(address positioningConfigArg) external initializer {
         // IPositioningConfig address is not contract
-        require(PositioningConfigArg.isContract(), "AB_VPMMCNC");
+        require(positioningConfigArg.isContract(), "AB_VPMMCNC");
 
         __PositioningCallee_init();
 
-        _positioningConfig = PositioningConfigArg;
+        _positioningConfig = positioningConfigArg;
         _underlyingPriceIndex = 0;
         _grantRole(ACCOUNT_BALANCE_ADMIN, _msgSender());
     }
@@ -97,15 +83,29 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
         if (_hasBaseToken(tokensStorage, baseToken)) {
             return;
         }
-        require(tokensStorage.length + 1 <= IPositioningConfig(_positioningConfig).getMaxMarketsPerAccount(), "AB_MNE");
-
-        tokensStorage.push(baseToken);
         // AB_MNE: markets number exceeds
+        require(tokensStorage.length + 1 <= IPositioningConfig(_positioningConfig).getMaxMarketsPerAccount(), "AB_MNE");
+        tokensStorage.push(baseToken);
     }
 
-    //
-    // EXTERNAL VIEW
-    //
+    /// @inheritdoc IAccountBalance
+    function settleBalanceAndDeregister(
+        address trader,
+        address baseToken,
+        int256 takerBase,
+        int256 takerQuote,
+        int256 realizedPnl,
+        int256 fee
+    ) external override returns (int256 positionSize) {
+        _requireOnlyPositioning();
+        (positionSize, ) = _modifyTakerBalance(trader, baseToken, takerBase, takerQuote);
+        _modifyOwedRealizedPnl(trader, fee, baseToken);
+
+        // @audit should merge _addOwedRealizedPnl and settleQuoteToOwedRealizedPnl in some way.
+        // PnlRealized will be emitted three times when removing trader's liquidity
+        _settleQuoteToOwedRealizedPnl(trader, baseToken, realizedPnl);
+        _deregisterBaseToken(trader, baseToken);
+    }
 
     /// @inheritdoc IAccountBalance
     function getPositioningConfig() external view override returns (address) {
@@ -168,32 +168,12 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
                 maxLiquidateRatio = 1e6;
             }
         }
-
         return positionSize.mulRatio(maxLiquidateRatio.toInt256());
     }
 
     // @inheritdoc IAccountBalance
     function getTakerOpenNotional(address trader, address baseToken) external view override returns (int256) {
         return _accountMarketMap[trader][baseToken].takerOpenNotional;
-    }
-
-    /// @inheritdoc IAccountBalance
-    function settleBalanceAndDeregister(
-        address trader,
-        address baseToken,
-        int256 takerBase,
-        int256 takerQuote,
-        int256 realizedPnl,
-        int256 fee
-    ) external override returns (int256 positionSize) {
-        _requireOnlyPositioning();
-        (positionSize, ) = _modifyTakerBalance(trader, baseToken, takerBase, takerQuote);
-        _modifyOwedRealizedPnl(trader, fee, baseToken);
-
-        // @audit should merge _addOwedRealizedPnl and settleQuoteToOwedRealizedPnl in some way.
-        // PnlRealized will be emitted three times when removing trader's liquidity
-        _settleQuoteToOwedRealizedPnl(trader, baseToken, realizedPnl);
-        _deregisterBaseToken(trader, baseToken);
     }
 
     /**
@@ -215,20 +195,12 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
                 baseDebtValue = (baseBalance * _getIndexPrice(baseToken).toInt256()) / _ORACLE_BASE;
             }
             totalBaseDebtValue = totalBaseDebtValue + baseDebtValue;
-
             // we can't calculate totalQuoteDebtValue until we have totalQuoteBalance
             totalQuoteBalance = totalQuoteBalance + _accountMarketMap[trader][baseToken].takerOpenNotional;
         }
         int256 totalQuoteDebtValue = totalQuoteBalance >= int256(0) ? int256(0) : totalQuoteBalance;
-
         // both values are negative due to the above condition checks
         return (totalQuoteDebtValue + totalBaseDebtValue).abs();
-    }
-
-    /// @inheritdoc IAccountBalance
-    function getMarginRequirementForLiquidation(address trader) public view override returns (int256) {
-        return
-            getTotalAbsPositionValue(trader).mulRatio(IPositioningConfig(_positioningConfig).getMmRatio()).toInt256();
     }
 
     /// @inheritdoc IAccountBalance
@@ -252,9 +224,11 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
         indexPrice = _getIndexPrice(baseToken);
     }
 
-    //
-    // PUBLIC VIEW
-    //
+    /// @inheritdoc IAccountBalance
+    function getMarginRequirementForLiquidation(address trader) public view override returns (int256) {
+        return
+            getTotalAbsPositionValue(trader).mulRatio(IPositioningConfig(_positioningConfig).getMmRatio()).toInt256();
+    }
 
     /// @inheritdoc IAccountBalance
     function getTakerPositionSize(address trader, address baseToken) public view override returns (int256) {
@@ -287,10 +261,6 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
         }
         return totalPositionValue;
     }
-
-    //
-    // INTERNAL NON-VIEW
-    //
 
     function _modifyTakerBalance(
         address trader,
@@ -334,7 +304,6 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
         if (info.takerPositionSize.abs() >= _DUST || info.takerOpenNotional.abs() >= _DUST) {
             return;
         }
-
         delete _accountMarketMap[trader][baseToken];
 
         address[] storage tokensStorage = _baseTokensMap[trader];
@@ -352,12 +321,7 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
         }
     }
 
-    //
-    // INTERNAL VIEW
-    //
-
     function _getIndexPrice(address baseToken) internal view returns (uint256) {
-        // TODO: use underlying price index
         return IIndexPrice(baseToken).getIndexPrice(_underlyingPriceIndex);
     }
 
@@ -369,7 +333,6 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
             address baseToken = _baseTokensMap[trader][i];
             totalTakerQuoteBalance = totalTakerQuoteBalance + (_accountMarketMap[trader][baseToken].takerOpenNotional);
         }
-
         return (totalTakerQuoteBalance);
     }
 

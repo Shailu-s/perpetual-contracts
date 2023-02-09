@@ -10,19 +10,17 @@ import "../interfaces/IMarkPriceOracle.sol";
 import "../interfaces/IMatchingEngine.sol";
 import "./AssetMatcher.sol";
 
-
 abstract contract MatchingEngineCore is PausableUpgradeable, AssetMatcher, AccessControlUpgradeable {
+    uint256 private constant _UINT256_MAX = 2**256 - 1;
+    uint256 private constant _ORACLE_BASE = 1000000;
     // admin of matching engine
     bytes32 public constant MATCHING_ENGINE_CORE_ADMIN = keccak256("MATCHING_ENGINE_CORE_ADMIN");
     // match orders role, used in matching engine by Positioning
     bytes32 public constant CAN_MATCH_ORDERS = keccak256("CAN_MATCH_ORDERS");
-    uint256 private constant _UINT256_MAX = 2**256 - 1;
-    uint256 private constant _ORACLE_BASE = 1000000;
-
+    // Interfaced address of mark price oracle
     IMarkPriceOracle public markPriceOracle;
-
+    // min salt of maker
     mapping(address => uint256) public makerMinSalt;
-
     //state of the orders
     mapping(bytes32 => uint256) public fills;
 
@@ -31,26 +29,7 @@ abstract contract MatchingEngineCore is PausableUpgradeable, AssetMatcher, Acces
     event CanceledAll(address indexed trader, uint256 minSalt);
     event Matched(address[2] traders, uint64[2] deadline, uint256[2] salt, uint256 newLeftFill, uint256 newRightFill);
 
-    /**
-        @notice Cancels a given order
-        @param order the order to be cancelled
-     */
-    function cancelOrder(LibOrder.Order memory order) public {
-        require(_msgSender() == order.trader, "V_PERP_M: not a maker");
-        require(order.salt != 0, "V_PERP_M: 0 salt can't be used");
-        require(order.salt >= makerMinSalt[_msgSender()], "V_PERP_M: order salt lower");
-        bytes32 orderKeyHash = LibOrder.hashKey(order);
-        fills[orderKeyHash] = _UINT256_MAX;
-        emit Canceled(
-            orderKeyHash,
-            order.trader,
-            order.isShort ? order.makeAsset.virtualToken : order.takeAsset.virtualToken,
-            order.isShort ? order.makeAsset.value : order.takeAsset.value,
-            order.salt
-        );
-    }
-
-    function grantMatchOrders(address account) public {
+    function grantMatchOrders(address account) external {
         require(hasRole(MATCHING_ENGINE_CORE_ADMIN, _msgSender()), "MatchingEngineCore: Not admin");
         _grantRole(CAN_MATCH_ORDERS, account);
     }
@@ -77,6 +56,36 @@ abstract contract MatchingEngineCore is PausableUpgradeable, AssetMatcher, Acces
         emit CanceledAll(_msgSender(), minSalt);
     }
 
+    function matchOrderInBatch(LibOrder.Order[] memory ordersLeft, LibOrder.Order[] memory ordersRight)
+        external
+        whenNotPaused
+    {
+        _requireCanMatchOrders();
+        uint256 ordersLength = ordersLeft.length;
+        for (uint256 index = 0; index < ordersLength; index++) {
+            matchOrders(ordersLeft[index], ordersRight[index]);
+        }
+    }
+
+    /**
+        @notice Cancels a given order
+        @param order the order to be cancelled
+     */
+    function cancelOrder(LibOrder.Order memory order) public {
+        require(_msgSender() == order.trader, "V_PERP_M: not a maker");
+        require(order.salt != 0, "V_PERP_M: 0 salt can't be used");
+        require(order.salt >= makerMinSalt[_msgSender()], "V_PERP_M: order salt lower");
+        bytes32 orderKeyHash = LibOrder.hashKey(order);
+        fills[orderKeyHash] = _UINT256_MAX;
+        emit Canceled(
+            orderKeyHash,
+            order.trader,
+            order.isShort ? order.makeAsset.virtualToken : order.takeAsset.virtualToken,
+            order.isShort ? order.makeAsset.value : order.takeAsset.value,
+            order.salt
+        );
+    }
+
     /** 
         @notice Will match two orders & transfers assets
         @param orderLeft the left side of order
@@ -94,17 +103,6 @@ abstract contract MatchingEngineCore is PausableUpgradeable, AssetMatcher, Acces
         LibFill.FillResult memory newFill = _matchAndTransfer(orderLeft, orderRight);
 
         return (newFill);
-    }
-
-    function matchOrderInBatch(LibOrder.Order[] memory ordersLeft, LibOrder.Order[] memory ordersRight)
-        external
-        whenNotPaused
-    {
-        _requireCanMatchOrders();
-        uint256 ordersLength = ordersLeft.length;
-        for (uint256 index = 0; index < ordersLength; index++) {
-            matchOrders(ordersLeft[index], ordersRight[index]);
-        }
     }
 
     /**
@@ -180,6 +178,11 @@ abstract contract MatchingEngineCore is PausableUpgradeable, AssetMatcher, Acces
         }
     }
 
+    function _requireCanMatchOrders() internal view {
+        // MatchingEngineCore: Not Can Match Orders
+        require(hasRole(CAN_MATCH_ORDERS, _msgSender()), "MEC_NCMO");
+    }
+
     function _matchAssets(LibOrder.Order memory orderLeft, LibOrder.Order memory orderRight)
         internal
         pure
@@ -189,11 +192,6 @@ abstract contract MatchingEngineCore is PausableUpgradeable, AssetMatcher, Acces
         require(matchToken != address(0), "V_PERP_M: left make assets don't match");
         matchToken = _matchAssets(orderLeft.takeAsset.virtualToken, orderRight.makeAsset.virtualToken);
         require(matchToken != address(0), "V_PERP_M: left take assets don't match");
-    }
-
-    function _requireCanMatchOrders() internal view {
-        // MatchingEngineCore: Not Can Match Orders
-        require(hasRole(CAN_MATCH_ORDERS, _msgSender()), "MEC_NCMO");
     }
 
     uint256[50] private __gap;

@@ -4,9 +4,7 @@ pragma solidity =0.8.12;
 import "@openzeppelin/contracts/proxy/Clones.sol";
 import { AddressUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol";
 import { ContextUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol";
-import {
-    ReentrancyGuardUpgradeable
-} from "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
+import { ReentrancyGuardUpgradeable } from "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 
 import { LibPerpMath } from "../libs/LibPerpMath.sol";
@@ -26,7 +24,6 @@ import { OwnerPausable } from "../helpers/OwnerPausable.sol";
 import { TestERC20 } from "../tests/TestERC20.sol";
 import { Vault } from "./Vault.sol";
 import { VaultControllerStorage } from "../storage/VaultControllerStorage.sol";
-import "hardhat/console.sol";
 
 contract VaultController is
     ReentrancyGuardUpgradeable,
@@ -40,8 +37,6 @@ contract VaultController is
     using LibPerpMath for uint256;
     using LibPerpMath for int256;
     using LibSettlementTokenMath for uint256;
-
-    bytes32 public constant VAULT_CONTROLLER_ADMIN = keccak256("VAULT_CONTROLLER_ADMIN");
 
     function initialize(address positioningConfig, address accountBalanceArg) external initializer {
         __ReentrancyGuard_init();
@@ -106,8 +101,10 @@ contract VaultController is
         // settle all funding payments owedRealizedPnl
         IPositioning(_positioning).settleAllFunding(to);
         // by this time there should be no owedRealizedPnl nor pending funding payment in free collateral
-        int256 freeCollateralByImRatio =
-            getFreeCollateralByRatio(to, IPositioningConfig(_positioningConfig).getImRatio());
+        int256 freeCollateralByImRatio = getFreeCollateralByRatio(
+            to,
+            IPositioningConfig(_positioningConfig).getImRatio()
+        );
 
         uint256 amountX10_18 = LibSettlementTokenMath.parseSettlementToken(amount, IVault(_vault).decimals());
         // V_NEFC: not enough freeCollateral
@@ -119,6 +116,14 @@ contract VaultController is
         deltaBalance = deltaBalance + owedRealizedPnlX10_18;
         _modifyBalance(to, token, deltaBalance, _vault);
         IVault(_vault).withdraw(amount, to);
+    }
+
+    /// @inheritdoc IVaultController
+    function setPositioning(address PositioningArg) external {
+        _requireOnlyVaultControllerAdmin();
+        // V_VPMM: Positioning is not contract
+        require(PositioningArg.isContract(), "V_VPMM");
+        _positioning = PositioningArg;
     }
 
     /// @inheritdoc IVaultController
@@ -156,36 +161,8 @@ contract VaultController is
     }
 
     /// @inheritdoc IVaultController
-    function setPositioning(address PositioningArg) external {
-        _requireOnlyVaultControllerAdmin();
-        // V_VPMM: Positioning is not contract
-        require(PositioningArg.isContract(), "V_VPMM");
-        _positioning = PositioningArg;
-    }
-
-    /// @inheritdoc IVaultController
     function getVault(address _token) public view override returns (address vault) {
         vault = _vaultAddress[_token];
-    }
-
-    function _requireOnlyPositioning() internal view {
-        // only Positioning
-        require(_msgSender() == _positioning, "CHD_OCH");
-    }
-
-    function _getAccountValue(address trader) internal view returns (int256) {
-        int256 fundingPayment = IPositioning(_positioning).getAllPendingFundingPayment(trader);
-        (int256 owedRealizedPnl, int256 unrealizedPnl) = IAccountBalance(_accountBalance).getPnlAndPendingFee(trader);
-        int256 balanceX10_18 = getBalance(trader);
-        // accountValue = collateralValue + owedRealizedPnl - fundingPayment + unrealizedPnl
-
-        return balanceX10_18 + (owedRealizedPnl - fundingPayment) + unrealizedPnl;
-    }
-
-    /// @return totalMarginRequirement with decimals == 18, for freeCollateral calculation
-    function _getTotalMarginRequirement(address trader, uint24 ratio) internal view returns (uint256) {
-        uint256 totalDebtValue = IAccountBalance(_accountBalance).getTotalDebtValue(trader);
-        return totalDebtValue.mulRatio(ratio);
     }
 
     function _modifyBalance(
@@ -209,6 +186,26 @@ contract VaultController is
                 }
             }
         }
+    }
+
+    function _requireOnlyPositioning() internal view {
+        // only Positioning
+        require(_msgSender() == _positioning, "CHD_OP");
+    }
+
+    function _getAccountValue(address trader) internal view returns (int256) {
+        int256 fundingPayment = IPositioning(_positioning).getAllPendingFundingPayment(trader);
+        (int256 owedRealizedPnl, int256 unrealizedPnl) = IAccountBalance(_accountBalance).getPnlAndPendingFee(trader);
+        int256 balanceX10_18 = getBalance(trader);
+        // accountValue = collateralValue + owedRealizedPnl - fundingPayment + unrealizedPnl
+
+        return balanceX10_18 + (owedRealizedPnl - fundingPayment) + unrealizedPnl;
+    }
+
+    /// @return totalMarginRequirement with decimals == 18, for freeCollateral calculation
+    function _getTotalMarginRequirement(address trader, uint24 ratio) internal view returns (uint256) {
+        uint256 totalDebtValue = IAccountBalance(_accountBalance).getTotalDebtValue(trader);
+        return totalDebtValue.mulRatio(ratio);
     }
 
     function _msgSender() internal view override(OwnerPausable, ContextUpgradeable) returns (address) {

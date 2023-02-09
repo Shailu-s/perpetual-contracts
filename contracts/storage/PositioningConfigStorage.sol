@@ -5,6 +5,7 @@ pragma solidity =0.8.12;
 /// contract which implements PositioningConfigStorageV1 and following the naming convention
 /// PositioningConfigStorageVX.
 abstract contract PositioningConfigStorageV1 {
+    bytes32 public constant POSITIONING_CONFIG_ADMIN = keccak256("POSITIONING_CONFIG_ADMIN");
     uint8 internal _maxMarketsPerAccount;
     uint24 internal _imRatio;
     uint24 internal _mmRatio;

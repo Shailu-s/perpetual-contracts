@@ -14,11 +14,6 @@ abstract contract PositioningCallee is AccessControlUpgradeable {
 
     event PositioningCalleeChanged(address indexed positioningCallee);
 
-    // solhint-disable-next-line func-order
-    function __PositioningCallee_init() internal onlyInitializing {
-        _grantRole(POSITIONING_CALLEE_ADMIN, _msgSender());
-    }
-
     function setPositioning(address positioningArg) external virtual {
         require(hasRole(POSITIONING_CALLEE_ADMIN, _msgSender()), "PositioningCallee: Not admin");
         _positioning = positioningArg;
@@ -29,9 +24,13 @@ abstract contract PositioningCallee is AccessControlUpgradeable {
         return _positioning;
     }
 
+    function __PositioningCallee_init() internal onlyInitializing {
+        _grantRole(POSITIONING_CALLEE_ADMIN, _msgSender());
+    }
+
     function _requireOnlyPositioning() internal view {
         // only Positioning
-        require(_msgSender() == _positioning, "CHD_OCH");
+        require(_msgSender() == _positioning, "CHD_OP");
     }
 
     uint256[50] private __gap;

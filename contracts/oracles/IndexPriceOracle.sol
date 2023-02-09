@@ -14,14 +14,14 @@ import "./IndexTWAP.sol";
  * @author volmex.finance [security@volmexlabs.com]
  */
 contract IndexPriceOracle is ERC165StorageUpgradeable, IndexTWAP, IIndexPriceOracle, AccessControlUpgradeable {
-    // index price admin role
-    bytes32 public constant INDEX_PRICE_ORACLE_ADMIN = keccak256("INDEX_PRICE_ORACLE_ADMIN");
     // price precision constant upto 6 decimal places
     uint256 private constant _VOLATILITY_PRICE_PRECISION = 1000000;
     // maximum allowed number of index volatility datapoints for calculating twap
     uint256 private constant _MAX_ALLOWED_TWAP_DATAPOINTS = 6;
     // Interface ID of VolmexOracle contract, hashId = 0xf9fffc9f
     bytes4 private constant _IVOLMEX_ORACLE_ID = type(IIndexPriceOracle).interfaceId;
+    // index price admin role
+    bytes32 public constant INDEX_PRICE_ORACLE_ADMIN = keccak256("INDEX_PRICE_ORACLE_ADMIN");
 
     // Store the price of volatility by indexes { 0 - ETHV, 1 = BTCV }
     mapping(uint256 => uint256) private _volatilityTokenPriceByIndex;
@@ -36,10 +36,10 @@ contract IndexPriceOracle is ERC165StorageUpgradeable, IndexTWAP, IIndexPriceOra
     mapping(uint256 => uint256) public volatilityLeverageByIndex;
     // Store the base volatility index by leverage volatility index
     mapping(uint256 => uint256) public baseVolatilityIndex;
-    // Store the number of indexes
-    uint256 public indexCount;
     // Store the timestamp of volatility price update by index
     mapping(uint256 => uint256) public volatilityLastUpdateTimestamp;
+    // Store the number of indexes
+    uint256 public indexCount;
 
     /**
      * @notice Initializes the contract setting the deployer as the initial owner.
@@ -189,6 +189,16 @@ contract IndexPriceOracle is ERC165StorageUpgradeable, IndexTWAP, IIndexPriceOra
     }
 
     /**
+     * @notice Update maximum amount of volatility index datapoints for calculating the TWAP
+     *
+     * @param _value Max datapoints value {180}
+     */
+    function updateTwapMaxDatapoints(uint256 _value) external {
+        _requireIndexPriceOracleAdmin();
+        _updateTwapMaxDatapoints(_value);
+    }
+
+    /**
      * @notice Get the volatility token price by symbol
      * @param _volatilityTokenSymbol Symbol of the volatility token
      */
@@ -248,16 +258,6 @@ contract IndexPriceOracle is ERC165StorageUpgradeable, IndexTWAP, IIndexPriceOra
     }
 
     /**
-     * @notice Update maximum amount of volatility index datapoints for calculating the TWAP
-     *
-     * @param _value Max datapoints value {180}
-     */
-    function updateTwapMaxDatapoints(uint256 _value) external {
-        _requireIndexPriceOracleAdmin();
-        _updateTwapMaxDatapoints(_value);
-    }
-
-    /**
      * @notice Emulate the Chainlink Oracle interface for retrieving Volmex TWAP volatility index
      * @param _index Datapoints volatility index id {0}
      * @return answer is the answer for the given round
@@ -272,6 +272,16 @@ contract IndexPriceOracle is ERC165StorageUpgradeable, IndexTWAP, IIndexPriceOra
         lastUpdateTimestamp = volatilityLeverageByIndex[_index] > 0
             ? volatilityLastUpdateTimestamp[baseVolatilityIndex[_index]]
             : volatilityLastUpdateTimestamp[_index];
+    }
+
+    function supportsInterface(bytes4 interfaceId)
+        public
+        view
+        virtual
+        override(AccessControlUpgradeable, ERC165StorageUpgradeable)
+        returns (bool)
+    {
+        return super.supportsInterface(interfaceId);
     }
 
     function _requireIndexPriceOracleAdmin() internal view {
@@ -307,15 +317,5 @@ contract IndexPriceOracle is ERC165StorageUpgradeable, IndexTWAP, IIndexPriceOra
             lastUpdateTimestamp = volatilityLastUpdateTimestamp[_index];
         }
         iVolatilityTokenTwap = volatilityCapRatioByIndex[_index] - volatilityTokenTwap;
-    }
-
-    function supportsInterface(bytes4 interfaceId)
-        public
-        view
-        virtual
-        override(AccessControlUpgradeable, ERC165StorageUpgradeable)
-        returns (bool)
-    {
-        return super.supportsInterface(interfaceId);
     }
 }

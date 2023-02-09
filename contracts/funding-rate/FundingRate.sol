@@ -26,23 +26,28 @@ contract FundingRate is IFundingRate, BlockContext, PositioningCallee, FundingRa
     using LibPerpMath for int256;
     using LibSafeCastUint for uint256;
 
-    function __FundingRate_init(address markPriceOracleArg, address indexPriceOracleArg) internal onlyInitializing {
-        __PositioningCallee_init();
-        _markPriceOracleArg = markPriceOracleArg;
-        _indexPriceOracleArg = indexPriceOracleArg;
-        _fundingRateInterval = 3;
-    }
-
     /// @inheritdoc IFundingRate
     function settleFunding(address trader, address baseToken) public virtual override returns (int256 fundingPayment) {
         uint256 markTwap;
         uint256 indexTwap;
         (markTwap, indexTwap) = _getTwaps(baseToken);
-
         fundingPayment = _getFundingPayment(trader, baseToken, markTwap, indexTwap);
 
         emit FundingUpdated(baseToken, markTwap, indexTwap);
         return fundingPayment;
+    }
+
+    /// @inheritdoc IFundingRate
+    function getPendingFundingPayment(address trader, address baseToken) public view virtual override returns (int256) {
+        (uint256 markTwap, uint256 indexTwap) = _getTwaps(baseToken);
+        return _getFundingPayment(trader, baseToken, markTwap, indexTwap);
+    }
+
+    function __FundingRate_init(address markPriceOracleArg, address indexPriceOracleArg) internal onlyInitializing {
+        __PositioningCallee_init();
+        _markPriceOracleArg = markPriceOracleArg;
+        _indexPriceOracleArg = indexPriceOracleArg;
+        _fundingRateInterval = 3;
     }
 
     /**
@@ -68,12 +73,7 @@ contract FundingRate is IFundingRate, BlockContext, PositioningCallee, FundingRa
     /// @param baseToken address of the baseToken
     /// @return markTwap only for settleFunding()
     /// @return indexTwap only for settleFunding()
-    function _getTwaps(address baseToken)
-        internal
-        view
-        virtual
-        returns (uint256 markTwap, uint256 indexTwap)
-    {
+    function _getTwaps(address baseToken) internal view virtual returns (uint256 markTwap, uint256 indexTwap) {
         uint256 twapInterval;
         uint256 timestamp = _blockTimestamp();
         // shorten twapInterval if prior observations are not enough
@@ -101,11 +101,5 @@ contract FundingRate is IFundingRate, BlockContext, PositioningCallee, FundingRa
             absDeltaTwap = indexTwap - markTwap;
             deltaTwap = absDeltaTwap > maxDeltaTwap ? maxDeltaTwap.neg256() : absDeltaTwap.neg256();
         }
-    }
-
-    /// @inheritdoc IFundingRate
-    function getPendingFundingPayment(address trader, address baseToken) public view virtual override returns (int256) {
-        (uint256 markTwap, uint256 indexTwap) = _getTwaps(baseToken);
-        return _getFundingPayment(trader, baseToken, markTwap, indexTwap);
     }
 }
