@@ -103,16 +103,6 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
         // AB_MNE: markets number exceeds
     }
 
-    /// @inheritdoc IAccountBalance
-    function updateTwPremiumGrowthGlobal(
-        address trader,
-        address baseToken,
-        int256 lastTwPremiumGrowthGlobal
-    ) external override {
-        _requireOnlyPositioning();
-        _accountMarketMap[trader][baseToken].lastTwPremiumGrowthGlobal = lastTwPremiumGrowthGlobal;
-    }
-
     //
     // EXTERNAL VIEW
     //
