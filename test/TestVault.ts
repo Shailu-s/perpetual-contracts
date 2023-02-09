@@ -29,11 +29,11 @@ describe("Vault", function () {
   let volmexPerpPeriphery;
   let perpViewFake;
   let volmexPerpPeripheryEth;
-  let owner, alice, relayer;
+  let owner, alice, relayer, bob, cole;
 
   beforeEach(async function () {
     VolmexPerpPeriphery = await ethers.getContractFactory("VolmexPerpPeriphery");
-    [owner, alice, relayer] = await ethers.getSigners();
+    [owner, alice, relayer, bob, cole] = await ethers.getSigners();
     IndexPriceOracle = await ethers.getContractFactory("IndexPriceOracle");
     MarkPriceOracle = await ethers.getContractFactory("MarkPriceOracle");
     MatchingEngine = await ethers.getContractFactory("MatchingEngineTest");
@@ -114,7 +114,7 @@ describe("Vault", function () {
         markPriceOracle.address,
         indexPriceOracle.address,
         0,
-        [owner.address, alice.address]
+        [owner.address, alice.address],
       ],
       {
         initializer: "initialize",
@@ -131,7 +131,7 @@ describe("Vault", function () {
         markPriceOracle.address,
         indexPriceOracle.address,
         1,
-        [owner.address, alice.address]
+        [owner.address, alice.address],
       ],
       {
         initializer: "initialize",
@@ -143,10 +143,13 @@ describe("Vault", function () {
     await vaultController.registerVault(DAIVault.address, DAI.address);
     await vaultController.registerVault(ethVault.address, ETH.address);
 
-    const amount = parseUnits("1000", await USDC.decimals());
+    const amount = parseUnits("100000000000000000000", await USDC.decimals());
     await USDC.mint(alice.address, amount);
+    await USDC.mint(bob.address, amount);
+    await USDC.mint(cole.address, amount);
     await USDC.connect(alice).approve(vault.address, amount);
-
+    await USDC.connect(bob).approve(vault.address, amount);
+    await USDC.connect(cole).approve(vault.address, amount);
     await USDC.mint(owner.address, amount);
 
     const daiAmount = parseUnits("1000", await DAI.decimals());
@@ -243,6 +246,122 @@ describe("Vault", function () {
       expect(await vaultController.getBalanceByToken(alice.address, USDC.address)).to.eq(
         "100000000000000000000",
       );
+    });
+    it("Negative Test For desposit from vault after setting token balance cap ", async () => {
+      await positioningConfig.setSettlementTokenBalanceCap("5000000000000000000");
+      const USDCVaultAddress = await vaultController.getVault(USDC.address);
+
+      const USDCVaultContract = await vaultFactory.attach(USDCVaultAddress);
+      await USDC.connect(alice).approve(USDCVaultAddress, "200000000000000000000");
+      await USDC.connect(alice).approve(volmexPerpPeriphery.address, "200000000000000000000");
+      await expect(
+        vaultController
+          .connect(alice)
+          .deposit(
+            volmexPerpPeriphery.address,
+            USDC.address,
+            alice.address,
+            "200000000000000000000",
+          ),
+      ).to.be.revertedWith("V_GTSTBC");
+    });
+    it("Negative Test For desposit from vault after setting token balance cap for multiple users", async () => {
+      const amount = parseUnits("2000000000000000000", await USDC.decimals());
+      await positioningConfig.setSettlementTokenBalanceCap(
+        parseUnits("5000000000000000000", await USDC.decimals()),
+      );
+      const USDCVaultAddress = await vaultController.getVault(USDC.address);
+      const USDCVaultContract = await vaultFactory.attach(USDCVaultAddress);
+      await USDC.connect(alice).approve(USDCVaultAddress, amount);
+      await USDC.connect(alice).approve(volmexPerpPeriphery.address, amount);
+      await USDC.connect(bob).approve(USDCVaultAddress, amount);
+      await USDC.connect(bob).approve(volmexPerpPeriphery.address, amount);
+      await USDC.connect(cole).approve(USDCVaultAddress, amount);
+      await USDC.connect(cole).approve(volmexPerpPeriphery.address, amount);
+
+      await expect(
+        vaultController
+          .connect(alice)
+          .deposit(volmexPerpPeriphery.address, USDC.address, alice.address, amount),
+      )
+        .to.emit(USDCVaultContract, "Deposited")
+        .withArgs(USDC.address, alice.address, amount);
+
+      // // increase vault balance
+      expect(await USDC.balanceOf(USDCVaultAddress)).to.eq(amount);
+
+      await expect(
+        vaultController
+          .connect(bob)
+          .deposit(volmexPerpPeriphery.address, USDC.address, bob.address, amount),
+      )
+        .to.emit(USDCVaultContract, "Deposited")
+        .withArgs(USDC.address, bob.address, amount);
+      // // increase vault balance
+      const amount2 = parseUnits("4000000000000000000", await USDC.decimals());
+      expect(await USDC.balanceOf(USDCVaultAddress)).to.eq(amount2);
+      await expect(
+        vaultController
+          .connect(cole)
+          .deposit(volmexPerpPeriphery.address, USDC.address, cole.address, amount),
+      ).to.be.revertedWith("V_GTSTBC");
+    });
+    it("Negative Test For desposit from vault after setting token balance cap for multiple users also with funds withdrawn", async () => {
+      const amount = parseUnits("2000000000000000000", await USDC.decimals());
+      await positioningConfig.setSettlementTokenBalanceCap(
+        parseUnits("5000000000000000000", await USDC.decimals()),
+      );
+      const USDCVaultAddress = await vaultController.getVault(USDC.address);
+      const USDCVaultContract = await vaultFactory.attach(USDCVaultAddress);
+      await USDC.approve(USDCVaultAddress, amount);
+      await USDC.approve(volmexPerpPeriphery.address, amount);
+  
+      await USDC.connect(bob).approve(USDCVaultAddress, amount);
+      await USDC.connect(bob).approve(volmexPerpPeriphery.address, amount);
+      await USDC.connect(cole).approve(USDCVaultAddress, amount);
+      await USDC.connect(cole).approve(volmexPerpPeriphery.address, amount);
+
+      await expect(
+        vaultController
+          .deposit(volmexPerpPeriphery.address, USDC.address, owner.address, amount),
+      )
+        .to.emit(USDCVaultContract, "Deposited")
+        .withArgs(USDC.address, owner.address, amount);
+
+      // // increase vault balance
+      expect(await USDC.balanceOf(USDCVaultAddress)).to.eq(amount);
+
+      await expect(
+        vaultController
+          .connect(bob)
+          .deposit(volmexPerpPeriphery.address, USDC.address, bob.address, amount),
+      )
+        .to.emit(USDCVaultContract, "Deposited")
+        .withArgs(USDC.address, bob.address, amount);
+      // // increase vault balance
+      const amount2 = parseUnits("4000000000000000000", await USDC.decimals());
+      expect(await USDC.balanceOf(USDCVaultAddress)).to.eq(amount2);
+      // Withdraw by alice
+      await accountBalance.grantSettleRealizedPnlRole(vaultController.address)
+      await expect(
+        vaultController.withdraw(USDC.address, owner.address, parseUnits("1000000000000000000", await USDC.decimals())),
+      ).to.emit(USDCVaultContract, "Withdrawn");
+
+     
+      await expect(
+        vaultController
+          .connect(cole)
+          .deposit(volmexPerpPeriphery.address, USDC.address, cole.address, amount),
+      ).to.emit(USDCVaultContract, "Deposited")
+      .withArgs(USDC.address, cole.address, amount);
+      
+      await USDC.approve(USDCVaultAddress, amount);
+      await USDC.approve(volmexPerpPeriphery.address, amount);
+      await expect(
+        vaultController
+          .deposit(volmexPerpPeriphery.address, USDC.address, owner.address, parseUnits("1000000000000000000", await USDC.decimals())),
+      ).to.be.revertedWith("V_GTSTBC");
+
     });
     it("Negative Test For desposit from vault", async () => {
       await positioningConfig.setSettlementTokenBalanceCap(10000);
