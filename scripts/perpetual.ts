@@ -38,7 +38,7 @@ const positioning = async () => {
     [
       "Virtual ETH Index Token", // nameArg
       "VEVIV", // symbolArg,
-      indexPriceOracle.address, // priceFeedArg
+      `${process.env.INDEX_PRICE_ORACLE}`, // priceFeedArg
       true, // isBase
     ],
     {
@@ -74,10 +74,14 @@ const positioning = async () => {
   await markPriceOracle.deployed();
 
   console.log("Deploying USDC ...");
-  const usdc = await upgrades.deployProxy(TestERC20, ["USD Coin", "USDC", 6], {
-    initializer: "__TestERC20_init",
-  });
-  await usdc.deployed();
+  let usdcAddress = process.env.USDC;
+  if (!process.env.USDC) {
+    const usdc = await upgrades.deployProxy(TestERC20, ["USD Coin", "USDC", 6], {
+      initializer: "__TestERC20_init",
+    });
+    await usdc.deployed();
+    usdcAddress = usdc.address;
+  }
 
   console.log("Deploying MatchingEngine ...");
   const matchingEngine = await upgrades.deployProxy(MatchingEngine, [
@@ -111,7 +115,7 @@ const positioning = async () => {
   const vault = await upgrades.deployProxy(Vault, [
     positioningConfig.address,
     accountBalance.address,
-    usdc.address,
+    usdcAddress,
     vaultController.address,
     false,
   ]);
@@ -127,8 +131,9 @@ const positioning = async () => {
       accountBalance.address,
       matchingEngine.address,
       markPriceOracle.address,
-      indexPriceOracle.address,
+      `${process.env.INDEX_PRICE_ORACLE}`,
       0,
+      [owner.address, `${process.env.LIQUIDATOR}`]
     ],
     {
       initializer: "initialize",
@@ -146,7 +151,9 @@ const positioning = async () => {
   await (await positioning.setMarketRegistry(marketRegistry.address)).wait();
   await (await positioning.setDefaultFeeReceiver(owner.address)).wait();
   await (await vaultController.setPositioning(positioning.address)).wait();
-  await (await vaultController.registerVault(vault.address, usdc.address)).wait();
+  await (await vaultController.registerVault(vault.address, usdcAddress)).wait();
+  await marketRegistry.setMakerFeeRatio(0.0004e6);
+  await marketRegistry.setTakerFeeRatio(0.0009e6);
 
   console.log("Deploying Periphery contract ...");
   const periphery = await upgrades.deployProxy(VolmexPerpPeriphery, [
@@ -154,7 +161,7 @@ const positioning = async () => {
     markPriceOracle.address,
     [vault.address, vault.address],
     owner.address,
-    owner.address, // replace with replayer address
+    `${process.env.RELAYER}`, // RELAYER
   ]);
   await periphery.deployed();
 
@@ -181,20 +188,20 @@ const positioning = async () => {
   await (await perpView.grantViewStatesRole(factory.address)).wait();
 
   const addresses = {
-    "IndexPriceOracle": indexPriceOracle.address,
-    "MarkPriceOracle": markPriceOracle.address,
-    "BaseToken": volmexBaseToken.address,
-    "USDC": usdc.address,
-    "MatchingEngine": matchingEngine.address,
-    "PositioningCnnfig": positioningConfig.address,
-    "AccountBalance": accountBalance.address,
-    "Vault": vault.address,
-    "VaultController": vaultController.address,
-    "Positioning": positioning.address,
-    "Periphery": periphery.address,
-    "MarketRegistry": marketRegistry.address,
-    "QuoteToken": volmexQuoteToken.address,
-    "PerpView": perpView.address,
+    USDC: usdcAddress,
+    IndexPriceOracle: indexPriceOracle.address,
+    MarkPriceOracle: markPriceOracle.address,
+    BaseToken: volmexBaseToken.address,
+    QuoteToken: volmexQuoteToken.address,
+    MatchingEngine: matchingEngine.address,
+    VaultController: vaultController.address,
+    Vault: vault.address,
+    MarketRegistry: marketRegistry.address,
+    AccountBalance: accountBalance.address,
+    PositioningConfig: positioningConfig.address,
+    Positioning: positioning.address,
+    Periphery: periphery.address,
+    PerpView: perpView.address,
   };
   console.log("\n =====Deployment Successful===== \n");
   console.log(addresses);
@@ -222,7 +229,7 @@ const positioning = async () => {
   }
   try {
     await run("verify:verify", {
-      address: await proxyAdmin.getProxyImplementation(usdc.address),
+      address: await proxyAdmin.getProxyImplementation(usdcAddress),
     });
   } catch (error) {
     console.log("ERROR - verify - usdc token!");
