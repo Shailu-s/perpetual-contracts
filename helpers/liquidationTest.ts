@@ -46,53 +46,50 @@ const Types = {
     { name: "isShort", type: "bool" },
   ],
 };
-const beforePrice = BN.from("200000000");
+const beforePrice = BN.from("68000000");
 const afterPrice = BN.from("400000000");
 const deposit = async () => {
   const provider = new ethers.providers.JsonRpcProvider(
     `https://polygon-mumbai.g.alchemy.com/v2/${process.env.POLYGON_TESTNET_ALCHEMY_API_KEY}`,
   );
-  const account1 = new ethers.Wallet(`${process.env.PRIVATE_KEY_1}`, provider);
-  const account2 = new ethers.Wallet(`${process.env.PRIVATE_KEY_2}`, provider);
-  console.log("Account 1 address: ", account1.address);
-  console.log("Account 2 address: ", account2.address);
+  const owner = new ethers.Wallet(`${process.env.PRIVATE_KEY}`, provider);
+  const alice = new ethers.Wallet(`${process.env.PRIVATE_KEY_1}`, provider);
+  const bob = new ethers.Wallet(`${process.env.PRIVATE_KEY_2}`, provider);
+  console.log("Account 1 address: ", alice.address);
+  console.log("Account 2 address: ", bob.address);
   const periphery = await ethers.getContractAt("VolmexPerpPeriphery", peripheryAddress);
   const collateral = await ethers.getContractAt("TestERC20", usdcAddress);
-  const account1Balance = await collateral.balanceOf(account1.address);
-  const account2Balance = await collateral.balanceOf(account2.address);
-  console.log("account1Balance: ", account1Balance.toString());
-  console.log("account2Balance: ", account2Balance.toString());
-  // console.log("Approve Periphery ...");
-  // await (
-  //   await collateral
-  //     .connect(account1)
-  //     .approve(periphery.address, account1Balance, { gasLimit: 100000 })
-  // ).wait();
-  // await (
-  //   await collateral
-  //     .connect(account2)
-  //     .approve(periphery.address, account2Balance, { gasLimit: 100000 })
-  // ).wait();
-  // console.log("Approved!!!");
-  // console.log("Depositing 1000 collateral from both accounts ...");
-  // await (
-  //   await periphery
-  //     .connect(account1)
-  //     .depositToVault(0, collateral.address, "20000000")
-  // ).wait();
-  // console.log("Deposit in Account 1 successful!!!");
-  // await (
-  //   await periphery
-  //     .connect(account2)
-  //     .depositToVault(0, collateral.address, "1000000000")
-  // ).wait();
-  // console.log("Deposit in Account 2 successful!!!");
-  // console.log("Deposited!!!");
+  const aliceBalance = await collateral.balanceOf(alice.address);
+  const bobBalance = await collateral.balanceOf(bob.address);
+  console.log("aliceBalance: ", aliceBalance.toString());
+  console.log("bobBalance: ", bobBalance.toString());
+  console.log("Approve Periphery ...");
+  await (
+    await collateral
+      .connect(alice)
+      .approve(periphery.address, aliceBalance)
+  ).wait();
+  await (
+    await collateral
+      .connect(bob)
+      .approve(periphery.address, bobBalance)
+  ).wait();
+  console.log("Approved!!!");
+  console.log("Depositing 1000 collateral from both accounts ...");
+  await (
+    await periphery
+      .connect(alice)
+      .depositToVault(0, collateral.address, "1000000000")
+  ).wait();
+  console.log("Deposit in Account 1 successful!!!");
+  await (
+    await periphery
+      .connect(bob)
+      .depositToVault(0, collateral.address, "20000000")
+  ).wait();
+  console.log("Deposit in Account 2 successful!!!");
+  console.log("Deposited!!!");
   const indexPriceOracle = await ethers.getContractAt("IndexPriceOracle", indexPriceOracleAddress);
-  const owner = new ethers.Wallet(
-    `ded016e6b77a5847bc4665207ab97157de8749cf96627de82da30734fef5c9aa`,
-    provider,
-  );
   console.log("Before index price:");
   console.log((await indexPriceOracle.getIndexTwap(0))[0].toString());
   for (var i = 0; i < 6; i++) {
@@ -107,25 +104,25 @@ const deposit = async () => {
   console.log((await indexPriceOracle.getIndexTwap(0))[0].toString());
   console.log("Opening position");
   console.log("Signature creation started ...");
-  console.log("account 1: ", account1.address);
-  console.log("account 2: ", account2.address);
+  console.log("account 1: ", alice.address);
+  console.log("account 2: ", bob.address);
   const orderLeft = Order(
     ORDER,
     deadline,
-    account1.address,
-    Asset(baseToken, "100000000000000000000"),
-    Asset(quoteToken, "2000000000000000000000"),
-    164,
+    alice.address,
+    Asset(baseToken, "25000000000000000000"),
+    Asset(quoteToken, "350000000000000000000"),
+    472,
     0,
     true,
   );
   const orderRight = Order(
     ORDER,
     deadline,
-    account2.address,
-    Asset(quoteToken, "2000000000000000000000"),
-    Asset(baseToken, "100000000000000000000"),
-    165,
+    bob.address,
+    Asset(quoteToken, "350000000000000000000"),
+    Asset(baseToken, "25000000000000000000"),
+    473,
     0,
     false,
   );
@@ -136,8 +133,8 @@ const deposit = async () => {
     chainId: chainId,
     verifyingContract: positioning,
   };
-  const signatureLeft = await account1._signTypedData(domain, Types, orderLeft);
-  const signatureRight = await account2._signTypedData(domain, Types, orderRight);
+  const signatureLeft = await alice._signTypedData(domain, Types, orderLeft);
+  const signatureRight = await bob._signTypedData(domain, Types, orderRight);
   console.log("Signature created!!!");
   console.log("Opening position ...");
   const tx = await periphery
