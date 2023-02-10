@@ -2,9 +2,9 @@
 pragma solidity =0.8.12;
 
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 
 import "../libs/LibOrder.sol";
-import "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 import "../interfaces/IPositioning.sol";
 import "../interfaces/IVaultController.sol";
 import "../interfaces/IVolmexBaseToken.sol";
@@ -21,31 +21,22 @@ contract VolmexPerpView is IVolmexPerpView, Initializable, AccessControlUpgradea
 
     // Store the addresses of positionings { index => positioning address }
     mapping(uint256 => IPositioning) public positionings;
-
     // Store the addresses of vaultControllers { index => vaultController address }
     mapping(uint256 => IVaultController) public vaultControllers;
-
     // To store the address of volatility.
     mapping(uint256 => IVolmexBaseToken) public baseTokens;
-
     // To store the address of collateral.
     mapping(uint256 => IVolmexQuoteToken) public quoteTokens;
-
     // Store the addresses of account balance by index
     mapping(uint256 => IAccountBalance) public accounts;
-
     // Store the addresses of market regsitry by index
     mapping(uint256 => IMarketRegistry) public marketRegistries;
-
     // Used to set the index of positioning
     uint256 public perpIndexCount;
-
     // Used to store the address of vault at a particular _index (incremental state of 1)
     uint256 public vaultIndexCount;
-
     // Used to store the address and name of volatility at a particular _index (incremental state of 1)
     uint256 public baseTokenIndexCount;
-
     // Used to store the address and name of collateral at a particular _index (incremental state of 1)
     uint256 public quoteTokenIndexCount;
 

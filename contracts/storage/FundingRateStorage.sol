@@ -6,10 +6,10 @@ pragma solidity =0.8.12;
 /// ExchangeStorageVX.
 abstract contract FundingRateStorage {
     int256 internal constant _PRECISION_BASE = 1e18;
+
     address internal _markPriceOracleArg;
     address internal _indexPriceOracleArg;
     uint64 internal _underlyingPriceIndex;
-
     int256 internal _fundingRateInterval;
 
     uint256[50] private __gap;

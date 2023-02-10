@@ -9,18 +9,15 @@ pragma solidity =0.8.12;
 contract IndexTWAP {
     // Max datapoints allowed to store in
     uint256 private _MAX_DATAPOINTS;
+    // Store index datapoints into multidimensional arrays
+    mapping(uint256 => uint256[]) private _datapoints;
+    // In order to maintain low gas fees and storage efficiency we use cursors to store datapoints
+    mapping(uint256 => uint256) private _datapointsCursor;
 
     // Emit new event when new datapoint is added
     event IndexDataPointAdded(uint256 indexed_index, uint256 _value);
-
     // Emit an event when max allowed twap datapoints value it's updated
     event MaxTwapDatapointsUpdated(uint256 _value);
-
-    // Store index datapoints into multidimensional arrays
-    mapping(uint256 => uint256[]) private _datapoints;
-
-    // In order to maintain low gas fees and storage efficiency we use cursors to store datapoints
-    mapping(uint256 => uint256) private _datapointsCursor;
 
     /**
      * @notice Adds a new datapoint to the datapoints storage array
@@ -50,6 +47,19 @@ contract IndexTWAP {
     }
 
     /**
+     * @notice Update maximum amount of volatility index datapoints for calculating the TWAP
+     *
+     * @param _value Max datapoints value {180}
+     */
+    function _updateTwapMaxDatapoints(uint256 _value) internal {
+        require(_value > 0, "Minimum amount of index datapoints needs to be greater than zero");
+
+        _MAX_DATAPOINTS = _value;
+
+        emit MaxTwapDatapointsUpdated(_value);
+    }
+
+    /**
      * @notice Get the TWAP value from current available datapoints
      * @param _index Datapoints volatility index id {0}
      */
@@ -72,19 +82,6 @@ contract IndexTWAP {
      */
     function _getIndexDataPoints(uint256 _index) internal view returns (uint256[] memory datapoints) {
         datapoints = _datapoints[_index];
-    }
-
-    /**
-     * @notice Update maximum amount of volatility index datapoints for calculating the TWAP
-     *
-     * @param _value Max datapoints value {180}
-     */
-    function _updateTwapMaxDatapoints(uint256 _value) internal {
-        require(_value > 0, "Minimum amount of index datapoints needs to be greater than zero");
-
-        _MAX_DATAPOINTS = _value;
-
-        emit MaxTwapDatapointsUpdated(_value);
     }
 
     uint256[10] private __gap;

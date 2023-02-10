@@ -82,7 +82,7 @@ describe("Vault Controller deposit tests", function () {
         markPriceFake.address,
         indexPriceFake.address,
         0,
-        [owner.address, alice.address]
+        [owner.address, alice.address],
       ],
       {
         initializer: "initialize",

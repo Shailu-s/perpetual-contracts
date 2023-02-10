@@ -10,6 +10,7 @@ contract VirtualToken is IVirtualToken, ERC20Upgradeable, AccessControlUpgradeab
     bytes32 public constant VIRTUAL_TOKEN_ADMIN = keccak256("VIRTUAL_TOKEN_ADMIN");
     bytes32 public constant MINTER = keccak256("MINTER");
     bytes32 public constant BURNER = keccak256("BURNER");
+
     mapping(address => bool) internal _whitelistMap;
     bool public isBase;
 
@@ -20,7 +21,7 @@ contract VirtualToken is IVirtualToken, ERC20Upgradeable, AccessControlUpgradeab
         string memory nameArg,
         string memory symbolArg,
         bool isBaseArg
-    ) public onlyInitializing {
+    ) internal onlyInitializing {
         isBase = isBaseArg;
         __ERC20_init(nameArg, symbolArg);
         _grantRole(VIRTUAL_TOKEN_ADMIN, _msgSender());

@@ -2,13 +2,8 @@
 pragma solidity =0.8.12;
 
 import { AddressUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol";
-import {
-    ReentrancyGuardUpgradeable
-} from "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
-import {
-    SafeERC20Upgradeable,
-    IERC20Upgradeable
-} from "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
+import { ReentrancyGuardUpgradeable } from "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
+import { SafeERC20Upgradeable, IERC20Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 import { Context } from "@openzeppelin/contracts/utils/Context.sol";
 import { ContextUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
@@ -38,24 +33,14 @@ contract Vault is IVault, ReentrancyGuardUpgradeable, OwnerPausable, VaultStorag
     using LibPerpMath for int256;
     using LibPerpMath for uint256;
 
-    bytes32 public constant VAULT_ADMIN = keccak256("VAULT_ADMIN");
-
-    //
-    // MODIFIER
-    //
-
     modifier onlySettlementToken(address token) {
         // only settlement token
         require(_settlementToken == token, "V_OST");
         _;
     }
 
-    //
-    // EXTERNAL NON-VIEW
-    //
-
     function initialize(
-        address PositioningConfigArg,
+        address positioningConfigArg,
         address accountBalanceArg,
         address tokenArg,
         address vaultControllerArg,
@@ -67,11 +52,10 @@ contract Vault is IVault, ReentrancyGuardUpgradeable, OwnerPausable, VaultStorag
         } else {
             decimalsArg = IERC20Metadata(tokenArg).decimals();
         }
-
         // invalid settlementToken decimals
         require(decimalsArg <= 18, "V_ISTD");
         // PositioningConfig address is not contract
-        require(PositioningConfigArg.isContract(), "V_CHCNC");
+        require(positioningConfigArg.isContract(), "V_CHCNC");
         // accountBalance address is not contract
         require(accountBalanceArg.isContract(), "V_ABNC");
 
@@ -81,7 +65,7 @@ contract Vault is IVault, ReentrancyGuardUpgradeable, OwnerPausable, VaultStorag
         // update states
         _decimals = decimalsArg;
         _settlementToken = tokenArg;
-        _positioningConfig = PositioningConfigArg;
+        _positioningConfig = positioningConfigArg;
         _accountBalance = accountBalanceArg;
         _vaultController = vaultControllerArg;
         _isEthVault = isEthVaultArg;
@@ -89,10 +73,10 @@ contract Vault is IVault, ReentrancyGuardUpgradeable, OwnerPausable, VaultStorag
     }
 
     /// @inheritdoc IVault
-    function setPositioning(address PositioningArg) external onlyOwner {
+    function setPositioning(address positioningArg) external onlyOwner {
         // V_VPMM: Positioning is not contract
-        require(PositioningArg.isContract(), "V_VPMM");
-        _Positioning = PositioningArg;
+        require(positioningArg.isContract(), "V_VPMM");
+        _positioning = positioningArg;
     }
 
     /// @inheritdoc IVault
@@ -114,37 +98,6 @@ contract Vault is IVault, ReentrancyGuardUpgradeable, OwnerPausable, VaultStorag
         //   amount: here
         _requireOnlyVaultController();
         _deposit(periphery, amount, from);
-    }
-
-    function _deposit(
-        IVolmexPerpPeriphery periphery,
-        uint256 amount,
-        address from
-    ) internal {
-        // input requirement checks:
-        //   token: here
-        //   amount: here
-        uint256 _vaultBalance;
-        if (_isEthVault) {
-            // amount not equal
-            require(msg.value == amount, "V_ANE");
-            _vaultBalance = address(this).balance;
-        } else {
-            //amount not accepted
-            require(msg.value == 0, "V_ANA");
-            // check for deflationary tokens by assuring balances before and after transferring to be the same
-            uint256 balanceBefore = IERC20Metadata(_settlementToken).balanceOf(address(this));
-            periphery.transferToVault(IERC20Upgradeable(_settlementToken), from, amount);
-            // SafeERC20Upgradeable.safeTransferFrom(IERC20Upgradeable(token), from, address(this), amount);
-            // V_BAI: inconsistent balance amount, to prevent from deflationary tokens
-            require((IERC20Metadata(_settlementToken).balanceOf(address(this)) - balanceBefore) == amount, "V_IBA");
-            _vaultBalance = IERC20Metadata(_settlementToken).balanceOf(address(this));
-        }
-
-        uint256 settlementTokenBalanceCap = IPositioningConfig(_positioningConfig).getSettlementTokenBalanceCap();
-        // V_GTSTBC: greater than settlement token balance cap
-        require(_vaultBalance <= settlementTokenBalanceCap, "V_GTSTBC");
-        emit Deposited(_settlementToken, from, amount);
     }
 
     /// @inheritdoc IVault
@@ -207,10 +160,6 @@ contract Vault is IVault, ReentrancyGuardUpgradeable, OwnerPausable, VaultStorag
         _settlementToken = newTokenArg;
     }
 
-    //
-    // EXTERNAL VIEW
-    //
-
     /// @inheritdoc IVault
     function getSettlementToken() external view override returns (address) {
         return _settlementToken;
@@ -238,7 +187,7 @@ contract Vault is IVault, ReentrancyGuardUpgradeable, OwnerPausable, VaultStorag
 
     /// @inheritdoc IVault
     function getPositioning() external view override returns (address) {
-        return _Positioning;
+        return _positioning;
     }
 
     /// @inheritdoc IVault
@@ -250,9 +199,36 @@ contract Vault is IVault, ReentrancyGuardUpgradeable, OwnerPausable, VaultStorag
         return _isEthVault;
     }
 
-    //
-    // INTERNAL VIEW
-    //
+    function _deposit(
+        IVolmexPerpPeriphery periphery,
+        uint256 amount,
+        address from
+    ) internal {
+        // input requirement checks:
+        //   token: here
+        //   amount: here
+        uint256 _vaultBalance;
+        if (_isEthVault) {
+            // amount not equal
+            require(msg.value == amount, "V_ANE");
+            _vaultBalance = address(this).balance;
+        } else {
+            //amount not accepted
+            require(msg.value == 0, "V_ANA");
+            // check for deflationary tokens by assuring balances before and after transferring to be the same
+            uint256 balanceBefore = IERC20Metadata(_settlementToken).balanceOf(address(this));
+            periphery.transferToVault(IERC20Upgradeable(_settlementToken), from, amount);
+            // SafeERC20Upgradeable.safeTransferFrom(IERC20Upgradeable(token), from, address(this), amount);
+            // V_BAI: inconsistent balance amount, to prevent from deflationary tokens
+            require((IERC20Metadata(_settlementToken).balanceOf(address(this)) - balanceBefore) == amount, "V_IBA");
+            _vaultBalance = IERC20Metadata(_settlementToken).balanceOf(address(this));
+        }
+
+        uint256 settlementTokenBalanceCap = IPositioningConfig(_positioningConfig).getSettlementTokenBalanceCap();
+        // V_GTSTBC: greater than settlement token balance cap
+        require(_vaultBalance <= settlementTokenBalanceCap, "V_GTSTBC");
+        emit Deposited(_settlementToken, from, amount);
+    }
 
     function _msgSender() internal view override(ContextUpgradeable, OwnerPausable) returns (address) {
         return super._msgSender();

@@ -315,15 +315,14 @@ describe("Vault", function () {
       const USDCVaultContract = await vaultFactory.attach(USDCVaultAddress);
       await USDC.approve(USDCVaultAddress, amount);
       await USDC.approve(volmexPerpPeriphery.address, amount);
-  
+
       await USDC.connect(bob).approve(USDCVaultAddress, amount);
       await USDC.connect(bob).approve(volmexPerpPeriphery.address, amount);
       await USDC.connect(cole).approve(USDCVaultAddress, amount);
       await USDC.connect(cole).approve(volmexPerpPeriphery.address, amount);
 
       await expect(
-        vaultController
-          .deposit(volmexPerpPeriphery.address, USDC.address, owner.address, amount),
+        vaultController.deposit(volmexPerpPeriphery.address, USDC.address, owner.address, amount),
       )
         .to.emit(USDCVaultContract, "Deposited")
         .withArgs(USDC.address, owner.address, amount);
@@ -342,26 +341,33 @@ describe("Vault", function () {
       const amount2 = parseUnits("4000000000000000000", await USDC.decimals());
       expect(await USDC.balanceOf(USDCVaultAddress)).to.eq(amount2);
       // Withdraw by alice
-      await accountBalance.grantSettleRealizedPnlRole(vaultController.address)
+      await accountBalance.grantSettleRealizedPnlRole(vaultController.address);
       await expect(
-        vaultController.withdraw(USDC.address, owner.address, parseUnits("1000000000000000000", await USDC.decimals())),
+        vaultController.withdraw(
+          USDC.address,
+          owner.address,
+          parseUnits("1000000000000000000", await USDC.decimals()),
+        ),
       ).to.emit(USDCVaultContract, "Withdrawn");
 
-     
       await expect(
         vaultController
           .connect(cole)
           .deposit(volmexPerpPeriphery.address, USDC.address, cole.address, amount),
-      ).to.emit(USDCVaultContract, "Deposited")
-      .withArgs(USDC.address, cole.address, amount);
-      
+      )
+        .to.emit(USDCVaultContract, "Deposited")
+        .withArgs(USDC.address, cole.address, amount);
+
       await USDC.approve(USDCVaultAddress, amount);
       await USDC.approve(volmexPerpPeriphery.address, amount);
       await expect(
-        vaultController
-          .deposit(volmexPerpPeriphery.address, USDC.address, owner.address, parseUnits("1000000000000000000", await USDC.decimals())),
+        vaultController.deposit(
+          volmexPerpPeriphery.address,
+          USDC.address,
+          owner.address,
+          parseUnits("1000000000000000000", await USDC.decimals()),
+        ),
       ).to.be.revertedWith("V_GTSTBC");
-
     });
     it("Negative Test For desposit from vault", async () => {
       await positioningConfig.setSettlementTokenBalanceCap(10000);

@@ -9,20 +9,21 @@ const indexPrice = async () => {
   const provider = new ethers.providers.JsonRpcProvider(
     `https://polygon-mumbai.g.alchemy.com/v2/${process.env.POLYGON_TESTNET_ALCHEMY_API_KEY}`,
   );
-  const owner = new ethers.Wallet(`ded016e6b77a5847bc4665207ab97157de8749cf96627de82da30734fef5c9aa`, provider);
+  const owner = new ethers.Wallet(
+    `ded016e6b77a5847bc4665207ab97157de8749cf96627de82da30734fef5c9aa`,
+    provider,
+  );
   const indexPriceOracle = await ethers.getContractAt("IndexPriceOracle", indexPriceOracleAddress);
 
   console.log("Update index price ...");
   await (
-    await indexPriceOracle.connect(owner).updateBatchVolatilityTokenPrice(
-      [0],
-      [price],
-      [proofHash],
-    )
+    await indexPriceOracle
+      .connect(owner)
+      .updateBatchVolatilityTokenPrice([0], [price], [proofHash])
   ).wait();
   console.log("Updated index price !!!");
-  console.log("Primary", (((await indexPriceOracle.getIndexTwap(0))[0]).div("1000000")).toString());
-  console.log("Complement", (((await indexPriceOracle.getIndexTwap(0))[1]).div("1000000")).toString());
+  console.log("Primary", (await indexPriceOracle.getIndexTwap(0))[0].div("1000000").toString());
+  console.log("Complement", (await indexPriceOracle.getIndexTwap(0))[1].div("1000000").toString());
 };
 
 indexPrice()
