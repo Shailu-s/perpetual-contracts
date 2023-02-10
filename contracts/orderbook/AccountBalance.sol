@@ -134,7 +134,7 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
         int256 accountValue
     ) external view override returns (int256) {
         int256 marginRequirement = getMarginRequirementForLiquidation(trader);
-        int256 positionSize = getTakerPositionSize(trader, baseToken);
+        int256 positionSize = getPositionSize(trader, baseToken);
 
         // No liquidatable position
         if (accountValue >= marginRequirement || positionSize == 0) {
@@ -172,8 +172,8 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
     }
 
     // @inheritdoc IAccountBalance
-    function getTakerOpenNotional(address trader, address baseToken) external view override returns (int256) {
-        return _accountMarketMap[trader][baseToken].takerOpenNotional;
+    function getOpenNotional(address trader, address baseToken) external view override returns (int256) {
+        return _accountMarketMap[trader][baseToken].openNotional;
     }
 
     /**
@@ -186,7 +186,7 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
         uint256 tokenLen = _baseTokensMap[trader].length;
         for (uint256 i = 0; i < tokenLen; i++) {
             address baseToken = _baseTokensMap[trader][i];
-            int256 baseBalance = _accountMarketMap[trader][baseToken].takerPositionSize;
+            int256 baseBalance = _accountMarketMap[trader][baseToken].positionSize;
             int256 baseDebtValue;
             // baseDebt = baseBalance when it's negative
             if (baseBalance < 0) {
@@ -196,7 +196,7 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
             }
             totalBaseDebtValue = totalBaseDebtValue + baseDebtValue;
             // we can't calculate totalQuoteDebtValue until we have totalQuoteBalance
-            totalQuoteBalance = totalQuoteBalance + _accountMarketMap[trader][baseToken].takerOpenNotional;
+            totalQuoteBalance = totalQuoteBalance + _accountMarketMap[trader][baseToken].openNotional;
         }
         int256 totalQuoteDebtValue = totalQuoteBalance >= int256(0) ? int256(0) : totalQuoteBalance;
         // both values are negative due to the above condition checks
@@ -231,14 +231,14 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
     }
 
     /// @inheritdoc IAccountBalance
-    function getTakerPositionSize(address trader, address baseToken) public view override returns (int256) {
-        int256 positionSize = _accountMarketMap[trader][baseToken].takerPositionSize;
+    function getPositionSize(address trader, address baseToken) public view override returns (int256) {
+        int256 positionSize = _accountMarketMap[trader][baseToken].positionSize;
         return positionSize.abs() < _DUST ? int256(0) : positionSize;
     }
 
     /// @inheritdoc IAccountBalance
     function getTotalPositionValue(address trader, address baseToken) public view override returns (int256) {
-        int256 positionSize = getTakerPositionSize(trader, baseToken);
+        int256 positionSize = getPositionSize(trader, baseToken);
         if (positionSize == 0) return 0;
 
         uint256 indexTwap = _getIndexPrice(baseToken);
@@ -269,10 +269,10 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
         int256 quote
     ) internal returns (int256, int256) {
         LibAccountMarket.Info storage accountInfo = _accountMarketMap[trader][baseToken];
-        accountInfo.takerPositionSize = accountInfo.takerPositionSize + base;
-        accountInfo.takerOpenNotional = accountInfo.takerOpenNotional + quote;
-        if (accountInfo.takerPositionSize.abs() >= _DUST || accountInfo.takerOpenNotional.abs() >= _DUST) {
-            return (accountInfo.takerPositionSize, accountInfo.takerOpenNotional);
+        accountInfo.positionSize = accountInfo.positionSize + base;
+        accountInfo.openNotional = accountInfo.openNotional + quote;
+        if (accountInfo.positionSize.abs() >= _DUST || accountInfo.openNotional.abs() >= _DUST) {
+            return (accountInfo.positionSize, accountInfo.openNotional);
         }
         return (0, 0);
     }
@@ -294,14 +294,14 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
         int256 amount
     ) internal {
         LibAccountMarket.Info storage accountInfo = _accountMarketMap[trader][baseToken];
-        accountInfo.takerOpenNotional = accountInfo.takerOpenNotional - amount;
+        accountInfo.openNotional = accountInfo.openNotional - amount;
         _modifyOwedRealizedPnl(trader, amount, baseToken);
     }
 
     /// @dev this function is expensive
     function _deregisterBaseToken(address trader, address baseToken) internal {
         LibAccountMarket.Info memory info = _accountMarketMap[trader][baseToken];
-        if (info.takerPositionSize.abs() >= _DUST || info.takerOpenNotional.abs() >= _DUST) {
+        if (info.positionSize.abs() >= _DUST || info.openNotional.abs() >= _DUST) {
             return;
         }
         delete _accountMarketMap[trader][baseToken];
@@ -331,7 +331,7 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
         uint256 tokenLen = _baseTokensMap[trader].length;
         for (uint256 i = 0; i < tokenLen; i++) {
             address baseToken = _baseTokensMap[trader][i];
-            totalTakerQuoteBalance = totalTakerQuoteBalance + (_accountMarketMap[trader][baseToken].takerOpenNotional);
+            totalTakerQuoteBalance = totalTakerQuoteBalance + (_accountMarketMap[trader][baseToken].openNotional);
         }
         return (totalTakerQuoteBalance);
     }

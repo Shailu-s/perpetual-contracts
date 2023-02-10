@@ -425,11 +425,11 @@ describe("Positioning", function () {
             .openPosition(orderLeft, signatureLeft, orderRight, signatureRight, liquidator),
         ).to.emit(positioning, "PositionChanged");
 
-        const positionSize = await accountBalance1.getTakerPositionSize(
+        const positionSize = await accountBalance1.getPositionSize(
           account1.address,
           orderLeft.takeAsset.virtualToken,
         );
-        const positionSize1 = await accountBalance1.getTakerPositionSize(
+        const positionSize1 = await accountBalance1.getPositionSize(
           account2.address,
           orderLeft.takeAsset.virtualToken,
         );
@@ -508,11 +508,11 @@ describe("Positioning", function () {
             ),
         ).to.emit(positioning, "PositionChanged");
 
-        const positionSize = await accountBalance1.getTakerPositionSize(
+        const positionSize = await accountBalance1.getPositionSize(
           account1.address,
           orderLeft.takeAsset.virtualToken,
         );
-        const positionSize1 = await accountBalance1.getTakerPositionSize(
+        const positionSize1 = await accountBalance1.getPositionSize(
           account2.address,
           orderLeft.takeAsset.virtualToken,
         );
@@ -593,11 +593,11 @@ describe("Positioning", function () {
             ),
         ).to.emit(positioning, "PositionChanged");
 
-        const positionSize = await accountBalance1.getTakerPositionSize(
+        const positionSize = await accountBalance1.getPositionSize(
           account1.address,
           orderLeft.takeAsset.virtualToken,
         );
-        const positionSize1 = await accountBalance1.getTakerPositionSize(
+        const positionSize1 = await accountBalance1.getPositionSize(
           account2.address,
           orderLeft.takeAsset.virtualToken,
         );
@@ -674,11 +674,11 @@ describe("Positioning", function () {
             ),
         ).to.emit(positioning, "PositionChanged");
 
-        const positionSize = await accountBalance1.getTakerPositionSize(
+        const positionSize = await accountBalance1.getPositionSize(
           account1.address,
           orderLeft.takeAsset.virtualToken,
         );
-        const positionSize1 = await accountBalance1.getTakerPositionSize(
+        const positionSize1 = await accountBalance1.getPositionSize(
           account2.address,
           orderLeft.takeAsset.virtualToken,
         );
@@ -724,11 +724,11 @@ describe("Positioning", function () {
             ),
         ).to.emit(positioning, "PositionChanged");
 
-        const positionSize3 = await accountBalance1.getTakerPositionSize(
+        const positionSize3 = await accountBalance1.getPositionSize(
           account1.address,
           orderLeft.takeAsset.virtualToken,
         );
-        const positionSize2 = await accountBalance1.getTakerPositionSize(
+        const positionSize2 = await accountBalance1.getPositionSize(
           account2.address,
           orderLeft.takeAsset.virtualToken,
         );
@@ -811,11 +811,11 @@ describe("Positioning", function () {
             ),
         ).to.emit(positioning, "PositionChanged");
 
-        const positionSize = await accountBalance1.getTakerPositionSize(
+        const positionSize = await accountBalance1.getPositionSize(
           account1.address,
           orderLeft.takeAsset.virtualToken,
         );
-        const positionSize1 = await accountBalance1.getTakerPositionSize(
+        const positionSize1 = await accountBalance1.getPositionSize(
           account2.address,
           orderLeft.takeAsset.virtualToken,
         );
@@ -861,11 +861,11 @@ describe("Positioning", function () {
             ),
         ).to.emit(positioning, "PositionChanged");
 
-        const positionSize3 = await accountBalance1.getTakerPositionSize(
+        const positionSize3 = await accountBalance1.getPositionSize(
           account1.address,
           orderLeft.takeAsset.virtualToken,
         );
-        const positionSize2 = await accountBalance1.getTakerPositionSize(
+        const positionSize2 = await accountBalance1.getPositionSize(
           account2.address,
           orderLeft.takeAsset.virtualToken,
         );
@@ -952,11 +952,11 @@ describe("Positioning", function () {
             ),
         ).to.emit(positioning, "PositionChanged");
 
-        const positionSize = await accountBalance1.getTakerPositionSize(
+        const positionSize = await accountBalance1.getPositionSize(
           account1.address,
           orderLeft.takeAsset.virtualToken,
         );
-        const positionSize1 = await accountBalance1.getTakerPositionSize(
+        const positionSize1 = await accountBalance1.getPositionSize(
           account2.address,
           orderLeft.takeAsset.virtualToken,
         );
@@ -1002,11 +1002,11 @@ describe("Positioning", function () {
             ),
         ).to.emit(positioning, "PositionChanged");
 
-        const positionSize3 = await accountBalance1.getTakerPositionSize(
+        const positionSize3 = await accountBalance1.getPositionSize(
           account1.address,
           orderLeft.takeAsset.virtualToken,
         );
-        const positionSize2 = await accountBalance1.getTakerPositionSize(
+        const positionSize2 = await accountBalance1.getPositionSize(
           account2.address,
           orderLeft.takeAsset.virtualToken,
         );
@@ -1084,11 +1084,11 @@ describe("Positioning", function () {
             ),
         ).to.emit(positioning, "PositionChanged");
 
-        const positionSize = await accountBalance1.getTakerPositionSize(
+        const positionSize = await accountBalance1.getPositionSize(
           account1.address,
           orderLeft.takeAsset.virtualToken,
         );
-        const positionSize1 = await accountBalance1.getTakerPositionSize(
+        const positionSize1 = await accountBalance1.getPositionSize(
           account2.address,
           orderLeft.takeAsset.virtualToken,
         );
@@ -1166,11 +1166,11 @@ describe("Positioning", function () {
             .openPosition(orderLeft, signatureLeft, orderRight, signatureRight, liquidator),
         ).to.emit(positioning, "PositionChanged");
 
-        const positionSize = await accountBalance1.getTakerPositionSize(
+        const positionSize = await accountBalance1.getPositionSize(
           account1.address,
           orderLeft.takeAsset.virtualToken,
         );
-        const positionSize1 = await accountBalance1.getTakerPositionSize(
+        const positionSize1 = await accountBalance1.getPositionSize(
           account2.address,
           orderLeft.takeAsset.virtualToken,
         );
@@ -1187,7 +1187,7 @@ describe("Positioning", function () {
             .connect(account1)
             .openPosition(orderLeft1, signatureLeft1, orderRight1, signatureRight1, liquidator),
         ).to.emit(positioning, "PositionChanged");
-        const positionSizeAfter = await accountBalance1.getTakerPositionSize(
+        const positionSizeAfter = await accountBalance1.getPositionSize(
           account1.address,
           virtualToken.address,
         );
@@ -1256,11 +1256,11 @@ describe("Positioning", function () {
             .openPosition(orderLeft, signatureLeft, orderRight, signatureRight, liquidator),
         ).to.emit(positioning, "PositionChanged");
 
-        const positionSize = await accountBalance1.getTakerPositionSize(
+        const positionSize = await accountBalance1.getPositionSize(
           account1.address,
           orderLeft.takeAsset.virtualToken,
         );
-        const positionSize1 = await accountBalance1.getTakerPositionSize(
+        const positionSize1 = await accountBalance1.getPositionSize(
           account2.address,
           orderLeft.takeAsset.virtualToken,
         );
@@ -1303,11 +1303,11 @@ describe("Positioning", function () {
             liquidator,
           ),
         ).to.emit(positioning, "PositionChanged");
-        const positionSizeAfter = await accountBalance1.getTakerPositionSize(
+        const positionSizeAfter = await accountBalance1.getPositionSize(
           account1.address,
           orderLeft1.makeAsset.virtualToken,
         );
-        const positionSizeAfter1 = await accountBalance1.getTakerPositionSize(
+        const positionSizeAfter1 = await accountBalance1.getPositionSize(
           account2.address,
           orderLeft1.makeAsset.virtualToken,
         );
@@ -2206,11 +2206,11 @@ describe("Liquidation test in Positioning", function () {
           ),
         ).to.emit(positioning, "PositionChanged");
 
-        const positionSize = await accountBalance1.getTakerPositionSize(
+        const positionSize = await accountBalance1.getPositionSize(
           account1.address,
           orderLeft.makeAsset.virtualToken,
         );
-        const positionSize1 = await accountBalance1.getTakerPositionSize(
+        const positionSize1 = await accountBalance1.getPositionSize(
           account2.address,
           orderLeft.makeAsset.virtualToken,
         );
@@ -2237,12 +2237,12 @@ describe("Liquidation test in Positioning", function () {
             .liquidate(account1.address, volmexBaseToken.address, "-10000000000000000000"),
         ).to.emit(positioning, "PositionLiquidated");
 
-        const positionSizeAfter = await accountBalance1.getTakerPositionSize(
+        const positionSizeAfter = await accountBalance1.getPositionSize(
           account1.address,
           volmexBaseToken.address,
         );
 
-        const positionSizeLiquidator = await accountBalance1.getTakerPositionSize(
+        const positionSizeLiquidator = await accountBalance1.getPositionSize(
           account2.address,
           volmexBaseToken.address,
         );
@@ -2265,11 +2265,11 @@ describe("Liquidation test in Positioning", function () {
           ),
         ).to.emit(positioning, "PositionChanged");
 
-        const positionSize = await accountBalance1.getTakerPositionSize(
+        const positionSize = await accountBalance1.getPositionSize(
           account1.address,
           orderLeft.makeAsset.virtualToken,
         );
-        const positionSize1 = await accountBalance1.getTakerPositionSize(
+        const positionSize1 = await accountBalance1.getPositionSize(
           account2.address,
           orderLeft.makeAsset.virtualToken,
         );
@@ -2295,12 +2295,12 @@ describe("Liquidation test in Positioning", function () {
             .liquidateFullPosition(account1.address, volmexBaseToken.address),
         ).to.emit(positioning, "PositionLiquidated");
 
-        const positionSizeAfter = await accountBalance1.getTakerPositionSize(
+        const positionSizeAfter = await accountBalance1.getPositionSize(
           account1.address,
           volmexBaseToken.address,
         );
 
-        const positionSizeLiquidator = await accountBalance1.getTakerPositionSize(
+        const positionSizeLiquidator = await accountBalance1.getPositionSize(
           account2.address,
           volmexBaseToken.address,
         );
@@ -2387,11 +2387,11 @@ describe("Liquidation test in Positioning", function () {
           ),
         ).to.emit(positioning, "PositionChanged");
 
-        const positionSize = await accountBalance1.getTakerPositionSize(
+        const positionSize = await accountBalance1.getPositionSize(
           account1.address,
           orderLeft1.takeAsset.virtualToken,
         );
-        const positionSize1 = await accountBalance1.getTakerPositionSize(
+        const positionSize1 = await accountBalance1.getPositionSize(
           account2.address,
           orderLeft1.takeAsset.virtualToken,
         );
@@ -2416,12 +2416,12 @@ describe("Liquidation test in Positioning", function () {
             .liquidateFullPosition(account1.address, volmexBaseToken.address),
         ).to.emit(positioning, "PositionLiquidated");
 
-        const positionSizeAfter = await accountBalance1.getTakerPositionSize(
+        const positionSizeAfter = await accountBalance1.getPositionSize(
           account1.address,
           volmexBaseToken.address,
         );
 
-        const positionSizeLiquidator = await accountBalance1.getTakerPositionSize(
+        const positionSizeLiquidator = await accountBalance1.getPositionSize(
           account2.address,
           volmexBaseToken.address,
         );
@@ -2443,11 +2443,11 @@ describe("Liquidation test in Positioning", function () {
             liquidator,
           ),
         ).to.emit(positioning, "PositionChanged");
-        const positionSize = await accountBalance1.getTakerPositionSize(
+        const positionSize = await accountBalance1.getPositionSize(
           account1.address,
           orderLeft.makeAsset.virtualToken,
         );
-        const positionSize1 = await accountBalance1.getTakerPositionSize(
+        const positionSize1 = await accountBalance1.getPositionSize(
           account2.address,
           orderLeft.makeAsset.virtualToken,
         );
@@ -2475,11 +2475,11 @@ describe("Liquidation test in Positioning", function () {
             liquidator,
           ),
         ).to.emit(positioning, "PositionChanged");
-        const positionSize = await accountBalance1.getTakerPositionSize(
+        const positionSize = await accountBalance1.getPositionSize(
           account1.address,
           orderLeft.makeAsset.virtualToken,
         );
-        const positionSize1 = await accountBalance1.getTakerPositionSize(
+        const positionSize1 = await accountBalance1.getPositionSize(
           account2.address,
           orderLeft.makeAsset.virtualToken,
         );
@@ -2521,11 +2521,11 @@ describe("Liquidation test in Positioning", function () {
           ),
         ).to.emit(positioning, "PositionChanged");
 
-        const positionSize = await accountBalance1.getTakerPositionSize(
+        const positionSize = await accountBalance1.getPositionSize(
           account1.address,
           orderLeft.makeAsset.virtualToken,
         );
-        const positionSize1 = await accountBalance1.getTakerPositionSize(
+        const positionSize1 = await accountBalance1.getPositionSize(
           account2.address,
           orderLeft.makeAsset.virtualToken,
         );

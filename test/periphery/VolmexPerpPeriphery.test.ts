@@ -293,13 +293,13 @@ describe("VolmexPerpPeriphery", function () {
         let txDataBefore = {
           "Mark price": (await markPriceOracle.getCumulativePrice("3600", 0)).toString(),
           "Alice position": (
-            await accountBalance1.getTakerPositionSize(alice.address, volmexBaseToken.address)
+            await accountBalance1.getPositionSize(alice.address, volmexBaseToken.address)
           ).toString(),
           "Alice owed and un realized pnl": (
             await accountBalance1.getPnlAndPendingFee(alice.address)
           ).toString(),
           "Bob position": (
-            await accountBalance1.getTakerPositionSize(bob.address, volmexBaseToken.address)
+            await accountBalance1.getPositionSize(bob.address, volmexBaseToken.address)
           ).toString(),
           "Bob owed and un realized pnl": (
             await accountBalance1.getPnlAndPendingFee(bob.address)
@@ -344,13 +344,13 @@ describe("VolmexPerpPeriphery", function () {
           txDataBefore = {
             "Mark price": (await markPriceOracle.getCumulativePrice("3600", 0)).toString(),
             "Alice position": (
-              await accountBalance1.getTakerPositionSize(alice.address, volmexBaseToken.address)
+              await accountBalance1.getPositionSize(alice.address, volmexBaseToken.address)
             ).toString(),
             "Alice owed and un realized pnl": (
               await accountBalance1.getPnlAndPendingFee(alice.address)
             ).toString(),
             "Bob position": (
-              await accountBalance1.getTakerPositionSize(bob.address, volmexBaseToken.address)
+              await accountBalance1.getPositionSize(bob.address, volmexBaseToken.address)
             ).toString(),
             "Bob owed and un realized pnl": (
               await accountBalance1.getPnlAndPendingFee(bob.address)
@@ -818,11 +818,11 @@ describe("VolmexPerpPeriphery", function () {
         ),
       ).to.emit(positioning, "PositionChanged");
 
-      const positionSize = await accountBalance1.getTakerPositionSize(
+      const positionSize = await accountBalance1.getPositionSize(
         account1.address,
         orderLeft.makeAsset.virtualToken,
       );
-      const positionSize1 = await accountBalance1.getTakerPositionSize(
+      const positionSize1 = await accountBalance1.getPositionSize(
         account2.address,
         orderLeft.makeAsset.virtualToken,
       );

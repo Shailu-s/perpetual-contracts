@@ -277,8 +277,8 @@ contract Positioning is
             params.baseToken
         );
 
-        int256 takerOpenNotional = info.takerOpenNotional;
-        int256 takerPositionSize = info.takerPositionSize;
+        int256 takerOpenNotional = info.openNotional;
+        int256 takerPositionSize = info.positionSize;
         // when takerPositionSize < 0, it's a short position; when base < 0, isBaseToQuote(shorting)
         bool isReducingPosition = takerPositionSize == 0 ? false : takerPositionSize < 0 != params.base < 0;
 
@@ -637,7 +637,7 @@ contract Positioning is
     }
 
     function _getTakerOpenNotional(address trader, address baseToken) internal view returns (int256) {
-        return IAccountBalance(_accountBalance).getTakerOpenNotional(trader, baseToken);
+        return IAccountBalance(_accountBalance).getOpenNotional(trader, baseToken);
     }
 
     function _calculateFees(
@@ -667,7 +667,7 @@ contract Positioning is
 
     /// @dev This function returns position size of trader
     function _getTakerPosition(address trader, address baseToken) internal view returns (int256) {
-        return IAccountBalance(_accountBalance).getTakerPositionSize(trader, baseToken);
+        return IAccountBalance(_accountBalance).getPositionSize(trader, baseToken);
     }
 
     /// @dev This function checks if free collateral of trader is available

@@ -132,7 +132,7 @@ async function getSignature() {
       await positioning.getPendingFundingPayment(account3.address, baseToken)
     ).toString(),
     positionSize: (
-      await accountBalance.getTakerPositionSize(account3.address, baseToken)
+      await accountBalance.getPositionSize(account3.address, baseToken)
     ).toString(),
   };
   console.log("response: ", requiredData);

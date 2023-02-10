@@ -276,11 +276,11 @@ describe("Liquidation test in Positioning", function () {
           ),
         ).to.emit(positioning, "PositionChanged");
 
-        const positionSize = await accountBalance1.getTakerPositionSize(
+        const positionSize = await accountBalance1.getPositionSize(
           account1.address,
           orderLeft.makeAsset.virtualToken,
         );
-        const positionSize1 = await accountBalance1.getTakerPositionSize(
+        const positionSize1 = await accountBalance1.getPositionSize(
           account2.address,
           orderLeft.makeAsset.virtualToken,
         );
@@ -307,12 +307,12 @@ describe("Liquidation test in Positioning", function () {
             .liquidate(account1.address, volmexBaseToken.address, "-10000000000000000000"),
         ).to.emit(positioning, "PositionLiquidated");
 
-        const positionSizeAfter = await accountBalance1.getTakerPositionSize(
+        const positionSizeAfter = await accountBalance1.getPositionSize(
           account1.address,
           volmexBaseToken.address,
         );
 
-        const positionSizeLiquidator = await accountBalance1.getTakerPositionSize(
+        const positionSizeLiquidator = await accountBalance1.getPositionSize(
           account2.address,
           volmexBaseToken.address,
         );
@@ -335,11 +335,11 @@ describe("Liquidation test in Positioning", function () {
           ),
         ).to.emit(positioning, "PositionChanged");
 
-        const positionSize = await accountBalance1.getTakerPositionSize(
+        const positionSize = await accountBalance1.getPositionSize(
           account1.address,
           orderLeft.makeAsset.virtualToken,
         );
-        const positionSize1 = await accountBalance1.getTakerPositionSize(
+        const positionSize1 = await accountBalance1.getPositionSize(
           account2.address,
           orderLeft.makeAsset.virtualToken,
         );
@@ -365,12 +365,12 @@ describe("Liquidation test in Positioning", function () {
             .liquidateFullPosition(account1.address, volmexBaseToken.address),
         ).to.emit(positioning, "PositionLiquidated");
 
-        const positionSizeAfter = await accountBalance1.getTakerPositionSize(
+        const positionSizeAfter = await accountBalance1.getPositionSize(
           account1.address,
           volmexBaseToken.address,
         );
 
-        const positionSizeLiquidator = await accountBalance1.getTakerPositionSize(
+        const positionSizeLiquidator = await accountBalance1.getPositionSize(
           account2.address,
           volmexBaseToken.address,
         );
@@ -392,11 +392,11 @@ describe("Liquidation test in Positioning", function () {
             liquidator,
           ),
         ).to.emit(positioning, "PositionChanged");
-        const positionSize = await accountBalance1.getTakerPositionSize(
+        const positionSize = await accountBalance1.getPositionSize(
           account1.address,
           orderLeft.makeAsset.virtualToken,
         );
-        const positionSize1 = await accountBalance1.getTakerPositionSize(
+        const positionSize1 = await accountBalance1.getPositionSize(
           account2.address,
           orderLeft.makeAsset.virtualToken,
         );
@@ -424,11 +424,11 @@ describe("Liquidation test in Positioning", function () {
             liquidator,
           ),
         ).to.emit(positioning, "PositionChanged");
-        const positionSize = await accountBalance1.getTakerPositionSize(
+        const positionSize = await accountBalance1.getPositionSize(
           account1.address,
           orderLeft.makeAsset.virtualToken,
         );
-        const positionSize1 = await accountBalance1.getTakerPositionSize(
+        const positionSize1 = await accountBalance1.getPositionSize(
           account2.address,
           orderLeft.makeAsset.virtualToken,
         );
@@ -470,11 +470,11 @@ describe("Liquidation test in Positioning", function () {
           ),
         ).to.emit(positioning, "PositionChanged");
 
-        const positionSize = await accountBalance1.getTakerPositionSize(
+        const positionSize = await accountBalance1.getPositionSize(
           account1.address,
           orderLeft.makeAsset.virtualToken,
         );
-        const positionSize1 = await accountBalance1.getTakerPositionSize(
+        const positionSize1 = await accountBalance1.getPositionSize(
           account2.address,
           orderLeft.makeAsset.virtualToken,
         );

@@ -3,7 +3,7 @@ pragma solidity =0.8.12;
 
 library LibAccountMarket {
     struct Info {
-        int256 takerPositionSize;
-        int256 takerOpenNotional;
+        int256 positionSize;
+        int256 openNotional;
     }
 }
