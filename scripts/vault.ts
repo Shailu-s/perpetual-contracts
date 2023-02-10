@@ -25,7 +25,7 @@ const vault = async () => {
   const perpView = VolmexPerpView.attach(`${process.env.PERP_VIEW}`);
   const periphery = VolmexPerpPeriphery.attach(`${process.env.PERIPHERY}`);
   await (await perpView.incrementVaultIndex()).wait();
-  console.log("Whitelist vault ...")
+  console.log("Whitelist vault ...");
   await (await periphery.whitelistVault(vault.address, true)).wait();
 
   console.log("Register vault ...");

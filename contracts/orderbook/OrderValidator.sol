@@ -12,8 +12,8 @@ import "../libs/LibSignature.sol";
 abstract contract OrderValidator is Initializable, ContextUpgradeable, EIP712Upgradeable {
     using LibSignature for bytes32;
     using AddressUpgradeable for address;
-    bytes4 internal constant MAGICVALUE = 0x1626ba7e;
 
+    bytes4 internal constant _MAGICVALUE = 0x1626ba7e;
     mapping(address => uint256) public makerMinSalt;
 
     function __OrderValidator_init_unchained() internal onlyInitializing {
@@ -38,7 +38,7 @@ abstract contract OrderValidator is Initializable, ContextUpgradeable, EIP712Upg
                 if (signer != order.trader) {
                     if (order.trader.isContract()) {
                         require(
-                            IERC1271(order.trader).isValidSignature(_hashTypedDataV4(hash), signature) == MAGICVALUE,
+                            IERC1271(order.trader).isValidSignature(_hashTypedDataV4(hash), signature) == _MAGICVALUE,
                             "V_PERP_M: contract order signature verification error"
                         );
                     } else {

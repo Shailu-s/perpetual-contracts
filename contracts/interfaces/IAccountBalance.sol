@@ -64,17 +64,6 @@ interface IAccountBalance {
     /// @param baseToken The address of the trader's base token
     function registerBaseToken(address trader, address baseToken) external;
 
-    /// @notice Update trader Twap premium info
-    /// @dev Only used by `Positioning` contract
-    /// @param trader The address of trader
-    /// @param baseToken The address of baseToken
-    /// @param lastTwPremiumGrowthGlobal The last Twap Premium
-    function updateTwPremiumGrowthGlobal(
-        address trader,
-        address baseToken,
-        int256 lastTwPremiumGrowthGlobal
-    ) external;
-
     /// @notice Get `PositioningConfig` address
     /// @return PositioningConfig The address of PositioningConfig
     function getPositioningConfig() external view returns (address);
@@ -94,7 +83,7 @@ interface IAccountBalance {
     /// @param trader The address of trader
     /// @param baseToken The address of baseToken
     /// @return openNotional The taker cost of trader's baseToken
-    function getTakerOpenNotional(address trader, address baseToken) external view returns (int256);
+    function getOpenNotional(address trader, address baseToken) external view returns (int256);
 
     /// @notice Get total debt value of trader
     /// @param trader The address of trader
@@ -119,7 +108,7 @@ interface IAccountBalance {
     /// @param trader The address of trader
     /// @param baseToken The address of baseToken
     /// @return takerPositionSize The taker position size of trader's baseToken market
-    function getTakerPositionSize(address trader, address baseToken) external view returns (int256);
+    function getPositionSize(address trader, address baseToken) external view returns (int256);
 
     /// @notice Get total position value of trader's baseToken market
     /// @dev A negative returned value is only be used when calculating pnl,

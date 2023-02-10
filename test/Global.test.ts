@@ -172,7 +172,7 @@ describe("Global", function () {
         markPriceOracle.address,
         indexPriceOracle.address,
         0,
-        [owner.address, account1.address]
+        [owner.address, account1.address],
       ],
       {
         initializer: "initialize",
@@ -266,11 +266,11 @@ describe("Global", function () {
         .openPosition(orderLeft, signatureLeft, orderRight, signatureRight, liquidator),
     ).to.emit(positioning, "PositionChanged");
 
-    let positionSize = await accountBalance.getTakerPositionSize(
+    let positionSize = await accountBalance.getPositionSize(
       account1.address,
       orderLeft.takeAsset.virtualToken,
     );
-    let positionSize1 = await accountBalance.getTakerPositionSize(
+    let positionSize1 = await accountBalance.getPositionSize(
       account2.address,
       orderLeft.takeAsset.virtualToken,
     );
@@ -279,7 +279,7 @@ describe("Global", function () {
       [
         "open notional",
         (
-          await accountBalance.getTakerOpenNotional(
+          await accountBalance.getOpenNotional(
             account1.address,
             orderLeft.takeAsset.virtualToken,
           )
@@ -290,7 +290,7 @@ describe("Global", function () {
       [
         "open notional 1",
         (
-          await accountBalance.getTakerOpenNotional(
+          await accountBalance.getOpenNotional(
             account2.address,
             orderLeft.takeAsset.virtualToken,
           )
@@ -347,11 +347,11 @@ describe("Global", function () {
         .openPosition(orderLeft, signatureLeft, orderRight, signatureRight, liquidator),
     ).to.emit(positioning, "PositionChanged");
 
-    positionSize = await accountBalance.getTakerPositionSize(
+    positionSize = await accountBalance.getPositionSize(
       account1.address,
       orderLeft.makeAsset.virtualToken,
     );
-    positionSize1 = await accountBalance.getTakerPositionSize(
+    positionSize1 = await accountBalance.getPositionSize(
       account2.address,
       orderLeft.makeAsset.virtualToken,
     );
@@ -360,7 +360,7 @@ describe("Global", function () {
       [
         "open notional",
         (
-          await accountBalance.getTakerOpenNotional(
+          await accountBalance.getOpenNotional(
             account1.address,
             orderLeft.makeAsset.virtualToken,
           )
@@ -371,7 +371,7 @@ describe("Global", function () {
       [
         "open notional 1",
         (
-          await accountBalance.getTakerOpenNotional(
+          await accountBalance.getOpenNotional(
             account2.address,
             orderLeft.makeAsset.virtualToken,
           )
@@ -413,11 +413,11 @@ describe("Global", function () {
         .openPosition(orderLeft, signatureLeft, orderRight, signatureRight, liquidator),
     ).to.emit(positioning, "PositionChanged");
 
-    positionSize = await accountBalance.getTakerPositionSize(
+    positionSize = await accountBalance.getPositionSize(
       account1.address,
       orderLeft.makeAsset.virtualToken,
     );
-    positionSize1 = await accountBalance.getTakerPositionSize(
+    positionSize1 = await accountBalance.getPositionSize(
       account2.address,
       orderLeft.makeAsset.virtualToken,
     );
@@ -426,7 +426,7 @@ describe("Global", function () {
       [
         "open notional",
         (
-          await accountBalance.getTakerOpenNotional(
+          await accountBalance.getOpenNotional(
             account1.address,
             orderLeft.makeAsset.virtualToken,
           )
@@ -437,7 +437,7 @@ describe("Global", function () {
       [
         "open notional 1",
         (
-          await accountBalance.getTakerOpenNotional(
+          await accountBalance.getOpenNotional(
             account2.address,
             orderLeft.makeAsset.virtualToken,
           )
@@ -494,11 +494,11 @@ describe("Global", function () {
         .openPosition(orderLeft, signatureLeft, orderRight, signatureRight, liquidator),
     ).to.emit(positioning, "PositionChanged");
 
-    let positionSize = await accountBalance.getTakerPositionSize(
+    let positionSize = await accountBalance.getPositionSize(
       account1.address,
       orderLeft.takeAsset.virtualToken,
     );
-    let positionSize1 = await accountBalance.getTakerPositionSize(
+    let positionSize1 = await accountBalance.getPositionSize(
       account2.address,
       orderLeft.takeAsset.virtualToken,
     );
@@ -507,7 +507,7 @@ describe("Global", function () {
       [
         "open notional",
         (
-          await accountBalance.getTakerOpenNotional(
+          await accountBalance.getOpenNotional(
             account1.address,
             orderLeft.takeAsset.virtualToken,
           )
@@ -518,7 +518,7 @@ describe("Global", function () {
       [
         "open notional 1",
         (
-          await accountBalance.getTakerOpenNotional(
+          await accountBalance.getOpenNotional(
             account2.address,
             orderLeft.takeAsset.virtualToken,
           )
@@ -577,11 +577,11 @@ describe("Global", function () {
         .openPosition(orderLeft, signatureLeft, orderRight, signatureRight, liquidator),
     ).to.emit(positioning, "PositionChanged");
 
-    positionSize = await accountBalance.getTakerPositionSize(
+    positionSize = await accountBalance.getPositionSize(
       account1.address,
       orderLeft.makeAsset.virtualToken,
     );
-    positionSize1 = await accountBalance.getTakerPositionSize(
+    positionSize1 = await accountBalance.getPositionSize(
       account2.address,
       orderLeft.makeAsset.virtualToken,
     );
@@ -590,7 +590,7 @@ describe("Global", function () {
       [
         "open notional",
         (
-          await accountBalance.getTakerOpenNotional(
+          await accountBalance.getOpenNotional(
             account1.address,
             orderLeft.makeAsset.virtualToken,
           )
@@ -601,7 +601,7 @@ describe("Global", function () {
       [
         "open notional 1",
         (
-          await accountBalance.getTakerOpenNotional(
+          await accountBalance.getOpenNotional(
             account2.address,
             orderLeft.makeAsset.virtualToken,
           )
@@ -645,11 +645,11 @@ describe("Global", function () {
         .openPosition(orderLeft, signatureLeft, orderRight, signatureRight, liquidator),
     ).to.emit(positioning, "PositionChanged");
 
-    positionSize = await accountBalance.getTakerPositionSize(
+    positionSize = await accountBalance.getPositionSize(
       account1.address,
       orderLeft.makeAsset.virtualToken,
     );
-    positionSize1 = await accountBalance.getTakerPositionSize(
+    positionSize1 = await accountBalance.getPositionSize(
       account2.address,
       orderLeft.makeAsset.virtualToken,
     );
@@ -658,7 +658,7 @@ describe("Global", function () {
       [
         "open notional",
         (
-          await accountBalance.getTakerOpenNotional(
+          await accountBalance.getOpenNotional(
             account1.address,
             orderLeft.makeAsset.virtualToken,
           )
@@ -669,7 +669,7 @@ describe("Global", function () {
       [
         "open notional 1",
         (
-          await accountBalance.getTakerOpenNotional(
+          await accountBalance.getOpenNotional(
             account2.address,
             orderLeft.makeAsset.virtualToken,
           )

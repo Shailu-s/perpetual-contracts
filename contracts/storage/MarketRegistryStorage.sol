@@ -5,12 +5,11 @@ pragma solidity =0.8.12;
 /// contract which implements MarketRegistryStorageV1 and following the naming convention
 /// MarketRegistryStorageVX.
 abstract contract MarketRegistryStorageV1 {
+    // admin of market registry
+    bytes32 public constant MARKET_REGISTRY_ADMIN = keccak256("MARKET_REGISTRY_ADMIN");
     address internal _quoteToken;
-
     uint8 internal _maxOrdersPerMarket;
-
     address[] internal _baseTokensMarketMap;
-
     uint24 internal _makerFeeRatio;
     uint24 internal _takerFeeRatio;
 }

@@ -5,18 +5,13 @@ pragma solidity =0.8.12;
 /// contract which implements VaultStorageV1 and following the naming convention
 /// VaultStorageVX.
 abstract contract VaultStorageV1 {
-    // --------- IMMUTABLE ---------
-
+    bytes32 public constant VAULT_ADMIN = keccak256("VAULT_ADMIN");
     uint8 internal _decimals;
-
     address internal _settlementToken;
-
-    // --------- ^^^^^^^^^ ---------
-
     address internal _positioningConfig;
     address internal _accountBalance;
-    address internal _Positioning;
+    address internal _positioning;
+    bool internal _isEthVault;
     uint256 internal _totalDebt;
-    address public _vaultController;
-    bool public _isEthVault;
+    address internal _vaultController;
 }

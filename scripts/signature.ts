@@ -44,11 +44,15 @@ const Types = {
 };
 async function getSignature() {
   console.log("Signature creation started ...");
-  const provider = new ethers.providers.JsonRpcProvider(
-    "https://rpc-mumbai.maticvigil.com/",
+  const provider = new ethers.providers.JsonRpcProvider("https://rpc-mumbai.maticvigil.com/");
+  const account1 = new ethers.Wallet(
+    "ded016e6b77a5847bc4665207ab97157de8749cf96627de82da30734fef5c9aa",
+    provider,
   );
-  const account1 = new ethers.Wallet("ded016e6b77a5847bc4665207ab97157de8749cf96627de82da30734fef5c9aa", provider);
-  const account2 = new ethers.Wallet("b2eada77569027933f70e63fbb356a1193bcb3c3d52cba3859d5fd73103d69c8", provider);
+  const account2 = new ethers.Wallet(
+    "b2eada77569027933f70e63fbb356a1193bcb3c3d52cba3859d5fd73103d69c8",
+    provider,
+  );
   const orderleft = Order(
     ORDER,
     deadline,
@@ -78,24 +82,24 @@ async function getSignature() {
   };
   const signatureLeft = await account1._signTypedData(domain, Types, orderleft);
   const signatureRight = await account2._signTypedData(domain, Types, orderRight);
-  console.log("signatureLeft",signatureLeft)
-  console.log("signatureRight", signatureRight)
+  console.log("signatureLeft", signatureLeft);
+  console.log("signatureRight", signatureRight);
   console.log("Signature created !!!");
   const Periphery = await ethers.getContractFactory("VolmexPerpPeriphery");
   const periphery = Periphery.attach(peripheryAddress);
   console.log("Opening position ...");
-  // const tx = await periphery
-  //   .connect(account1)
-  //   .openPosition(
-  //     0,
-  //     orderleft,
-  //     signatureLeft,
-  //     orderRight,
-  //     signatureRight,
-  //     encodeAddress(account1.address),
-  //   );
-  // const receipt = await tx.wait();
-  // console.log("Tx Hash: ", receipt.transactionHash);
+  const tx = await periphery
+    .connect(account1)
+    .openPosition(
+      0,
+      orderleft,
+      signatureLeft,
+      orderRight,
+      signatureRight,
+      encodeAddress(account1.address),
+    );
+  const receipt = await tx.wait();
+  console.log("Tx Hash: ", receipt.transactionHash);
 }
 getSignature()
   .then(() => process.exit(0))
