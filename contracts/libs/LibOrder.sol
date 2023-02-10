@@ -7,6 +7,17 @@ import "./LibAsset.sol";
 import "../interfaces/IVirtualToken.sol";
 
 library LibOrder {
+    struct Order {
+        bytes4 orderType;
+        uint64 deadline;
+        address trader;
+        LibAsset.Asset makeAsset;
+        LibAsset.Asset takeAsset;
+        uint256 salt;
+        uint128 triggerPrice;
+        bool isShort;
+    }
+
     bytes32 constant ORDER_TYPEHASH =
         keccak256(
             "Order(bytes4 orderType,uint64 deadline,address trader,Asset makeAsset,Asset takeAsset,uint256 salt,uint128 triggerPrice,bool isShort)Asset(address virtualToken,uint256 value)"
@@ -19,15 +30,22 @@ library LibOrder {
     // Generated using bytes4(keccack256(abi.encodePacked("TakeProfitLimitOrder")))
     bytes4 public constant TAKE_PROFIT_LIMIT_ORDER = 0xe0fc7f94;
 
-    struct Order {
-        bytes4 orderType;
-        uint64 deadline;
-        address trader;
-        LibAsset.Asset makeAsset;
-        LibAsset.Asset takeAsset;
-        uint256 salt;
-        uint128 triggerPrice;
-        bool isShort;
+    function validate(LibOrder.Order memory order) internal view {
+        require(order.deadline > block.timestamp, "V_PERP_M: Order deadline validation failed");
+
+        bool isMakeAssetBase = IVirtualToken(order.makeAsset.virtualToken).isBase();
+        bool isTakeAssetBase = IVirtualToken(order.takeAsset.virtualToken).isBase();
+
+        require(
+            (isMakeAssetBase && !isTakeAssetBase) || (!isMakeAssetBase && isTakeAssetBase),
+            "Both makeAsset & takeAsset can't be baseTokens"
+        );
+
+        require(
+            (order.isShort && isMakeAssetBase && !isTakeAssetBase) ||
+                (!order.isShort && !isMakeAssetBase && isTakeAssetBase),
+            "Short order can't have takeAsset as a baseToken/Long order can't have makeAsset as baseToken"
+        );
     }
 
     function calculateRemaining(Order memory order, uint256 fill)
@@ -70,23 +88,5 @@ library LibOrder {
                     order.isShort
                 )
             );
-    }
-
-    function validate(LibOrder.Order memory order) internal view {
-        require(order.deadline > block.timestamp, "V_PERP_M: Order deadline validation failed");
-
-        bool isMakeAssetBase = IVirtualToken(order.makeAsset.virtualToken).isBase();
-        bool isTakeAssetBase = IVirtualToken(order.takeAsset.virtualToken).isBase();
-
-        require(
-            (isMakeAssetBase && !isTakeAssetBase) || (!isMakeAssetBase && isTakeAssetBase),
-            "Both makeAsset & takeAsset can't be baseTokens"
-        );
-
-        require(
-            (order.isShort && isMakeAssetBase && !isTakeAssetBase) ||
-                (!order.isShort && !isMakeAssetBase && isTakeAssetBase),
-            "Short order can't have takeAsset as a baseToken/Long order can't have makeAsset as baseToken"
-        );
     }
 }

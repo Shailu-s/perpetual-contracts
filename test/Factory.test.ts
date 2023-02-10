@@ -152,7 +152,7 @@ describe("PerpFactory", function () {
         positioning.address,
         accountBalance.address,
         perpView.address,
-        marketRegistry.address
+        marketRegistry.address,
       ),
     ).to.be.revertedWith("Initializable: contract is already initialized");
   });
@@ -161,22 +161,22 @@ describe("PerpFactory", function () {
     it("Should fail to initialize", async () => {
       await expectRevert(
         perpView.initialize(owner.address),
-        "Initializable: contract is already initialized"
+        "Initializable: contract is already initialized",
       );
     });
     it("Should fail to set state role", async () => {
       await expectRevert(
         perpView.connect(alice).grantViewStatesRole(owner.address),
-        "VolmexPerpView: Not admin"
+        "VolmexPerpView: Not admin",
       );
     });
     it("Should fail to call view role methods", async () => {
       await expectRevert(
         perpView.connect(alice).incrementVaultIndex(),
-        "VolmexPerpView: Not state update caller"
+        "VolmexPerpView: Not state update caller",
       );
     });
-  })
+  });
 
   describe("Clone:", function () {
     it("Should set token implementation contract correctly", async () => {
@@ -217,7 +217,7 @@ describe("PerpFactory", function () {
         indexPriceOracle.address,
         volmexQuoteToken.address,
         index,
-        [owner.address, alice.address]
+        [owner.address, alice.address],
       );
     });
 
@@ -225,21 +225,23 @@ describe("PerpFactory", function () {
       const index = (await perpView.perpIndexCount()).toString();
       expect(
         await factory.clonePerpEcosystem(
-        positioningConfig.address,
-        matchingEngine.address,
-        markPriceOracle.address,
-        indexPriceOracle.address,
-        volmexQuoteToken.address,
-        index,
-        [owner.address, alice.address]
+          positioningConfig.address,
+          matchingEngine.address,
+          markPriceOracle.address,
+          indexPriceOracle.address,
+          volmexQuoteToken.address,
+          index,
+          [owner.address, alice.address],
         ),
-      ).to.emit(factory, "").withArgs(
-        index + 1,
-        await perpView.positionings(index),
-        await perpView.vaultControllers(index),
-        await perpView.accounts(index),
-        await perpView.marketRegistries(index)
-      );
+      )
+        .to.emit(factory, "")
+        .withArgs(
+          index + 1,
+          await perpView.positionings(index),
+          await perpView.vaultControllers(index),
+          await perpView.accounts(index),
+          await perpView.marketRegistries(index),
+        );
     });
 
     it("Should Clone Vault", async () => {
@@ -251,7 +253,7 @@ describe("PerpFactory", function () {
         indexPriceOracle.address,
         volmexQuoteToken.address,
         index,
-        [owner.address, alice.address]
+        [owner.address, alice.address],
       );
       const vaultClone = await factory.cloneVault(
         USDC.address,
@@ -276,7 +278,7 @@ describe("PerpFactory", function () {
             indexPriceOracle.address,
             volmexQuoteToken.address,
             index,
-            [owner.address, alice.address]
+            [owner.address, alice.address],
           ),
       ).to.be.revertedWith("PF_NCD");
     });
@@ -290,7 +292,7 @@ describe("PerpFactory", function () {
         indexPriceOracle.address,
         volmexQuoteToken.address,
         index,
-        [owner.address, alice.address]
+        [owner.address, alice.address],
       );
       await expect(
         factory.cloneVault(

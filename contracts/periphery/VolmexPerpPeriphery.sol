@@ -17,12 +17,12 @@ contract VolmexPerpPeriphery is Initializable, AccessControlUpgradeable, IVolmex
     bytes32 public constant VOLMEX_PERP_PERIPHERY = keccak256("VOLMEX_PERP_PERIPHERY");
     // role of relayer to execute open position
     bytes32 public constant RELAYER_MULTISIG = keccak256("RELAYER_MULTISIG");
+
     // Store the whitelist Vaults
     mapping(address => bool) private _isVaultWhitelist;
 
-    // Uused to fetch base token price according to market
+    // Used to fetch base token price according to market
     IMarkPriceOracle public markPriceOracle;
-
     // Stores the address of VolmexPerpView contract
     IVolmexPerpView public perpView;
 
@@ -102,12 +102,7 @@ contract VolmexPerpPeriphery is Initializable, AccessControlUpgradeable, IVolmex
             - Check the msg.value and send it to vault controller
          */
         IVaultController vaultController = perpView.vaultControllers(_index);
-        vaultController.deposit{ value: msg.value }(
-            IVolmexPerpPeriphery(address(this)),
-            _token,
-            _msgSender(),
-            _amount
-        );
+        vaultController.deposit{ value: msg.value }(IVolmexPerpPeriphery(address(this)), _token, _msgSender(), _amount);
     }
 
     function withdrawFromVault(
@@ -203,9 +198,15 @@ contract VolmexPerpPeriphery is Initializable, AccessControlUpgradeable, IVolmex
     ) internal {
         IPositioning positioning = perpView.positionings(_index);
         if (_leftLimitOrder.orderType != LibOrder.ORDER)
-            require(_verifyTriggerPrice(_leftLimitOrder, positioning), "Periphery: left order price verification failed");
+            require(
+                _verifyTriggerPrice(_leftLimitOrder, positioning),
+                "Periphery: left order price verification failed"
+            );
         if (_rightLimitOrder.orderType != LibOrder.ORDER)
-            require(_verifyTriggerPrice(_rightLimitOrder, positioning), "Periphery: right order price verification failed");
+            require(
+                _verifyTriggerPrice(_rightLimitOrder, positioning),
+                "Periphery: right order price verification failed"
+            );
 
         positioning.openPosition(
             _leftLimitOrder,
@@ -225,7 +226,11 @@ contract VolmexPerpPeriphery is Initializable, AccessControlUpgradeable, IVolmex
     }
 
     // TODO: Change the logic to round id, if Volmex Oracle implements price by round id functionality
-    function _verifyTriggerPrice(LibOrder.Order memory _limitOrder, IPositioning _positioning) private view returns (bool) {
+    function _verifyTriggerPrice(LibOrder.Order memory _limitOrder, IPositioning _positioning)
+        private
+        view
+        returns (bool)
+    {
         // TODO: Add check for round id, when Volmex Oracle updates functionality
 
         address positioningConfig = _positioning.getPositioningConfig();

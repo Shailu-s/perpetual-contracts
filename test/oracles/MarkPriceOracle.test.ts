@@ -102,7 +102,7 @@ describe("MarkPriceOracle", function () {
         positioning.address,
         accountBalance.address,
         marketRegistry.address,
-        perpViewFake.address
+        perpViewFake.address,
       ],
       {
         initializer: "initialize",

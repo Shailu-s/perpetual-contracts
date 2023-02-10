@@ -5,6 +5,7 @@ import { AccessControl } from "@openzeppelin/contracts/access/AccessControl.sol"
 import { SafeMathUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/math/SafeMathUpgradeable.sol";
 import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
+
 import "../interfaces/IMatchingEngine.sol";
 
 /**
@@ -24,23 +25,19 @@ contract MarkPriceOracle is Initializable, AccessControlUpgradeable {
     // role of observation collection
     bytes32 public constant CAN_ADD_OBSERVATION = keccak256("CAN_ADD_OBSERVATION");
 
-    // Address of the MatchingEngine contract
-    address public matchingEngine;
-
     // Index count
     uint64 internal _indexCount;
 
+    // Address of the MatchingEngine contract
+    address public matchingEngine;
     // mapping to store index to the address of the baseToken
     mapping(uint64 => address) public baseTokenByIndex;
-
+    // mapping to store index by base token address
     mapping(address => uint64) public indexByBaseToken;
-
     // mapping to store baseToken to Observations
     mapping(uint64 => Observation[]) public observationsByIndex;
 
-    /// @param matchingEngine The address of the MatchingEngine contract
     event MatchingEngineChanged(address indexed matchingEngine);
-
     event ObservationAdded(uint64 index, uint256 priceCumulative, uint256 timestamp);
 
     // Used to check the caller is Exchange contract

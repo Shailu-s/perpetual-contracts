@@ -243,15 +243,16 @@ contract PerpFactory is Initializable, IPerpFactory, AccessControlUpgradeable {
     }
 
     function _cloneMarketRegistry(uint256 _perpIndex, address _quoteToken) 
-    private 
-    returns (IMarketRegistry marketRegistry) {
+        private
+        returns (IMarketRegistry marketRegistry)
+    {
         bytes32 salt = keccak256(abi.encodePacked(_perpIndex, _quoteToken));
         marketRegistry = IMarketRegistry(Clones.cloneDeterministic(marketRegistryImplementation, salt));
         marketRegistry.initialize(_quoteToken);
         perpViewRegistry.setMarketRegistry(marketRegistry);
     }
 
-    function _requireClonesDeployer() internal view {
+    function _requireClonesDeployer() private view {
         // PerpFactory: Not CLONES_DEPLOYER
         require(hasRole(CLONES_DEPLOYER, _msgSender()), "PF_NCD");
     }

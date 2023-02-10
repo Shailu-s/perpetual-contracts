@@ -8,9 +8,6 @@ import { PositioningConfigStorageV1 } from "../storage/PositioningConfigStorage.
 
 // never inherit any new stateful contract. never change the orders of parent stateful contracts
 contract PositioningConfig is IPositioningConfig, Initializable, PositioningConfigStorageV1, AccessControlUpgradeable {
-    //
-    // EVENT
-    //
     event TwapIntervalChanged(uint256 twapInterval);
     event LiquidationPenaltyRatioChanged(uint24 liquidationPenaltyRatio);
     event PartialCloseRatioChanged(uint24 partialCloseRatio);
@@ -21,21 +18,11 @@ contract PositioningConfig is IPositioningConfig, Initializable, PositioningConf
     event MaintenanceMarginChanged(uint24 mmRatio);
     event PartialLiquidationRatioChanged(uint24 partialLiquidationRatio);
 
-    bytes32 public constant POSITIONING_CONFIG_ADMIN = keccak256("POSITIONING_CONFIG_ADMIN");
-
-    //
-    // MODIFIER
-    //
-
     modifier checkRatio(uint24 ratio) {
         // PositioningConfig: ratio overflow
         require(ratio <= 1e6, "PC_RO");
         _;
     }
-
-    //
-    // EXTERNAL NON-VIEW
-    //
 
     function initialize() external initializer {
         _maxMarketsPerAccount = type(uint8).max;
@@ -44,7 +31,7 @@ contract PositioningConfig is IPositioningConfig, Initializable, PositioningConf
         _liquidationPenaltyRatio = 0.025e6; // initial penalty ratio, 2.5% in decimal 6
         _partialCloseRatio = 0.25e6; // partial close ratio, 25% in decimal 6
         _partialLiquidationRatio = 0.1e6; // partial liquidation ratio, 10% in decimal 6
-        _maxFundingRate = 0.1e6; // max funding rate, 10% in decimal 6
+        _maxFundingRate = 0.08e6; // max funding rate, 10% in decimal 6
         _twapInterval = 14400;
         _settlementTokenBalanceCap = 0;
         _grantRole(POSITIONING_CONFIG_ADMIN, _msgSender());
@@ -121,10 +108,6 @@ contract PositioningConfig is IPositioningConfig, Initializable, PositioningConf
         _partialLiquidationRatio = partialLiquidationRatioArg;
         emit PartialLiquidationRatioChanged(_partialLiquidationRatio);
     }
-
-    //
-    // EXTERNAL VIEW
-    //
 
     /// @inheritdoc IPositioningConfig
     function getMaxMarketsPerAccount() external view override returns (uint8) {

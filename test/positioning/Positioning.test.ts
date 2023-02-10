@@ -4,6 +4,7 @@ const { Order, Asset, sign, encodeAddress } = require("../order");
 import { FakeContract, smock } from "@defi-wonderland/smock";
 import { FundingRate, IndexPriceOracle, MarkPriceOracle } from "../../typechain";
 import { BigNumber } from "ethers";
+import { max } from "lodash";
 
 describe("Positioning", function () {
   let MatchingEngine;
@@ -45,6 +46,7 @@ describe("Positioning", function () {
   let perpViewFake;
   let orderLeft, orderRight;
   const deadline = 87654321987654;
+  const maxFundingRate = 0.08;
   let owner, account1, account2, account3, account4, relayer;
   let liquidator;
 
@@ -199,7 +201,7 @@ describe("Positioning", function () {
         markPriceOracle.address,
         indexPriceOracle.address,
         0,
-        [owner.address, account2.address]
+        [owner.address, account2.address],
       ],
       {
         initializer: "initialize",
@@ -288,7 +290,7 @@ describe("Positioning", function () {
               markPriceOracle.address,
               indexPriceOracle.address,
               0,
-              [owner.address, account2.address]
+              [owner.address, account2.address],
             ],
             {
               initializer: "initialize",
@@ -311,7 +313,7 @@ describe("Positioning", function () {
               markPriceOracle.address,
               indexPriceOracle.address,
               0,
-              [owner.address, account2.address]
+              [owner.address, account2.address],
             ],
             {
               initializer: "initialize",
@@ -334,7 +336,7 @@ describe("Positioning", function () {
               markPriceOracle.address,
               indexPriceOracle.address,
               0,
-              [owner.address, account2.address]
+              [owner.address, account2.address],
             ],
             {
               initializer: "initialize",
@@ -357,7 +359,7 @@ describe("Positioning", function () {
               markPriceOracle.address,
               indexPriceOracle.address,
               0,
-              [owner.address, account2.address]
+              [owner.address, account2.address],
             ],
             {
               initializer: "initialize",
@@ -423,11 +425,11 @@ describe("Positioning", function () {
             .openPosition(orderLeft, signatureLeft, orderRight, signatureRight, liquidator),
         ).to.emit(positioning, "PositionChanged");
 
-        const positionSize = await accountBalance1.getTakerPositionSize(
+        const positionSize = await accountBalance1.getPositionSize(
           account1.address,
           orderLeft.takeAsset.virtualToken,
         );
-        const positionSize1 = await accountBalance1.getTakerPositionSize(
+        const positionSize1 = await accountBalance1.getPositionSize(
           account2.address,
           orderLeft.takeAsset.virtualToken,
         );
@@ -506,11 +508,11 @@ describe("Positioning", function () {
             ),
         ).to.emit(positioning, "PositionChanged");
 
-        const positionSize = await accountBalance1.getTakerPositionSize(
+        const positionSize = await accountBalance1.getPositionSize(
           account1.address,
           orderLeft.takeAsset.virtualToken,
         );
-        const positionSize1 = await accountBalance1.getTakerPositionSize(
+        const positionSize1 = await accountBalance1.getPositionSize(
           account2.address,
           orderLeft.takeAsset.virtualToken,
         );
@@ -518,7 +520,7 @@ describe("Positioning", function () {
         await expect(positionSize.toString()).to.be.equal(convert("24"));
         await expect(positionSize1.toString()).to.be.equal(convert("-24"));
       });
-      it("should use order validation before opening position", async () => {
+      it("should use order validation before opening position ", async () => {
         // const txn = await markPriceOracle.getCumulativePrice(10000000, 0);
 
         await matchingEngine.grantMatchOrders(positioning.address);
@@ -591,17 +593,295 @@ describe("Positioning", function () {
             ),
         ).to.emit(positioning, "PositionChanged");
 
-        const positionSize = await accountBalance1.getTakerPositionSize(
+        const positionSize = await accountBalance1.getPositionSize(
           account1.address,
           orderLeft.takeAsset.virtualToken,
         );
-        const positionSize1 = await accountBalance1.getTakerPositionSize(
+        const positionSize1 = await accountBalance1.getPositionSize(
           account2.address,
           orderLeft.takeAsset.virtualToken,
         );
 
         await expect(positionSize.toString()).to.be.equal(convert("40"));
         await expect(positionSize1.toString()).to.be.equal(convert("-40"));
+      });
+
+      it("should match orders and open position with multiple orders funding rate should not be greator than 0.08", async () => {
+        // const txn = await markPriceOracle.getCumulativePrice(10000000, 0);
+
+        await matchingEngine.grantMatchOrders(positioning.address);
+
+        await virtualToken.mint(account1.address, convert("1000"));
+        await virtualToken.mint(account2.address, convert("1000"));
+        await virtualToken.addWhitelist(account1.address);
+        await virtualToken.addWhitelist(account2.address);
+
+        await virtualToken.connect(account1).approve(vault.address, convert("1000"));
+        await virtualToken.connect(account2).approve(vault.address, convert("1000"));
+        await virtualToken.connect(account1).approve(volmexPerpPeriphery.address, convert("1000"));
+        await virtualToken.connect(account2).approve(volmexPerpPeriphery.address, convert("1000"));
+        await vaultController
+          .connect(account1)
+          .deposit(
+            volmexPerpPeriphery.address,
+            virtualToken.address,
+            account1.address,
+            convert("1000"),
+          );
+        await vaultController
+          .connect(account2)
+          .deposit(
+            volmexPerpPeriphery.address,
+            virtualToken.address,
+            account2.address,
+            convert("1000"),
+          );
+
+        const orderLeftLeverage = Order(
+          ORDER,
+          deadline,
+          account1.address,
+          Asset(volmexBaseToken.address, convert("10")),
+          Asset(virtualToken.address, convert("1000")),
+          1,
+          0,
+          true,
+        );
+
+        const orderRightLeverage = Order(
+          ORDER,
+          deadline,
+          account2.address,
+          Asset(virtualToken.address, convert("1000")),
+          Asset(volmexBaseToken.address, convert("10")),
+          1,
+          0,
+          false,
+        );
+
+        let signatureLeft = await getSignature(orderLeftLeverage, account1.address);
+        let signatureRight = await getSignature(orderRightLeverage, account2.address);
+
+        await expect(
+          positioning
+            .connect(account1)
+            .openPosition(
+              orderLeftLeverage,
+              signatureLeft,
+              orderRightLeverage,
+              signatureRight,
+              liquidator,
+            ),
+        ).to.emit(positioning, "PositionChanged");
+
+        const positionSize = await accountBalance1.getPositionSize(
+          account1.address,
+          orderLeft.takeAsset.virtualToken,
+        );
+        const positionSize1 = await accountBalance1.getPositionSize(
+          account2.address,
+          orderLeft.takeAsset.virtualToken,
+        );
+
+        await expect(positionSize.toString()).to.be.equal(convert("-10"));
+        await expect(positionSize1.toString()).to.be.equal(convert("10"));
+
+        const orderLeftLeverage1 = Order(
+          ORDER,
+          deadline,
+          account1.address,
+          Asset(volmexBaseToken.address, convert("10")),
+          Asset(virtualToken.address, convert("1000")),
+          3,
+          0,
+          true,
+        );
+
+        const orderRightLeverage1 = Order(
+          ORDER,
+          deadline,
+          account2.address,
+          Asset(virtualToken.address, convert("1000")),
+          Asset(volmexBaseToken.address, convert("10")),
+          4,
+          0,
+          false,
+        );
+        let signatureLeft1 = await getSignature(orderLeftLeverage1, account1.address);
+        let signatureRight1 = await getSignature(orderRightLeverage1, account2.address);
+
+        // let a = await indexPriceOracle
+        // opening the position here
+        await expect(
+          positioning
+            .connect(account1)
+            .openPosition(
+              orderLeftLeverage1,
+              signatureLeft1,
+              orderRightLeverage1,
+              signatureRight1,
+              liquidator,
+            ),
+        ).to.emit(positioning, "PositionChanged");
+
+        const positionSize3 = await accountBalance1.getPositionSize(
+          account1.address,
+          orderLeft.takeAsset.virtualToken,
+        );
+        const positionSize2 = await accountBalance1.getPositionSize(
+          account2.address,
+          orderLeft.takeAsset.virtualToken,
+        );
+        await expect(positionSize3.toString()).to.be.equal(convert("-20"));
+        await expect(positionSize2.toString()).to.be.equal(convert("20"));
+        const pendingFunding1 = parseInt(
+          await positioning.getPendingFundingPayment(account1.address, volmexBaseToken.address),
+        );
+        const pendingFunding2 = parseInt(
+          await positioning.getPendingFundingPayment(account2.address, volmexBaseToken.address),
+        );
+        expect(Math.abs(pendingFunding1 / parseInt(positionSize3))).to.be.lessThan(maxFundingRate);
+        expect(Math.abs(pendingFunding2 / parseInt(positionSize2))).to.be.lessThan(maxFundingRate);
+      });
+      it("should match orders and open position with multiple orders funding rate should not be greator than 0.08 with chnage in prices", async () => {
+        // const txn = await markPriceOracle.getCumulativePrice(10000000, 0);
+
+        await matchingEngine.grantMatchOrders(positioning.address);
+
+        await virtualToken.mint(account1.address, convert("1000"));
+        await virtualToken.mint(account2.address, convert("1000"));
+        await virtualToken.addWhitelist(account1.address);
+        await virtualToken.addWhitelist(account2.address);
+
+        await virtualToken.connect(account1).approve(vault.address, convert("1000"));
+        await virtualToken.connect(account2).approve(vault.address, convert("1000"));
+        await virtualToken.connect(account1).approve(volmexPerpPeriphery.address, convert("1000"));
+        await virtualToken.connect(account2).approve(volmexPerpPeriphery.address, convert("1000"));
+        await vaultController
+          .connect(account1)
+          .deposit(
+            volmexPerpPeriphery.address,
+            virtualToken.address,
+            account1.address,
+            convert("1000"),
+          );
+        await vaultController
+          .connect(account2)
+          .deposit(
+            volmexPerpPeriphery.address,
+            virtualToken.address,
+            account2.address,
+            convert("1000"),
+          );
+
+        const orderLeftLeverage = Order(
+          ORDER,
+          deadline,
+          account1.address,
+          Asset(volmexBaseToken.address, convert("10")),
+          Asset(virtualToken.address, convert("1000")),
+          1,
+          0,
+          true,
+        );
+
+        const orderRightLeverage = Order(
+          ORDER,
+          deadline,
+          account2.address,
+          Asset(virtualToken.address, convert("1000")),
+          Asset(volmexBaseToken.address, convert("10")),
+          1,
+          0,
+          false,
+        );
+
+        let signatureLeft = await getSignature(orderLeftLeverage, account1.address);
+        let signatureRight = await getSignature(orderRightLeverage, account2.address);
+
+        await expect(
+          positioning
+            .connect(account1)
+            .openPosition(
+              orderLeftLeverage,
+              signatureLeft,
+              orderRightLeverage,
+              signatureRight,
+              liquidator,
+            ),
+        ).to.emit(positioning, "PositionChanged");
+
+        const positionSize = await accountBalance1.getPositionSize(
+          account1.address,
+          orderLeft.takeAsset.virtualToken,
+        );
+        const positionSize1 = await accountBalance1.getPositionSize(
+          account2.address,
+          orderLeft.takeAsset.virtualToken,
+        );
+
+        await expect(positionSize.toString()).to.be.equal(convert("-10"));
+        await expect(positionSize1.toString()).to.be.equal(convert("10"));
+
+        const orderLeftLeverage1 = Order(
+          ORDER,
+          deadline,
+          account1.address,
+          Asset(volmexBaseToken.address, convert("10")),
+          Asset(virtualToken.address, convert("1000")),
+          3,
+          0,
+          true,
+        );
+
+        const orderRightLeverage1 = Order(
+          ORDER,
+          deadline,
+          account2.address,
+          Asset(virtualToken.address, convert("1000")),
+          Asset(volmexBaseToken.address, convert("10")),
+          4,
+          0,
+          false,
+        );
+        let signatureLeft1 = await getSignature(orderLeftLeverage1, account1.address);
+        let signatureRight1 = await getSignature(orderRightLeverage1, account2.address);
+
+        // let a = await indexPriceOracle
+        // opening the position here
+        await expect(
+          positioning
+            .connect(account1)
+            .openPosition(
+              orderLeftLeverage1,
+              signatureLeft1,
+              orderRightLeverage1,
+              signatureRight1,
+              liquidator,
+            ),
+        ).to.emit(positioning, "PositionChanged");
+
+        const positionSize3 = await accountBalance1.getPositionSize(
+          account1.address,
+          orderLeft.takeAsset.virtualToken,
+        );
+        const positionSize2 = await accountBalance1.getPositionSize(
+          account2.address,
+          orderLeft.takeAsset.virtualToken,
+        );
+        await expect(positionSize3.toString()).to.be.equal(convert("-20"));
+        await expect(positionSize2.toString()).to.be.equal(convert("20"));
+        const pendingFunding1 = parseInt(
+          await positioning.getPendingFundingPayment(account1.address, volmexBaseToken.address),
+        );
+        const pendingFunding2 = parseInt(
+          await positioning.getPendingFundingPayment(account2.address, volmexBaseToken.address),
+        );
+        await matchingEngine.addObservation(10000000, 0);
+        await matchingEngine.addObservation(10500000, 0);
+        await matchingEngine.addObservation(17082020, 0);
+        expect(Math.abs(pendingFunding1 / parseInt(positionSize3))).to.be.lessThan(maxFundingRate);
+        expect(Math.abs(pendingFunding2 / parseInt(positionSize2))).to.be.lessThan(maxFundingRate);
       });
 
       it("should match orders and open position with multiple orders", async () => {
@@ -672,11 +952,11 @@ describe("Positioning", function () {
             ),
         ).to.emit(positioning, "PositionChanged");
 
-        const positionSize = await accountBalance1.getTakerPositionSize(
+        const positionSize = await accountBalance1.getPositionSize(
           account1.address,
           orderLeft.takeAsset.virtualToken,
         );
-        const positionSize1 = await accountBalance1.getTakerPositionSize(
+        const positionSize1 = await accountBalance1.getPositionSize(
           account2.address,
           orderLeft.takeAsset.virtualToken,
         );
@@ -722,11 +1002,11 @@ describe("Positioning", function () {
             ),
         ).to.emit(positioning, "PositionChanged");
 
-        const positionSize3 = await accountBalance1.getTakerPositionSize(
+        const positionSize3 = await accountBalance1.getPositionSize(
           account1.address,
           orderLeft.takeAsset.virtualToken,
         );
-        const positionSize2 = await accountBalance1.getTakerPositionSize(
+        const positionSize2 = await accountBalance1.getPositionSize(
           account2.address,
           orderLeft.takeAsset.virtualToken,
         );
@@ -804,11 +1084,11 @@ describe("Positioning", function () {
             ),
         ).to.emit(positioning, "PositionChanged");
 
-        const positionSize = await accountBalance1.getTakerPositionSize(
+        const positionSize = await accountBalance1.getPositionSize(
           account1.address,
           orderLeft.takeAsset.virtualToken,
         );
-        const positionSize1 = await accountBalance1.getTakerPositionSize(
+        const positionSize1 = await accountBalance1.getPositionSize(
           account2.address,
           orderLeft.takeAsset.virtualToken,
         );
@@ -886,11 +1166,11 @@ describe("Positioning", function () {
             .openPosition(orderLeft, signatureLeft, orderRight, signatureRight, liquidator),
         ).to.emit(positioning, "PositionChanged");
 
-        const positionSize = await accountBalance1.getTakerPositionSize(
+        const positionSize = await accountBalance1.getPositionSize(
           account1.address,
           orderLeft.takeAsset.virtualToken,
         );
-        const positionSize1 = await accountBalance1.getTakerPositionSize(
+        const positionSize1 = await accountBalance1.getPositionSize(
           account2.address,
           orderLeft.takeAsset.virtualToken,
         );
@@ -907,7 +1187,7 @@ describe("Positioning", function () {
             .connect(account1)
             .openPosition(orderLeft1, signatureLeft1, orderRight1, signatureRight1, liquidator),
         ).to.emit(positioning, "PositionChanged");
-        const positionSizeAfter = await accountBalance1.getTakerPositionSize(
+        const positionSizeAfter = await accountBalance1.getPositionSize(
           account1.address,
           virtualToken.address,
         );
@@ -976,11 +1256,11 @@ describe("Positioning", function () {
             .openPosition(orderLeft, signatureLeft, orderRight, signatureRight, liquidator),
         ).to.emit(positioning, "PositionChanged");
 
-        const positionSize = await accountBalance1.getTakerPositionSize(
+        const positionSize = await accountBalance1.getPositionSize(
           account1.address,
           orderLeft.takeAsset.virtualToken,
         );
-        const positionSize1 = await accountBalance1.getTakerPositionSize(
+        const positionSize1 = await accountBalance1.getPositionSize(
           account2.address,
           orderLeft.takeAsset.virtualToken,
         );
@@ -1023,11 +1303,11 @@ describe("Positioning", function () {
             liquidator,
           ),
         ).to.emit(positioning, "PositionChanged");
-        const positionSizeAfter = await accountBalance1.getTakerPositionSize(
+        const positionSizeAfter = await accountBalance1.getPositionSize(
           account1.address,
           orderLeft1.makeAsset.virtualToken,
         );
-        const positionSizeAfter1 = await accountBalance1.getTakerPositionSize(
+        const positionSizeAfter1 = await accountBalance1.getPositionSize(
           account2.address,
           orderLeft1.makeAsset.virtualToken,
         );
@@ -1097,47 +1377,31 @@ describe("Positioning", function () {
       });
 
       it("test for liquidators", async () => {
-        await expect(
-          await positioning.isLiquidatorWhitelist(owner.address)
-        ).to.equal(true);
+        await expect(await positioning.isLiquidatorWhitelist(owner.address)).to.equal(true);
 
-        await expect(
-          await positioning.isLiquidatorWhitelist(account2.address)
-        ).to.equal(true);
+        await expect(await positioning.isLiquidatorWhitelist(account2.address)).to.equal(true);
 
-        await expect(
-          await positioning.isLiquidatorWhitelist(account1.address)
-        ).to.equal(false);
+        await expect(await positioning.isLiquidatorWhitelist(account1.address)).to.equal(false);
       });
 
       it("should whitelist a new liquidator", async () => {
-        await expect(
-          await positioning.whitelistLiquidator(owner.address, false)
-        )
-        .to
-        .emit(positioning, 'LiquidatorWhitelisted')
-        .withArgs(owner.address, false);
+        await expect(await positioning.whitelistLiquidator(owner.address, false))
+          .to.emit(positioning, "LiquidatorWhitelisted")
+          .withArgs(owner.address, false);
 
-        await expect(
-          await positioning.isLiquidatorWhitelist(owner.address)
-        ).to.equal(false);
+        await expect(await positioning.isLiquidatorWhitelist(owner.address)).to.equal(false);
 
-        await expect(
-          await positioning.whitelistLiquidator(account1.address, true)
-        )
-        .to
-        .emit(positioning, 'LiquidatorWhitelisted')
-        .withArgs(account1.address, true);
+        await expect(await positioning.whitelistLiquidator(account1.address, true))
+          .to.emit(positioning, "LiquidatorWhitelisted")
+          .withArgs(account1.address, true);
 
-        await expect(
-          await positioning.isLiquidatorWhitelist(account1.address)
-        ).to.equal(true);
+        await expect(await positioning.isLiquidatorWhitelist(account1.address)).to.equal(true);
       });
 
-      it('should not be able to whitelist liquidator if not have appropriate role', async () => {
+      it("should not be able to whitelist liquidator if not have appropriate role", async () => {
         await expect(
-          positioning.connect(account1).whitelistLiquidator(owner.address, false)
-        ).to.be.revertedWith('Positioning: Not admin');
+          positioning.connect(account1).whitelistLiquidator(owner.address, false),
+        ).to.be.revertedWith("Positioning: Not admin");
       });
     });
     describe("failure", function () {
@@ -1171,9 +1435,9 @@ describe("Positioning", function () {
           false,
         );
 
-        await expect(positioning
-          .connect(account1)
-          .getOrderValidate(orderLeftLeverage)).to.be.revertedWith("V_PERP_NEFC");
+        await expect(
+          positioning.connect(account1).getOrderValidate(orderLeftLeverage),
+        ).to.be.revertedWith("V_PERP_NEFC");
       });
 
       it("failure for wrong basetoken given", async () => {
@@ -1836,7 +2100,7 @@ describe("Liquidation test in Positioning", function () {
         markPriceOracle.address,
         indexPriceOracle.address,
         0,
-        [owner.address, account2.address]
+        [owner.address, account2.address],
       ],
       {
         initializer: "initialize",
@@ -1942,11 +2206,11 @@ describe("Liquidation test in Positioning", function () {
           ),
         ).to.emit(positioning, "PositionChanged");
 
-        const positionSize = await accountBalance1.getTakerPositionSize(
+        const positionSize = await accountBalance1.getPositionSize(
           account1.address,
           orderLeft.makeAsset.virtualToken,
         );
-        const positionSize1 = await accountBalance1.getTakerPositionSize(
+        const positionSize1 = await accountBalance1.getPositionSize(
           account2.address,
           orderLeft.makeAsset.virtualToken,
         );
@@ -1965,7 +2229,7 @@ describe("Liquidation test in Positioning", function () {
             )
           ).wait();
         }
-console.log("Testsssss", account2.address)
+        console.log("Testsssss", account2.address);
         // liquidating the position
         await expect(
           positioning
@@ -1973,12 +2237,12 @@ console.log("Testsssss", account2.address)
             .liquidate(account1.address, volmexBaseToken.address, "-10000000000000000000"),
         ).to.emit(positioning, "PositionLiquidated");
 
-        const positionSizeAfter = await accountBalance1.getTakerPositionSize(
+        const positionSizeAfter = await accountBalance1.getPositionSize(
           account1.address,
           volmexBaseToken.address,
         );
 
-        const positionSizeLiquidator = await accountBalance1.getTakerPositionSize(
+        const positionSizeLiquidator = await accountBalance1.getPositionSize(
           account2.address,
           volmexBaseToken.address,
         );
@@ -2001,11 +2265,11 @@ console.log("Testsssss", account2.address)
           ),
         ).to.emit(positioning, "PositionChanged");
 
-        const positionSize = await accountBalance1.getTakerPositionSize(
+        const positionSize = await accountBalance1.getPositionSize(
           account1.address,
           orderLeft.makeAsset.virtualToken,
         );
-        const positionSize1 = await accountBalance1.getTakerPositionSize(
+        const positionSize1 = await accountBalance1.getPositionSize(
           account2.address,
           orderLeft.makeAsset.virtualToken,
         );
@@ -2031,12 +2295,12 @@ console.log("Testsssss", account2.address)
             .liquidateFullPosition(account1.address, volmexBaseToken.address),
         ).to.emit(positioning, "PositionLiquidated");
 
-        const positionSizeAfter = await accountBalance1.getTakerPositionSize(
+        const positionSizeAfter = await accountBalance1.getPositionSize(
           account1.address,
           volmexBaseToken.address,
         );
 
-        const positionSizeLiquidator = await accountBalance1.getTakerPositionSize(
+        const positionSizeLiquidator = await accountBalance1.getPositionSize(
           account2.address,
           volmexBaseToken.address,
         );
@@ -2052,8 +2316,12 @@ console.log("Testsssss", account2.address)
         await virtualToken.connect(account1).approve(vault.address, ten.add(ten).toString());
         await virtualToken.connect(account2).approve(vault.address, ten.add(ten).toString());
 
-        await virtualToken.connect(account1).approve(volmexPerpPeriphery.address, ten.add(ten).toString());
-        await virtualToken.connect(account2).approve(volmexPerpPeriphery.address, ten.add(ten).toString());
+        await virtualToken
+          .connect(account1)
+          .approve(volmexPerpPeriphery.address, ten.add(ten).toString());
+        await virtualToken
+          .connect(account2)
+          .approve(volmexPerpPeriphery.address, ten.add(ten).toString());
 
         await vaultController
           .connect(account1)
@@ -2094,7 +2362,7 @@ console.log("Testsssss", account2.address)
           0,
           false,
         );
-    
+
         const orderRight1 = Order(
           ORDER,
           87654321987654,
@@ -2119,11 +2387,11 @@ console.log("Testsssss", account2.address)
           ),
         ).to.emit(positioning, "PositionChanged");
 
-        const positionSize = await accountBalance1.getTakerPositionSize(
+        const positionSize = await accountBalance1.getPositionSize(
           account1.address,
           orderLeft1.takeAsset.virtualToken,
         );
-        const positionSize1 = await accountBalance1.getTakerPositionSize(
+        const positionSize1 = await accountBalance1.getPositionSize(
           account2.address,
           orderLeft1.takeAsset.virtualToken,
         );
@@ -2148,12 +2416,12 @@ console.log("Testsssss", account2.address)
             .liquidateFullPosition(account1.address, volmexBaseToken.address),
         ).to.emit(positioning, "PositionLiquidated");
 
-        const positionSizeAfter = await accountBalance1.getTakerPositionSize(
+        const positionSizeAfter = await accountBalance1.getPositionSize(
           account1.address,
           volmexBaseToken.address,
         );
 
-        const positionSizeLiquidator = await accountBalance1.getTakerPositionSize(
+        const positionSizeLiquidator = await accountBalance1.getPositionSize(
           account2.address,
           volmexBaseToken.address,
         );
@@ -2175,11 +2443,11 @@ console.log("Testsssss", account2.address)
             liquidator,
           ),
         ).to.emit(positioning, "PositionChanged");
-        const positionSize = await accountBalance1.getTakerPositionSize(
+        const positionSize = await accountBalance1.getPositionSize(
           account1.address,
           orderLeft.makeAsset.virtualToken,
         );
-        const positionSize1 = await accountBalance1.getTakerPositionSize(
+        const positionSize1 = await accountBalance1.getPositionSize(
           account2.address,
           orderLeft.makeAsset.virtualToken,
         );
@@ -2207,11 +2475,11 @@ console.log("Testsssss", account2.address)
             liquidator,
           ),
         ).to.emit(positioning, "PositionChanged");
-        const positionSize = await accountBalance1.getTakerPositionSize(
+        const positionSize = await accountBalance1.getPositionSize(
           account1.address,
           orderLeft.makeAsset.virtualToken,
         );
-        const positionSize1 = await accountBalance1.getTakerPositionSize(
+        const positionSize1 = await accountBalance1.getPositionSize(
           account2.address,
           orderLeft.makeAsset.virtualToken,
         );
@@ -2253,11 +2521,11 @@ console.log("Testsssss", account2.address)
           ),
         ).to.emit(positioning, "PositionChanged");
 
-        const positionSize = await accountBalance1.getTakerPositionSize(
+        const positionSize = await accountBalance1.getPositionSize(
           account1.address,
           orderLeft.makeAsset.virtualToken,
         );
-        const positionSize1 = await accountBalance1.getTakerPositionSize(
+        const positionSize1 = await accountBalance1.getPositionSize(
           account2.address,
           orderLeft.makeAsset.virtualToken,
         );
