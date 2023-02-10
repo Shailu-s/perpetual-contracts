@@ -110,6 +110,7 @@
     "@openzeppelin/test-helpers": "^0.5.16",
     "dotenv": "^16.0.3",
     "eth-sig-util": "3.0.1",
-    "remixd": "^0.2.4"
+    "remixd": "^0.2.4",
+    "sol2uml": "^2.4.3"
   }
 }
