@@ -174,6 +174,8 @@ describe("VolmexPerpPeriphery", function () {
     await positioning.deployed();
     await (await perpView.setPositioning(positioning.address)).wait();
     await (await perpView.incrementPerpIndex()).wait();
+    await (await volmexBaseToken.setMintBurnRole(positioning.address)).wait();
+    await (await volmexQuoteToken.setMintBurnRole(positioning.address)).wait();
 
     marketRegistry = await upgrades.deployProxy(MarketRegistry, [volmexQuoteToken.address]);
 
@@ -238,11 +240,6 @@ describe("VolmexPerpPeriphery", function () {
     });
 
     it("Open position", async () => {
-      console.log("Index price: ", (await indexPriceOracle.getIndexTwap(0)).toString());
-      console.log(
-        "Mark price: ",
-        (await markPriceOracle.getCumulativePrice("3600", 0)).toString(),
-      );
       let salt = 250;
       let txBefore = [];
       for (let index = 0; index < 10; index++) {
@@ -280,16 +277,6 @@ describe("VolmexPerpPeriphery", function () {
           liquidator,
         );
         const receipt = await tx.wait();
-        console.log(
-          "Confirmations",
-          index + 1,
-          (await markPriceOracle.getCumulativePrice(3600, 0)).toString(),
-        );
-        console.log(
-          "Alice",
-          (await accountBalance1.getPnlAndPendingFee(alice.address)).toString(),
-        );
-        console.log("Bob", (await accountBalance1.getPnlAndPendingFee(bob.address)).toString());
         let txDataBefore = {
           "Mark price": (await markPriceOracle.getCumulativePrice("3600", 0)).toString(),
           "Alice position": (
@@ -359,7 +346,6 @@ describe("VolmexPerpPeriphery", function () {
           txBefore.push(txDataBefore);
         }
       }
-      console.log(txBefore);
     });
   });
 

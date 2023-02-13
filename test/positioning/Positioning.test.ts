@@ -207,6 +207,8 @@ describe("Positioning", function () {
         initializer: "initialize",
       },
     );
+    await (await volmexBaseToken.setMintBurnRole(positioning.address)).wait();
+    await (await virtualToken.setMintBurnRole(positioning.address)).wait();
     marketRegistry = await upgrades.deployProxy(MarketRegistry, [virtualToken.address]);
 
     // await marketRegistry.connect(owner).addBaseToken(virtualToken.address)
@@ -2106,6 +2108,8 @@ describe("Liquidation test in Positioning", function () {
         initializer: "initialize",
       },
     );
+    await (await volmexBaseToken.setMintBurnRole(positioning.address)).wait();
+    await (await virtualToken.setMintBurnRole(positioning.address)).wait();
     marketRegistry = await upgrades.deployProxy(MarketRegistry, [virtualToken.address]);
     perpViewFake = await smock.fake("VolmexPerpView");
     volmexPerpPeriphery = await upgrades.deployProxy(VolmexPerpPeriphery, [
