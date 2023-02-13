@@ -254,8 +254,7 @@ describe("MatchingEngine", function () {
       it("should fail to match orders as left order assets don't match", async () => {
         const [owner, account1, account2] = await ethers.getSigners();
 
-        await virtualToken.addWhitelist(account1.address);
-        await virtualToken.addWhitelist(account2.address);
+
         await virtualToken.connect(account1).approve(matchingEngine.address, 1000000000000000);
         await virtualToken.connect(account2).approve(matchingEngine.address, 1000000000000000);
 
@@ -291,8 +290,7 @@ describe("MatchingEngine", function () {
       it("should fail to match orders as left order .takevalue == 0", async () => {
         const [owner, account1, account2] = await ethers.getSigners();
 
-        await virtualToken.addWhitelist(account1.address);
-        await virtualToken.addWhitelist(account2.address);
+
         await virtualToken.connect(account1).approve(matchingEngine.address, 1000000000000000);
         await virtualToken.connect(account2).approve(matchingEngine.address, 1000000000000000);
 
@@ -328,8 +326,7 @@ describe("MatchingEngine", function () {
       it(" should fail if trader for both the orders in same", async () => {
         const [owner, account1] = await ethers.getSigners();
 
-        await virtualToken.addWhitelist(account1.address);
-        await virtualToken.addWhitelist(account2.address);
+
         await virtualToken.connect(account1).approve(matchingEngine.address, 1000000000000000);
         await virtualToken.connect(account2).approve(matchingEngine.address, 1000000000000000);
 
@@ -365,8 +362,7 @@ describe("MatchingEngine", function () {
       it("Should Not match orders since executer in not authorised", async () => {
         const [owner, account1, account2] = await ethers.getSigners();
 
-        await virtualToken.addWhitelist(account1.address);
-        await virtualToken.addWhitelist(account2.address);
+
         await virtualToken.connect(account1).approve(matchingEngine.address, 1000000000000000);
         await virtualToken.connect(account2).approve(matchingEngine.address, 1000000000000000);
 
@@ -404,8 +400,7 @@ describe("MatchingEngine", function () {
       it("should fail to match orders as left order take assets don't match", async () => {
         const [owner, account1, account2] = await ethers.getSigners();
 
-        await virtualToken.addWhitelist(account1.address);
-        await virtualToken.addWhitelist(account2.address);
+
         await virtualToken.connect(account1).approve(matchingEngine.address, 1000000000000000);
         await virtualToken.connect(account2).approve(matchingEngine.address, 1000000000000000);
 
@@ -532,9 +527,7 @@ describe("MatchingEngine", function () {
       const [owner, account1, account2, account3, account4] = await ethers.getSigners();
 
       await virtualToken.mint(account1.address, 1000000000000000);
-      await virtualToken.mint(account2.address, 1000000000000000);
-      await virtualToken.addWhitelist(account1.address);
-      await virtualToken.addWhitelist(account2.address);
+      
       await virtualToken.connect(account1).approve(transferManagerTest.address, 1000000000000000);
       await virtualToken.connect(account2).approve(transferManagerTest.address, 1000000000000000);
 
@@ -549,9 +542,7 @@ describe("MatchingEngine", function () {
       const [owner, account1, account2, account3, account4] = await ethers.getSigners();
 
       await virtualToken.mint(account1.address, 1000000000000000);
-      await virtualToken.mint(account2.address, 1000000000000000);
-      await virtualToken.addWhitelist(account1.address);
-      await virtualToken.addWhitelist(account2.address);
+
       await virtualToken.connect(account1).approve(transferManagerTest.address, 1000000000000000);
       await virtualToken.connect(account2).approve(transferManagerTest.address, 1000000000000000);
 

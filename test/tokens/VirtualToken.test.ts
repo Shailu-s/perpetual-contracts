@@ -48,7 +48,6 @@ describe("VirtualToken", function () {
     it("should burn tokens", async () => {
       await virtualToken.mint(account1.address, 10000000);
       expect(await virtualToken.balanceOf(account1.address)).to.be.equal(10000000);
-      await virtualToken.addWhitelist(account1.address);
       await virtualToken.burn(account1.address, 5000000);
       expect(await virtualToken.balanceOf(account1.address)).to.be.equal(5000000);
     });
@@ -68,24 +67,6 @@ describe("VirtualToken", function () {
       await expect(
         virtualToken.connect(account1).burn(account2.address, 100000),
       ).to.be.revertedWith("VirtualToken: Not burner");
-    });
-  });
-  describe("Add and Remove user from white list", function () {
-    it("Add user to white list", async () => {
-      expect(await virtualToken.addWhitelist(account1.address))
-        .to.emit(virtualToken, "WhitelistAdded")
-        .withArgs(account1.address);
-      expect(await virtualToken.isInWhitelist(account1.address)).to.be.equal(true);
-    });
-    it("Remove user to white list", async () => {
-      expect(await virtualToken.addWhitelist(account1.address))
-        .to.emit(virtualToken, "WhitelistAdded")
-        .withArgs(account1.address);
-      expect(await virtualToken.isInWhitelist(account1.address)).to.be.equal(true);
-      expect(await virtualToken.removeWhitelist(account1.address))
-        .to.emit(virtualToken, "WhitelistRemoved")
-        .withArgs(account1.address);
-      expect(await virtualToken.isInWhitelist(account1.address)).to.be.equal(false);
     });
   });
 });
