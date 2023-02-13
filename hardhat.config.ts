@@ -10,7 +10,7 @@ import "@openzeppelin/hardhat-defender";
 import "@nomiclabs/hardhat-etherscan";
 import { HardhatUserConfig } from "hardhat/config";
 import "solidity-coverage";
-
+import 'hardhat-docgen'
 import { config as dotEnvConfig } from "dotenv";
 dotEnvConfig();
 
@@ -67,6 +67,11 @@ const config: HardhatUserConfig = {
     apiKey: process.env.DEFENDER_TEAM_API_KEY,
     apiSecret: process.env.DEFENDER_TEAM_API_SECRET_KEY,
   },
+  docgen: {
+    path: './docs',
+    clear: true,
+    runOnCompile: true,
+  }
 };
 
 export default config;
