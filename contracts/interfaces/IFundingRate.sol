@@ -11,7 +11,6 @@ interface IFundingRate {
     /// @param baseToken address of the baseToken
     /// @return fundingPayment pnding funding payment on this basetoken
     function settleFunding(address trader, address baseToken) external returns (int256 fundingPayment);
-
     ///@dev this function calculates pending funding payment of a trader respective to basetoken
     /// @param trader address of the trader
     /// @param baseToken address of the baseToken

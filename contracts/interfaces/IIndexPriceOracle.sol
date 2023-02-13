@@ -19,65 +19,20 @@ interface IIndexPriceOracle {
 
     // Getter  methods
     function volatilityCapRatioByIndex(uint256 _index) external view returns (uint256);
-
     function volatilityTokenPriceProofHash(uint256 _index) external view returns (bytes32);
-
     function volatilityIndexBySymbol(string calldata _tokenSymbol) external view returns (uint256);
-
     function volatilityLastUpdateTimestamp(uint256 _index) external view returns (uint256);
-
     function volatilityLeverageByIndex(uint256 _index) external view returns (uint256);
-
     function baseVolatilityIndex(uint256 _index) external view returns (uint256);
-
     function indexCount() external view returns (uint256);
-
     function latestRoundData(uint256 _index) external view returns (uint256 answer, uint256 lastUpdateTimestamp);
-
-    function getIndexTwap(uint256 _index)
-        external
-        view
-        returns (
-            uint256 volatilityTokenTwap,
-            uint256 iVolatilityTokenTwap,
-            uint256 lastUpdateTimestamp
-        );
-
-    function getVolatilityTokenPriceByIndex(uint256 _index)
-        external
-        view
-        returns (
-            uint256 volatilityTokenPrice,
-            uint256 iVolatilityTokenPrice,
-            uint256 lastUpdateTimestamp
-        );
-
-    function getVolatilityPriceBySymbol(string calldata _volatilityTokenSymbol)
-        external
-        view
-        returns (
-            uint256 volatilityTokenPrice,
-            uint256 iVolatilityTokenPrice,
-            uint256 lastUpdateTimestamp
-        );
+    function getIndexTwap(uint256 _index) external view returns (uint256 volatilityTokenTwap, uint256 iVolatilityTokenTwap, uint256 lastUpdateTimestamp);
+    function getVolatilityTokenPriceByIndex(uint256 _index) external view returns (uint256 volatilityTokenPrice, uint256 iVolatilityTokenPrice, uint256 lastUpdateTimestamp);
+    function getVolatilityPriceBySymbol(string calldata _volatilityTokenSymbol) external view returns (uint256 volatilityTokenPrice, uint256 iVolatilityTokenPrice, uint256 lastUpdateTimestamp);
 
     // Setter methods
     function updateIndexBySymbol(string calldata _tokenSymbol, uint256 _index) external;
-
     function updateBaseVolatilityIndex(uint256 _leverageVolatilityIndex, uint256 _newBaseVolatilityIndex) external;
-
-    function updateBatchVolatilityTokenPrice(
-        uint256[] memory _volatilityIndexes,
-        uint256[] memory _volatilityTokenPrices,
-        bytes32[] memory _proofHashes
-    ) external;
-
-    function addVolatilityIndex(
-        uint256 _volatilityTokenPrice,
-        IVolmexProtocol _protocol,
-        string calldata _volatilityTokenSymbol,
-        uint256 _leverage,
-        uint256 _baseVolatilityIndex,
-        bytes32 _proofHash
-    ) external;
+    function updateBatchVolatilityTokenPrice(uint256[] memory _volatilityIndexes, uint256[] memory _volatilityTokenPrices, bytes32[] memory _proofHashes) external;
+    function addVolatilityIndex(uint256 _volatilityTokenPrice, IVolmexProtocol _protocol, string calldata _volatilityTokenSymbol, uint256 _leverage, uint256 _baseVolatilityIndex, bytes32 _proofHash) external;
 }

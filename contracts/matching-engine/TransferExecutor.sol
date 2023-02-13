@@ -7,7 +7,6 @@ import "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol"
 
 import "../interfaces/IERC20TransferProxy.sol";
 import "../interfaces/ITransferExecutor.sol";
-import "../interfaces/IMintBurn.sol";
 import "../interfaces/IVirtualToken.sol";
 import "../libs/LibAsset.sol";
 
