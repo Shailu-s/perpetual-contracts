@@ -36,16 +36,7 @@ import { PositioningStorageV1 } from "../storage/PositioningStorage.sol";
 import { PositioningCallee } from "../helpers/PositioningCallee.sol";
 
 // never inherit any new stateful contract. never change the orders of parent stateful contracts
-contract Positioning is
-    IPositioning,
-    BlockContext,
-    ReentrancyGuardUpgradeable,
-    OwnerPausable,
-    PositioningStorageV1,
-    FundingRate,
-    EIP712Upgradeable,
-    OrderValidator
-{
+contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, OwnerPausable, PositioningStorageV1, FundingRate, EIP712Upgradeable, OrderValidator {
     using AddressUpgradeable for address;
     using LibSafeCastUint for uint256;
     using LibSafeCastInt for int256;
@@ -174,10 +165,7 @@ contract Positioning is
         // short = selling base token
         address baseToken = orderLeft.isShort ? orderLeft.makeAsset.virtualToken : orderLeft.takeAsset.virtualToken;
 
-        require(
-            IMarketRegistry(_marketRegistry).checkBaseToken(baseToken),
-            "V_PERP: Basetoken not registered at market"
-        );
+        require(IMarketRegistry(_marketRegistry).checkBaseToken(baseToken), "V_PERP: Basetoken not registered at market");
 
         // register base token for account balance calculations
         IAccountBalance(_accountBalance).registerBaseToken(orderLeft.trader, baseToken);
@@ -231,21 +219,14 @@ contract Positioning is
         uint24 imRatio = IPositioningConfig(_positioningConfig).getImRatio();
 
         require(
-            int256(order.isShort ? order.takeAsset.value : order.makeAsset.value) <
-                (_getFreeCollateralByRatio(order.trader, imRatio) * 1e6) / uint256(imRatio).toInt256(),
+            int256(order.isShort ? order.takeAsset.value : order.makeAsset.value) < (_getFreeCollateralByRatio(order.trader, imRatio) * 1e6) / uint256(imRatio).toInt256(),
             "V_PERP_NEFC"
         );
         return true;
     }
 
     ///@dev this function calculates total pending funding payment of a trader
-    function getAllPendingFundingPayment(address trader)
-        external
-        view
-        virtual
-        override
-        returns (int256 pendingFundingPayment)
-    {
+    function getAllPendingFundingPayment(address trader) external view virtual override returns (int256 pendingFundingPayment) {
         address[] memory baseTokens = IAccountBalance(_accountBalance).getBaseTokens(trader);
         uint256 baseTokenLength = baseTokens.length;
 
@@ -272,10 +253,7 @@ contract Positioning is
 
     /// @inheritdoc IPositioning
     function getPnlToBeRealized(RealizePnlParams memory params) public view override returns (int256) {
-        LibAccountMarket.Info memory info = IAccountBalance(_accountBalance).getAccountInfo(
-            params.trader,
-            params.baseToken
-        );
+        LibAccountMarket.Info memory info = IAccountBalance(_accountBalance).getAccountInfo(params.trader, params.baseToken);
 
         int256 takerOpenNotional = info.openNotional;
         int256 takerPositionSize = info.positionSize;
@@ -321,12 +299,7 @@ contract Positioning is
         int256 accountValue = _getAccountValue(trader);
 
         // trader's position is closed at index price and pnl realized
-        (int256 liquidatedPositionSize, int256 liquidatedPositionNotional) = _getLiquidatedPositionSizeAndNotional(
-            trader,
-            baseToken,
-            accountValue,
-            positionSizeToBeLiquidated
-        );
+        (int256 liquidatedPositionSize, int256 liquidatedPositionNotional) = _getLiquidatedPositionSizeAndNotional(trader, baseToken, accountValue, positionSizeToBeLiquidated);
         _modifyPositionAndRealizePnl(trader, baseToken, liquidatedPositionSize, liquidatedPositionNotional, 0);
 
         // trader pays liquidation penalty
@@ -346,8 +319,7 @@ contract Positioning is
         // liquidator opens a position with liquidationFeeToLiquidator as a discount
         // liquidator's openNotional = -liquidatedPositionNotional + liquidationFeeToLiquidator
         int256 liquidatorExchangedPositionSize = liquidatedPositionSize.neg256();
-        int256 liquidatorExchangedPositionNotional = liquidatedPositionNotional.neg256() +
-            liquidationFeeToLiquidator.toInt256();
+        int256 liquidatorExchangedPositionNotional = liquidatedPositionNotional.neg256() + liquidationFeeToLiquidator.toInt256();
         // note that this function will realize pnl if it's reducing liquidator's existing position size
         _modifyPositionAndRealizePnl(
             liquidator,
@@ -418,25 +390,11 @@ contract Positioning is
         );
 
         int256[2] memory realizedPnL;
-        realizedPnL[0] = _realizePnLChecks(
-            orderLeft,
-            baseToken,
-            internalData.leftExchangedPositionSize,
-            internalData.leftExchangedPositionNotional
-        );
-        realizedPnL[1] = _realizePnLChecks(
-            orderRight,
-            baseToken,
-            internalData.rightExchangedPositionSize,
-            internalData.rightExchangedPositionNotional
-        );
+        realizedPnL[0] = _realizePnLChecks(orderLeft, baseToken, internalData.leftExchangedPositionSize, internalData.leftExchangedPositionNotional);
+        realizedPnL[1] = _realizePnLChecks(orderRight, baseToken, internalData.rightExchangedPositionSize, internalData.rightExchangedPositionNotional);
 
         // modifies PnL of fee receiver
-        _modifyOwedRealizedPnl(
-            _getFeeReceiver(),
-            (orderFees.orderLeftFee + orderFees.orderRightFee).toInt256(),
-            baseToken
-        );
+        _modifyOwedRealizedPnl(_getFeeReceiver(), (orderFees.orderLeftFee + orderFees.orderRightFee).toInt256(), baseToken);
 
         // modifies positionSize and openNotional
         internalData.leftPositionSize = _settleBalanceAndDeregister(
@@ -527,14 +485,7 @@ contract Positioning is
     ) internal {
         int256 realizedPnl;
         if (exchangedPositionSize != 0) {
-            realizedPnl = getPnlToBeRealized(
-                RealizePnlParams({
-                    trader: trader,
-                    baseToken: baseToken,
-                    base: exchangedPositionSize,
-                    quote: exchangedPositionNotional
-                })
-            );
+            realizedPnl = getPnlToBeRealized(RealizePnlParams({ trader: trader, baseToken: baseToken, base: exchangedPositionSize, quote: exchangedPositionNotional }));
         }
 
         // realizedPnl is realized here
@@ -557,15 +508,7 @@ contract Positioning is
         int256 realizedPnl,
         int256 makerFee
     ) internal returns (int256) {
-        return
-            IAccountBalance(_accountBalance).settleBalanceAndDeregister(
-                trader,
-                baseToken,
-                takerBase,
-                takerQuote,
-                realizedPnl,
-                makerFee
-            );
+        return IAccountBalance(_accountBalance).settleBalanceAndDeregister(trader, baseToken, takerBase, takerQuote, realizedPnl, makerFee);
     }
 
     function _registerBaseToken(address trader, address token) internal {
@@ -615,11 +558,7 @@ contract Positioning is
             // shore the remaining positions and make sure traders having enough money to pay liquidation penalty.
 
             // CH_NEMRM : not enough minimum required margin after reducing/closing position
-            require(
-                _getAccountValue(order.trader) >=
-                    _getTotalAbsPositionValue(order.trader).mulRatio(_getLiquidationPenaltyRatio()).toInt256(),
-                "CH_NEMRM"
-            );
+            require(_getAccountValue(order.trader) >= _getTotalAbsPositionValue(order.trader).mulRatio(_getLiquidationPenaltyRatio()).toInt256(), "CH_NEMRM");
         }
         return pnlToBeRealized;
     }
@@ -631,21 +570,14 @@ contract Positioning is
         int256 accountValue,
         int256 positionSizeToBeLiquidated
     ) internal view returns (int256, int256) {
-        int256 maxLiquidatablePositionSize = IAccountBalance(_accountBalance).getLiquidatablePositionSize(
-            trader,
-            baseToken,
-            accountValue
-        );
+        int256 maxLiquidatablePositionSize = IAccountBalance(_accountBalance).getLiquidatablePositionSize(trader, baseToken, accountValue);
 
         if (positionSizeToBeLiquidated.abs() > maxLiquidatablePositionSize.abs() || positionSizeToBeLiquidated == 0) {
             positionSizeToBeLiquidated = maxLiquidatablePositionSize;
         }
 
         int256 liquidatedPositionSize = positionSizeToBeLiquidated.neg256();
-        int256 liquidatedPositionNotional = positionSizeToBeLiquidated.mulDiv(
-            _getIndexPrice(baseToken).toInt256(),
-            _ORACLE_BASE
-        );
+        int256 liquidatedPositionNotional = positionSizeToBeLiquidated.mulDiv(_getIndexPrice(baseToken).toInt256(), _ORACLE_BASE);
 
         return (liquidatedPositionSize, liquidatedPositionNotional);
     }

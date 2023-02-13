@@ -25,13 +25,7 @@ import { TestERC20 } from "../tests/TestERC20.sol";
 import { Vault } from "./Vault.sol";
 import { VaultControllerStorage } from "../storage/VaultControllerStorage.sol";
 
-contract VaultController is
-    ReentrancyGuardUpgradeable,
-    OwnerPausable,
-    VaultControllerStorage,
-    IVaultController,
-    AccessControlUpgradeable
-{
+contract VaultController is ReentrancyGuardUpgradeable, OwnerPausable, VaultControllerStorage, IVaultController, AccessControlUpgradeable {
     using AddressUpgradeable for address;
     using LibSafeCastUint for uint256;
     using LibPerpMath for uint256;
@@ -101,10 +95,7 @@ contract VaultController is
         // settle all funding payments owedRealizedPnl
         IPositioning(_positioning).settleAllFunding(to);
         // by this time there should be no owedRealizedPnl nor pending funding payment in free collateral
-        int256 freeCollateralByImRatio = getFreeCollateralByRatio(
-            to,
-            IPositioningConfig(_positioningConfig).getImRatio()
-        );
+        int256 freeCollateralByImRatio = getFreeCollateralByRatio(to, IPositioningConfig(_positioningConfig).getImRatio());
 
         uint256 amountX10_18 = LibSettlementTokenMath.parseSettlementToken(amount, IVault(_vault).decimals());
         // V_NEFC: not enough freeCollateral

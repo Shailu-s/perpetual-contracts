@@ -37,10 +37,7 @@ contract PositioningConfig is IPositioningConfig, Initializable, PositioningConf
         _grantRole(POSITIONING_CONFIG_ADMIN, _msgSender());
     }
 
-    function setLiquidationPenaltyRatio(uint24 liquidationPenaltyRatioArg)
-        external
-        checkRatio(liquidationPenaltyRatioArg)
-    {
+    function setLiquidationPenaltyRatio(uint24 liquidationPenaltyRatioArg) external checkRatio(liquidationPenaltyRatioArg) {
         _requirePositioningConfigAdmin();
         _liquidationPenaltyRatio = liquidationPenaltyRatioArg;
         emit LiquidationPenaltyRatioChanged(liquidationPenaltyRatioArg);
@@ -98,10 +95,7 @@ contract PositioningConfig is IPositioningConfig, Initializable, PositioningConf
         emit MaintenanceMarginChanged(_mmRatio);
     }
 
-    function setPartialLiquidationRatio(uint24 partialLiquidationRatioArg)
-        external
-        checkRatio(partialLiquidationRatioArg)
-    {
+    function setPartialLiquidationRatio(uint24 partialLiquidationRatioArg) external checkRatio(partialLiquidationRatioArg) {
         _requirePositioningConfigAdmin();
         // PositioningConfig: Invalid Partial Liquidation Ratio (PC_IPLR)
         require(partialLiquidationRatioArg > 0, "PC_IPLR");

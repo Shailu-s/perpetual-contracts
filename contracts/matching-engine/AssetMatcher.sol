@@ -14,11 +14,7 @@ abstract contract AssetMatcher is OwnableUpgradeable {
         }
     }
 
-    function _matchAssetOneSide(address leftBaseToken, address rightBaseToken)
-        private
-        pure
-        returns (address baseToken)
-    {
+    function _matchAssetOneSide(address leftBaseToken, address rightBaseToken) private pure returns (address baseToken) {
         if (leftBaseToken != address(0)) {
             if (rightBaseToken != address(0)) {
                 return _simpleMatch(leftBaseToken, rightBaseToken);

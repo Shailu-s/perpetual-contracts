@@ -56,10 +56,7 @@ abstract contract MatchingEngineCore is PausableUpgradeable, AssetMatcher, Acces
         emit CanceledAll(_msgSender(), minSalt);
     }
 
-    function matchOrderInBatch(LibOrder.Order[] memory ordersLeft, LibOrder.Order[] memory ordersRight)
-        external
-        whenNotPaused
-    {
+    function matchOrderInBatch(LibOrder.Order[] memory ordersLeft, LibOrder.Order[] memory ordersRight) external whenNotPaused {
         _requireCanMatchOrders();
         uint256 ordersLength = ordersLeft.length;
         for (uint256 index = 0; index < ordersLength; index++) {
@@ -91,11 +88,7 @@ abstract contract MatchingEngineCore is PausableUpgradeable, AssetMatcher, Acces
         @param orderLeft the left side of order
         @param orderRight the right side of order
      */
-    function matchOrders(LibOrder.Order memory orderLeft, LibOrder.Order memory orderRight)
-        public
-        whenNotPaused
-        returns (LibFill.FillResult memory)
-    {
+    function matchOrders(LibOrder.Order memory orderLeft, LibOrder.Order memory orderRight) public whenNotPaused returns (LibFill.FillResult memory) {
         _requireCanMatchOrders();
         if (orderLeft.trader != address(0) && orderRight.trader != address(0)) {
             require(orderRight.trader != orderLeft.trader, "V_PERP_M: order verification failed");
@@ -110,10 +103,7 @@ abstract contract MatchingEngineCore is PausableUpgradeable, AssetMatcher, Acces
         @param orderLeft the left order of the match
         @param orderRight the right order of the match
     */
-    function _matchAndTransfer(LibOrder.Order memory orderLeft, LibOrder.Order memory orderRight)
-        internal
-        returns (LibFill.FillResult memory newFill)
-    {
+    function _matchAndTransfer(LibOrder.Order memory orderLeft, LibOrder.Order memory orderRight) internal returns (LibFill.FillResult memory newFill) {
         _matchAssets(orderLeft, orderRight);
 
         newFill = _getFillSetNew(orderLeft, orderRight);
@@ -122,13 +112,7 @@ abstract contract MatchingEngineCore is PausableUpgradeable, AssetMatcher, Acces
             ? _updateObservation(newFill.rightValue, newFill.leftValue, orderLeft.makeAsset.virtualToken)
             : _updateObservation(newFill.leftValue, newFill.rightValue, orderRight.makeAsset.virtualToken);
 
-        emit Matched(
-            [orderLeft.trader, orderRight.trader],
-            [orderLeft.deadline, orderRight.deadline],
-            [orderLeft.salt, orderRight.salt],
-            newFill.leftValue,
-            newFill.rightValue
-        );
+        emit Matched([orderLeft.trader, orderRight.trader], [orderLeft.deadline, orderRight.deadline], [orderLeft.salt, orderRight.salt], newFill.leftValue, newFill.rightValue);
     }
 
     function _updateObservation(
@@ -147,10 +131,7 @@ abstract contract MatchingEngineCore is PausableUpgradeable, AssetMatcher, Acces
         @param orderRight right order of the match
         @return returns change in orders' fills by the match 
     */
-    function _getFillSetNew(LibOrder.Order memory orderLeft, LibOrder.Order memory orderRight)
-        internal
-        returns (LibFill.FillResult memory)
-    {
+    function _getFillSetNew(LibOrder.Order memory orderLeft, LibOrder.Order memory orderRight) internal returns (LibFill.FillResult memory) {
         bytes32 leftOrderKeyHash = LibOrder.hashKey(orderLeft);
         bytes32 rightOrderKeyHash = LibOrder.hashKey(orderRight);
         uint256 leftOrderFill = _getOrderFill(orderLeft.salt, leftOrderKeyHash);
@@ -183,11 +164,7 @@ abstract contract MatchingEngineCore is PausableUpgradeable, AssetMatcher, Acces
         require(hasRole(CAN_MATCH_ORDERS, _msgSender()), "MEC_NCMO");
     }
 
-    function _matchAssets(LibOrder.Order memory orderLeft, LibOrder.Order memory orderRight)
-        internal
-        pure
-        returns (address matchToken)
-    {
+    function _matchAssets(LibOrder.Order memory orderLeft, LibOrder.Order memory orderRight) internal pure returns (address matchToken) {
         matchToken = _matchAssets(orderLeft.makeAsset.virtualToken, orderRight.takeAsset.virtualToken);
         require(matchToken != address(0), "V_PERP_M: left make assets don't match");
         matchToken = _matchAssets(orderLeft.takeAsset.virtualToken, orderRight.makeAsset.virtualToken);

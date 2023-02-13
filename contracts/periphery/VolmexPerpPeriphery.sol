@@ -82,14 +82,7 @@ contract VolmexPerpPeriphery is Initializable, AccessControlUpgradeable, IVolmex
         uint256 _index
     ) external {
         _requireVolmexPerpPeripheryRelayer();
-        _fillLimitOrder(
-            _leftLimitOrder,
-            _signatureLeftLimitOrder,
-            _rightLimitOrder,
-            _signatureRightLimitOrder,
-            liquidator,
-            _index
-        );
+        _fillLimitOrder(_leftLimitOrder, _signatureLeftLimitOrder, _rightLimitOrder, _signatureRightLimitOrder, liquidator, _index);
     }
 
     function depositToVault(
@@ -141,13 +134,7 @@ contract VolmexPerpPeriphery is Initializable, AccessControlUpgradeable, IVolmex
         IPositioning positioning = perpView.positionings(_index);
         uint256 ordersLength = _ordersLeft.length;
         for (uint256 orderIndex = 0; orderIndex < ordersLength; orderIndex++) {
-            positioning.openPosition(
-                _ordersLeft[orderIndex],
-                _signaturesLeft[orderIndex],
-                _ordersRight[orderIndex],
-                _signaturesRight[orderIndex],
-                liquidator
-            );
+            positioning.openPosition(_ordersLeft[orderIndex], _signaturesLeft[orderIndex], _ordersRight[orderIndex], _signaturesRight[orderIndex], liquidator);
         }
     }
 
@@ -197,24 +184,10 @@ contract VolmexPerpPeriphery is Initializable, AccessControlUpgradeable, IVolmex
         uint256 _index
     ) internal {
         IPositioning positioning = perpView.positionings(_index);
-        if (_leftLimitOrder.orderType != LibOrder.ORDER)
-            require(
-                _verifyTriggerPrice(_leftLimitOrder, positioning),
-                "Periphery: left order price verification failed"
-            );
-        if (_rightLimitOrder.orderType != LibOrder.ORDER)
-            require(
-                _verifyTriggerPrice(_rightLimitOrder, positioning),
-                "Periphery: right order price verification failed"
-            );
+        if (_leftLimitOrder.orderType != LibOrder.ORDER) require(_verifyTriggerPrice(_leftLimitOrder, positioning), "Periphery: left order price verification failed");
+        if (_rightLimitOrder.orderType != LibOrder.ORDER) require(_verifyTriggerPrice(_rightLimitOrder, positioning), "Periphery: right order price verification failed");
 
-        positioning.openPosition(
-            _leftLimitOrder,
-            _signatureLeftLimitOrder,
-            _rightLimitOrder,
-            _signatureRightLimitOrder,
-            liquidator
-        );
+        positioning.openPosition(_leftLimitOrder, _signatureLeftLimitOrder, _rightLimitOrder, _signatureRightLimitOrder, liquidator);
     }
 
     function _requireVolmexPerpPeripheryAdmin() internal view {
@@ -226,11 +199,7 @@ contract VolmexPerpPeriphery is Initializable, AccessControlUpgradeable, IVolmex
     }
 
     // TODO: Change the logic to round id, if Volmex Oracle implements price by round id functionality
-    function _verifyTriggerPrice(LibOrder.Order memory _limitOrder, IPositioning _positioning)
-        private
-        view
-        returns (bool)
-    {
+    function _verifyTriggerPrice(LibOrder.Order memory _limitOrder, IPositioning _positioning) private view returns (bool) {
         // TODO: Add check for round id, when Volmex Oracle updates functionality
 
         address positioningConfig = _positioning.getPositioningConfig();
@@ -259,11 +228,7 @@ contract VolmexPerpPeriphery is Initializable, AccessControlUpgradeable, IVolmex
     }
 
     // TODO: Changes might require if we integrate chainlink, which are related to round_id
-    function _getBaseTokenPrice(LibOrder.Order memory _order, uint256 _twInterval)
-        private
-        view
-        returns (uint256 price)
-    {
+    function _getBaseTokenPrice(LibOrder.Order memory _order, uint256 _twInterval) private view returns (uint256 price) {
         address makeAsset = _order.makeAsset.virtualToken;
         address takeAsset = _order.takeAsset.virtualToken;
 

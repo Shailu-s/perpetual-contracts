@@ -107,10 +107,7 @@ contract PerpFactory is Initializable, IPerpFactory, AccessControlUpgradeable {
      * @param _name is the name of quote token
      * @param _symbol is the symbol of quote token
      */
-    function cloneQuoteToken(string memory _name, string memory _symbol)
-        external
-        returns (IVolmexQuoteToken volmexQuoteToken)
-    {
+    function cloneQuoteToken(string memory _name, string memory _symbol) external returns (IVolmexQuoteToken volmexQuoteToken) {
         _requireClonesDeployer();
         uint256 quoteIndex = perpViewRegistry.quoteTokenIndexCount();
 
@@ -162,35 +159,26 @@ contract PerpFactory is Initializable, IPerpFactory, AccessControlUpgradeable {
         address _quoteToken,
         uint64 _underlyingPriceIndex,
         address[2] calldata _liquidators
-    )
-        external
-        returns (
-            address[4] memory perpEcosystem
-        )
-    {
+    ) external returns (address[4] memory perpEcosystem) {
         _requireClonesDeployer();
         uint256 perpIndex = perpViewRegistry.perpIndexCount();
         perpEcosystem[0] = address(_cloneAccountBalance(perpIndex, _positioningConfig));
         perpEcosystem[1] = address(_cloneVaultController(perpIndex, _positioningConfig, address(perpEcosystem[0])));
-        perpEcosystem[2] = address(_clonePositioning(
-            perpIndex,
-            _positioningConfig,
-            IVaultController(perpEcosystem[1]),
-            _matchingEngine,
-            perpEcosystem[0],
-            _markPriceOracle,
-            _indexPriceOracle,
-            _underlyingPriceIndex,
-            _liquidators
-        ));
-        perpEcosystem[3] = address(_cloneMarketRegistry(perpIndex, _quoteToken));
-        emit PerpSystemCreated(
-            perpIndex, 
-            perpEcosystem[2], 
-            perpEcosystem[1], 
-            perpEcosystem[0], 
-            perpEcosystem[3]
+        perpEcosystem[2] = address(
+            _clonePositioning(
+                perpIndex,
+                _positioningConfig,
+                IVaultController(perpEcosystem[1]),
+                _matchingEngine,
+                perpEcosystem[0],
+                _markPriceOracle,
+                _indexPriceOracle,
+                _underlyingPriceIndex,
+                _liquidators
+            )
         );
+        perpEcosystem[3] = address(_cloneMarketRegistry(perpIndex, _quoteToken));
+        emit PerpSystemCreated(perpIndex, perpEcosystem[2], perpEcosystem[1], perpEcosystem[0], perpEcosystem[3]);
         perpViewRegistry.incrementPerpIndex();
     }
 
@@ -232,20 +220,14 @@ contract PerpFactory is Initializable, IPerpFactory, AccessControlUpgradeable {
         perpViewRegistry.setPositioning(positioning);
     }
 
-    function _cloneAccountBalance(uint256 _perpIndex, address _positioningConfig)
-        private
-        returns (IAccountBalance accountBalance)
-    {
+    function _cloneAccountBalance(uint256 _perpIndex, address _positioningConfig) private returns (IAccountBalance accountBalance) {
         bytes32 salt = keccak256(abi.encodePacked(_perpIndex, _positioningConfig));
         accountBalance = IAccountBalance(Clones.cloneDeterministic(accountBalanceImplementation, salt));
         accountBalance.initialize(_positioningConfig);
         perpViewRegistry.setAccount(accountBalance);
     }
 
-    function _cloneMarketRegistry(uint256 _perpIndex, address _quoteToken) 
-        private
-        returns (IMarketRegistry marketRegistry)
-    {
+    function _cloneMarketRegistry(uint256 _perpIndex, address _quoteToken) private returns (IMarketRegistry marketRegistry) {
         bytes32 salt = keccak256(abi.encodePacked(_perpIndex, _quoteToken));
         marketRegistry = IMarketRegistry(Clones.cloneDeterministic(marketRegistryImplementation, salt));
         marketRegistry.initialize(_quoteToken);

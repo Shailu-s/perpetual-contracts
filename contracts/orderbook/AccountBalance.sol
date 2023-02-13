@@ -118,12 +118,7 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
     }
 
     /// @inheritdoc IAccountBalance
-    function getAccountInfo(address trader, address baseToken)
-        external
-        view
-        override
-        returns (LibAccountMarket.Info memory)
-    {
+    function getAccountInfo(address trader, address baseToken) external view override returns (LibAccountMarket.Info memory) {
         return _accountMarketMap[trader][baseToken];
     }
 
@@ -226,8 +221,7 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
 
     /// @inheritdoc IAccountBalance
     function getMarginRequirementForLiquidation(address trader) public view override returns (int256) {
-        return
-            getTotalAbsPositionValue(trader).mulRatio(IPositioningConfig(_positioningConfig).getMmRatio()).toInt256();
+        return getTotalAbsPositionValue(trader).mulRatio(IPositioningConfig(_positioningConfig).getMmRatio()).toInt256();
     }
 
     /// @inheritdoc IAccountBalance

@@ -25,11 +25,7 @@ abstract contract TransferManager is OwnableUpgradeable, TransferExecutor {
         @return totalLeftValue - total amount for the left order
         @return totalRightValue - total amout for the right order
     */
-    function _doTransfers(LibDeal.DealSide memory left, LibDeal.DealSide memory right)
-        internal
-        virtual
-        returns (uint256 totalLeftValue, uint256 totalRightValue)
-    {
+    function _doTransfers(LibDeal.DealSide memory left, LibDeal.DealSide memory right) internal virtual returns (uint256 totalLeftValue, uint256 totalRightValue) {
         totalLeftValue = left.asset.value;
         totalRightValue = right.asset.value;
 

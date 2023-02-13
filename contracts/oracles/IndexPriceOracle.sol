@@ -114,26 +114,14 @@ contract IndexPriceOracle is ERC165StorageUpgradeable, IndexTWAP, IIndexPriceOra
 
         if (_leverage > 1) {
             // This will also check the base volatilities are present
-            require(
-                volatilityCapRatioByIndex[_baseVolatilityIndex] / _leverage == _volatilityCapRatio,
-                "VolmexOracle: Invalid _baseVolatilityIndex provided"
-            );
+            require(volatilityCapRatioByIndex[_baseVolatilityIndex] / _leverage == _volatilityCapRatio, "VolmexOracle: Invalid _baseVolatilityIndex provided");
             volatilityLeverageByIndex[_index] = _leverage;
             baseVolatilityIndex[_index] = _baseVolatilityIndex;
             _addIndexDataPoint(_index, _volatilityTokenPriceByIndex[_baseVolatilityIndex] / _leverage);
 
-            emit LeveragedVolatilityIndexAdded(
-                _index,
-                _volatilityCapRatio,
-                _volatilityTokenSymbol,
-                _leverage,
-                _baseVolatilityIndex
-            );
+            emit LeveragedVolatilityIndexAdded(_index, _volatilityCapRatio, _volatilityTokenSymbol, _leverage, _baseVolatilityIndex);
         } else {
-            require(
-                _volatilityTokenPrice <= _volatilityCapRatio,
-                "VolmexOracle: _volatilityTokenPrice should be smaller than VolatilityCapRatio"
-            );
+            require(_volatilityTokenPrice <= _volatilityCapRatio, "VolmexOracle: _volatilityTokenPrice should be smaller than VolatilityCapRatio");
             _updateVolatilityMeta(_index, _volatilityTokenPrice, _proofHash);
 
             emit VolatilityIndexAdded(_index, _volatilityCapRatio, _volatilityTokenSymbol, _volatilityTokenPrice);
@@ -161,15 +149,11 @@ contract IndexPriceOracle is ERC165StorageUpgradeable, IndexTWAP, IIndexPriceOra
     ) external {
         _requireIndexPriceOracleAdmin();
         require(
-            _volatilityIndexes.length == _volatilityTokenPrices.length &&
-                _volatilityIndexes.length == _proofHashes.length,
+            _volatilityIndexes.length == _volatilityTokenPrices.length && _volatilityIndexes.length == _proofHashes.length,
             "VolmexOracle: length of input arrays are not equal"
         );
         for (uint256 i = 0; i < _volatilityIndexes.length; i++) {
-            require(
-                _volatilityTokenPrices[i] <= volatilityCapRatioByIndex[_volatilityIndexes[i]],
-                "VolmexOracle: _volatilityTokenPrice should be smaller than VolatilityCapRatio"
-            );
+            require(_volatilityTokenPrices[i] <= volatilityCapRatioByIndex[_volatilityIndexes[i]], "VolmexOracle: _volatilityTokenPrice should be smaller than VolatilityCapRatio");
 
             _updateVolatilityMeta(_volatilityIndexes[i], _volatilityTokenPrices[i], _proofHashes[i]);
         }
@@ -262,25 +246,12 @@ contract IndexPriceOracle is ERC165StorageUpgradeable, IndexTWAP, IIndexPriceOra
      * @param _index Datapoints volatility index id {0}
      * @return answer is the answer for the given round
      */
-    function latestRoundData(uint256 _index)
-        external
-        view
-        virtual
-        returns (uint256 answer, uint256 lastUpdateTimestamp)
-    {
+    function latestRoundData(uint256 _index) external view virtual returns (uint256 answer, uint256 lastUpdateTimestamp) {
         answer = _getIndexTwap(_index) * 100;
-        lastUpdateTimestamp = volatilityLeverageByIndex[_index] > 0
-            ? volatilityLastUpdateTimestamp[baseVolatilityIndex[_index]]
-            : volatilityLastUpdateTimestamp[_index];
+        lastUpdateTimestamp = volatilityLeverageByIndex[_index] > 0 ? volatilityLastUpdateTimestamp[baseVolatilityIndex[_index]] : volatilityLastUpdateTimestamp[_index];
     }
 
-    function supportsInterface(bytes4 interfaceId)
-        public
-        view
-        virtual
-        override(AccessControlUpgradeable, ERC165StorageUpgradeable)
-        returns (bool)
-    {
+    function supportsInterface(bytes4 interfaceId) public view virtual override(AccessControlUpgradeable, ERC165StorageUpgradeable) returns (bool) {
         return super.supportsInterface(interfaceId);
     }
 
