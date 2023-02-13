@@ -5,13 +5,10 @@ import { IERC20Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC
 
 interface IVirtualToken is IERC20Upgradeable {
     // Getters
-    function isInWhitelist(address account) external view returns (bool);
-    function isBase() external view returns (bool); // TODO add this in base and quote token as well
+    function isBase() external view returns (bool);
 
     // Setters
     function mint(address recipient, uint256 amount) external;
     function burn(address recipient, uint256 amount) external;
     function mintMaximumTo(address recipient) external;
-    function addWhitelist(address account) external;
-    function removeWhitelist(address account) external;
 }

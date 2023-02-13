@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: BUSL - 1.1
 pragma solidity =0.8.12;
 
-import { FixedPoint96 } from "@uniswap/v3-core/contracts/libraries/FixedPoint96.sol";
 import { LibFullMath } from "../libs/LibFullMath.sol";
 import { LibSafeCastInt } from "./LibSafeCastInt.sol";
 import { LibSafeCastUint } from "./LibSafeCastUint.sol";
@@ -9,10 +8,6 @@ import { LibSafeCastUint } from "./LibSafeCastUint.sol";
 library LibPerpMath {
     using LibSafeCastInt for int256;
     using LibSafeCastUint for uint256;
-
-    function formatX96ToX10_18(uint256 valueX96) internal pure returns (uint256) {
-        return LibFullMath.mulDiv(valueX96, 1 ether, FixedPoint96.Q96);
-    }
 
     function max(int256 a, int256 b) internal pure returns (int256) {
         return a >= b ? a : b;
@@ -44,8 +39,12 @@ library LibPerpMath {
         return -LibSafeCastUint.toInt128(int128(a));
     }
 
-    function mulRatio(uint256 value, uint24 ratio) internal pure returns (uint256) {
+    function mulRatio(uint256 value, uint256 ratio) internal pure returns (uint256) {
         return LibFullMath.mulDiv(value, ratio, 1e6);
+    }
+
+    function mulRatio(int256 value, int256 ratio) internal pure returns (int256) {
+        return mulDiv(value, ratio, 1e6);
     }
 
     /// @param denominator cannot be 0 and is checked in LibFullMath.mulDiv()

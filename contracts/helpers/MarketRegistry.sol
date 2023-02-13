@@ -16,19 +16,12 @@ import { MarketRegistryStorageV1 } from "../storage/MarketRegistryStorage.sol";
 contract MarketRegistry is IMarketRegistry, PositioningCallee, MarketRegistryStorageV1 {
     using AddressUpgradeable for address;
 
-    //
-    // MODIFIER
-    //
     // As seen externally, ratio can not be greater than one
     modifier checkRatio(uint24 ratio) {
         // ratio overflow
         require(ratio <= 1e6, "MR_RO");
         _;
     }
-
-    //
-    // EXTERNAL NON-VIEW
-    //
 
     function initialize(address quoteTokenArg) external initializer {
         __PositioningCallee_init();
@@ -39,26 +32,32 @@ contract MarketRegistry is IMarketRegistry, PositioningCallee, MarketRegistrySto
         // update states
         _quoteToken = quoteTokenArg;
         _maxOrdersPerMarket = type(uint8).max;
+        _grantRole(MARKET_REGISTRY_ADMIN, _msgSender());
     }
 
     /// @inheritdoc IMarketRegistry
-    function setMakerFeeRatio( uint24 makerFeeRatio) external override checkRatio(makerFeeRatio) onlyOwner {
+    function setMakerFeeRatio(uint24 makerFeeRatio) external override checkRatio(makerFeeRatio) {
+        _requireMarketRegistryAdmin();
         _makerFeeRatio = makerFeeRatio;
     }
 
     /// @inheritdoc IMarketRegistry
-    function setTakerFeeRatio( uint24 takerFeeRatio) external override checkRatio(takerFeeRatio) onlyOwner {
+    function setTakerFeeRatio(uint24 takerFeeRatio) external override checkRatio(takerFeeRatio) {
+        _requireMarketRegistryAdmin();
         _takerFeeRatio = takerFeeRatio;
     }
-    
+
     /// @inheritdoc IMarketRegistry
-    function setMaxOrdersPerMarket(uint8 maxOrdersPerMarketArg) external override onlyOwner {
+    function setMaxOrdersPerMarket(uint8 maxOrdersPerMarketArg) external override {
+        _requireMarketRegistryAdmin();
         _maxOrdersPerMarket = maxOrdersPerMarketArg;
         emit MaxOrdersPerMarketChanged(maxOrdersPerMarketArg);
     }
 
     /// @inheritdoc IMarketRegistry
-    function addBaseToken(address baseToken) external override onlyOwner {
+    function addBaseToken(address baseToken) external override {
+        _requireMarketRegistryAdmin();
+        require(IVirtualToken(baseToken).isBase(), "MarketRegistry: not base token");
         address[] storage tokensStorage = _baseTokensMarketMap;
         if (_hasBaseToken(tokensStorage, baseToken)) {
             return;
@@ -66,10 +65,6 @@ contract MarketRegistry is IMarketRegistry, PositioningCallee, MarketRegistrySto
 
         tokensStorage.push(baseToken);
     }
-
-    //
-    // EXTERNAL VIEW
-    //
 
     /// @inheritdoc IMarketRegistry
     function getQuoteToken() external view override returns (address) {
@@ -91,7 +86,6 @@ contract MarketRegistry is IMarketRegistry, PositioningCallee, MarketRegistrySto
         return _takerFeeRatio;
     }
 
-
     /// @inheritdoc IMarketRegistry
     function checkBaseToken(address baseToken) external view override returns (bool) {
         address[] storage tokensStorage = _baseTokensMarketMap;
@@ -100,6 +94,10 @@ contract MarketRegistry is IMarketRegistry, PositioningCallee, MarketRegistrySto
         } else {
             return false;
         }
+    }
+
+    function _requireMarketRegistryAdmin() internal view {
+        require(hasRole(MARKET_REGISTRY_ADMIN, _msgSender()), "MarketRegistry: Not admin");
     }
 
     function _hasBaseToken(address[] memory baseTokens, address baseToken) internal pure returns (bool) {

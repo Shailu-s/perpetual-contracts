@@ -3,28 +3,28 @@
 pragma solidity =0.8.12;
 
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 
 import "../interfaces/IERC20TransferProxy.sol";
 import "../interfaces/ITransferExecutor.sol";
-import "../interfaces/IMintBurn.sol";
 import "../interfaces/IVirtualToken.sol";
 import "../libs/LibAsset.sol";
 
-abstract contract TransferExecutor is Initializable, OwnableUpgradeable, ITransferExecutor {
+abstract contract TransferExecutor is AccessControlUpgradeable {
+    bytes32 public constant TRANSFER_EXECUTOR = keccak256("TRANSFER_EXECUTOR");
     address internal _proxy;
 
     event ProxyChanged(address proxy);
 
-    function __TransferExecutor_init_unchained(address erc20TransferProxy) internal {
-        _proxy = erc20TransferProxy;
-
-        __Ownable_init();
-    }
-
-    function setTransferProxy(address proxy) external onlyOwner {
+    function setTransferProxy(address proxy) external {
+        require(hasRole(TRANSFER_EXECUTOR, _msgSender()), "TransferExecutor: Not admin");
         _proxy = proxy;
         emit ProxyChanged(proxy);
+    }
+
+    function __TransferExecutor_init_unchained(address _erc20TransferProxy, address _owner) internal {
+        _proxy = _erc20TransferProxy;
+        _grantRole(TRANSFER_EXECUTOR, _owner);
     }
 
     function _transfer(
@@ -32,8 +32,8 @@ abstract contract TransferExecutor is Initializable, OwnableUpgradeable, ITransf
         address from,
         address to,
         address proxy
-    ) internal override {
-        // TODO: At the time of perp integration, @Aditya needs to update the logic here of minting the vTokens
+    ) internal {
+        // Transfer of virtual tokens are handled at Positioning.sol
     }
 
     uint256[50] private __gap;

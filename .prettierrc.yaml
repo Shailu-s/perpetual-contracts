@@ -1,14 +1,16 @@
-semi: false
-printWidth: 120
+semi: true
+printWidth: 180
 singleQuote: false
 trailingComma: all
 arrowParens: avoid
 tabWidth: 4
 bracketSpacing: true
 overrides:
-  - files: "*.json"
-    options:
-      tabWidth: 2
-  - files: "*.ts"
-    options:
-      tabWidth: 2
+    - files: "*.json"
+      options:
+          tabWidth: 2
+          printWidth: 99
+    - files: "*.ts"
+      options:
+          tabWidth: 2
+          printWidth: 99

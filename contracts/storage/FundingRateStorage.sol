@@ -5,11 +5,12 @@ pragma solidity =0.8.12;
 /// contract which implements ExchangeStorageV1 and following the naming convention
 /// ExchangeStorageVX.
 abstract contract FundingRateStorage {
+    int256 internal constant _PRECISION_BASE = 1e18;
+
     address internal _markPriceOracleArg;
     address internal _indexPriceOracleArg;
     uint64 internal _underlyingPriceIndex;
+    int256 internal _fundingRateInterval;
 
-    mapping(address => uint256) internal _lastSettledTimestampMap;
-    // mapping basetoken => twpremium(time weighted)
-    mapping(address => int256) internal _globalFundingGrowthMap;
+    uint256[50] private __gap;
 }

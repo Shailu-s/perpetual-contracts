@@ -5,18 +5,17 @@ import { PausableUpgradeable } from "@openzeppelin/contracts-upgradeable/securit
 import { OwnableUpgradeable } from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
 abstract contract OwnerPausable is OwnableUpgradeable, PausableUpgradeable {
-    // solhint-disable-next-line func-order
-    function __OwnerPausable_init() internal onlyInitializing {
-        __Ownable_init();
-        __Pausable_init();
-    }
-
     function pause() external onlyOwner {
         _pause();
     }
 
     function unpause() external onlyOwner {
         _unpause();
+    }
+
+    function __OwnerPausable_init() internal onlyInitializing {
+        __Ownable_init();
+        __Pausable_init();
     }
 
     function _msgSender() internal view virtual override returns (address) {

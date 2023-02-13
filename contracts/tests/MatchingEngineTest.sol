@@ -5,35 +5,18 @@ pragma abicoder v2;
 
 import "../matching-engine/MatchingEngine.sol";
 
-contract MatchingEngineTest is MatchingEngine
-{
+contract MatchingEngineTest is MatchingEngine {
     uint256 private constant _UINT256_MAX = 2**256 - 1;
 
-    function __MatchingEngineTest_init(
-        address erc20TransferProxy,
-        address owner,
-        IMarkPriceOracle markPriceOracle
-    ) external initializer {
-        initialize(
-            erc20TransferProxy,
-            owner,
-            markPriceOracle
-        );
+    function __MatchingEngineTest_init(address owner, IMarkPriceOracle markPriceOracle) external initializer {
+        initialize(owner, markPriceOracle);
         __Ownable_init_unchained();
+        _grantRole(CAN_MATCH_ORDERS, _msgSender());
+        _grantRole(CAN_MATCH_ORDERS, address(this));
     }
 
-    function matchOrdersTest(
-        LibOrder.Order memory orderLeft,
-        LibOrder.Order memory orderRight
-    ) external payable {
+    function matchOrdersTest(LibOrder.Order memory orderLeft, LibOrder.Order memory orderRight) external payable {
         matchOrders(orderLeft, orderRight);
-    }
-
-    function doTransfersTest(
-        LibDeal.DealSide memory left,
-        LibDeal.DealSide memory right
-    ) public virtual returns (uint totalMakeValue, uint totalTakeValue) {
-        return _doTransfers(left, right);
     }
 
     function setMakerMinSalt(uint256 _val) external {
@@ -46,5 +29,11 @@ contract MatchingEngineTest is MatchingEngine
 
     function addObservation(uint256 _priceCumulative, uint64 _index) public {
         markPriceOracle.addObservation(_priceCumulative, _index);
+    }
+
+    //TODO Should be inculded in matching engine core
+    function pause() external {
+        _requireCanMatchOrders();
+        _pause();
     }
 }

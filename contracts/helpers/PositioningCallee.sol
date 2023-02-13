@@ -1,40 +1,36 @@
 // SPDX-License-Identifier: BUSL - 1.1
 pragma solidity =0.8.12;
 
-import { OwnableUpgradeable } from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import { Context } from "@openzeppelin/contracts/utils/Context.sol";
+import { ContextUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 
-abstract contract PositioningCallee is OwnableUpgradeable {
-    //
-    // STATE
-    //
-    address internal _Positioning;
+abstract contract PositioningCallee is AccessControlUpgradeable {
+    // positioning callee admin role
+    bytes32 public constant POSITIONING_CALLEE_ADMIN = keccak256("POSITIONING_CALLEE_ADMIN");
 
-    //
-    // EVENT
-    //
-    event PositioningCalleeChanged(address indexed PositioningCallee);
+    // Address of positioning contracts
+    address internal _positioning;
 
-    //
-    // CONSTRUCTOR
-    //
+    event PositioningCalleeChanged(address indexed positioningCallee);
 
-    // solhint-disable-next-line func-order
-    function __PositioningCallee_init() internal onlyInitializing {
-        __Ownable_init();
-    }
-
-    function setPositioning(address PositioningArg) external onlyOwner {
-        _Positioning = PositioningArg;
-        emit PositioningCalleeChanged(PositioningArg);
+    function setPositioning(address positioningArg) external virtual {
+        require(hasRole(POSITIONING_CALLEE_ADMIN, _msgSender()), "PositioningCallee: Not admin");
+        _positioning = positioningArg;
+        emit PositioningCalleeChanged(positioningArg);
     }
 
     function getPositioning() external view returns (address) {
-        return _Positioning;
+        return _positioning;
+    }
+
+    function __PositioningCallee_init() internal onlyInitializing {
+        _grantRole(POSITIONING_CALLEE_ADMIN, _msgSender());
     }
 
     function _requireOnlyPositioning() internal view {
         // only Positioning
-        require(_msgSender() == _Positioning, "CHD_OCH");
+        require(_msgSender() == _positioning, "CHD_OP");
     }
 
     uint256[50] private __gap;

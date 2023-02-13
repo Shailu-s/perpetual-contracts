@@ -30,14 +30,16 @@ library LibFill {
         uint256 leftOrderFill,
         uint256 rightOrderFill
     ) internal pure returns (FillResult memory) {
-        (uint256 leftBaseValue, uint256 leftQuoteValue) = LibOrder.calculateRemaining(leftOrder, leftOrderFill);
-        (uint256 rightBaseValue, uint256 rightQuoteValue) = LibOrder.calculateRemaining(rightOrder, rightOrderFill);
+        (uint256 leftBaseValue, uint256 leftQuoteValue) = LibOrder.calculateRemaining(leftOrder, leftOrderFill); //q,b
+        (uint256 rightBaseValue, uint256 rightQuoteValue) = LibOrder.calculateRemaining(rightOrder, rightOrderFill); //b,q
 
+        //We have 3 cases here:
         if (rightQuoteValue > leftBaseValue) {
-            return fillLeft(leftBaseValue, leftQuoteValue, rightOrder.makeAsset.value, rightOrder.takeAsset.value);
+            //1nd: left order should be fully filled
+            return fillLeft(leftBaseValue, leftQuoteValue, rightOrder.makeAsset.value, rightOrder.takeAsset.value); //lq,lb,rb,rq
         }
-
-        return fillRight(leftOrder.makeAsset.value, leftOrder.takeAsset.value, rightBaseValue, rightQuoteValue);
+        //2st: right order should be fully filled or 3d: both should be fully filled if required values are the same
+        return fillRight(leftOrder.makeAsset.value, leftOrder.takeAsset.value, rightBaseValue, rightQuoteValue); //lq,lb,rb,rq
     }
 
     function fillRight(
@@ -46,9 +48,9 @@ library LibFill {
         uint256 rightMakeValue,
         uint256 rightTakeValue
     ) internal pure returns (FillResult memory result) {
-        uint256 makerValue = LibMath.safeGetPartialAmountFloor(rightTakeValue, leftMakeValue, leftTakeValue);
+        uint256 makerValue = LibMath.safeGetPartialAmountFloor(rightTakeValue, leftMakeValue, leftTakeValue); //rq * lb / lq
         require(makerValue <= rightMakeValue, "V_PERP_M: fillRight: unable to fill");
-        return FillResult(rightTakeValue, makerValue);
+        return FillResult(rightTakeValue, makerValue); //rq, lb == left goes long ; rb, lq ==left goes short
     }
 
     function fillLeft(
@@ -57,8 +59,8 @@ library LibFill {
         uint256 rightMakeValue,
         uint256 rightTakeValue
     ) internal pure returns (FillResult memory result) {
-        uint256 rightTake = LibMath.safeGetPartialAmountFloor(leftTakeValue, rightMakeValue, rightTakeValue);
+        uint256 rightTake = LibMath.safeGetPartialAmountFloor(leftTakeValue, rightMakeValue, rightTakeValue); //lb *rq / rb = rq
         require(rightTake <= leftMakeValue, "V_PERP_M: fillLeft: unable to fill");
-        return FillResult(leftMakeValue, leftTakeValue);
+        return FillResult(leftMakeValue, leftTakeValue); //lq,lb
     }
 }

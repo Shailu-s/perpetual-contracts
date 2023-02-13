@@ -25,16 +25,9 @@ interface IVolmexProtocol {
     function updatePositionToken(address _positionToken, bool _isVolatilityIndex) external;
     function collateralize(uint256 _collateralQty) external;
     function redeem(uint256 _positionTokenQty) external;
-    function redeemSettled(
-        uint256 _volatilityIndexTokenQty,
-        uint256 _inverseVolatilityIndexTokenQty
-    ) external;
+    function redeemSettled(uint256 _volatilityIndexTokenQty, uint256 _inverseVolatilityIndexTokenQty) external;
     function settle(uint256 _settlementPrice) external;
-    function recoverTokens(
-        address _token,
-        address _toWhom,
-        uint256 _howMuch
-    ) external;
+    function recoverTokens(address _token, address _toWhom, uint256 _howMuch) external;
     function updateFees(uint256 _issuanceFees, uint256 _redeemFees) external;
     function claimAccumulatedFees() external;
     function togglePause(bool _isPause) external;

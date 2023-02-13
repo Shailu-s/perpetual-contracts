@@ -16,6 +16,5 @@ contract PositioningMock is Positioning {
         return fakeFundingPaymentX10_18;
     }
 
-    function settleAllFunding(address trader) external override {
-    }
+    function settleAllFunding(address trader) external override {}
 }

@@ -12,10 +12,6 @@ abstract contract ParentToken is IVolmexBaseToken, IIndexPrice, VirtualToken, Ba
     using SafeMathUpgradeable for uint256;
     using SafeMathUpgradeable for uint8;
 
-    //
-    // EXTERNAL NON-VIEW
-    //
-
     function initialize(
         string memory nameArg,
         string memory symbolArg,
@@ -28,18 +24,13 @@ abstract contract ParentToken is IVolmexBaseToken, IIndexPrice, VirtualToken, Ba
 
     /// @dev This function is only used for emergency shutdown, to set priceFeed to an emergencyPriceFeed
     function setPriceFeed(address priceFeedArg) external override {
-
         _priceFeed = priceFeedArg;
         emit PriceFeedChanged(_priceFeed);
     }
 
-    //
-    // EXTERNAL VIEW
-    //
-
     /// @inheritdoc IIndexPrice
-    function getIndexPrice(uint256 interval) external view virtual override(IIndexPrice, IVolmexBaseToken) returns (uint256);
-    
+    function getIndexPrice(uint256 index) external view virtual override(IIndexPrice, IVolmexBaseToken) returns (uint256);
+
     /// @inheritdoc IVolmexBaseToken
     function getPriceFeed() external view override returns (address) {
         return _priceFeed;
