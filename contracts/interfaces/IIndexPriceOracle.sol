@@ -7,17 +7,8 @@ import "./IVolmexProtocol.sol";
 interface IIndexPriceOracle {
     event SymbolIndexUpdated(uint256 indexed _index);
     event BaseVolatilityIndexUpdated(uint256 indexed baseVolatilityIndex);
-    event BatchVolatilityTokenPriceUpdated(
-        uint256[] _volatilityIndexes,
-        uint256[] _volatilityTokenPrices,
-        bytes32[] _proofHashes
-    );
-    event VolatilityIndexAdded(
-        uint256 indexed volatilityTokenIndex,
-        uint256 volatilityCapRatio,
-        string volatilityTokenSymbol,
-        uint256 volatilityTokenPrice
-    );
+    event BatchVolatilityTokenPriceUpdated(uint256[] _volatilityIndexes, uint256[] _volatilityTokenPrices, bytes32[] _proofHashes);
+    event VolatilityIndexAdded(uint256 indexed volatilityTokenIndex, uint256 volatilityCapRatio, string volatilityTokenSymbol, uint256 volatilityTokenPrice);
     event LeveragedVolatilityIndexAdded(
         uint256 indexed volatilityTokenIndex,
         uint256 volatilityCapRatio,

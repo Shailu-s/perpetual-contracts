@@ -21,7 +21,11 @@ interface IAccountBalance {
     /// @dev Only used by `Positioning` contract
     /// @param trader The address of the trader
     /// @param amount Modified amount of owedRealizedPnl
-    function modifyOwedRealizedPnl(address trader, int256 amount, address baseToken) external;
+    function modifyOwedRealizedPnl(
+        address trader,
+        int256 amount,
+        address baseToken
+    ) external;
 
     /// @notice Settle owedRealizedPnl
     /// @dev Only used by `Vault.withdraw()`

@@ -44,14 +44,7 @@ interface IPositioning {
     /// @param positionSize The size of position
     /// @param liquidationFee The fee of liquidate
     /// @param liquidator The address of liquidator
-    event PositionLiquidated(
-        address indexed trader,
-        address indexed baseToken,
-        uint256 positionNotional,
-        uint256 positionSize,
-        uint256 liquidationFee,
-        address liquidator
-    );
+    event PositionLiquidated(address indexed trader, address indexed baseToken, uint256 positionNotional, uint256 positionSize, uint256 liquidationFee, address liquidator);
 
     // TODO: Implement this event
     /// @notice Emitted when open position with non-zero referral code

@@ -13,11 +13,9 @@ interface IMatchingEngine {
 
     function cancelAllOrders(uint256 minSalt) external;
 
-    function matchOrders(LibOrder.Order memory orderLeft, LibOrder.Order memory orderRight)
-        external
-        returns (LibFill.FillResult memory);
+    function matchOrders(LibOrder.Order memory orderLeft, LibOrder.Order memory orderRight) external returns (LibFill.FillResult memory);
 
     function grantMatchOrders(address account) external;
-    function fills(bytes32 orderHashKey) external view returns(uint256);
 
+    function fills(bytes32 orderHashKey) external view returns (uint256);
 }
