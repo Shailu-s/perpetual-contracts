@@ -123,13 +123,7 @@ contract Vault is IVault, ReentrancyGuardUpgradeable, OwnerPausable, VaultStorag
     }
 
     /// @inheritdoc IVault
-    function transferFundToVault(address token, uint256 amount)
-        external
-        override
-        whenNotPaused
-        nonReentrant
-        onlySettlementToken(token)
-    {
+    function transferFundToVault(address token, uint256 amount) external override whenNotPaused nonReentrant onlySettlementToken(token) {
         _requireVaultAdmin();
         address from = _msgSender();
         SafeERC20Upgradeable.safeTransferFrom(IERC20Upgradeable(token), from, address(this), amount);
@@ -138,13 +132,7 @@ contract Vault is IVault, ReentrancyGuardUpgradeable, OwnerPausable, VaultStorag
     }
 
     /// @inheritdoc IVault
-    function repayDebtToOwner(address token, uint256 amount)
-        external
-        override
-        whenNotPaused
-        nonReentrant
-        onlySettlementToken(token)
-    {
+    function repayDebtToOwner(address token, uint256 amount) external override whenNotPaused nonReentrant onlySettlementToken(token) {
         _requireVaultAdmin();
         address to = _msgSender();
         //V_AIMTD: amount is more that debt

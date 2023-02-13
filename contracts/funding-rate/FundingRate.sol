@@ -63,8 +63,7 @@ contract FundingRate is IFundingRate, BlockContext, PositioningCallee, FundingRa
         uint256 markTwap,
         uint256 indexTwap
     ) internal view virtual returns (int256 pendingFundingPayment) {
-        int256 marketFundingRate = (_getDeltaTwap(markTwap, indexTwap) * _PRECISION_BASE) /
-            (indexTwap.toInt256() * _fundingRateInterval);
+        int256 marketFundingRate = (_getDeltaTwap(markTwap, indexTwap) * _PRECISION_BASE) / (indexTwap.toInt256() * _fundingRateInterval);
         int256 positionSize = IAccountBalance(_accountBalance).getPositionSize(trader, baseToken);
         pendingFundingPayment = (positionSize * marketFundingRate) / _PRECISION_BASE;
     }

@@ -144,6 +144,8 @@ const positioning = async () => {
   await (await matchingEngine.grantMatchOrders(positioning.address)).wait();
   await (await perpView.setPositioning(positioning.address)).wait();
   await (await perpView.incrementPerpIndex()).wait();
+  await (await volmexBaseToken.setMintBurnRole(positioning.address)).wait();
+  await (await volmexQuoteToken.setMintBurnRole(positioning.address)).wait();
 
   const marketRegistry = await upgrades.deployProxy(MarketRegistry, [volmexQuoteToken.address]);
   await marketRegistry.deployed();

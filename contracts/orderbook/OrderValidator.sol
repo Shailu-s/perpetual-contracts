@@ -37,10 +37,7 @@ abstract contract OrderValidator is Initializable, ContextUpgradeable, EIP712Upg
                 }
                 if (signer != order.trader) {
                     if (order.trader.isContract()) {
-                        require(
-                            IERC1271(order.trader).isValidSignature(_hashTypedDataV4(hash), signature) == _MAGICVALUE,
-                            "V_PERP_M: contract order signature verification error"
-                        );
+                        require(IERC1271(order.trader).isValidSignature(_hashTypedDataV4(hash), signature) == _MAGICVALUE, "V_PERP_M: contract order signature verification error");
                     } else {
                         revert("V_PERP_M: order signature verification error");
                     }

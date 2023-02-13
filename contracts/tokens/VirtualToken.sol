@@ -11,7 +11,6 @@ contract VirtualToken is IVirtualToken, ERC20Upgradeable, AccessControlUpgradeab
     bytes32 public constant MINTER = keccak256("MINTER");
     bytes32 public constant BURNER = keccak256("BURNER");
 
-    mapping(address => bool) internal _whitelistMap;
     bool public isBase;
 
     event WhitelistAdded(address account);
@@ -46,40 +45,6 @@ contract VirtualToken is IVirtualToken, ERC20Upgradeable, AccessControlUpgradeab
     function mintMaximumTo(address recipient) external override {
         _requireVirtualTokenAdmin();
         _mint(recipient, type(uint256).max);
-    }
-
-    function addWhitelist(address account) external override {
-        _requireVirtualTokenAdmin();
-        _whitelistMap[account] = true;
-        emit WhitelistAdded(account);
-    }
-
-    function removeWhitelist(address account) external override {
-        _requireVirtualTokenAdmin();
-        // VT_BNZ: balance is not zero
-        require(balanceOf(account) == 0, "VT_BNZ");
-        delete _whitelistMap[account];
-        emit WhitelistRemoved(account);
-    }
-
-    /// @inheritdoc IVirtualToken
-    function isInWhitelist(address account) external view override returns (bool) {
-        return _whitelistMap[account];
-    }
-
-    /// @inheritdoc ERC20Upgradeable
-    function _beforeTokenTransfer(
-        address from,
-        address to,
-        uint256 amount
-    ) internal virtual override {
-        super._beforeTokenTransfer(from, to, amount);
-
-        // `from` == address(0) when mint()
-        if (from != address(0)) {
-            // not whitelisted
-            require(_whitelistMap[from], "VT_NW");
-        }
     }
 
     function _requireVirtualTokenAdmin() internal view {

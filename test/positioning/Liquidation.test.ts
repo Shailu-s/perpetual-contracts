@@ -176,6 +176,8 @@ describe("Liquidation test in Positioning", function () {
         initializer: "initialize",
       },
     );
+    await (await volmexBaseToken.setMintBurnRole(positioning.address)).wait();
+    await (await virtualToken.setMintBurnRole(positioning.address)).wait();
     marketRegistry = await upgrades.deployProxy(MarketRegistry, [virtualToken.address]);
     perpViewFake = await smock.fake("VolmexPerpView");
     volmexPerpPeriphery = await upgrades.deployProxy(VolmexPerpPeriphery, [
@@ -207,8 +209,6 @@ describe("Liquidation test in Positioning", function () {
 
     await virtualToken.mint(account1.address, ten.toString());
     await virtualToken.mint(account2.address, ten.toString());
-    await virtualToken.addWhitelist(account1.address);
-    await virtualToken.addWhitelist(account2.address);
 
     await virtualToken.connect(account1).approve(vault.address, ten.toString());
     await virtualToken.connect(account2).approve(vault.address, ten.toString());

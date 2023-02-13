@@ -29,12 +29,7 @@ abstract contract ParentToken is IVolmexBaseToken, IIndexPrice, VirtualToken, Ba
     }
 
     /// @inheritdoc IIndexPrice
-    function getIndexPrice(uint256 index)
-        external
-        view
-        virtual
-        override(IIndexPrice, IVolmexBaseToken)
-        returns (uint256);
+    function getIndexPrice(uint256 index) external view virtual override(IIndexPrice, IVolmexBaseToken) returns (uint256);
 
     /// @inheritdoc IVolmexBaseToken
     function getPriceFeed() external view override returns (address) {

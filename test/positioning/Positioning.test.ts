@@ -207,6 +207,8 @@ describe("Positioning", function () {
         initializer: "initialize",
       },
     );
+    await (await volmexBaseToken.setMintBurnRole(positioning.address)).wait();
+    await (await virtualToken.setMintBurnRole(positioning.address)).wait();
     marketRegistry = await upgrades.deployProxy(MarketRegistry, [virtualToken.address]);
 
     // await marketRegistry.connect(owner).addBaseToken(virtualToken.address)
@@ -391,8 +393,7 @@ describe("Positioning", function () {
 
         await virtualToken.mint(account1.address, convert("1000"));
         await virtualToken.mint(account2.address, convert("1000"));
-        await virtualToken.addWhitelist(account1.address);
-        await virtualToken.addWhitelist(account2.address);
+        
         await virtualToken.connect(account1).approve(vault.address, convert("1000"));
         await virtualToken.connect(account2).approve(vault.address, convert("1000"));
         await virtualToken.connect(account1).approve(volmexPerpPeriphery.address, convert("1000"));
@@ -445,8 +446,7 @@ describe("Positioning", function () {
 
         await virtualToken.mint(account1.address, convert("1000"));
         await virtualToken.mint(account2.address, convert("1000"));
-        await virtualToken.addWhitelist(account1.address);
-        await virtualToken.addWhitelist(account2.address);
+        
 
         await virtualToken.connect(account1).approve(vault.address, convert("1000"));
         await virtualToken.connect(account2).approve(vault.address, convert("1000"));
@@ -527,8 +527,7 @@ describe("Positioning", function () {
 
         await virtualToken.mint(account1.address, convert("1000"));
         await virtualToken.mint(account2.address, convert("1000"));
-        await virtualToken.addWhitelist(account1.address);
-        await virtualToken.addWhitelist(account2.address);
+        
 
         await virtualToken.connect(account1).approve(vault.address, convert("1000"));
         await virtualToken.connect(account2).approve(vault.address, convert("1000"));
@@ -613,8 +612,7 @@ describe("Positioning", function () {
 
         await virtualToken.mint(account1.address, convert("1000"));
         await virtualToken.mint(account2.address, convert("1000"));
-        await virtualToken.addWhitelist(account1.address);
-        await virtualToken.addWhitelist(account2.address);
+        
 
         await virtualToken.connect(account1).approve(vault.address, convert("1000"));
         await virtualToken.connect(account2).approve(vault.address, convert("1000"));
@@ -750,8 +748,7 @@ describe("Positioning", function () {
 
         await virtualToken.mint(account1.address, convert("1000"));
         await virtualToken.mint(account2.address, convert("1000"));
-        await virtualToken.addWhitelist(account1.address);
-        await virtualToken.addWhitelist(account2.address);
+        
 
         await virtualToken.connect(account1).approve(vault.address, convert("1000"));
         await virtualToken.connect(account2).approve(vault.address, convert("1000"));
@@ -891,8 +888,7 @@ describe("Positioning", function () {
 
         await virtualToken.mint(account1.address, convert("1000"));
         await virtualToken.mint(account2.address, convert("1000"));
-        await virtualToken.addWhitelist(account1.address);
-        await virtualToken.addWhitelist(account2.address);
+        
 
         await virtualToken.connect(account1).approve(vault.address, convert("1000"));
         await virtualToken.connect(account2).approve(vault.address, convert("1000"));
@@ -1021,8 +1017,7 @@ describe("Positioning", function () {
 
         await virtualToken.mint(account1.address, convert("1000"));
         await virtualToken.mint(account2.address, convert("1000"));
-        await virtualToken.addWhitelist(account1.address);
-        await virtualToken.addWhitelist(account2.address);
+        
 
         await virtualToken.connect(account1).approve(vault.address, convert("1000"));
         await virtualToken.connect(account2).approve(vault.address, convert("1000"));
@@ -1109,8 +1104,7 @@ describe("Positioning", function () {
 
         await virtualToken.mint(account1.address, convert("1000"));
         await virtualToken.mint(account2.address, convert("1000"));
-        await virtualToken.addWhitelist(account1.address);
-        await virtualToken.addWhitelist(account2.address);
+        
 
         await virtualToken.connect(account1).approve(vault.address, convert("1000"));
         await virtualToken.connect(account2).approve(vault.address, convert("1000"));
@@ -1200,8 +1194,7 @@ describe("Positioning", function () {
 
         await virtualToken.mint(account1.address, convert("1000"));
         await virtualToken.mint(account2.address, convert("1000"));
-        await virtualToken.addWhitelist(account1.address);
-        await virtualToken.addWhitelist(account2.address);
+        
         await virtualToken.connect(account1).approve(vault.address, convert("1000"));
         await virtualToken.connect(account2).approve(vault.address, convert("1000"));
         await virtualToken.connect(account1).approve(volmexPerpPeriphery.address, convert("1000"));
@@ -1335,8 +1328,7 @@ describe("Positioning", function () {
 
         await virtualToken.mint(account1.address, ten.toString());
         await virtualToken.mint(account2.address, ten.toString());
-        await virtualToken.addWhitelist(account1.address);
-        await virtualToken.addWhitelist(account2.address);
+        
         await virtualToken.connect(account1).approve(vault.address, ten.toString());
         await virtualToken.connect(account2).approve(vault.address, ten.toString());
         await virtualToken.connect(account1).approve(volmexPerpPeriphery.address, ten.toString());
@@ -1411,7 +1403,7 @@ describe("Positioning", function () {
         await matchingEngine.grantMatchOrders(positioning.address);
 
         await virtualToken.mint(account1.address, convert("1000"));
-        await virtualToken.addWhitelist(account1.address);
+        
 
         await virtualToken.connect(account1).approve(vault.address, convert("1000"));
         await virtualToken.connect(account1).approve(volmexPerpPeriphery.address, convert("1000"));
@@ -1445,8 +1437,7 @@ describe("Positioning", function () {
 
         await virtualToken.mint(account1.address, convert("1000"));
         await virtualToken.mint(account2.address, convert("1000"));
-        await virtualToken.addWhitelist(account1.address);
-        await virtualToken.addWhitelist(account2.address);
+        
         await virtualToken.connect(account1).approve(vault.address, convert("1000"));
         await virtualToken.connect(account2).approve(vault.address, convert("1000"));
 
@@ -1489,8 +1480,7 @@ describe("Positioning", function () {
       it("failure for opening with zero amount", async () => {
         await virtualToken.mint(account1.address, 1000000000000000);
         await virtualToken.mint(account2.address, 1000000000000000);
-        await virtualToken.addWhitelist(account1.address);
-        await virtualToken.addWhitelist(account2.address);
+        
         await virtualToken.connect(account1).approve(vault.address, 1000000000000000);
         await virtualToken.connect(account2).approve(vault.address, 1000000000000000);
 
@@ -1534,8 +1524,7 @@ describe("Positioning", function () {
       it("failure not enough free collateral", async () => {
         await virtualToken.mint(account1.address, convert("1000"));
         await virtualToken.mint(account2.address, convert("1000"));
-        await virtualToken.addWhitelist(account1.address);
-        await virtualToken.addWhitelist(account2.address);
+        
         await virtualToken.connect(account1).approve(vault.address, convert("1000"));
         await virtualToken.connect(account2).approve(vault.address, convert("1000"));
 
@@ -1565,8 +1554,7 @@ describe("Positioning", function () {
 
         await virtualToken.mint(account1.address, convert("1000"));
         await virtualToken.mint(account2.address, convert("1000"));
-        await virtualToken.addWhitelist(account1.address);
-        await virtualToken.addWhitelist(account2.address);
+        
 
         await virtualToken.connect(account1).approve(vault.address, convert("1000"));
         await virtualToken.connect(account2).approve(vault.address, convert("1000"));
@@ -1634,8 +1622,7 @@ describe("Positioning", function () {
 
         await virtualToken.mint(account1.address, convert("1000"));
         await virtualToken.mint(account2.address, convert("1000"));
-        await virtualToken.addWhitelist(account1.address);
-        await virtualToken.addWhitelist(account2.address);
+        
         await virtualToken.connect(account1).approve(vault.address, convert("1000"));
         await virtualToken.connect(account2).approve(vault.address, convert("1000"));
         await virtualToken.connect(account1).approve(volmexPerpPeriphery.address, convert("1000"));
@@ -1673,8 +1660,7 @@ describe("Positioning", function () {
 
         await virtualToken.mint(account1.address, convert("1000"));
         await virtualToken.mint(account2.address, convert("1000"));
-        await virtualToken.addWhitelist(account1.address);
-        await virtualToken.addWhitelist(account2.address);
+        
         await virtualToken.connect(account1).approve(vault.address, convert("1000"));
         await virtualToken.connect(account2).approve(vault.address, convert("1000"));
         await virtualToken.connect(account1).approve(volmexPerpPeriphery.address, convert("1000"));
@@ -1771,8 +1757,8 @@ describe("Positioning", function () {
       it("should fail to match orders as order maker is contract but signature cannot be verified", async () => {
         erc1271Test = await ERC1271Test.deploy();
 
-        await virtualToken.addWhitelist(account1.address);
-        await virtualToken.addWhitelist(erc1271Test.address);
+        
+        
         await virtualToken.connect(account1).approve(matchingEngine.address, 1000000000000000);
         await virtualToken.connect(account2).approve(matchingEngine.address, 1000000000000000);
 
@@ -1787,8 +1773,8 @@ describe("Positioning", function () {
 
         await virtualToken.mint(account1.address, convert("1000"));
         await virtualToken.mint(erc1271Test.address, convert("1000"));
-        await virtualToken.addWhitelist(account1.address);
-        await virtualToken.addWhitelist(erc1271Test.address);
+        
+        
         await virtualToken.connect(account1).approve(vault.address, convert("1000"));
         await virtualToken.connect(account2).approve(vault.address, convert("1000"));
         await virtualToken.connect(account1).approve(volmexPerpPeriphery.address, convert("1000"));
@@ -1847,8 +1833,7 @@ describe("Positioning", function () {
 
         await virtualToken.mint(account1.address, convert("1000"));
         await virtualToken.mint(account2.address, convert("1000"));
-        await virtualToken.addWhitelist(account1.address);
-        await virtualToken.addWhitelist(account2.address);
+        
         await virtualToken.connect(account1).approve(vault.address, convert("1000"));
         await virtualToken.connect(account2).approve(vault.address, convert("1000"));
         await virtualToken.connect(account1).approve(volmexPerpPeriphery.address, convert("1000"));
@@ -2106,6 +2091,8 @@ describe("Liquidation test in Positioning", function () {
         initializer: "initialize",
       },
     );
+    await (await volmexBaseToken.setMintBurnRole(positioning.address)).wait();
+    await (await virtualToken.setMintBurnRole(positioning.address)).wait();
     marketRegistry = await upgrades.deployProxy(MarketRegistry, [virtualToken.address]);
     perpViewFake = await smock.fake("VolmexPerpView");
     volmexPerpPeriphery = await upgrades.deployProxy(VolmexPerpPeriphery, [
@@ -2137,8 +2124,7 @@ describe("Liquidation test in Positioning", function () {
 
     await virtualToken.mint(account1.address, ten.toString());
     await virtualToken.mint(account2.address, ten.toString());
-    await virtualToken.addWhitelist(account1.address);
-    await virtualToken.addWhitelist(account2.address);
+    
 
     await virtualToken.connect(account1).approve(vault.address, ten.toString());
     await virtualToken.connect(account2).approve(vault.address, ten.toString());
