@@ -9,8 +9,6 @@ interface IVirtualToken is IERC20Upgradeable {
 
     // Setters
     function mint(address recipient, uint256 amount) external;
-
     function burn(address recipient, uint256 amount) external;
-
     function mintMaximumTo(address recipient) external;
 }

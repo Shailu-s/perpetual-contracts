@@ -15,19 +15,16 @@ interface IPositioning {
         int256 leftOpenNotional;
         int256 rightOpenNotional;
     }
-
     struct OrderFees {
         uint256 orderLeftFee;
         uint256 orderRightFee;
     }
-
     struct RealizePnlParams {
         address trader;
         address baseToken;
         int256 base;
         int256 quote;
     }
-
     struct InternalRealizePnlParams {
         address trader;
         address baseToken;
@@ -44,23 +41,13 @@ interface IPositioning {
     /// @param positionSize The size of position
     /// @param liquidationFee The fee of liquidate
     /// @param liquidator The address of liquidator
-    event PositionLiquidated(
-        address indexed trader,
-        address indexed baseToken,
-        uint256 positionNotional,
-        uint256 positionSize,
-        uint256 liquidationFee,
-        address liquidator
-    );
-
+    event PositionLiquidated(address indexed trader, address indexed baseToken, uint256 positionNotional, uint256 positionSize, uint256 liquidationFee, address liquidator);
     // TODO: Implement this event
     /// @notice Emitted when open position with non-zero referral code
     /// @param referralCode The referral code by partners
     event ReferredPositionChanged(bytes32 indexed referralCode);
-
     /// @notice Emitted when defualt fee receiver is changed
     event DefaultFeeReceiverChanged(address defaultFeeReceiver);
-
     /// @notice Emitted when taker's position is being changed
     /// @param trader Trader address
     /// @param baseToken The address of virtual base token(ETH, BTC, etc...)
@@ -77,63 +64,37 @@ interface IPositioning {
         bytes4 orderType,
         bool isShort
     );
-
     /// @notice Emitted when settling a trader's funding payment
     /// @param trader The address of trader
     /// @param baseToken The address of virtual base token(ETH, BTC, etc...)
     /// @param fundingPayment The fundingPayment of trader on baseToken market, > 0: payment, < 0 : receipt
     event FundingPaymentSettled(address indexed trader, address indexed baseToken, int256 fundingPayment);
-
     /// @notice Emitted when trusted forwarder address changed
     /// @dev TrustedForward is only used for metaTx
     /// @param forwarder The trusted forwarder address
     event TrustedForwarderChanged(address indexed forwarder);
-
     /// @notice Emitted when liquidator is whitelisted or removed
     event LiquidatorWhitelisted(address indexed liquidator, bool isWhitelist);
-
     event IndexPriceSet(address indexed indexPriceOracle);
-
     event FundingIntervalSet(int256 fundingInterval);
 
     /// @dev this function is public for testing
-    function initialize(
-        address positioningConfigArg,
-        address vaultControllerArg,
-        address accountBalanceArg,
-        address matchingEngineArg,
-        address markPriceArg,
-        address indexPriceArg,
-        uint64 underlyingPriceIndex,
-        address[2] calldata liquidators
-    ) external;
-
+    function initialize(address positioningConfigArg, address vaultControllerArg, address accountBalanceArg, address matchingEngineArg, address markPriceArg, address indexPriceArg, uint64 underlyingPriceIndex, address[2] calldata liquidators) external;
     /// @notice Settle all markets fundingPayment to owedRealized Pnl
     /// @param trader The address of trader
     function settleAllFunding(address trader) external;
-
     /// @notice Function to set fee receiver
     function setDefaultFeeReceiver(address newDefaultFeeReceiver) external;
-
     /// @notice Update whitelist for a liquidator
     /// @param isWhitelist if true, whitelist. is false remove whitelist
     function whitelistLiquidator(address liquidator, bool isWhitelist) external;
-
     /// @notice Update funding rate inteval
     /// @param interval denominator for 24 hours and get interval value, eg 24/3 = 8 hour interval of funding payment
     function setFundingInterval(int256 interval) external;
-
     /// @notice Trader can call `openPosition` to long/short on baseToken market
     /// @param orderLeft PositionParams struct
     /// @param orderRight PositionParams struct
-    function openPosition(
-        LibOrder.Order memory orderLeft,
-        bytes memory signatureLeft,
-        LibOrder.Order memory orderRight,
-        bytes memory signatureRight,
-        bytes memory liquidator
-    ) external;
-
+    function openPosition(LibOrder.Order memory orderLeft, bytes memory signatureLeft, LibOrder.Order memory orderRight, bytes memory signatureRight, bytes memory liquidator) external;
     /// @notice If trader is underwater, any one can call `liquidate` to liquidate this trader
     /// @dev If trader has open orders, need to call `cancelAllExcessOrders` first
     /// @dev If positionSize is greater than maxLiquidatePositionSize, liquidate maxLiquidatePositionSize by default
@@ -145,12 +106,7 @@ interface IPositioning {
     /// @param baseToken The address of baseToken
     /// @param positionSize the position size to be liquidated by liquidator
     //    and MUST be the same direction as trader's position size
-    function liquidate(
-        address trader,
-        address baseToken,
-        int256 positionSize
-    ) external;
-
+    function liquidate(address trader, address baseToken, int256 positionSize) external;
     /// @notice liquidate trader's position and will liquidate the max possible position size
     /// @dev If margin ratio >= 0.5 * mmRatio,
     /// maxLiquidateRatio = MIN((1, 0.5 * totalAbsPositionValue / absPositionValue)
@@ -159,31 +115,25 @@ interface IPositioning {
     /// @param trader The address of trader
     /// @param baseToken The address of baseToken
     function liquidateFullPosition(address trader, address baseToken) external;
-
     /// @notice Get position size of a trader to be liquidated
     /// @param trader The address of trader
     /// @param baseToken The address of baseToken
     function getLiquidatablePosition(address trader, address baseToken) external view returns (uint256);
-
     /// @notice Get the pnl that can be realized if trader reduce position
     /// @dev This function normally won't be needed by traders, but it might be useful for 3rd party
     /// @param params The params needed to do the query, encoded as `RealizePnlParams` in calldata
     /// @return pnlToBeRealized The pnl that can be realized if trader reduce position
     function getPnlToBeRealized(RealizePnlParams memory params) external view returns (int256 pnlToBeRealized);
-
     /// @notice Get PositioningConfig address
     /// @return PositioningConfig PositioningConfig address
     function getPositioningConfig() external view returns (address PositioningConfig);
-
     /// @notice Get total pending funding payment of trader
     /// @param trader address of the trader
     /// @return pendingFundingPayment  total pending funding
     function getAllPendingFundingPayment(address trader) external view returns (int256 pendingFundingPayment);
-
     /// @notice Get `Vault` address
     /// @return vault `Vault` address
     function getVaultController() external view returns (address vault);
-
     /// @notice Get AccountBalance address
     /// @return accountBalance `AccountBalance` address
     function getAccountBalance() external view returns (address accountBalance);

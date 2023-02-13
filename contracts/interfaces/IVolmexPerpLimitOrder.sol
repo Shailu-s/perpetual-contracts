@@ -19,12 +19,6 @@ interface IVolmexPerpLimitOrder {
         uint128 triggerPrice;
     }
 
-    function initialize(
-        IMarkPriceOracle _markPriceOracle,
-        IPositioning _positioning,
-        IAccountBalance _accountBalance,
-        address _admin
-    ) external;
-
+    function initialize(IMarkPriceOracle _markPriceOracle, IPositioning _positioning, IAccountBalance _accountBalance, address _admin) external;
     function setMarkPriceOracle(IMarkPriceOracle _markPriceOracle) external;
 }
