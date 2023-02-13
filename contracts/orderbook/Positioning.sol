@@ -431,14 +431,14 @@ contract Positioning is
             internalData.rightExchangedPositionNotional
         );
 
-        // // modifies PnL of fee receiver
+        // modifies PnL of fee receiver
         _modifyOwedRealizedPnl(
             _getFeeReceiver(),
             (orderFees.orderLeftFee + orderFees.orderRightFee).toInt256(),
             baseToken
         );
 
-        // // modifies positionSize and openNotional
+        // modifies positionSize and openNotional
         internalData.leftPositionSize = _settleBalanceAndDeregister(
             orderLeft.trader,
             baseToken,
@@ -471,6 +471,8 @@ contract Positioning is
         }
 
         uint256 orderIndexPrice = _getIndexPrice(baseToken);
+        _updateTokenAmount(orderLeft.trader, baseToken);
+        _updateTokenAmount(orderRight.trader, baseToken);
 
         emit PositionChanged(
             orderLeft.trader,
@@ -495,6 +497,22 @@ contract Positioning is
         );
 
         return internalData;
+    }
+
+    function _updateTokenAmount(address trader, address baseToken) internal {
+        int256 position = _getTakerPosition(trader, baseToken);
+        int256 notional = _getTakerOpenNotional(trader, baseToken);
+        address quoteToken = IMarketRegistry(_marketRegistry).getQuoteToken();
+        if (position > 0) {
+            uint256 currentBalance = IVirtualToken(baseToken).balanceOf(trader);
+            IVirtualToken(baseToken).burn(trader, currentBalance);
+            IVirtualToken(baseToken).mint(trader, uint256(position));
+        }
+        if (notional > 0) {
+            uint256 currentBalance = IVirtualToken(quoteToken).balanceOf(trader);
+            IVirtualToken(quoteToken).burn(trader, currentBalance);
+            IVirtualToken(quoteToken).mint(trader, uint256(notional));
+        }
     }
 
     /// @dev Calculate how much profit/loss we should realize,
