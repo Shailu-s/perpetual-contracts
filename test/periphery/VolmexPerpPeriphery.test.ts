@@ -240,6 +240,13 @@ describe("VolmexPerpPeriphery", function () {
     });
 
     it("Open position", async () => {
+      await expect(
+        volmexPerpPeriphery.whitelistTrader(alice.address, true)
+      ).to.emit(volmexPerpPeriphery, "TraderWhitelisted");
+      await expect(
+        volmexPerpPeriphery.whitelistTrader(bob.address, true)
+      ).to.emit(volmexPerpPeriphery, "TraderWhitelisted");
+
       let salt = 250;
       let txBefore = [];
       for (let index = 0; index < 10; index++) {
@@ -347,6 +354,52 @@ describe("VolmexPerpPeriphery", function () {
         }
       }
     });
+
+    it("Open position when not whitelisted", async () => {
+      let salt = 250;
+      let txBefore = [];
+      for (let index = 0; index < 10; index++) {
+        let orderLeft = Order(
+          ORDER,
+          deadline,
+          alice.address,
+          Asset(volmexBaseToken.address, baseAmount),
+          Asset(volmexQuoteToken.address, quoteAmount),
+          salt,
+          0,
+          true,
+        );
+
+        let orderRight = Order(
+          ORDER,
+          deadline,
+          bob.address,
+          Asset(volmexQuoteToken.address, quoteAmount),
+          Asset(volmexBaseToken.address, baseAmount),
+          salt++,
+          0,
+          false,
+        );
+
+        const signatureLeft = await getSignature(orderLeft, alice.address);
+        const signatureRight = await getSignature(orderRight, bob.address);
+
+        await expect(
+          volmexPerpPeriphery.setOnlyWhitelisted(false)
+        ).to.emit(volmexPerpPeriphery, "OnlyWhitelisted");
+
+        await expect(
+          volmexPerpPeriphery.openPosition(
+            0,
+            orderLeft,
+            signatureLeft,
+            orderRight,
+            signatureRight,
+            liquidator,
+          )
+        ).to.emit(positioning, "PositionChanged");
+      }
+    });
   });
 
   describe("VolmexPerpPeriphery deployment", async () => {
@@ -415,6 +468,21 @@ describe("VolmexPerpPeriphery", function () {
       ).to.be.revertedWith("VolmexPerpPeriphery: Not relayer");
     });
   });
+
+  describe("onlyWhitelisted", async () => {
+    it("should set onlyWhitelisted", async () => {
+      await expect(
+        volmexPerpPeriphery.setOnlyWhitelisted(false)
+      ).to.emit(volmexPerpPeriphery, "OnlyWhitelisted");
+    });
+
+    it("should fail to set onlyWhitelisted if caller doesn't have admin role", async () => {
+      await expect(
+        volmexPerpPeriphery.connect(account2).setOnlyWhitelisted(false)
+      ).to.be.revertedWith('');
+    });
+  });
+
   describe("Add a vault to white list", function () {
     it("Add vault to white list", async () => {
       const vault1 = await upgrades.deployProxy(Vault, [

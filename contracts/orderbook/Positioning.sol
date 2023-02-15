@@ -79,6 +79,7 @@ contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, 
         for (uint256 index = 0; index < 2; index++) {
             isLiquidatorWhitelist[liquidators[index]] = true;
         }
+        onlyWhitelisted = true;
 
         _grantRole(POSITIONING_ADMIN, _msgSender());
     }
@@ -131,6 +132,12 @@ contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, 
         _fundingRateInterval = interval;
 
         emit FundingIntervalSet(interval);
+    }
+
+    function setOnlyWhitelisted(bool whitelisted) external {
+        _requirePositioningAdmin();
+        onlyWhitelisted = whitelisted;
+        emit OnlyWhitelisted(whitelisted);
     }
 
     /// @inheritdoc IPositioning
@@ -283,7 +290,9 @@ contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, 
         // P_EAV: enough account value
         require(_isAccountLiquidatable(trader), "P_EAV");
         address liquidator = _msgSender();
-        _requireWhitelistLiquidator(liquidator);
+        if (onlyWhitelisted) {
+            _requireWhitelistLiquidator(liquidator);
+        }
 
         int256 positionSize = _getTakerPosition(trader, baseToken);
 
