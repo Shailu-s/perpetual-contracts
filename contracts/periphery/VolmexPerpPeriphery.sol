@@ -139,8 +139,7 @@ contract VolmexPerpPeriphery is Initializable, AccessControlUpgradeable, IVolmex
             _requireWhitelistedTrader(_orderLeft.trader);
             _requireWhitelistedTrader(_orderRight.trader);
         }
-        IPositioning positioning = perpView.positionings(_index);
-        positioning.openPosition(_orderLeft, _signatureLeft, _orderRight, _signatureRight, liquidator);
+        _openPosition(_index, _orderLeft, _signatureLeft, _orderRight, _signatureRight, liquidator);
     }
 
     function batchOpenPosition(
@@ -155,8 +154,13 @@ contract VolmexPerpPeriphery is Initializable, AccessControlUpgradeable, IVolmex
         _requireVolmexPerpPeripheryRelayer();
         IPositioning positioning = perpView.positionings(_index);
         uint256 ordersLength = _ordersLeft.length;
+        bool _isTraderWhitelistEnabled = isTraderWhitelistEnabled;
         for (uint256 orderIndex = 0; orderIndex < ordersLength; orderIndex++) {
-            positioning.openPosition(_ordersLeft[orderIndex], _signaturesLeft[orderIndex], _ordersRight[orderIndex], _signaturesRight[orderIndex], liquidator);
+            if (_isTraderWhitelistEnabled) {
+                _requireWhitelistedTrader(_ordersLeft[orderIndex].trader);
+                _requireWhitelistedTrader(_ordersRight[orderIndex].trader);
+            }
+            _openPosition(_index, _ordersLeft[orderIndex], _signaturesLeft[orderIndex], _ordersRight[orderIndex], _signaturesRight[orderIndex], liquidator);
         }
     }
 
@@ -196,6 +200,18 @@ contract VolmexPerpPeriphery is Initializable, AccessControlUpgradeable, IVolmex
     /**
         Internal view functions
      */
+
+    function _openPosition(
+        uint64 _index,
+        LibOrder.Order memory _orderLeft,
+        bytes memory _signatureLeft,
+        LibOrder.Order memory _orderRight,
+        bytes memory _signatureRight,
+        bytes memory liquidator
+    ) internal {
+        IPositioning positioning = perpView.positionings(_index);
+        positioning.openPosition(_orderLeft, _signatureLeft, _orderRight, _signatureRight, liquidator);
+    }
 
     function _fillLimitOrder(
         LibOrder.Order memory _leftLimitOrder,

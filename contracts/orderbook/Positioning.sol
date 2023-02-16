@@ -134,7 +134,7 @@ contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, 
         emit FundingIntervalSet(interval);
     }
 
-    function toggleWhitelist() external {
+    function toggleLiquidatorWhitelist() external {
         _requirePositioningAdmin();
         isLiquidatorWhitelistEnabled = !isLiquidatorWhitelistEnabled;
     }

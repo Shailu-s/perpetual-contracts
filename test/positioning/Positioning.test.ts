@@ -380,15 +380,15 @@ describe("Positioning", function () {
     });
   });
 
-  describe("toggleWhitelist", async () => {
+  describe("toggleLiquidatorWhitelist", async () => {
     it("should fail to set whitelisted flag if caller doesn't have admin role", async () => {
       await expect(
-        positioning.connect(account1).toggleWhitelist(),
+        positioning.connect(account1).toggleLiquidatorWhitelist(),
       ).to.be.revertedWith("Positioning: Not admin");
     });
 
     it("should set whitelisted flag if caller has admin role", async () => {
-      const tx = positioning.toggleWhitelist();
+      const tx = positioning.toggleLiquidatorWhitelist();
       expect(tx.confirmations).not.equal(0);
     });
   });
@@ -2295,7 +2295,7 @@ describe("Liquidation test in Positioning", function () {
             .liquidate(account1.address, volmexBaseToken.address, "-10000000000000000000"),
         ).to.be.revertedWith("Positioning: liquidator not whitelisted");
 
-        positioning.toggleWhitelist();
+        await positioning.toggleLiquidatorWhitelist();
 
         await expect(
           positioning
