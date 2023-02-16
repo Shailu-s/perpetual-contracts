@@ -20,6 +20,12 @@ contract VolmexPerpPeriphery is Initializable, AccessControlUpgradeable, IVolmex
 
     // Store the whitelist Vaults
     mapping(address => bool) private _isVaultWhitelist;
+    
+    // Store the whitelist traders
+    mapping(address => bool) public isTraderWhitelisted;
+
+    // Boolean flag to enable / disable whitelisted traders
+    bool public isTraderWhitelistEnabled;
 
     // Used to fetch base token price according to market
     IMarkPriceOracle public markPriceOracle;
@@ -51,6 +57,7 @@ contract VolmexPerpPeriphery is Initializable, AccessControlUpgradeable, IVolmex
         for (uint256 i = 0; i < 2; i++) {
             _isVaultWhitelist[_vaults[i]] = true;
         }
+        isTraderWhitelistEnabled = true;
         _grantRole(VOLMEX_PERP_PERIPHERY, _owner);
         _grantRole(RELAYER_MULTISIG, _relayer);
     }
@@ -67,10 +74,21 @@ contract VolmexPerpPeriphery is Initializable, AccessControlUpgradeable, IVolmex
         emit RelayerUpdated(_relayer);
     }
 
+    function toggleTraderWhitelistEnabled() external {
+        _requireVolmexPerpPeripheryAdmin();
+        isTraderWhitelistEnabled = !isTraderWhitelistEnabled;
+    }
+
     function whitelistVault(address _vault, bool _isWhitelist) external {
         _requireVolmexPerpPeripheryAdmin();
         _isVaultWhitelist[_vault] = _isWhitelist;
         emit VaultWhitelisted(_vault, _isWhitelist);
+    }
+
+    function whitelistTrader(address _trader, bool _isWhitelist) external {
+        _requireVolmexPerpPeripheryAdmin();
+        isTraderWhitelisted[_trader] = _isWhitelist;
+        emit TraderWhitelisted(_trader, _isWhitelist);
     }
 
     function fillLimitOrder(
@@ -117,8 +135,11 @@ contract VolmexPerpPeriphery is Initializable, AccessControlUpgradeable, IVolmex
         bytes memory liquidator
     ) external {
         _requireVolmexPerpPeripheryRelayer();
-        IPositioning positioning = perpView.positionings(_index);
-        positioning.openPosition(_orderLeft, _signatureLeft, _orderRight, _signatureRight, liquidator);
+        if (isTraderWhitelistEnabled) {
+            _requireWhitelistedTrader(_orderLeft.trader);
+            _requireWhitelistedTrader(_orderRight.trader);
+        }
+        _openPosition(_index, _orderLeft, _signatureLeft, _orderRight, _signatureRight, liquidator);
     }
 
     function batchOpenPosition(
@@ -133,8 +154,16 @@ contract VolmexPerpPeriphery is Initializable, AccessControlUpgradeable, IVolmex
         _requireVolmexPerpPeripheryRelayer();
         IPositioning positioning = perpView.positionings(_index);
         uint256 ordersLength = _ordersLeft.length;
+        bool _isTraderWhitelistEnabled = isTraderWhitelistEnabled;
+        if (_isTraderWhitelistEnabled) {
+            for (uint256 orderIndex = 0; orderIndex < ordersLength; orderIndex++) {
+                _requireWhitelistedTrader(_ordersLeft[orderIndex].trader);
+                _requireWhitelistedTrader(_ordersRight[orderIndex].trader);
+            }
+        }
+
         for (uint256 orderIndex = 0; orderIndex < ordersLength; orderIndex++) {
-            positioning.openPosition(_ordersLeft[orderIndex], _signaturesLeft[orderIndex], _ordersRight[orderIndex], _signaturesRight[orderIndex], liquidator);
+            _openPosition(_index, _ordersLeft[orderIndex], _signaturesLeft[orderIndex], _ordersRight[orderIndex], _signaturesRight[orderIndex], liquidator);
         }
     }
 
@@ -175,6 +204,18 @@ contract VolmexPerpPeriphery is Initializable, AccessControlUpgradeable, IVolmex
         Internal view functions
      */
 
+    function _openPosition(
+        uint64 _index,
+        LibOrder.Order memory _orderLeft,
+        bytes memory _signatureLeft,
+        LibOrder.Order memory _orderRight,
+        bytes memory _signatureRight,
+        bytes memory liquidator
+    ) internal {
+        IPositioning positioning = perpView.positionings(_index);
+        positioning.openPosition(_orderLeft, _signatureLeft, _orderRight, _signatureRight, liquidator);
+    }
+
     function _fillLimitOrder(
         LibOrder.Order memory _leftLimitOrder,
         bytes memory _signatureLeftLimitOrder,
@@ -196,6 +237,10 @@ contract VolmexPerpPeriphery is Initializable, AccessControlUpgradeable, IVolmex
 
     function _requireVolmexPerpPeripheryRelayer() internal view {
         require(hasRole(RELAYER_MULTISIG, _msgSender()), "VolmexPerpPeriphery: Not relayer");
+    }
+
+    function _requireWhitelistedTrader(address trader) internal view {
+        require(isTraderWhitelisted[trader], "Periphery: trader not whitelisted");
     }
 
     // TODO: Change the logic to round id, if Volmex Oracle implements price by round id functionality

@@ -18,7 +18,8 @@ abstract contract PositioningStorageV1 {
     address internal _marketRegistry;
 
     address public defaultFeeReceiver;
-    mapping(address => bool) public isLiquidatorWhitelist;
+    mapping(address => bool) public isLiquidatorWhitelisted;
+    bool public isLiquidatorWhitelistEnabled;
 
     uint256[50] private __gap;
 }

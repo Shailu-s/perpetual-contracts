@@ -91,6 +91,8 @@ interface IPositioning {
     /// @notice Update funding rate inteval
     /// @param interval denominator for 24 hours and get interval value, eg 24/3 = 8 hour interval of funding payment
     function setFundingInterval(int256 interval) external;
+    /// @notice If true, allows only whitelisted liquidators, else everyone can be liquidator
+     function toggleLiquidatorWhitelist() external;
     /// @notice Trader can call `openPosition` to long/short on baseToken market
     /// @param orderLeft PositionParams struct
     /// @param orderRight PositionParams struct
