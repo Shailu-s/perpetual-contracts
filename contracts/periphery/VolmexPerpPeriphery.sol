@@ -22,10 +22,10 @@ contract VolmexPerpPeriphery is Initializable, AccessControlUpgradeable, IVolmex
     mapping(address => bool) private _isVaultWhitelist;
     
     // Store the whitelist traders
-    mapping(address => bool) private _isTraderWhitelist;
+    mapping(address => bool) private _isWhitelisted;
 
-    // Boolean flag to enable / disable onlyWhitelisted traders
-    bool onlyWhitelisted;
+    // Boolean flag to enable / disable whitelisted traders
+    bool public isWhitelistEnabled;
 
     // Used to fetch base token price according to market
     IMarkPriceOracle public markPriceOracle;
@@ -57,7 +57,7 @@ contract VolmexPerpPeriphery is Initializable, AccessControlUpgradeable, IVolmex
         for (uint256 i = 0; i < 2; i++) {
             _isVaultWhitelist[_vaults[i]] = true;
         }
-        onlyWhitelisted = true;
+        isWhitelistEnabled = true;
         _grantRole(VOLMEX_PERP_PERIPHERY, _owner);
         _grantRole(RELAYER_MULTISIG, _relayer);
     }
@@ -74,10 +74,10 @@ contract VolmexPerpPeriphery is Initializable, AccessControlUpgradeable, IVolmex
         emit RelayerUpdated(_relayer);
     }
 
-    function setOnlyWhitelisted(bool whitelisted) external {
+    function setWhitelistEnabled(bool _whitelistEnabled) external {
         _requireVolmexPerpPeripheryAdmin();
-        onlyWhitelisted = whitelisted;
-        emit OnlyWhitelisted(whitelisted);
+        isWhitelistEnabled = _whitelistEnabled;
+        emit OnlyWhitelisted(isWhitelistEnabled);
     }
 
     function whitelistVault(address _vault, bool _isWhitelist) external {
@@ -88,8 +88,8 @@ contract VolmexPerpPeriphery is Initializable, AccessControlUpgradeable, IVolmex
 
     function whitelistTrader(address _trader, bool _isWhitelist) external {
         _requireVolmexPerpPeripheryAdmin();
-        _isTraderWhitelist[_trader] = _isWhitelist;
-        emit TraderWhitelisted(_trader, _isWhitelist);
+        _isWhitelisted[_trader] = _isWhitelist;
+        emit Whitelisted(_trader, _isWhitelist);
     }
 
     function fillLimitOrder(
@@ -136,7 +136,7 @@ contract VolmexPerpPeriphery is Initializable, AccessControlUpgradeable, IVolmex
         bytes memory liquidator
     ) external {
         _requireVolmexPerpPeripheryRelayer();
-        if (onlyWhitelisted) {
+        if (isWhitelistEnabled) {
             _requireWhitelistedTrader(_orderLeft.trader);
             _requireWhitelistedTrader(_orderRight.trader);
         }
@@ -222,7 +222,7 @@ contract VolmexPerpPeriphery is Initializable, AccessControlUpgradeable, IVolmex
     }
 
     function _requireWhitelistedTrader(address trader) internal view {
-        require(_isTraderWhitelist[trader], "Periphery: trader not whitelisted");
+        require(_isWhitelisted[trader], "Periphery: trader not whitelisted");
     }
 
     // TODO: Change the logic to round id, if Volmex Oracle implements price by round id functionality

@@ -242,10 +242,10 @@ describe("VolmexPerpPeriphery", function () {
     it("Open position", async () => {
       await expect(
         volmexPerpPeriphery.whitelistTrader(alice.address, true)
-      ).to.emit(volmexPerpPeriphery, "TraderWhitelisted");
+      ).to.emit(volmexPerpPeriphery, "Whitelisted");
       await expect(
         volmexPerpPeriphery.whitelistTrader(bob.address, true)
-      ).to.emit(volmexPerpPeriphery, "TraderWhitelisted");
+      ).to.emit(volmexPerpPeriphery, "Whitelisted");
 
       let salt = 250;
       let txBefore = [];
@@ -385,7 +385,7 @@ describe("VolmexPerpPeriphery", function () {
         const signatureRight = await getSignature(orderRight, bob.address);
 
         await expect(
-          volmexPerpPeriphery.setOnlyWhitelisted(false)
+          volmexPerpPeriphery.setWhitelistEnabled(false)
         ).to.emit(volmexPerpPeriphery, "OnlyWhitelisted");
 
         await expect(
@@ -472,14 +472,14 @@ describe("VolmexPerpPeriphery", function () {
   describe("onlyWhitelisted", async () => {
     it("should set onlyWhitelisted", async () => {
       await expect(
-        volmexPerpPeriphery.setOnlyWhitelisted(false)
+        volmexPerpPeriphery.setWhitelistEnabled(false)
       ).to.emit(volmexPerpPeriphery, "OnlyWhitelisted");
     });
 
     it("should fail to set onlyWhitelisted if caller doesn't have admin role", async () => {
       await expect(
-        volmexPerpPeriphery.connect(account2).setOnlyWhitelisted(false)
-      ).to.be.revertedWith('');
+        volmexPerpPeriphery.connect(account2).setWhitelistEnabled(false)
+      ).to.be.revertedWith('Periphery: Not admin');
     });
   });
 
