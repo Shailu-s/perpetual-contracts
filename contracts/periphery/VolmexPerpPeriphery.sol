@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: BUSL - 1.1
 pragma solidity =0.8.12;
 
-import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 
 import "../libs/LibOrder.sol";
@@ -12,7 +11,7 @@ import "../interfaces/IVolmexPerpPeriphery.sol";
 import "../interfaces/IVolmexPerpView.sol";
 import "../interfaces/IPositioningConfig.sol";
 
-contract VolmexPerpPeriphery is Initializable, AccessControlUpgradeable, IVolmexPerpPeriphery {
+contract VolmexPerpPeriphery is AccessControlUpgradeable, IVolmexPerpPeriphery {
     // perp periphery role
     bytes32 public constant VOLMEX_PERP_PERIPHERY = keccak256("VOLMEX_PERP_PERIPHERY");
     // role of relayer to execute open position
@@ -152,7 +151,7 @@ contract VolmexPerpPeriphery is Initializable, AccessControlUpgradeable, IVolmex
     ) external {
         require(_ordersLeft.length == _ordersRight.length, "Periphery: mismatch orders");
         _requireVolmexPerpPeripheryRelayer();
-        IPositioning positioning = perpView.positionings(_index);
+
         uint256 ordersLength = _ordersLeft.length;
         bool _isTraderWhitelistEnabled = isTraderWhitelistEnabled;
         if (_isTraderWhitelistEnabled) {
