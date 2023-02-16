@@ -155,11 +155,14 @@ contract VolmexPerpPeriphery is Initializable, AccessControlUpgradeable, IVolmex
         IPositioning positioning = perpView.positionings(_index);
         uint256 ordersLength = _ordersLeft.length;
         bool _isTraderWhitelistEnabled = isTraderWhitelistEnabled;
-        for (uint256 orderIndex = 0; orderIndex < ordersLength; orderIndex++) {
-            if (_isTraderWhitelistEnabled) {
+        if (_isTraderWhitelistEnabled) {
+            for (uint256 orderIndex = 0; orderIndex < ordersLength; orderIndex++) {
                 _requireWhitelistedTrader(_ordersLeft[orderIndex].trader);
                 _requireWhitelistedTrader(_ordersRight[orderIndex].trader);
             }
+        }
+
+        for (uint256 orderIndex = 0; orderIndex < ordersLength; orderIndex++) {
             _openPosition(_index, _ordersLeft[orderIndex], _signaturesLeft[orderIndex], _ordersRight[orderIndex], _signaturesRight[orderIndex], liquidator);
         }
     }
