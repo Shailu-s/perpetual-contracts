@@ -12,8 +12,7 @@ import "./IVaultController.sol";
 interface IVolmexPerpPeriphery {
     event RelayerUpdated(address indexed newRelayerAddress);
     event VaultWhitelisted(address indexed vault, bool isWhitelist);
-    event Whitelisted(address indexed trader, bool isWhitelist);
-    event OnlyWhitelisted(bool isWhitelist);
+    event TraderWhitelisted(address indexed account, bool isWhitelist);
 
     function depositToVault(uint64 _index, address _token, uint256 _amount) external payable;
     function withdrawFromVault(uint64 _index, address _token, address payable _to, uint256 _amount) external;

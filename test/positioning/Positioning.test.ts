@@ -1382,11 +1382,11 @@ describe("Positioning", function () {
       });
 
       it("test for liquidators", async () => {
-        await expect(await positioning.isLiquidatorWhitelist(owner.address)).to.equal(true);
+        await expect(await positioning.isLiquidatorWhitelisted(owner.address)).to.equal(true);
 
-        await expect(await positioning.isLiquidatorWhitelist(account2.address)).to.equal(true);
+        await expect(await positioning.isLiquidatorWhitelisted(account2.address)).to.equal(true);
 
-        await expect(await positioning.isLiquidatorWhitelist(account1.address)).to.equal(false);
+        await expect(await positioning.isLiquidatorWhitelisted(account1.address)).to.equal(false);
       });
 
       it("should whitelist a new liquidator", async () => {
@@ -1394,13 +1394,13 @@ describe("Positioning", function () {
           .to.emit(positioning, "LiquidatorWhitelisted")
           .withArgs(owner.address, false);
 
-        await expect(await positioning.isLiquidatorWhitelist(owner.address)).to.equal(false);
+        await expect(await positioning.isLiquidatorWhitelisted(owner.address)).to.equal(false);
 
         await expect(await positioning.whitelistLiquidator(account1.address, true))
           .to.emit(positioning, "LiquidatorWhitelisted")
           .withArgs(account1.address, true);
 
-        await expect(await positioning.isLiquidatorWhitelist(account1.address)).to.equal(true);
+        await expect(await positioning.isLiquidatorWhitelisted(account1.address)).to.equal(true);
       });
 
       it("should not be able to whitelist liquidator if not have appropriate role", async () => {

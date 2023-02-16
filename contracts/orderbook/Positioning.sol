@@ -77,7 +77,7 @@ contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, 
         _matchingEngine = matchingEngineArg;
         _underlyingPriceIndex = underlyingPriceIndex;
         for (uint256 index = 0; index < 2; index++) {
-            isLiquidatorWhitelist[liquidators[index]] = true;
+            isLiquidatorWhitelisted[liquidators[index]] = true;
         }
         isLiquidatorWhitelistEnabled = true;
 
@@ -119,9 +119,9 @@ contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, 
     /// @inheritdoc IPositioning
     function whitelistLiquidator(address liquidator, bool isWhitelist) external {
         _requirePositioningAdmin();
-        isLiquidatorWhitelist[liquidator] = isWhitelist;
+        isLiquidatorWhitelisted[liquidator] = isWhitelist;
         if (!isWhitelist) {
-            delete isLiquidatorWhitelist[liquidator];
+            delete isLiquidatorWhitelisted[liquidator];
         }
         emit LiquidatorWhitelisted(liquidator, isWhitelist);
     }
@@ -662,7 +662,7 @@ contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, 
     }
 
     function _requireWhitelistLiquidator(address liquidator) internal view {
-        require(isLiquidatorWhitelist[liquidator], "Positioning: liquidator not whitelisted");
+        require(isLiquidatorWhitelisted[liquidator], "Positioning: liquidator not whitelisted");
     }
 
     function _getPnlToBeRealized(InternalRealizePnlParams memory params) internal pure returns (int256) {

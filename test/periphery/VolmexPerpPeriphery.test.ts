@@ -242,10 +242,10 @@ describe("VolmexPerpPeriphery", function () {
     it("Open position", async () => {
       await expect(
         volmexPerpPeriphery.whitelistTrader(alice.address, true)
-      ).to.emit(volmexPerpPeriphery, "Whitelisted");
+      ).to.emit(volmexPerpPeriphery, "TraderWhitelisted");
       await expect(
         volmexPerpPeriphery.whitelistTrader(bob.address, true)
-      ).to.emit(volmexPerpPeriphery, "Whitelisted");
+      ).to.emit(volmexPerpPeriphery, "TraderWhitelisted");
 
       let salt = 250;
       let txBefore = [];
@@ -358,6 +358,7 @@ describe("VolmexPerpPeriphery", function () {
     it("Open position when not whitelisted", async () => {
       let salt = 250;
       let txBefore = [];
+      await volmexPerpPeriphery.toggleTraderWhitelistEnabled();
       for (let index = 0; index < 10; index++) {
         let orderLeft = Order(
           ORDER,
@@ -383,10 +384,6 @@ describe("VolmexPerpPeriphery", function () {
 
         const signatureLeft = await getSignature(orderLeft, alice.address);
         const signatureRight = await getSignature(orderRight, bob.address);
-
-        await expect(
-          volmexPerpPeriphery.setWhitelistEnabled(false)
-        ).to.emit(volmexPerpPeriphery, "OnlyWhitelisted");
 
         await expect(
           volmexPerpPeriphery.openPosition(
@@ -470,15 +467,13 @@ describe("VolmexPerpPeriphery", function () {
   });
 
   describe("onlyWhitelisted", async () => {
-    it("should set onlyWhitelisted", async () => {
-      await expect(
-        volmexPerpPeriphery.setWhitelistEnabled(false)
-      ).to.emit(volmexPerpPeriphery, "OnlyWhitelisted");
+    it("should set onlyWhitelisted", async () => {      
+      volmexPerpPeriphery.toggleTraderWhitelistEnabled();
     });
 
     it("should fail to set onlyWhitelisted if caller doesn't have admin role", async () => {
       await expect(
-        volmexPerpPeriphery.connect(account2).setWhitelistEnabled(false)
+        volmexPerpPeriphery.connect(account2).toggleTraderWhitelistEnabled()
       ).to.be.revertedWith('Periphery: Not admin');
     });
   });
