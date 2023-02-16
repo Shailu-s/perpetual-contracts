@@ -25,7 +25,7 @@ contract VolmexPerpPeriphery is Initializable, AccessControlUpgradeable, IVolmex
     mapping(address => bool) private _isWhitelisted;
 
     // Boolean flag to enable / disable whitelisted traders
-    bool public isWhitelistEnabled;
+    bool public isTraderWhitelistEnabled;
 
     // Used to fetch base token price according to market
     IMarkPriceOracle public markPriceOracle;
@@ -57,7 +57,7 @@ contract VolmexPerpPeriphery is Initializable, AccessControlUpgradeable, IVolmex
         for (uint256 i = 0; i < 2; i++) {
             _isVaultWhitelist[_vaults[i]] = true;
         }
-        isWhitelistEnabled = true;
+        isTraderWhitelistEnabled = true;
         _grantRole(VOLMEX_PERP_PERIPHERY, _owner);
         _grantRole(RELAYER_MULTISIG, _relayer);
     }
@@ -76,8 +76,8 @@ contract VolmexPerpPeriphery is Initializable, AccessControlUpgradeable, IVolmex
 
     function setWhitelistEnabled(bool _whitelistEnabled) external {
         _requireVolmexPerpPeripheryAdmin();
-        isWhitelistEnabled = _whitelistEnabled;
-        emit OnlyWhitelisted(isWhitelistEnabled);
+        isTraderWhitelistEnabled = _whitelistEnabled;
+        emit OnlyWhitelisted(isTraderWhitelistEnabled);
     }
 
     function whitelistVault(address _vault, bool _isWhitelist) external {
@@ -136,7 +136,7 @@ contract VolmexPerpPeriphery is Initializable, AccessControlUpgradeable, IVolmex
         bytes memory liquidator
     ) external {
         _requireVolmexPerpPeripheryRelayer();
-        if (isWhitelistEnabled) {
+        if (isTraderWhitelistEnabled) {
             _requireWhitelistedTrader(_orderLeft.trader);
             _requireWhitelistedTrader(_orderRight.trader);
         }

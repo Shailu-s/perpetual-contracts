@@ -79,7 +79,7 @@ contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, 
         for (uint256 index = 0; index < 2; index++) {
             isLiquidatorWhitelist[liquidators[index]] = true;
         }
-        isWhitelistEnabled = true;
+        isLiquidatorWhitelistEnabled = true;
 
         _grantRole(POSITIONING_ADMIN, _msgSender());
     }
@@ -136,7 +136,7 @@ contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, 
 
     function toggleWhitelist() external {
         _requirePositioningAdmin();
-        isWhitelistEnabled = !isWhitelistEnabled;
+        isLiquidatorWhitelistEnabled = !isLiquidatorWhitelistEnabled;
     }
 
     /// @inheritdoc IPositioning
@@ -289,7 +289,7 @@ contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, 
         // P_EAV: enough account value
         require(_isAccountLiquidatable(trader), "P_EAV");
         address liquidator = _msgSender();
-        if (isWhitelistEnabled) {
+        if (isLiquidatorWhitelistEnabled) {
             _requireWhitelistLiquidator(liquidator);
         }
 
