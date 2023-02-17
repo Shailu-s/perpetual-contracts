@@ -55,7 +55,6 @@ contract VaultController is ReentrancyGuardUpgradeable, OwnerPausable, VaultCont
         // positioning not set
         require(_positioning != address(0), "VC_PNS");
 
-        // TODO From should be external user not periphery
         // VC_CWZA: can't deposit zero amount
         require(amount > 0, "VC_CDZA");
 

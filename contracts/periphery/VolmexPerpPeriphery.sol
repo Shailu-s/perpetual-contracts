@@ -242,9 +242,9 @@ contract VolmexPerpPeriphery is AccessControlUpgradeable, IVolmexPerpPeriphery {
         require(isTraderWhitelisted[trader], "Periphery: trader not whitelisted");
     }
 
-    // TODO: Change the logic to round id, if Volmex Oracle implements price by round id functionality
+    // Note for V2: Change the logic to round id, if Volmex Oracle implements price by round id functionality
     function _verifyTriggerPrice(LibOrder.Order memory _limitOrder, IPositioning _positioning) private view returns (bool) {
-        // TODO: Add check for round id, when Volmex Oracle updates functionality
+        // Note for V2: Add check for round id, when Volmex Oracle updates functionality
 
         address positioningConfig = _positioning.getPositioningConfig();
         uint32 twInterval = IPositioningConfig(positioningConfig).getTwapInterval();
@@ -271,7 +271,6 @@ contract VolmexPerpPeriphery is AccessControlUpgradeable, IVolmexPerpPeriphery {
         return false;
     }
 
-    // TODO: Changes might require if we integrate chainlink, which are related to round_id
     function _getBaseTokenPrice(LibOrder.Order memory _order, uint256 _twInterval) private view returns (uint256 price) {
         address makeAsset = _order.makeAsset.virtualToken;
         address takeAsset = _order.takeAsset.virtualToken;

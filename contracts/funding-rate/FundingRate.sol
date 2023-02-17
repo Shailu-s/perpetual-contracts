@@ -48,9 +48,6 @@ contract FundingRate is IFundingRate, BlockContext, PositioningCallee, FundingRa
         _fundingRateInterval = 3;
     }
 
-    /**
-    TODO:   we should check use cases here whether marketFundingRate goes -ve or not
-     */
     /// @dev this function calculates pending funding payment of user
     /// @param markTwap only for settleFunding()
     /// @param indexTwap only for settleFunding()

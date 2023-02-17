@@ -142,7 +142,7 @@ contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, 
         _liquidate(trader, baseToken, positionSize);
     }
 
-    ///TODO: Test if this function liquidate full position even with when only partial was needed
+    ///Note for Auditor: Check full position liquidation even when partial was needed
     /// @inheritdoc IPositioning
     function liquidateFullPosition(address trader, address baseToken) external override whenNotPaused nonReentrant {
         // positionSizeToBeLiquidated = 0 means liquidating as much as possible
@@ -386,7 +386,7 @@ contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, 
         }
 
         OrderFees memory orderFees = _calculateFees(
-            true, // TODO: This is hardcoded right now but changes it during relayer development
+            true, // left order is maker
             internalData.leftExchangedPositionNotional,
             internalData.rightExchangedPositionNotional
         );

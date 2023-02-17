@@ -27,7 +27,6 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
     using LibPerpMath for uint160;
     using LibAccountMarket for LibAccountMarket.Info;
 
-    /// TODO: Discusss _MIN_PARTIAL_LIQUIDATE_POSITION_VALUE and its use cases.
     uint256 internal constant _MIN_PARTIAL_LIQUIDATE_POSITION_VALUE = 100e18 wei; // 100 USD in decimal 18
 
     function initialize(address positioningConfigArg) external initializer {
