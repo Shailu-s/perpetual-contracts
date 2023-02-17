@@ -4,7 +4,6 @@ pragma solidity =0.8.12;
 
 import "../libs/LibOrder.sol";
 import "../libs/LibFill.sol";
-import "../libs/LibDeal.sol";
 
 interface IMatchingEngine {
     function cancelOrder(LibOrder.Order memory order) external;

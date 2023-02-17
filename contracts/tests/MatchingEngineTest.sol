@@ -10,7 +10,6 @@ contract MatchingEngineTest is MatchingEngine {
 
     function __MatchingEngineTest_init(address owner, IMarkPriceOracle markPriceOracle) external initializer {
         initialize(owner, markPriceOracle);
-        __Ownable_init_unchained();
         _grantRole(CAN_MATCH_ORDERS, _msgSender());
         _grantRole(CAN_MATCH_ORDERS, address(this));
     }

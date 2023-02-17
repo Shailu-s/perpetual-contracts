@@ -9,8 +9,6 @@ import { ReentrancyGuardUpgradeable } from "@openzeppelin/contracts-upgradeable/
 import { LibAccountMarket } from "../libs/LibAccountMarket.sol";
 import { LibOrder } from "../libs/LibOrder.sol";
 import { LibFill } from "../libs/LibFill.sol";
-import { LibDeal } from "../libs/LibDeal.sol";
-import { LibAsset } from "../libs/LibAsset.sol";
 import { LibPerpMath } from "../libs/LibPerpMath.sol";
 import { LibSafeCastInt } from "../libs/LibSafeCastInt.sol";
 import { LibSafeCastUint } from "../libs/LibSafeCastUint.sol";
@@ -18,8 +16,6 @@ import { LibSignature } from "../libs/LibSignature.sol";
 import { EncodeDecode } from "../libs/EncodeDecode.sol";
 
 import { IAccountBalance } from "../interfaces/IAccountBalance.sol";
-import { IERC1271 } from "../interfaces/IERC1271.sol";
-import { IERC20Metadata } from "../interfaces/IERC20Metadata.sol";
 import { IIndexPrice } from "../interfaces/IIndexPrice.sol";
 import { IMatchingEngine } from "../interfaces/IMatchingEngine.sol";
 import { IMarketRegistry } from "../interfaces/IMarketRegistry.sol";
@@ -32,11 +28,9 @@ import { BlockContext } from "../helpers/BlockContext.sol";
 import { FundingRate } from "../funding-rate/FundingRate.sol";
 import { OwnerPausable } from "../helpers/OwnerPausable.sol";
 import { OrderValidator } from "./OrderValidator.sol";
-import { PositioningStorageV1 } from "../storage/PositioningStorage.sol";
-import { PositioningCallee } from "../helpers/PositioningCallee.sol";
 
 // never inherit any new stateful contract. never change the orders of parent stateful contracts
-contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, OwnerPausable, PositioningStorageV1, FundingRate, EIP712Upgradeable, OrderValidator {
+contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, OwnerPausable, FundingRate, EIP712Upgradeable, OrderValidator {
     using AddressUpgradeable for address;
     using LibSafeCastUint for uint256;
     using LibSafeCastInt for int256;
@@ -148,7 +142,7 @@ contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, 
         _liquidate(trader, baseToken, positionSize);
     }
 
-    ///TODO: Test if this function liquidate full position even with when only partial was needed
+    ///Note for Auditor: Check full position liquidation even when partial was needed
     /// @inheritdoc IPositioning
     function liquidateFullPosition(address trader, address baseToken) external override whenNotPaused nonReentrant {
         // positionSizeToBeLiquidated = 0 means liquidating as much as possible
@@ -392,7 +386,7 @@ contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, 
         }
 
         OrderFees memory orderFees = _calculateFees(
-            true, // TODO: This is hardcoded right now but changes it during relayer development
+            true, // left order is maker
             internalData.leftExchangedPositionNotional,
             internalData.rightExchangedPositionNotional
         );

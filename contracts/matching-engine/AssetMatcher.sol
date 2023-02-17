@@ -2,9 +2,7 @@
 
 pragma solidity =0.8.12;
 
-import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
-
-abstract contract AssetMatcher is OwnableUpgradeable {
+abstract contract AssetMatcher {
     function _matchAssets(address leftBaseToken, address rightBaseToken) internal pure returns (address baseToken) {
         address result = _matchAssetOneSide(leftBaseToken, rightBaseToken);
         if (result == address(0)) {
