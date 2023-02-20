@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: BUSL - 1.1
 pragma solidity =0.8.12;
 
-import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 
 import "../libs/LibOrder.sol";
@@ -12,7 +11,7 @@ import "../interfaces/IVolmexPerpPeriphery.sol";
 import "../interfaces/IVolmexPerpView.sol";
 import "../interfaces/IPositioningConfig.sol";
 
-contract VolmexPerpPeriphery is Initializable, AccessControlUpgradeable, IVolmexPerpPeriphery {
+contract VolmexPerpPeriphery is AccessControlUpgradeable, IVolmexPerpPeriphery {
     // perp periphery role
     bytes32 public constant VOLMEX_PERP_PERIPHERY = keccak256("VOLMEX_PERP_PERIPHERY");
     // role of relayer to execute open position
@@ -152,7 +151,7 @@ contract VolmexPerpPeriphery is Initializable, AccessControlUpgradeable, IVolmex
     ) external {
         require(_ordersLeft.length == _ordersRight.length, "Periphery: mismatch orders");
         _requireVolmexPerpPeripheryRelayer();
-        IPositioning positioning = perpView.positionings(_index);
+
         uint256 ordersLength = _ordersLeft.length;
         bool _isTraderWhitelistEnabled = isTraderWhitelistEnabled;
         if (_isTraderWhitelistEnabled) {
@@ -243,9 +242,9 @@ contract VolmexPerpPeriphery is Initializable, AccessControlUpgradeable, IVolmex
         require(isTraderWhitelisted[trader], "Periphery: trader not whitelisted");
     }
 
-    // TODO: Change the logic to round id, if Volmex Oracle implements price by round id functionality
+    // Note for V2: Change the logic to round id, if Volmex Oracle implements price by round id functionality
     function _verifyTriggerPrice(LibOrder.Order memory _limitOrder, IPositioning _positioning) private view returns (bool) {
-        // TODO: Add check for round id, when Volmex Oracle updates functionality
+        // Note for V2: Add check for round id, when Volmex Oracle updates functionality
 
         address positioningConfig = _positioning.getPositioningConfig();
         uint32 twInterval = IPositioningConfig(positioningConfig).getTwapInterval();
@@ -272,7 +271,6 @@ contract VolmexPerpPeriphery is Initializable, AccessControlUpgradeable, IVolmex
         return false;
     }
 
-    // TODO: Changes might require if we integrate chainlink, which are related to round_id
     function _getBaseTokenPrice(LibOrder.Order memory _order, uint256 _twInterval) private view returns (uint256 price) {
         address makeAsset = _order.makeAsset.virtualToken;
         address takeAsset = _order.takeAsset.virtualToken;

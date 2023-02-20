@@ -5,7 +5,6 @@ pragma abicoder v2;
 
 import { AddressUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol";
 
-import { IERC20Metadata } from "../interfaces/IERC20Metadata.sol";
 import { IMarketRegistry } from "../interfaces/IMarketRegistry.sol";
 import { IVirtualToken } from "../interfaces/IVirtualToken.sol";
 

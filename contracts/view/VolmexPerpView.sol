@@ -1,19 +1,12 @@
 // SPDX-License-Identifier: BUSL - 1.1
 pragma solidity =0.8.12;
 
-import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 
 import "../libs/LibOrder.sol";
-import "../interfaces/IPositioning.sol";
-import "../interfaces/IVaultController.sol";
-import "../interfaces/IVolmexBaseToken.sol";
-import "../interfaces/IVolmexQuoteToken.sol";
-import "../interfaces/IAccountBalance.sol";
-import "../interfaces/IMarketRegistry.sol";
 import "../interfaces/IVolmexPerpView.sol";
 
-contract VolmexPerpView is IVolmexPerpView, Initializable, AccessControlUpgradeable {
+contract VolmexPerpView is IVolmexPerpView, AccessControlUpgradeable {
     // admin of perp view contract
     bytes32 public constant VOLMEX_PERP_VIEW = keccak256("VOLMEX_PERP_VIEW");
     // perp view role to set contracts

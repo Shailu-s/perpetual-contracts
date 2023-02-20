@@ -3,7 +3,6 @@ pragma solidity =0.8.12;
 pragma abicoder v2;
 
 import { Positioning } from "../orderbook/Positioning.sol";
-import { IAccountBalance } from "../interfaces/IAccountBalance.sol";
 
 contract PositioningMock is Positioning {
     int256 public fakeFundingPaymentX10_18;

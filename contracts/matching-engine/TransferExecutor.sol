@@ -2,12 +2,8 @@
 
 pragma solidity =0.8.12;
 
-import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 
-import "../interfaces/IERC20TransferProxy.sol";
-import "../interfaces/ITransferExecutor.sol";
-import "../interfaces/IVirtualToken.sol";
 import "../libs/LibAsset.sol";
 
 abstract contract TransferExecutor is AccessControlUpgradeable {

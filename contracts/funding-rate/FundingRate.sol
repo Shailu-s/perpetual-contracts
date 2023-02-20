@@ -3,9 +3,7 @@ pragma solidity =0.8.12;
 pragma abicoder v2;
 
 import { AddressUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol";
-import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
-import { LibSafeCastInt } from "../libs/LibSafeCastInt.sol";
 import { LibSafeCastUint } from "../libs/LibSafeCastUint.sol";
 import { LibPerpMath } from "../libs/LibPerpMath.sol";
 
@@ -50,9 +48,6 @@ contract FundingRate is IFundingRate, BlockContext, PositioningCallee, FundingRa
         _fundingRateInterval = 3;
     }
 
-    /**
-    TODO:   we should check use cases here whether marketFundingRate goes -ve or not
-     */
     /// @dev this function calculates pending funding payment of user
     /// @param markTwap only for settleFunding()
     /// @param indexTwap only for settleFunding()

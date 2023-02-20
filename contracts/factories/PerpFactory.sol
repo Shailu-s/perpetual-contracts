@@ -12,7 +12,6 @@ import "../interfaces/IPositioning.sol";
 import "../interfaces/IAccountBalance.sol";
 import "../interfaces/IVolmexQuoteToken.sol";
 import "../interfaces/IPerpFactory.sol";
-import "../interfaces/IMatchingEngine.sol";
 import "../interfaces/IVolmexPerpView.sol";
 import "../interfaces/IMarketRegistry.sol";
 

@@ -7,7 +7,6 @@ import "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol"
 
 import "../libs/LibFill.sol";
 import "../interfaces/IMarkPriceOracle.sol";
-import "../interfaces/IMatchingEngine.sol";
 import "./AssetMatcher.sol";
 
 abstract contract MatchingEngineCore is PausableUpgradeable, AssetMatcher, AccessControlUpgradeable {

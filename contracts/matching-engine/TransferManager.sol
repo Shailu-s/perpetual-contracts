@@ -5,7 +5,7 @@ pragma abicoder v2;
 
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
-import "../interfaces/ITransferManager.sol";
+import "../libs/LibDeal.sol";
 import "../matching-engine/TransferExecutor.sol";
 
 abstract contract TransferManager is OwnableUpgradeable, TransferExecutor {
