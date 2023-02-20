@@ -7,7 +7,7 @@ import "@openzeppelin/contracts-upgradeable/utils/introspection/ERC165StorageUpg
 
 import "../../interfaces/IVolmexProtocol.sol";
 import "../../interfaces/IIndexPriceOracle.sol";
-import "./VolmexTWAP.sol";
+import "./VolmexTwap.sol";
 
 /**
  * @title Volmex Oracle contract
@@ -15,7 +15,7 @@ import "./VolmexTWAP.sol";
  *
  * @dev Fork of volmex-amm's oracle: https://github.com/volmexfinance/volmex-amm/tree/master/contracts/oracles
  */
-contract VolmexOracle is OwnableUpgradeable, ERC165StorageUpgradeable, VolmexTWAP, IIndexPriceOracle {
+contract VolmexOracle is OwnableUpgradeable, ERC165StorageUpgradeable, VolmexTwap, IIndexPriceOracle {
     // price precision constant upto 6 decimal places
     uint256 private constant _VOLATILITY_PRICE_PRECISION = 1000000;
     // maximum allowed number of index volatility datapoints for calculating twap

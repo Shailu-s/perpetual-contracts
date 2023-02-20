@@ -6,7 +6,7 @@ pragma solidity =0.8.12;
  * @title Volmex Oracle TWAP library
  * @author volmex.finance [security@volmexlabs.com]
  */
-contract VolmexTWAP {
+contract VolmexTwap {
     // Max datapoints allowed to store in
     uint256 private _MAX_DATAPOINTS;
 
