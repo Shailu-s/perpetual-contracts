@@ -1,5 +1,4 @@
 // SPDX-License-Identifier: BUSL-1.1
-
 pragma solidity =0.8.12;
 
 import { SafeERC20Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
@@ -8,15 +7,18 @@ import { ReentrancyGuardUpgradeable } from "@openzeppelin/contracts-upgradeable/
 import { ContextUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol";
 
 import { BlockContext } from "../helpers/BlockContext.sol";
+import { ISafe } from "../interfaces/ISafe.sol";
 
 contract Staking is ReentrancyGuardUpgradeable, ContextUpgradeable, BlockContext {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
+    ISafe public relayerSafe;
     IERC20Upgradeable public stakedToken;
     uint256 public cooldownSeconds;
     uint256 public unstakeWindow;
     mapping(address => uint256) public stakersCooldowns;
     mapping(address => uint256) public stakersAmount;
+    bool public isStakingLive;
 
     event Staked(address indexed from, address indexed onBehalfOf, uint256 amount);
     event Redeem(address indexed from, address indexed to, uint256 amount);
@@ -24,10 +26,12 @@ contract Staking is ReentrancyGuardUpgradeable, ContextUpgradeable, BlockContext
 
     function _initialize(
         IERC20Upgradeable _stakedToken,
+        ISafe _relayerSafe,
         uint256 _cooldownSeconds,
         uint256 _unstakeWindow
     ) internal {
         stakedToken = _stakedToken;
+        relayerSafe = _relayerSafe;
         cooldownSeconds = _cooldownSeconds;
         unstakeWindow = _unstakeWindow;
     }
@@ -76,6 +80,13 @@ contract Staking is ReentrancyGuardUpgradeable, ContextUpgradeable, BlockContext
         require(stakersAmount[msg.sender] != 0, "Staking invalid balance to cooldown");
         stakersCooldowns[msg.sender] = _blockTimestamp();
         emit Cooldown(msg.sender);
+    }
+
+    /**
+     * @dev Used to toggle staking, live or pause
+     */
+    function toggleStaking() external virtual {
+        isStakingLive = !isStakingLive;
     }
 
     /**
