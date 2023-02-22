@@ -4,17 +4,19 @@ pragma solidity =0.8.12;
 import { SafeERC20Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 import { IERC20Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import { ReentrancyGuardUpgradeable } from "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
-import { ContextUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol";
+import { AccessControlUpgradeable } from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 
 import { BlockContext } from "../helpers/BlockContext.sol";
 import { ISafe } from "../interfaces/ISafe.sol";
 import { IERC20Metadata } from "../interfaces/IERC20Metadata.sol";
 
-contract Staking is ReentrancyGuardUpgradeable, ContextUpgradeable, BlockContext {
+contract Staking is ReentrancyGuardUpgradeable, AccessControlUpgradeable, BlockContext {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
+    bytes32 public constant SLASHER_ROLE = keccak256("SLASHER_ROLE");
     ISafe public relayerSafe;
     IERC20Upgradeable public stakedToken;
+    address public volmexSafe;
     uint256 public cooldownSeconds;
     uint256 public unstakeWindow;
     mapping(address => uint256) public stakersCooldowns;
@@ -29,19 +31,23 @@ contract Staking is ReentrancyGuardUpgradeable, ContextUpgradeable, BlockContext
     function _initialize(
         IERC20Upgradeable _stakedToken,
         ISafe _relayerSafe,
+        address _volmexSafe,
         uint256 _cooldownSeconds,
         uint256 _unstakeWindow
     ) internal {
         stakedToken = _stakedToken;
         relayerSafe = _relayerSafe;
+        volmexSafe = _volmexSafe;
         cooldownSeconds = _cooldownSeconds;
         unstakeWindow = _unstakeWindow;
         minStakeRequired = 10000 * (10 ** IERC20Metadata(address(_stakedToken)).decimals());
+
+        _grantRole(DEFAULT_ADMIN_ROLE, _volmexSafe);
     }
 
     function stake(address _onBehalfOf, uint256 _amount) external virtual nonReentrant {
+        _requireStakingLive();
         require(relayerSafe.isOwner(_onBehalfOf), "Staking: not signer");
-        require(_amount != 0, "Staking: zero amount to stake");
         uint256 balanceOfUser = stakersAmount[_onBehalfOf];
         require(minStakeRequired <= balanceOfUser + _amount, "Staking: ");
         stakersCooldowns[_onBehalfOf] = getNextCooldownTimestamp(0, _amount, _onBehalfOf, balanceOfUser);
@@ -94,6 +100,7 @@ contract Staking is ReentrancyGuardUpgradeable, ContextUpgradeable, BlockContext
      * @dev Used to toggle staking, live or pause
      */
     function toggleStaking() external virtual {
+        _requireDefaultAdmin();
         isStakingLive = !isStakingLive;
     }
 
@@ -101,6 +108,7 @@ contract Staking is ReentrancyGuardUpgradeable, ContextUpgradeable, BlockContext
      * @dev Used to update minimum staker amount required
      */
     function updateMinStakeRequired(uint256 _minStakeAmount) external virtual {
+        _requireDefaultAdmin();
         minStakeRequired = _minStakeAmount;
     }
 
@@ -147,5 +155,13 @@ contract Staking is ReentrancyGuardUpgradeable, ContextUpgradeable, BlockContext
             }
         }
         return toCooldownTimestamp;
+    }
+
+    function _requireDefaultAdmin() private view {
+        require(hasRole(DEFAULT_ADMIN_ROLE, _msgSender()), "Staking: not admin");
+    }
+
+    function _requireStakingLive() private view {
+        require(isStakingLive, "Staking: staking not live");
     }
 }
