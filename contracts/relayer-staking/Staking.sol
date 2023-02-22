@@ -8,6 +8,7 @@ import { ContextUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/Co
 
 import { BlockContext } from "../helpers/BlockContext.sol";
 import { ISafe } from "../interfaces/ISafe.sol";
+import { IERC20Metadata } from "../interfaces/IERC20Metadata.sol";
 
 contract Staking is ReentrancyGuardUpgradeable, ContextUpgradeable, BlockContext {
     using SafeERC20Upgradeable for IERC20Upgradeable;
@@ -19,6 +20,7 @@ contract Staking is ReentrancyGuardUpgradeable, ContextUpgradeable, BlockContext
     mapping(address => uint256) public stakersCooldowns;
     mapping(address => uint256) public stakersAmount;
     bool public isStakingLive;
+    uint256 public minStakeRequired;
 
     event Staked(address indexed from, address indexed onBehalfOf, uint256 amount);
     event Redeem(address indexed from, address indexed to, uint256 amount);
@@ -34,12 +36,14 @@ contract Staking is ReentrancyGuardUpgradeable, ContextUpgradeable, BlockContext
         relayerSafe = _relayerSafe;
         cooldownSeconds = _cooldownSeconds;
         unstakeWindow = _unstakeWindow;
+        minStakeRequired = 10000 * (10 ** IERC20Metadata(address(_stakedToken)).decimals());
     }
 
     function stake(address _onBehalfOf, uint256 _amount) external virtual nonReentrant {
-        require(_amount != 0, "Staking: zero amount to stake");
         require(relayerSafe.isOwner(_onBehalfOf), "Staking: not signer");
+        require(_amount != 0, "Staking: zero amount to stake");
         uint256 balanceOfUser = stakersAmount[_onBehalfOf];
+        require(minStakeRequired <= balanceOfUser + _amount, "Staking: ");
         stakersCooldowns[_onBehalfOf] = getNextCooldownTimestamp(0, _amount, _onBehalfOf, balanceOfUser);
         stakersAmount[_onBehalfOf] += _amount;
         stakedToken.safeTransferFrom(msg.sender, address(this), _amount);
@@ -67,6 +71,9 @@ contract Staking is ReentrancyGuardUpgradeable, ContextUpgradeable, BlockContext
         if ((balanceOfMessageSender - amountToRedeem) == 0) {
             stakersCooldowns[msgSender] = 0;
         }
+        if ((balanceOfMessageSender - amountToRedeem) < minStakeRequired) {
+            // TODO: Logic to remove signer from multisig
+        }
 
         stakersAmount[msgSender] -= amountToRedeem;
         IERC20Upgradeable(stakedToken).safeTransfer(_to, amountToRedeem);
@@ -88,6 +95,13 @@ contract Staking is ReentrancyGuardUpgradeable, ContextUpgradeable, BlockContext
      */
     function toggleStaking() external virtual {
         isStakingLive = !isStakingLive;
+    }
+
+    /**
+     * @dev Used to update minimum staker amount required
+     */
+    function updateMinStakeRequired(uint256 _minStakeAmount) external virtual {
+        minStakeRequired = _minStakeAmount;
     }
 
     /**
