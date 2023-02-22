@@ -13,7 +13,6 @@ import { IERC20Metadata } from "../interfaces/IERC20Metadata.sol";
 contract Staking is ReentrancyGuardUpgradeable, AccessControlUpgradeable, BlockContext {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
-    bytes32 public constant SLASHER_ROLE = keccak256("SLASHER_ROLE");
     ISafe public relayerSafe;
     IERC20Upgradeable public stakedToken;
     address public volmexSafe;
