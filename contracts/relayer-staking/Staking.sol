@@ -38,6 +38,7 @@ contract Staking is ReentrancyGuardUpgradeable, ContextUpgradeable, BlockContext
 
     function stake(address _onBehalfOf, uint256 _amount) external virtual nonReentrant {
         require(_amount != 0, "Staking: zero amount to stake");
+        require(relayerSafe.isOwner(_onBehalfOf), "Staking: not signer");
         uint256 balanceOfUser = stakersAmount[_onBehalfOf];
         stakersCooldowns[_onBehalfOf] = getNextCooldownTimestamp(0, _amount, _onBehalfOf, balanceOfUser);
         stakersAmount[_onBehalfOf] += _amount;
