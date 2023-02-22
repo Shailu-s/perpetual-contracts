@@ -156,7 +156,7 @@ contract Staking is ReentrancyGuardUpgradeable, AccessControlUpgradeable, BlockC
         return toCooldownTimestamp;
     }
 
-    function _requireDefaultAdmin() private view {
+    function _requireDefaultAdmin() internal view {
         require(hasRole(DEFAULT_ADMIN_ROLE, _msgSender()), "Staking: not admin");
     }
 
