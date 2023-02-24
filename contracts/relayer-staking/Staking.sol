@@ -39,7 +39,7 @@ contract Staking is ReentrancyGuardUpgradeable, AccessControlUpgradeable, BlockC
         volmexSafe = _volmexSafe;
         cooldownSeconds = _cooldownSeconds;
         unstakeWindow = _unstakeWindow;
-        minStakeRequired = 10000 * (10 ** IERC20Metadata(address(_stakedToken)).decimals());
+        minStakeRequired = 10000000000000000000000;
 
         _grantRole(DEFAULT_ADMIN_ROLE, _volmexSafe);
     }
@@ -48,7 +48,7 @@ contract Staking is ReentrancyGuardUpgradeable, AccessControlUpgradeable, BlockC
         _requireStakingLive();
         require(relayerSafe.isOwner(_onBehalfOf), "Staking: not signer");
         uint256 balanceOfUser = stakersAmount[_onBehalfOf];
-        require(minStakeRequired <= balanceOfUser + _amount, "Staking: ");
+        require(minStakeRequired <= balanceOfUser + _amount, "Staking: insufficient amount");
         stakersCooldowns[_onBehalfOf] = getNextCooldownTimestamp(0, _amount, _onBehalfOf, balanceOfUser);
         stakersAmount[_onBehalfOf] += _amount;
         stakedToken.safeTransferFrom(msg.sender, address(this), _amount);
