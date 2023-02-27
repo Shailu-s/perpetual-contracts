@@ -54,10 +54,10 @@ contract Staking is ReentrancyGuardUpgradeable, AccessControlUpgradeable, BlockC
     function stake(address _onBehalfOf, uint256 _amount) external virtual nonReentrant {
         _requireStakingLive();
         require(relayerMultisig.isOwner(_onBehalfOf), "Staking: not relayer");
-        uint256 balanceOfUser = staker[_onBehalfOf].activeBalance;
+        StakerDetails storage stakerDetails = staker[_onBehalfOf];
+        uint256 balanceOfUser = stakerDetails.activeBalance;
         require(minStakeRequired <= balanceOfUser + _amount, "Staking: insufficient amount");
 
-        StakerDetails storage stakerDetails = staker[_onBehalfOf];
         stakerDetails.activeBalance += _amount;
         stakedToken.safeTransferFrom(msg.sender, address(this), _amount);
 
@@ -70,13 +70,13 @@ contract Staking is ReentrancyGuardUpgradeable, AccessControlUpgradeable, BlockC
      **/
     function unstake(address _to) external virtual nonReentrant {
         address msgSender = _msgSender();
-        uint256 inactiveBalance = staker[msgSender].inactiveBalance;
+        StakerDetails storage stakerDetails = staker[msgSender];
+        uint256 inactiveBalance = stakerDetails.inactiveBalance;
         require(inactiveBalance != 0, "Staking: insufficient inactive balance");
         uint256 currentTimestamp = _blockTimestamp();
-        uint256 cooldownStartTimestamp = staker[msgSender].cooldown;
+        uint256 cooldownStartTimestamp = stakerDetails.cooldown;
         require(currentTimestamp > (cooldownStartTimestamp + cooldownSeconds), "Staking: insufficient cooldown");
 
-        StakerDetails storage stakerDetails = staker[msgSender];
         delete stakerDetails.cooldown;
         delete stakerDetails.inactiveBalance;
 
