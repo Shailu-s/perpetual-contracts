@@ -7,17 +7,17 @@ import { ReentrancyGuardUpgradeable } from "@openzeppelin/contracts-upgradeable/
 import { AccessControlUpgradeable } from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 
 import { BlockContext } from "../helpers/BlockContext.sol";
-import { ISafe } from "../interfaces/ISafe.sol";
+import { IGnosisSafe } from "../interfaces/IGnosisSafe.sol";
 import { IERC20Metadata } from "../interfaces/IERC20Metadata.sol";
 
 contract Staking is ReentrancyGuardUpgradeable, AccessControlUpgradeable, BlockContext {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
-    ISafe public relayerSafe;
+    bytes32 public constant STAKER_ROLE = keccak256("STAKER_ROLE");
+
+    IGnosisSafe public relayerMultisig;
     IERC20Upgradeable public stakedToken;
-    address public volmexSafe;
     uint256 public cooldownSeconds;
-    uint256 public unstakeWindow;
     mapping(address => uint256) public stakersCooldowns;
     mapping(address => uint256) public stakersAmount;
     bool public isStakingLive;
@@ -25,23 +25,21 @@ contract Staking is ReentrancyGuardUpgradeable, AccessControlUpgradeable, BlockC
 
     event Staked(address indexed from, address indexed onBehalfOf, uint256 amount);
     event Redeem(address indexed from, address indexed to, uint256 amount);
-    event Cooldown(address indexed user);
+    event CoolDownActivated(address indexed user);
 
-    function _initialize(
+    function _Staking_init(
         IERC20Upgradeable _stakedToken,
-        ISafe _relayerSafe,
-        address _volmexSafe,
-        uint256 _cooldownSeconds,
-        uint256 _unstakeWindow
-    ) internal {
+        IGnosisSafe _relayerMultisig,
+        address _stakingAdmin,
+        uint256 _cooldownSeconds
+    ) internal onlyInitializing {
         stakedToken = _stakedToken;
-        relayerSafe = _relayerSafe;
-        volmexSafe = _volmexSafe;
+        relayerMultisig = _relayerMultisig;
         cooldownSeconds = _cooldownSeconds;
-        unstakeWindow = _unstakeWindow;
-        minStakeRequired = 10000000000000000000000;
+        minStakeRequired = 10000000000;
 
-        _grantRole(DEFAULT_ADMIN_ROLE, _volmexSafe);
+        _grantRole(DEFAULT_ADMIN_ROLE, _msgSender());
+        _grantRole(STAKER_ROLE, _stakingAdmin);
     }
 
     /**
@@ -50,10 +48,10 @@ contract Staking is ReentrancyGuardUpgradeable, AccessControlUpgradeable, BlockC
      */
     function stake(address _onBehalfOf, uint256 _amount) external virtual nonReentrant {
         _requireStakingLive();
-        require(relayerSafe.isOwner(_onBehalfOf), "Staking: not signer");
+        require(relayerMultisig.isOwner(_onBehalfOf), "Staking: not relayer");
         uint256 balanceOfUser = stakersAmount[_onBehalfOf];
         require(minStakeRequired <= balanceOfUser + _amount, "Staking: insufficient amount");
-        stakersCooldowns[_onBehalfOf] = getNextCooldownTimestamp(0, _amount, _onBehalfOf, balanceOfUser);
+
         stakersAmount[_onBehalfOf] += _amount;
         stakedToken.safeTransferFrom(msg.sender, address(this), _amount);
 
@@ -71,17 +69,12 @@ contract Staking is ReentrancyGuardUpgradeable, AccessControlUpgradeable, BlockC
         address msgSender = _msgSender();
         uint256 cooldownStartTimestamp = stakersCooldowns[msgSender];
         require(currentTimestamp > (cooldownStartTimestamp + cooldownSeconds), "Staking: insufficient cooldown");
-        require(
-            (currentTimestamp - (cooldownStartTimestamp + cooldownSeconds)) <= unstakeWindow,
-            "Staking: unstake window finished"
-        );
         uint256 balanceOfMessageSender = stakersAmount[msgSender];
         uint256 amountToRedeem = (_amount > balanceOfMessageSender) ? balanceOfMessageSender : _amount;
+        // update this, when inactive mechanics is included
+        // No need to check, as the balance will be checked in cooldown() when moving to inactive balance
         if ((balanceOfMessageSender - amountToRedeem) == 0) {
-            stakersCooldowns[msgSender] = 0;
-        }
-        if ((balanceOfMessageSender - amountToRedeem) < minStakeRequired) {
-            // TODO: Logic to remove signer from multisig
+            delete stakersCooldowns[msgSender];
         }
 
         stakersAmount[msgSender] -= amountToRedeem;
@@ -96,14 +89,18 @@ contract Staking is ReentrancyGuardUpgradeable, AccessControlUpgradeable, BlockC
     function cooldown() external virtual {
         require(stakersAmount[msg.sender] != 0, "Staking: invalid balance to cooldown");
         stakersCooldowns[msg.sender] = _blockTimestamp();
-        emit Cooldown(msg.sender);
+        emit CoolDownActivated(msg.sender);
+
+        // Add inactive and active staking
+        // slash will occur on total amount
+        // cooldown should move the amount to inactive and can only unstake that amount
     }
 
     /**
      * @dev Used to toggle staking, live or pause
      */
     function toggleStaking() external virtual {
-        _requireDefaultAdmin();
+        _requireStakerRole();
         isStakingLive = !isStakingLive;
     }
 
@@ -111,69 +108,27 @@ contract Staking is ReentrancyGuardUpgradeable, AccessControlUpgradeable, BlockC
      * @dev Used to update minimum staker amount required
      */
     function updateMinStakeRequired(uint256 _minStakeAmount) external virtual {
-        _requireDefaultAdmin();
+        _requireStakerRole();
         minStakeRequired = _minStakeAmount;
     }
 
     /**
      * @dev Update volmex safe address
      */
-    function updateVolmexSafe(address _volmexSafe) external virtual {
+    function updateStakerRole(address _stakerRole) external virtual {
         _requireDefaultAdmin();
-        volmexSafe = _volmexSafe;
-        _grantRole(DEFAULT_ADMIN_ROLE, _volmexSafe);
-    }
-
-    /**
-     * @dev Calculates the how is gonna be a new cooldown timestamp depending on the sender/receiver situation
-     *  - If the timestamp of the sender is "better" or the timestamp of the recipient is 0, we take the one of the recipient
-     *  - Weighted average of from/to cooldown timestamps if:
-     *    # The sender doesn't have the cooldown activated (timestamp 0).
-     *    # The sender timestamp is expired
-     *    # The sender has a "worse" timestamp
-     *  - If the receiver's cooldown timestamp expired (too old), the next is 0
-     * @param _fromCooldownTimestamp Cooldown timestamp of the sender
-     * @param _amountToReceive Amount
-     * @param _toAddress Address of the recipient
-     * @param _toBalance Current balance of the receiver
-     * @return cooldownTimestamp new cooldown timestamp
-     **/
-    function getNextCooldownTimestamp(
-        uint256 _fromCooldownTimestamp,
-        uint256 _amountToReceive,
-        address _toAddress,
-        uint256 _toBalance
-    ) public view returns (uint256) {
-        uint256 toCooldownTimestamp = stakersCooldowns[_toAddress];
-        if (toCooldownTimestamp == 0) {
-            return 0;
-        }
-        uint256 currentTimestamp = _blockTimestamp();
-        uint256 minimalValidCooldownTimestamp = (currentTimestamp - cooldownSeconds) - unstakeWindow;
-
-        if (minimalValidCooldownTimestamp > toCooldownTimestamp) {
-            toCooldownTimestamp = 0;
-        } else {
-            uint256 newFromCooldownTimestamp = (minimalValidCooldownTimestamp > _fromCooldownTimestamp)
-                ? currentTimestamp
-                : _fromCooldownTimestamp;
-
-            if (newFromCooldownTimestamp < toCooldownTimestamp) {
-                return toCooldownTimestamp;
-            } else {
-                toCooldownTimestamp =
-                    ((_amountToReceive * newFromCooldownTimestamp) + (_toBalance * toCooldownTimestamp)) /
-                    (_amountToReceive + _toBalance);
-            }
-        }
-        return toCooldownTimestamp;
+        _grantRole(STAKER_ROLE, _stakerRole);
     }
 
     function _requireDefaultAdmin() internal view {
         require(hasRole(DEFAULT_ADMIN_ROLE, _msgSender()), "Staking: not admin");
     }
 
+    function _requireStakerRole() internal view {
+        require(hasRole(STAKER_ROLE, _msgSender()), "Staking: not staker role");
+    }
+
     function _requireStakingLive() private view {
-        require(isStakingLive, "Staking: staking not live");
+        require(isStakingLive, "Staking: not live");
     }
 }
