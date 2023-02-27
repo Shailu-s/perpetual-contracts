@@ -39,16 +39,20 @@ contract Staking is ReentrancyGuardUpgradeable, AccessControlUpgradeable, BlockC
         volmexSafe = _volmexSafe;
         cooldownSeconds = _cooldownSeconds;
         unstakeWindow = _unstakeWindow;
-        minStakeRequired = 10000 * (10 ** IERC20Metadata(address(_stakedToken)).decimals());
+        minStakeRequired = 10000000000000000000000;
 
         _grantRole(DEFAULT_ADMIN_ROLE, _volmexSafe);
     }
 
+    /**
+     * @dev stake tokens to get relayer access
+     * staker should be a signer in mutisig
+     */
     function stake(address _onBehalfOf, uint256 _amount) external virtual nonReentrant {
         _requireStakingLive();
         require(relayerSafe.isOwner(_onBehalfOf), "Staking: not signer");
         uint256 balanceOfUser = stakersAmount[_onBehalfOf];
-        require(minStakeRequired <= balanceOfUser + _amount, "Staking: ");
+        require(minStakeRequired <= balanceOfUser + _amount, "Staking: insufficient amount");
         stakersCooldowns[_onBehalfOf] = getNextCooldownTimestamp(0, _amount, _onBehalfOf, balanceOfUser);
         stakersAmount[_onBehalfOf] += _amount;
         stakedToken.safeTransferFrom(msg.sender, address(this), _amount);
@@ -90,7 +94,7 @@ contract Staking is ReentrancyGuardUpgradeable, AccessControlUpgradeable, BlockC
      * - It can't be called if the user is not staking
      **/
     function cooldown() external virtual {
-        require(stakersAmount[msg.sender] != 0, "Staking invalid balance to cooldown");
+        require(stakersAmount[msg.sender] != 0, "Staking: invalid balance to cooldown");
         stakersCooldowns[msg.sender] = _blockTimestamp();
         emit Cooldown(msg.sender);
     }
@@ -109,6 +113,15 @@ contract Staking is ReentrancyGuardUpgradeable, AccessControlUpgradeable, BlockC
     function updateMinStakeRequired(uint256 _minStakeAmount) external virtual {
         _requireDefaultAdmin();
         minStakeRequired = _minStakeAmount;
+    }
+
+    /**
+     * @dev Update volmex safe address
+     */
+    function updateVolmexSafe(address _volmexSafe) external virtual {
+        _requireDefaultAdmin();
+        volmexSafe = _volmexSafe;
+        _grantRole(DEFAULT_ADMIN_ROLE, _volmexSafe);
     }
 
     /**

@@ -545,13 +545,13 @@ describe("VolmexPerpPeriphery", function () {
 
       await matchingEngine.grantMatchOrders(positioning.address);
 
-      let receipt = await volmexPerpPeriphery.fillLimitOrder(
+      let receipt = await volmexPerpPeriphery.openPosition(
+        0,
         orderLeft,
         signatureLeftLimitOrder,
         orderRight,
         signatureRightLimitOrder,
         owner.address,
-        0,
       );
       expect(receipt.confirmations).not.equal(0);
     });
@@ -587,13 +587,13 @@ describe("VolmexPerpPeriphery", function () {
       await expect(
         volmexPerpPeriphery
           .connect(account1)
-          .fillLimitOrder(
+          .openPosition(
+            0,
             orderLeft,
             signatureLeftLimitOrder,
             orderRight,
             signatureRightLimitOrder,
             owner.address,
-            0,
           ),
       ).to.be.revertedWith("VolmexPerpPeriphery: Not relayer");
     });
@@ -626,13 +626,13 @@ describe("VolmexPerpPeriphery", function () {
       await matchingEngine.grantMatchOrders(positioning.address);
 
       await expect(
-        volmexPerpPeriphery.fillLimitOrder(
+        volmexPerpPeriphery.openPosition(
+          0,
           orderLeft,
           signatureLeftLimitOrder,
           orderRight,
           signatureRightLimitOrder,
           owner.address,
-          0,
         ),
       ).to.be.revertedWith("Periphery: left order price verification failed");
     });
@@ -666,13 +666,13 @@ describe("VolmexPerpPeriphery", function () {
       await matchingEngine.grantMatchOrders(positioning.address);
 
       await expect(
-        volmexPerpPeriphery.fillLimitOrder(
+        volmexPerpPeriphery.openPosition(
+          0,
           orderLeft,
           signatureLeftLimitOrder,
           orderRight,
           signatureRightLimitOrder,
           owner.address,
-          0,
         ),
       ).to.be.revertedWith("Periphery: right order price verification failed");
     });
@@ -706,13 +706,13 @@ describe("VolmexPerpPeriphery", function () {
       await matchingEngine.grantMatchOrders(positioning.address);
 
       await expect(
-        volmexPerpPeriphery.fillLimitOrder(
+        volmexPerpPeriphery.openPosition(
+          0,
           orderLeft,
           signatureLeftLimitOrder,
           orderRight,
           signatureRightLimitOrder,
           owner.address,
-          0,
         ),
       ).to.be.revertedWith("Periphery: left order price verification failed");
     });
@@ -746,13 +746,13 @@ describe("VolmexPerpPeriphery", function () {
       await matchingEngine.grantMatchOrders(positioning.address);
 
       await expect(
-        volmexPerpPeriphery.fillLimitOrder(
+        volmexPerpPeriphery.openPosition(
+          0,
           orderLeft,
           signatureLeftLimitOrder,
           orderRight,
           signatureRightLimitOrder,
           owner.address,
-          0,
         ),
       ).to.be.revertedWith("Periphery: right order price verification failed");
     });
@@ -983,7 +983,7 @@ describe("VolmexPerpPeriphery", function () {
         signaturesLeft.push(signatureLeft);
         signaturesRight.push(signatureRight);
         await matchingEngine.grantMatchOrders(positioning.address);
-        await volmexPerpPeriphery.batchFillLimitOrders(
+        await volmexPerpPeriphery.batchOpenPosition(
           index,
           limitOrdersLeft,
           signaturesLeft,
@@ -1040,7 +1040,7 @@ describe("VolmexPerpPeriphery", function () {
         limitOrdersLeft.push(orderLeft);
         await matchingEngine.grantMatchOrders(positioning.address);
         await expect(
-          volmexPerpPeriphery.batchFillLimitOrders(
+          volmexPerpPeriphery.batchOpenPosition(
             index,
             limitOrdersLeft,
             signaturesLeft,

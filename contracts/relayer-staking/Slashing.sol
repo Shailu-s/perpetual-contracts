@@ -63,7 +63,7 @@ contract Slashing is Staking {
 
         // Transfer the slashed token to insurance fund.
         stakedToken.safeTransfer(insuranceFund, slashAmount);
-
+        stakersAmount[staker] -= slashAmount;
         emit Slashed(staker, slashAmount, remainingAfterSlash);
         return slashAmount;
     }
@@ -74,6 +74,15 @@ contract Slashing is Staking {
     function updateSlashPenalty(uint256 _slashPenalty) external virtual {
         _requireDefaultAdmin();
         slashPenalty = _slashPenalty;
+    }
+
+    /**
+     * @dev Update relayer safe address
+     */
+    function updateRelayerSafe(ISafe _relayerSafe) external virtual {
+        _requireDefaultAdmin();
+        relayerSafe = _relayerSafe;
+        _grantRole(SLASHER_ROLE, address(_relayerSafe));
     }
 
     function _requireSlasherRole() private view {
