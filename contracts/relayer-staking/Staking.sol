@@ -124,6 +124,14 @@ contract Staking is ReentrancyGuardUpgradeable, AccessControlUpgradeable, BlockC
     }
 
     /**
+     * @dev Update volmex safe address
+     */
+    function updateVolmexSafe(address _volmexSafe) external virtual {
+        _requireDefaultAdmin();
+        volmexSafe = _volmexSafe;
+    }
+
+    /**
      * @dev Calculates the how is gonna be a new cooldown timestamp depending on the sender/receiver situation
      *  - If the timestamp of the sender is "better" or the timestamp of the recipient is 0, we take the one of the recipient
      *  - Weighted average of from/to cooldown timestamps if:
