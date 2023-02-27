@@ -20,16 +20,16 @@ contract Slashing is Staking {
 
     function initialize(
         IERC20Upgradeable _stakedToken,
-        ISafe _relayerSafe,
-        address _volmexSafe,
+        ISafe _relayerMultisig,
+        address _stakingAdmin,
+        address _slashingAdmin,
         uint256 _cooldownSeconds,
-        uint256 _unstakeWindow,
         address _insuranceFund
     ) external {
-        _initialize(_stakedToken, _relayerSafe, _volmexSafe, _cooldownSeconds, _unstakeWindow);
+        _Staking_init(_stakedToken, _relayerMultisig, _stakingAdmin, _cooldownSeconds);
         slashPenalty = 2500;
         insuranceFund = _insuranceFund;
-        _grantRole(SLASHER_ROLE, address(_relayerSafe));
+        _grantRole(SLASHER_ROLE, _slashingAdmin);
     }
 
     /**
@@ -47,7 +47,7 @@ contract Slashing is Staking {
         _requireSlasherRole();
         uint256 underlyingBalance = stakedToken.balanceOf(address(this));
         require(underlyingBalance != 0, "Slashing: insuffient balance");
-
+        // first remove the inactive balance, then remaining will be removed from active balance
         // Get the slash amount and remaining amount. Note that remainingAfterSlash is nonzero.
         uint256 stakedAmount = stakersAmount[staker];
         uint256 slashAmount = (stakedAmount * slashPenalty) / SLASH_BASE;
@@ -55,37 +55,32 @@ contract Slashing is Staking {
 
         if (slashAmount == 0) {
             return 0;
+        } else {
+            // Transfer the slashed token to insurance fund.
+            stakedToken.safeTransfer(insuranceFund, slashAmount);
+            stakersAmount[staker] -= slashAmount;
+            emit Slashed(staker, slashAmount, remainingAfterSlash);
+            return slashAmount;
         }
-
-        if (remainingAfterSlash < minStakeRequired) {
-            // TODO: Logic to remove signer from multisig
-        }
-
-        // Transfer the slashed token to insurance fund.
-        stakedToken.safeTransfer(insuranceFund, slashAmount);
-        stakersAmount[staker] -= slashAmount;
-        emit Slashed(staker, slashAmount, remainingAfterSlash);
-        return slashAmount;
     }
 
     /**
      * @dev Used to update slash penalty percent
      */
     function updateSlashPenalty(uint256 _slashPenalty) external virtual {
-        _requireDefaultAdmin();
+        _requireSlasherRole();
         slashPenalty = _slashPenalty;
     }
 
     /**
      * @dev Update relayer safe address
      */
-    function updateRelayerSafe(ISafe _relayerSafe) external virtual {
+    function updateSlasherRole(address _slasherRole) external virtual {
         _requireDefaultAdmin();
-        relayerSafe = _relayerSafe;
-        _grantRole(SLASHER_ROLE, address(_relayerSafe));
+        _grantRole(SLASHER_ROLE, _slasherRole);
     }
 
     function _requireSlasherRole() private view {
-        require(hasRole(SLASHER_ROLE, _msgSender()), "Slashing: not slasher");
+        require(hasRole(SLASHER_ROLE, _msgSender()), "Slashing: not slasher role");
     }
 }
