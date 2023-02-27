@@ -46,7 +46,7 @@ contract Staking is ReentrancyGuardUpgradeable, AccessControlUpgradeable, BlockC
 
     /**
      * @dev stake tokens to get relayer access
-     * staker should be a singer in mutisig
+     * staker should be a signer in mutisig
      */
     function stake(address _onBehalfOf, uint256 _amount) external virtual nonReentrant {
         _requireStakingLive();
