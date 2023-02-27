@@ -94,7 +94,7 @@ contract Staking is ReentrancyGuardUpgradeable, AccessControlUpgradeable, BlockC
      * - It can't be called if the user is not staking
      **/
     function cooldown() external virtual {
-        require(stakersAmount[msg.sender] != 0, "Staking invalid balance to cooldown");
+        require(stakersAmount[msg.sender] != 0, "Staking: invalid balance to cooldown");
         stakersCooldowns[msg.sender] = _blockTimestamp();
         emit Cooldown(msg.sender);
     }
@@ -116,19 +116,12 @@ contract Staking is ReentrancyGuardUpgradeable, AccessControlUpgradeable, BlockC
     }
 
     /**
-     * @dev Update relayer safe address
-     */
-    function updateRelayerSafe(ISafe _relayerSafe) external virtual {
-        _requireDefaultAdmin();
-        relayerSafe = _relayerSafe;
-    }
-
-    /**
      * @dev Update volmex safe address
      */
     function updateVolmexSafe(address _volmexSafe) external virtual {
         _requireDefaultAdmin();
         volmexSafe = _volmexSafe;
+        _grantRole(DEFAULT_ADMIN_ROLE, _volmexSafe);
     }
 
     /**
