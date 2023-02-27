@@ -5,13 +5,15 @@ import { AddressUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/Ad
 import { ReentrancyGuardUpgradeable } from "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 import { IERC20Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import { SafeERC20Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
-import { InsuranceFundStorageV1 } from "../storage/InsuranceFundStorage.sol";
-import { OwnerPausable } from "../helpers/OwnerPausable.sol";
-import { IInsuranceFund } from "../interfaces/IInsuranceFund.sol";
+import { OwnerPausable } from "../../helpers/OwnerPausable.sol";
+import { IInsuranceFund } from "../../interfaces/IInsuranceFund.sol";
 
 // never inherit any new stateful contract. never change the orders of parent stateful contracts
-contract InsuranceFund is IInsuranceFund, ReentrancyGuardUpgradeable, OwnerPausable, InsuranceFundStorageV1 {
+contract InsuranceFund is IInsuranceFund, ReentrancyGuardUpgradeable, OwnerPausable {
     using AddressUpgradeable for address;
+
+    address internal _token;
+    address internal _borrower;
 
     event Borrowed(address borrower, uint256 amount);
 
