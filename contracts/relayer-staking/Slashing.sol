@@ -5,7 +5,7 @@ import { SafeERC20Upgradeable } from "@openzeppelin/contracts-upgradeable/token/
 import { IERC20Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 
 import { Staking } from "./Staking.sol";
-import { ISafe } from "../interfaces/ISafe.sol";
+import { IGnosisSafe } from "../interfaces/IGnosisSafe.sol";
 
 contract Slashing is Staking {
     using SafeERC20Upgradeable for IERC20Upgradeable;
@@ -16,11 +16,11 @@ contract Slashing is Staking {
     uint256 public slashPenalty;
     address public insuranceFund;
 
-    event Slashed(address indexed staker, uint256 amount, uint256 remainingAfterSlash);
+    event Slashed(address indexed staker, uint256 inactiveAmount, uint256 activeAmount);
 
     function initialize(
         IERC20Upgradeable _stakedToken,
-        ISafe _relayerMultisig,
+        IGnosisSafe _relayerMultisig,
         address _stakingAdmin,
         address _slashingAdmin,
         uint256 _cooldownSeconds,
@@ -33,33 +33,31 @@ contract Slashing is Staking {
     }
 
     /**
-     * @notice Slash staked token balances and withdraw those funds to the specified address.
+     * @dev Slash staked token balances and withdraw those funds to the specified address.
      *
-     * @param staker The address to receive the slashed tokens.
-     *
+     * @param _account The address to receive the slashed tokens.
      * @return _ amount slashed, denominated in the underlying token.
      */
-    function slash(address staker)
-        external
-        nonReentrant
-        returns (uint256)
-    {
+    function slash(address _account) external nonReentrant returns (uint256) {
         _requireSlasherRole();
-        uint256 underlyingBalance = stakedToken.balanceOf(address(this));
-        require(underlyingBalance != 0, "Slashing: insuffient balance");
-        // first remove the inactive balance, then remaining will be removed from active balance
-        // Get the slash amount and remaining amount. Note that remainingAfterSlash is nonzero.
-        uint256 stakedAmount = stakersAmount[staker];
+        StakerDetails storage stakerDetails = staker[_account];
+        uint256 inactiveBalance = stakerDetails.inactiveBalance;
+        uint256 activeBalance = stakerDetails.activeBalance;
+        uint256 stakedAmount = inactiveBalance + activeBalance;
         uint256 slashAmount = (stakedAmount * slashPenalty) / SLASH_BASE;
-        uint256 remainingAfterSlash = (stakedAmount - slashAmount);
 
         if (slashAmount == 0) {
+            emit Slashed(_account, 0, 0);
             return 0;
         } else {
-            // Transfer the slashed token to insurance fund.
+            (uint256 slashInactive, uint256 slashActive) = inactiveBalance >= slashAmount
+                ? (slashAmount, 0)
+                : (inactiveBalance, slashAmount - inactiveBalance);
+
+            stakerDetails.inactiveBalance -= slashInactive;
+            if (slashActive != 0) stakerDetails.activeBalance -= slashActive;
             stakedToken.safeTransfer(insuranceFund, slashAmount);
-            stakersAmount[staker] -= slashAmount;
-            emit Slashed(staker, slashAmount, remainingAfterSlash);
+            emit Slashed(_account, slashInactive, slashActive);
             return slashAmount;
         }
     }
