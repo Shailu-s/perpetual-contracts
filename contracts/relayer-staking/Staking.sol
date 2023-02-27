@@ -13,19 +13,24 @@ import { IERC20Metadata } from "../interfaces/IERC20Metadata.sol";
 contract Staking is ReentrancyGuardUpgradeable, AccessControlUpgradeable, BlockContext {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
+    struct StakerDetails {
+        uint256 cooldown;
+        uint256 inactiveBalance;
+        uint256 activeBalance;
+    }
+
     bytes32 public constant STAKER_ROLE = keccak256("STAKER_ROLE");
 
     IGnosisSafe public relayerMultisig;
     IERC20Upgradeable public stakedToken;
     uint256 public cooldownSeconds;
-    mapping(address => uint256) public stakersCooldowns;
-    mapping(address => uint256) public stakersAmount;
+    mapping(address => StakerDetails) public staker;
     bool public isStakingLive;
     uint256 public minStakeRequired;
 
     event Staked(address indexed from, address indexed onBehalfOf, uint256 amount);
-    event Redeem(address indexed from, address indexed to, uint256 amount);
-    event CoolDownActivated(address indexed user);
+    event Unstaked(address indexed from, address indexed to, uint256 amount, uint256 cooldownTimestamp);
+    event CooldownActivated(address indexed user, uint256 nextCooldown, uint256 inactiveBalance, uint256 activeBalance);
 
     function _Staking_init(
         IERC20Upgradeable _stakedToken,
@@ -49,10 +54,11 @@ contract Staking is ReentrancyGuardUpgradeable, AccessControlUpgradeable, BlockC
     function stake(address _onBehalfOf, uint256 _amount) external virtual nonReentrant {
         _requireStakingLive();
         require(relayerMultisig.isOwner(_onBehalfOf), "Staking: not relayer");
-        uint256 balanceOfUser = stakersAmount[_onBehalfOf];
+        uint256 balanceOfUser = staker[_onBehalfOf].activeBalance;
         require(minStakeRequired <= balanceOfUser + _amount, "Staking: insufficient amount");
 
-        stakersAmount[_onBehalfOf] += _amount;
+        StakerDetails storage stakerDetails = staker[_onBehalfOf];
+        stakerDetails.activeBalance += _amount;
         stakedToken.safeTransferFrom(msg.sender, address(this), _amount);
 
         emit Staked(msg.sender, _onBehalfOf, _amount);
@@ -61,39 +67,35 @@ contract Staking is ReentrancyGuardUpgradeable, AccessControlUpgradeable, BlockC
     /**
      * @dev unstake staked tokens
      * @param _to Address to transfer tokens to
-     * @param _amount Amount to redeem
      **/
-    function unstake(address _to, uint256 _amount) external virtual nonReentrant {
-        require(_amount != 0, "Staking: zero amount to unstake");
-        uint256 currentTimestamp = _blockTimestamp();
+    function unstake(address _to) external virtual nonReentrant {
         address msgSender = _msgSender();
-        uint256 cooldownStartTimestamp = stakersCooldowns[msgSender];
+        uint256 inactiveBalance = staker[msgSender].inactiveBalance;
+        require(inactiveBalance != 0, "Staking: insufficient inactive balance");
+        uint256 currentTimestamp = _blockTimestamp();
+        uint256 cooldownStartTimestamp = staker[msgSender].cooldown;
         require(currentTimestamp > (cooldownStartTimestamp + cooldownSeconds), "Staking: insufficient cooldown");
-        uint256 balanceOfMessageSender = stakersAmount[msgSender];
-        uint256 amountToRedeem = (_amount > balanceOfMessageSender) ? balanceOfMessageSender : _amount;
-        // update this, when inactive mechanics is included
-        // No need to check, as the balance will be checked in cooldown() when moving to inactive balance
-        if ((balanceOfMessageSender - amountToRedeem) == 0) {
-            delete stakersCooldowns[msgSender];
-        }
 
-        stakersAmount[msgSender] -= amountToRedeem;
-        IERC20Upgradeable(stakedToken).safeTransfer(_to, amountToRedeem);
-        emit Redeem(msgSender, _to, amountToRedeem);
+        StakerDetails storage stakerDetails = staker[msgSender];
+        delete stakerDetails.cooldown;
+        delete stakerDetails.inactiveBalance;
+
+        IERC20Upgradeable(stakedToken).safeTransfer(_to, inactiveBalance);
+        emit Unstaked(msgSender, _to, inactiveBalance, cooldownStartTimestamp + cooldownSeconds);
     }
 
     /**
      * @dev Activates the cooldown period to unstake
      * - It can't be called if the user is not staking
      **/
-    function cooldown() external virtual {
-        require(stakersAmount[msg.sender] != 0, "Staking: invalid balance to cooldown");
-        stakersCooldowns[msg.sender] = _blockTimestamp();
-        emit CoolDownActivated(msg.sender);
-
-        // Add inactive and active staking
-        // slash will occur on total amount
-        // cooldown should move the amount to inactive and can only unstake that amount
+    function cooldown(uint256 _amount) external virtual {
+        address msgSender = _msgSender();
+        require(staker[msgSender].activeBalance != 0, "Staking: invalid balance to cooldown");
+        StakerDetails storage stakerDetails = staker[msgSender];
+        stakerDetails.cooldown = _blockTimestamp();
+        stakerDetails.activeBalance -= _amount;
+        stakerDetails.inactiveBalance += _amount;
+        emit CooldownActivated(msgSender, stakerDetails.cooldown, stakerDetails.inactiveBalance, stakerDetails.activeBalance);
     }
 
     /**
