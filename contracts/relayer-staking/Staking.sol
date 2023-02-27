@@ -44,6 +44,10 @@ contract Staking is ReentrancyGuardUpgradeable, AccessControlUpgradeable, BlockC
         _grantRole(DEFAULT_ADMIN_ROLE, _volmexSafe);
     }
 
+    /**
+     * @dev stake tokens to get relayer access
+     * staker should be a singer in mutisig
+     */
     function stake(address _onBehalfOf, uint256 _amount) external virtual nonReentrant {
         _requireStakingLive();
         require(relayerSafe.isOwner(_onBehalfOf), "Staking: not signer");
@@ -109,6 +113,14 @@ contract Staking is ReentrancyGuardUpgradeable, AccessControlUpgradeable, BlockC
     function updateMinStakeRequired(uint256 _minStakeAmount) external virtual {
         _requireDefaultAdmin();
         minStakeRequired = _minStakeAmount;
+    }
+
+    /**
+     * @dev Update relayer safe address
+     */
+    function updateRelayerSafe(ISafe _relayerSafe) external virtual {
+        _requireDefaultAdmin();
+        relayerSafe = _relayerSafe;
     }
 
     /**
