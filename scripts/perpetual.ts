@@ -38,7 +38,7 @@ const positioning = async () => {
     [
       "Virtual ETH Index Token", // nameArg
       "VEVIV", // symbolArg,
-      `${process.env.INDEX_PRICE_ORACLE}`, // priceFeedArg
+      indexPriceOracle.address, // priceFeedArg
       true, // isBase
     ],
     {
@@ -131,7 +131,7 @@ const positioning = async () => {
       accountBalance.address,
       matchingEngine.address,
       markPriceOracle.address,
-      `${process.env.INDEX_PRICE_ORACLE}`,
+      indexPriceOracle.address,
       0,
       [owner.address, `${process.env.LIQUIDATOR}`],
     ],
@@ -140,21 +140,33 @@ const positioning = async () => {
     },
   );
   await positioning.deployed();
+  console.log("Set positioning ...");
   await (await accountBalance.setPositioning(positioning.address)).wait();
+  console.log("Grant match order ...");
   await (await matchingEngine.grantMatchOrders(positioning.address)).wait();
+  console.log("Set at perp view ...");
   await (await perpView.setPositioning(positioning.address)).wait();
   await (await perpView.incrementPerpIndex()).wait();
+  console.log("Set minter-burner ...");
   await (await volmexBaseToken.setMintBurnRole(positioning.address)).wait();
   await (await volmexQuoteToken.setMintBurnRole(positioning.address)).wait();
 
+  console.log("Deploying MarketRegistry ...");
   const marketRegistry = await upgrades.deployProxy(MarketRegistry, [volmexQuoteToken.address]);
   await marketRegistry.deployed();
+  console.log("Add base token ...");
   await (await marketRegistry.addBaseToken(volmexBaseToken.address)).wait();
+  console.log("Set market ...");
   await (await positioning.setMarketRegistry(marketRegistry.address)).wait();
+  console.log("Set fee receiver ...");
   await (await positioning.setDefaultFeeReceiver(owner.address)).wait();
+  console.log("Set positioning ...");
   await (await vaultController.setPositioning(positioning.address)).wait();
+  console.log("Register vault ...");
   await (await vaultController.registerVault(vault.address, usdcAddress)).wait();
+  console.log("Set maker fee ...");
   await marketRegistry.setMakerFeeRatio(0.0004e6);
+  console.log("Set taker fee ...");
   await marketRegistry.setTakerFeeRatio(0.0009e6);
 
   console.log("Deploying Periphery contract ...");
@@ -196,8 +208,8 @@ const positioning = async () => {
     BaseToken: volmexBaseToken.address,
     QuoteToken: volmexQuoteToken.address,
     MatchingEngine: matchingEngine.address,
-    VaultController: vaultController.address,
     Vault: vault.address,
+    VaultController: vaultController.address,
     MarketRegistry: marketRegistry.address,
     AccountBalance: accountBalance.address,
     PositioningConfig: positioningConfig.address,
@@ -213,7 +225,7 @@ const positioning = async () => {
       address: await proxyAdmin.getProxyImplementation(indexPriceOracle.address),
     });
   } catch (error) {
-    console.log("ERROR - verify - Index price oracle");
+    console.log("ERROR - verify - Index price oracle", error);
   }
   try {
     await run("verify:verify", {
