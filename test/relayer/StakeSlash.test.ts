@@ -9,29 +9,31 @@ describe("Stake & Slash", function () {
   let alice: Signer;
   let bob: Signer;
   let chris: Signer;
-  let insuranceFund: Signer;
-  let Multisig, Slashing, StakeToken, relayerSafe, slashing, stakeToken;
+  let Multisig, Slashing, StakeToken, InsuranceFund, relayerSafe, slashing, stakeToken, insuranceFund;
 
   this.beforeAll(async () => {
-    [owner, alice, bob, chris, volmexSafe, insuranceFund] = await ethers.getSigners();
+    [owner, alice, bob, chris, volmexSafe] = await ethers.getSigners();
     StakeToken = await ethers.getContractFactory("TestERC20");
     Slashing = await ethers.getContractFactory("Slashing");
     Multisig = await ethers.getContractFactory("Safe");
+    InsuranceFund = await ethers.getContractFactory("InsuranceFund");
   });
   this.beforeEach(async () => {
-    stakeToken = await upgrades.deployProxy(StakeToken, ["Volmex Staked", "VSTKN", 18], {
+    stakeToken = await upgrades.deployProxy(StakeToken, ["Volmex Staked", "VSTKN", 6], {
       initializer: "__TestERC20_init",
     });
     await stakeToken.deployed();
     relayerSafe = await Multisig.deploy();
     await relayerSafe.deployed();
+    insuranceFund = await upgrades.deployProxy(InsuranceFund, [stakeToken.address]);
+    await insuranceFund.deployed();
     slashing = await upgrades.deployProxy(Slashing, [
       stakeToken.address,
       relayerSafe.address,
       await volmexSafe.getAddress(),
+      await volmexSafe.getAddress(),
       432000, // 5 days
-      86400, // 24 hours
-      await insuranceFund.getAddress(),
+      insuranceFund.address,
     ]);
     await slashing.deployed();
   });
