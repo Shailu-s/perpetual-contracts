@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: BUSL - 1.1
-pragma solidity =0.8.12;
+pragma solidity =0.8.18;
 
 /// @notice For future upgrades, do not change VaultStorageV1. Create a new
 /// contract which implements VaultStorageV1 and following the naming convention
