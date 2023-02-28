@@ -219,7 +219,7 @@ describe("Stake & Slash", function () {
       const slasherRole = "0x12b42e8a160f6064dc959c6f251e3af0750ad213dbecf573b4710d67d6c28e39";
       await (await slashing.connect(volmexSafe).grantRole(slasherRole, await chris.getAddress())).wait();
       await (await slashing.connect(chris).toggleStaking()).wait();
-      console.log(await slashing.isStakingLive());
+      console.log(await slashing.updateSlashPenalty(2500));
     })
   })
 });
