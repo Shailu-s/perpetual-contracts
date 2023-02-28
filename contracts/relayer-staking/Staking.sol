@@ -86,7 +86,7 @@ contract Staking is ReentrancyGuardUpgradeable, AccessControlUpgradeable, BlockC
 
     /**
      * @dev Activates the cooldown period to unstake
-     * - It can't be called if the user is not staking
+     * - It can't be called if the user has not staked
      **/
     function cooldown(uint256 _amount) external virtual {
         address msgSender = _msgSender();
