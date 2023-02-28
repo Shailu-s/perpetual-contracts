@@ -212,14 +212,12 @@ describe("Stake & Slash", function () {
       const stakerRole = "0xb9e206fa2af7ee1331b72ce58b6d938ac810ce9b5cdb65d35ab723fd67badf9e";
       await (await slashing.connect(volmexSafe).grantRole(stakerRole, await bob.getAddress())).wait();
       await (await slashing.connect(bob).toggleStaking()).wait();
-      console.log(await slashing.isStakingLive());
     })
 
     it("Should provide staker role", async () => {
       const slasherRole = "0x12b42e8a160f6064dc959c6f251e3af0750ad213dbecf573b4710d67d6c28e39";
       await (await slashing.connect(volmexSafe).grantRole(slasherRole, await chris.getAddress())).wait();
-      await (await slashing.connect(chris).toggleStaking()).wait();
-      console.log(await slashing.updateSlashPenalty(2500));
+      await (await slashing.connect(chris).updateSlashPenalty(2500)).wait();
     })
   })
 });
