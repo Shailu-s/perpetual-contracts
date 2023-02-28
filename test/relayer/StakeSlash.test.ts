@@ -2,6 +2,7 @@ import { expect } from "chai";
 import { Signer } from "ethers";
 import { ethers, upgrades } from "hardhat";
 import { time } from "@nomicfoundation/hardhat-network-helpers";
+const BN = ethers.BigNumber;
 
 describe("Stake & Slash", function () {
   let volmexSafe: Signer;
@@ -9,7 +10,14 @@ describe("Stake & Slash", function () {
   let alice: Signer;
   let bob: Signer;
   let chris: Signer;
-  let Multisig, Slashing, StakeToken, InsuranceFund, relayerSafe, slashing, stakeToken, insuranceFund;
+  let Multisig,
+    Slashing,
+    StakeToken,
+    InsuranceFund,
+    relayerSafe,
+    slashing,
+    stakeToken,
+    insuranceFund;
 
   this.beforeAll(async () => {
     [owner, alice, bob, chris, volmexSafe] = await ethers.getSigners();
@@ -47,49 +55,58 @@ describe("Stake & Slash", function () {
     let aliceAddress: string;
     this.beforeEach(async () => {
       aliceAddress = await alice.getAddress();
-      await (await stakeToken.transfer(aliceAddress, ethers.utils.parseEther("10000"))).wait();
+      await (await stakeToken.transfer(aliceAddress, ethers.utils.parseUnits("10000", 6))).wait();
     });
 
     it("Should stake", async () => {
       await (await slashing.connect(volmexSafe).toggleStaking()).wait();
       await (await relayerSafe.setOwner(aliceAddress)).wait();
       await (
-        await stakeToken.connect(alice).approve(slashing.address, ethers.utils.parseEther("10000"))
+        await stakeToken
+          .connect(alice)
+          .approve(slashing.address, ethers.utils.parseUnits("10000", 6))
       ).wait();
       await (
-        await slashing.connect(alice).stake(aliceAddress, ethers.utils.parseEther("10000"))
+        await slashing.connect(alice).stake(aliceAddress, ethers.utils.parseUnits("10000", 6))
       ).wait();
-      expect(await slashing.stakersAmount(aliceAddress)).equal(ethers.utils.parseEther("10000"));
+      const staker = await slashing.staker(aliceAddress);
+      expect(staker.activeBalance).equal(ethers.utils.parseUnits("10000", 6));
     });
 
     it("Should not stake, not relayer", async () => {
       await (await slashing.connect(volmexSafe).toggleStaking()).wait();
       await (
-        await stakeToken.connect(alice).approve(slashing.address, ethers.utils.parseEther("10000"))
+        await stakeToken
+          .connect(alice)
+          .approve(slashing.address, ethers.utils.parseUnits("10000", 6))
       ).wait();
       await expect(
-        slashing.connect(alice).stake(aliceAddress, ethers.utils.parseEther("10000")),
-      ).revertedWith("Staking: not signer");
+        slashing.connect(alice).stake(aliceAddress, ethers.utils.parseUnits("10000", 6)),
+      ).revertedWith("Staking: not relayer");
     });
 
     it("Should not stake, staking not live", async () => {
       await (await relayerSafe.setOwner(aliceAddress)).wait();
       await (
-        await stakeToken.connect(alice).approve(slashing.address, ethers.utils.parseEther("10000"))
+        await stakeToken
+          .connect(alice)
+          .approve(slashing.address, ethers.utils.parseUnits("10000", 6))
       ).wait();
       await expect(
-        slashing.connect(alice).stake(aliceAddress, ethers.utils.parseEther("10000")),
-      ).revertedWith("Staking: staking not live");
+        slashing.connect(alice).stake(aliceAddress, ethers.utils.parseUnits("10000", 6)),
+      ).revertedWith("Staking: not live");
     });
 
     it("Should not stake, min required amount not fulfill", async () => {
       await (await slashing.connect(volmexSafe).toggleStaking()).wait();
       await (await relayerSafe.setOwner(aliceAddress)).wait();
       await (
-        await stakeToken.connect(alice).approve(slashing.address, ethers.utils.parseEther("1000"))
+        await stakeToken
+          .connect(alice)
+          .approve(slashing.address, ethers.utils.parseUnits("1000", 6))
       ).wait();
       await expect(
-        slashing.connect(alice).stake(aliceAddress, ethers.utils.parseEther("1000")),
+        slashing.connect(alice).stake(aliceAddress, ethers.utils.parseUnits("1000", 6)),
       ).revertedWith("Staking: insufficient amount");
     });
   });
@@ -99,38 +116,38 @@ describe("Stake & Slash", function () {
     this.beforeEach(async () => {
       await (await slashing.connect(volmexSafe).toggleStaking()).wait();
       aliceAddress = await alice.getAddress();
-      await (await stakeToken.transfer(aliceAddress, ethers.utils.parseEther("20000"))).wait();
+      await (await stakeToken.transfer(aliceAddress, ethers.utils.parseUnits("20000", 6))).wait();
       await (await relayerSafe.setOwner(aliceAddress)).wait();
       await (
-        await stakeToken.connect(alice).approve(slashing.address, ethers.utils.parseEther("20000"))
+        await stakeToken
+          .connect(alice)
+          .approve(slashing.address, ethers.utils.parseUnits("20000", 6))
       ).wait();
       await (
-        await slashing.connect(alice).stake(aliceAddress, ethers.utils.parseEther("20000"))
+        await slashing.connect(alice).stake(aliceAddress, ethers.utils.parseUnits("20000", 6))
       ).wait();
     });
 
     it("Should unstake", async () => {
-      await (await slashing.connect(alice).cooldown()).wait();
+      await (await slashing.connect(alice).cooldown(ethers.utils.parseUnits("1000", 6))).wait();
       const current = await time.latest();
       await time.increaseTo(current + 432000 + 1);
-      await (await slashing.connect(alice).unstake(aliceAddress, ethers.utils.parseEther("10000"))).wait();;
-      expect(await slashing.stakersAmount(aliceAddress)).equal(ethers.utils.parseEther("10000"))
+      const staker = await slashing.staker(aliceAddress);
+      await (await slashing.connect(alice).unstake(aliceAddress)).wait();
+      expect(staker.inactiveBalance).equal(ethers.utils.parseUnits("1000", 6));
     });
 
     it("Should not unstake, if cooldown not reached", async () => {
-      await (await slashing.connect(alice).cooldown()).wait();
-      await expect(
-        slashing.connect(alice).unstake(aliceAddress, ethers.utils.parseEther("10000")),
-      ).revertedWith("Staking: insufficient cooldown");
+      await (await slashing.connect(alice).cooldown(ethers.utils.parseUnits("1000", 6))).wait();
+      await expect(slashing.connect(alice).unstake(aliceAddress)).revertedWith(
+        "Staking: insufficient cooldown",
+      );
     });
 
-    it("Should not unstake, if unstake window closed", async () => {
-      await (await slashing.connect(alice).cooldown()).wait();
-      const current = await time.latest();
-      await time.increaseTo(current + 432000 + 86400 + 1);
-      await expect(
-        slashing.connect(alice).unstake(aliceAddress, ethers.utils.parseEther("10000")),
-      ).revertedWith("Staking: unstake window finished");
+    it("Should not unstake, if not cooldown", async () => {
+      await expect(slashing.connect(alice).unstake(aliceAddress)).revertedWith(
+        "Staking: insufficient inactive balance",
+      );
     });
   });
 
@@ -138,23 +155,49 @@ describe("Stake & Slash", function () {
     let aliceAddress: string;
     this.beforeEach(async () => {
       aliceAddress = await alice.getAddress();
-      await (await stakeToken.transfer(aliceAddress, ethers.utils.parseEther("10000"))).wait();
+      await (await stakeToken.transfer(aliceAddress, ethers.utils.parseUnits("10000", 6))).wait();
     });
 
     it("Should be slashed", async () => {
       await (await slashing.connect(volmexSafe).toggleStaking()).wait();
       await (await relayerSafe.setOwner(aliceAddress)).wait();
       await (
-        await stakeToken.connect(alice).approve(slashing.address, ethers.utils.parseEther("10000"))
+        await stakeToken
+          .connect(alice)
+          .approve(slashing.address, ethers.utils.parseUnits("10000", 6))
       ).wait();
       await (
-        await slashing.connect(alice).stake(aliceAddress, ethers.utils.parseEther("10000"))
+        await slashing.connect(alice).stake(aliceAddress, ethers.utils.parseUnits("10000", 6))
       ).wait();
-      await (await slashing.connect(volmexSafe).updateRelayerSafe(await owner.getAddress())).wait();
-      const beforeStake = await slashing.stakersAmount(aliceAddress);
-      await (await slashing.slash(aliceAddress)).wait();
-      const afterStake = await slashing.stakersAmount(aliceAddress);
-      expect(beforeStake.sub(afterStake)).equal(ethers.utils.parseEther("2500"));
-    })
-  })
+      const beforeSlash = await slashing.staker(aliceAddress);
+      await (await slashing.connect(volmexSafe).slash(aliceAddress)).wait();
+      const afterSlash = await slashing.staker(aliceAddress);
+      expect(beforeSlash.activeBalance.sub(afterSlash.activeBalance)).equal(
+        ethers.utils.parseUnits("2500", 6),
+      );
+    });
+
+    it("Should be slashed from both balances", async () => {
+      await (await slashing.connect(volmexSafe).toggleStaking()).wait();
+      await (await relayerSafe.setOwner(aliceAddress)).wait();
+      await (
+        await stakeToken
+          .connect(alice)
+          .approve(slashing.address, ethers.utils.parseUnits("10000", 6))
+      ).wait();
+      await (
+        await slashing.connect(alice).stake(aliceAddress, ethers.utils.parseUnits("10000", 6))
+      ).wait();
+      await (await slashing.connect(alice).cooldown(ethers.utils.parseUnits("1000", 6))).wait();
+      const beforeSlash = await slashing.staker(aliceAddress);
+      await (await slashing.connect(volmexSafe).slash(aliceAddress)).wait();
+      const afterSlash = await slashing.staker(aliceAddress);
+      expect(afterSlash.inactiveBalance).equal(0);
+      expect(afterSlash.activeBalance).equal(
+        beforeSlash.activeBalance.sub(
+          ethers.utils.parseUnits("2500", 6).sub(beforeSlash.inactiveBalance),
+        ),
+      );
+    });
+  });
 });
