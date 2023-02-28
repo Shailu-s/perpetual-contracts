@@ -34,8 +34,8 @@ const slashing = async () => {
     usdcAddress,
     relayerSafe,
     volmexSafe,
+    volmexSafe,
     300, // 5 days, should be
-    60, // 24 hours, should be
     insuraceAddress,
   ]);
   await slashing.deployed();
