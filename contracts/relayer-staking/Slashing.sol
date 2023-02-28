@@ -25,7 +25,7 @@ contract Slashing is Staking {
         address _slashingAdmin,
         uint256 _cooldownSeconds,
         address _insuranceFund
-    ) external {
+    ) external initializer {
         _Staking_init(_stakedToken, _relayerMultisig, _stakingAdmin, _cooldownSeconds);
         slashPenalty = 2500;
         insuranceFund = _insuranceFund;
