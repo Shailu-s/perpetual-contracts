@@ -8,29 +8,30 @@ import { AccessControlUpgradeable } from "@openzeppelin/contracts-upgradeable/ac
 
 import { BlockContext } from "../helpers/BlockContext.sol";
 import { IGnosisSafe } from "../interfaces/IGnosisSafe.sol";
-import { IERC20Metadata } from "../interfaces/IERC20Metadata.sol";
 
 contract Staking is ReentrancyGuardUpgradeable, AccessControlUpgradeable, BlockContext {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
     struct StakerDetails {
-        uint256 cooldown;
+        uint256 cooldownStart;
         uint256 inactiveBalance;
         uint256 activeBalance;
     }
 
-    bytes32 public constant STAKER_ROLE = keccak256("STAKER_ROLE");
+    // = keccak256("STAKER_ROLE")
+    bytes32 private constant _STAKER_ROLE = 0xb9e206fa2af7ee1331b72ce58b6d938ac810ce9b5cdb65d35ab723fd67badf9e;
 
     IGnosisSafe public relayerMultisig;
     IERC20Upgradeable public stakedToken;
-    uint256 public cooldownSeconds;
     mapping(address => StakerDetails) public staker;
-    bool public isStakingLive;
+    uint256 public cooldownSeconds;
     uint256 public minStakeRequired;
+    bool public isStakingLive;
 
     event Staked(address indexed from, address indexed onBehalfOf, uint256 amount);
     event Unstaked(address indexed from, address indexed to, uint256 amount, uint256 cooldownTimestamp);
     event CooldownActivated(address indexed user, uint256 nextCooldown, uint256 inactiveBalance, uint256 activeBalance);
+    event RelayerDeactivated(address indexed relayer, uint256 activeBalance);
 
     function _Staking_init(
         IERC20Upgradeable _stakedToken,
@@ -43,8 +44,8 @@ contract Staking is ReentrancyGuardUpgradeable, AccessControlUpgradeable, BlockC
         cooldownSeconds = _cooldownSeconds;
         minStakeRequired = 10000000000;
 
-        _grantRole(DEFAULT_ADMIN_ROLE, _msgSender());
-        _grantRole(STAKER_ROLE, _stakingAdmin);
+        _grantRole(_STAKER_ROLE, _stakingAdmin);
+        _setRoleAdmin(_STAKER_ROLE, _STAKER_ROLE);
     }
 
     /**
@@ -58,6 +59,7 @@ contract Staking is ReentrancyGuardUpgradeable, AccessControlUpgradeable, BlockC
         uint256 balanceOfUser = stakerDetails.activeBalance;
         require(minStakeRequired <= balanceOfUser + _amount, "Staking: insufficient amount");
 
+        // Relayer leader calculation is directly proportional to staker's activeBalance
         stakerDetails.activeBalance += _amount;
         stakedToken.safeTransferFrom(msg.sender, address(this), _amount);
 
@@ -72,12 +74,13 @@ contract Staking is ReentrancyGuardUpgradeable, AccessControlUpgradeable, BlockC
         address msgSender = _msgSender();
         StakerDetails storage stakerDetails = staker[msgSender];
         uint256 inactiveBalance = stakerDetails.inactiveBalance;
-        require(inactiveBalance != 0, "Staking: insufficient inactive balance");
+        require(inactiveBalance != 0, "Staking: nothing to unstake");
         uint256 currentTimestamp = _blockTimestamp();
-        uint256 cooldownStartTimestamp = stakerDetails.cooldown;
+        // No need to check `cooldownStartTimestamp == 0`, because this check `inactiveBalance != 0` will do.
+        uint256 cooldownStartTimestamp = stakerDetails.cooldownStart;
         require(currentTimestamp > (cooldownStartTimestamp + cooldownSeconds), "Staking: insufficient cooldown");
 
-        delete stakerDetails.cooldown;
+        delete stakerDetails.cooldownStart;
         delete stakerDetails.inactiveBalance;
 
         IERC20Upgradeable(stakedToken).safeTransfer(_to, inactiveBalance);
@@ -90,12 +93,15 @@ contract Staking is ReentrancyGuardUpgradeable, AccessControlUpgradeable, BlockC
      **/
     function cooldown(uint256 _amount) external virtual {
         address msgSender = _msgSender();
-        require(staker[msgSender].activeBalance != 0, "Staking: invalid balance to cooldown");
         StakerDetails storage stakerDetails = staker[msgSender];
-        stakerDetails.cooldown = _blockTimestamp();
+        require(stakerDetails.activeBalance != 0, "Staking: invalid balance to cooldown");
+        stakerDetails.cooldownStart = _blockTimestamp();
         stakerDetails.activeBalance -= _amount;
         stakerDetails.inactiveBalance += _amount;
-        emit CooldownActivated(msgSender, stakerDetails.cooldown, stakerDetails.inactiveBalance, stakerDetails.activeBalance);
+        emit CooldownActivated(msgSender, stakerDetails.cooldownStart, stakerDetails.inactiveBalance, stakerDetails.activeBalance);
+        if (stakerDetails.activeBalance < minStakeRequired) {
+            emit RelayerDeactivated(msgSender, stakerDetails.activeBalance);
+        }
     }
 
     /**
@@ -114,20 +120,8 @@ contract Staking is ReentrancyGuardUpgradeable, AccessControlUpgradeable, BlockC
         minStakeRequired = _minStakeAmount;
     }
 
-    /**
-     * @dev Update volmex safe address
-     */
-    function updateStakerRole(address _stakerRole) external virtual {
-        _requireDefaultAdmin();
-        _grantRole(STAKER_ROLE, _stakerRole);
-    }
-
-    function _requireDefaultAdmin() internal view {
-        require(hasRole(DEFAULT_ADMIN_ROLE, _msgSender()), "Staking: not admin");
-    }
-
     function _requireStakerRole() internal view {
-        require(hasRole(STAKER_ROLE, _msgSender()), "Staking: not staker role");
+        require(hasRole(_STAKER_ROLE, _msgSender()), "Staking: not staker role");
     }
 
     function _requireStakingLive() private view {

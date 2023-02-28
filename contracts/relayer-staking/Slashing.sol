@@ -10,15 +10,16 @@ import { IGnosisSafe } from "../interfaces/IGnosisSafe.sol";
 contract Slashing is Staking {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
-    bytes32 public constant SLASHER_ROLE = keccak256("SLASHER_ROLE");
-    uint256 public constant SLASH_BASE = 10000;
+    // = keccak256("SLASHER_ROLE")
+    bytes32 private constant _SLASHER_ROLE = 0x12b42e8a160f6064dc959c6f251e3af0750ad213dbecf573b4710d67d6c28e39;
+    uint256 private constant _SLASH_BASE = 10000;
 
-    uint256 public slashPenalty;
     address public insuranceFund;
+    uint256 public slashPenalty;
 
     event Slashed(address indexed staker, uint256 inactiveAmount, uint256 activeAmount);
 
-    function initialize(
+    function Slashing_init(
         IERC20Upgradeable _stakedToken,
         IGnosisSafe _relayerMultisig,
         address _stakingAdmin,
@@ -29,37 +30,40 @@ contract Slashing is Staking {
         _Staking_init(_stakedToken, _relayerMultisig, _stakingAdmin, _cooldownSeconds);
         slashPenalty = 2500;
         insuranceFund = _insuranceFund;
-        _grantRole(SLASHER_ROLE, _slashingAdmin);
+        _grantRole(_SLASHER_ROLE, _slashingAdmin);
+        _setRoleAdmin(_SLASHER_ROLE, _SLASHER_ROLE);
     }
 
     /**
      * @dev Slash staked token balances and withdraw those funds to the specified address.
      *
      * @param _account The address to receive the slashed tokens.
-     * @return _ amount slashed, denominated in the underlying token.
+     * @return slashAmount amount slashed, denominated in the underlying token.
      */
-    function slash(address _account) external nonReentrant returns (uint256) {
+    function slash(address _account) external nonReentrant returns (uint256 slashAmount) {
         _requireSlasherRole();
         StakerDetails storage stakerDetails = staker[_account];
         uint256 inactiveBalance = stakerDetails.inactiveBalance;
         uint256 activeBalance = stakerDetails.activeBalance;
         uint256 stakedAmount = inactiveBalance + activeBalance;
-        uint256 slashAmount = (stakedAmount * slashPenalty) / SLASH_BASE;
+        slashAmount = (stakedAmount * slashPenalty) / _SLASH_BASE;
 
-        if (slashAmount == 0) {
-            emit Slashed(_account, 0, 0);
-            return 0;
-        } else {
-            (uint256 slashInactive, uint256 slashActive) = inactiveBalance >= slashAmount
-                ? (slashAmount, 0)
-                : (inactiveBalance, slashAmount - inactiveBalance);
+        uint256 slashInactive;
+        uint256 slashActive;
+        if (slashAmount != 0) {
+            (slashInactive, slashActive) = inactiveBalance >= slashAmount ? (slashAmount, 0) : (inactiveBalance, slashAmount - inactiveBalance);
 
-            stakerDetails.inactiveBalance -= slashInactive;
-            if (slashActive != 0) stakerDetails.activeBalance -= slashActive;
+            if (slashInactive != 0) stakerDetails.inactiveBalance -= slashInactive;
+            if (slashActive != 0) {
+                stakerDetails.activeBalance -= slashActive;
+                if (stakerDetails.activeBalance < minStakeRequired) {
+                    emit RelayerDeactivated(_account, stakerDetails.activeBalance);
+                }
+            }
             stakedToken.safeTransfer(insuranceFund, slashAmount);
-            emit Slashed(_account, slashInactive, slashActive);
-            return slashAmount;
         }
+        emit Slashed(_account, slashInactive, slashActive);
+        return slashAmount;
     }
 
     /**
@@ -70,15 +74,7 @@ contract Slashing is Staking {
         slashPenalty = _slashPenalty;
     }
 
-    /**
-     * @dev Update relayer safe address
-     */
-    function updateSlasherRole(address _slasherRole) external virtual {
-        _requireDefaultAdmin();
-        _grantRole(SLASHER_ROLE, _slasherRole);
-    }
-
     function _requireSlasherRole() private view {
-        require(hasRole(SLASHER_ROLE, _msgSender()), "Slashing: not slasher role");
+        require(hasRole(_SLASHER_ROLE, _msgSender()), "Slashing: not slasher role");
     }
 }

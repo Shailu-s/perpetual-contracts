@@ -37,7 +37,9 @@ const slashing = async () => {
     volmexSafe,
     300, // 5 days, should be
     insuraceAddress,
-  ]);
+  ], {
+    initializer: "Slashing_init"
+  });
   await slashing.deployed();
   await verifyTask(await proxyAdmin.getProxyImplementation(slashing.address));
   console.log("Slashing: ", slashing.address);

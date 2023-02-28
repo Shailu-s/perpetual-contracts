@@ -42,7 +42,9 @@ describe("Stake & Slash", function () {
       await volmexSafe.getAddress(),
       432000, // 5 days
       insuranceFund.address,
-    ]);
+    ], {
+      initializer: "Slashing_init"
+    });
     await slashing.deployed();
   });
 
@@ -146,7 +148,7 @@ describe("Stake & Slash", function () {
 
     it("Should not unstake, if not cooldown", async () => {
       await expect(slashing.connect(alice).unstake(aliceAddress)).revertedWith(
-        "Staking: insufficient inactive balance",
+        "Staking: nothing to unstake",
       );
     });
   });
