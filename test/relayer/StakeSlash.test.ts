@@ -175,6 +175,8 @@ describe("Stake & Slash", function () {
       expect(beforeSlash.activeBalance.sub(afterSlash.activeBalance)).equal(
         ethers.utils.parseUnits("2500", 6),
       );
+      const insuranceBalance = await stakeToken.balanceOf(insuranceFund.address);
+      expect(insuranceBalance).equal(ethers.utils.parseUnits("2500", 6));
     });
 
     it("Should be slashed from both balances", async () => {
@@ -198,6 +200,8 @@ describe("Stake & Slash", function () {
           ethers.utils.parseUnits("2500", 6).sub(beforeSlash.inactiveBalance),
         ),
       );
+      const insuranceBalance = await stakeToken.balanceOf(insuranceFund.address);
+      expect(insuranceBalance).equal(ethers.utils.parseUnits("2500", 6));
     });
   });
 });
