@@ -129,7 +129,19 @@ describe("MatchingEngine", function () {
       let receipt = await matchingEngine.deployed();
       expect(receipt.confirmations).not.equal(0);
     });
-    
+    it("MatchingEngine Upgrade confirm", async () => {
+      const MatchingEngine = await ethers.getContractFactory("MatchingEngineMock");
+      const matchingEngine = await upgrades.deployProxy(
+        MatchingEngine,
+        [owner.address, markPriceOracle.address],
+        {
+          initializer: "initialize",
+        },
+      );
+      const MatchingEngineUpgrade = await ethers.getContractFactory("MatchingEngineTest");
+      const receipt = await upgrades.upgradeProxy(matchingEngine.address, MatchingEngineUpgrade);
+      expect(receipt.confirmations).not.equal(0);
+    });
   });
 
   describe("Cancel orders:", function () {
