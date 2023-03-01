@@ -111,7 +111,7 @@ abstract contract MatchingEngineCore is PausableUpgradeable, AssetMatcher, Acces
         orderLeft.isShort
             ? _updateObservation(newFill.rightValue, newFill.leftValue, orderLeft.makeAsset.virtualToken)
             : _updateObservation(newFill.leftValue, newFill.rightValue, orderRight.makeAsset.virtualToken);
-            
+
         bytes32 leftOrderKeyHash = LibOrder.hashKey(orderLeft);
         bytes32 rightOrderKeyHash = LibOrder.hashKey(orderRight);
 
