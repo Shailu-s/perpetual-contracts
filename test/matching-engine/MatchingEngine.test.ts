@@ -431,7 +431,7 @@ describe("MatchingEngine", function () {
     });
 
     describe("Success:", function () {
-      it.only("should match orders & emit event", async () => {
+      it("should match orders & emit event", async () => {
         await expect(matchingEngine.matchOrders(orderLeft, orderRight))
           .to.emit(matchingEngine, "Matched")
           .to.emit(matchingEngine, "OrdersFilled")
@@ -504,20 +504,22 @@ describe("MatchingEngine", function () {
           0,
           false,
         );
-
+     
+       
         const orderRight = Order(
           ORDER,
           deadline,
           account2.address,
           Asset(virtualToken.address, "20"),
           Asset(volmexBaseToken.address, "20"),
-          1,
+          2,
           0,
           true,
         );
         await expect(matchingEngine.matchOrders(orderLeft, orderRight))
           .to.emit(matchingEngine, "Matched")
-          .to.emit(matchingEngine, "OrdersFilled");
+          .to.emit(matchingEngine, "OrdersFilled")
+          .withArgs(["0x0000000000000000000000000000000000000000", account2.address], "20", "10");
       });
     });
   });
