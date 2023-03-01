@@ -431,10 +431,15 @@ describe("MatchingEngine", function () {
     });
 
     describe("Success:", function () {
-      it("should match orders & emit event", async () => {
+      it.only("should match orders & emit event", async () => {
         await expect(matchingEngine.matchOrders(orderLeft, orderRight))
           .to.emit(matchingEngine, "Matched")
-          .to.emit(matchingEngine, "OrdersFilled");
+          .to.emit(matchingEngine, "OrdersFilled")
+          .withArgs(
+            [account1.address, account2.address],
+            "1000000000000000000",
+            "1000000000000000000",
+          );
       });
 
       it("should match orders & emit event when orderRight salt is 0", async () => {
@@ -442,14 +447,24 @@ describe("MatchingEngine", function () {
 
         await expect(matchingEngine.matchOrders(orderLeft, orderRight))
           .to.emit(matchingEngine, "Matched")
-          .to.emit(matchingEngine, "OrdersFilled");
+          .to.emit(matchingEngine, "OrdersFilled")
+          .withArgs(
+            [account1.address, account2.address],
+            "1000000000000000000",
+            "1000000000000000000",
+          );
       });
       it("should match orders & emit event when orderleft salt is 0", async () => {
         orderLeft.salt = 0;
 
         await expect(matchingEngine.matchOrders(orderLeft, orderRight))
           .to.emit(matchingEngine, "Matched")
-          .to.emit(matchingEngine, "OrdersFilled");
+          .to.emit(matchingEngine, "OrdersFilled")
+          .withArgs(
+            [account1.address, account2.address],
+            "1000000000000000000",
+            "1000000000000000000",
+          );
       });
       it("Should match orders when when orderRight is short", async () => {
         const orderLeft = Order(
@@ -475,7 +490,8 @@ describe("MatchingEngine", function () {
         );
         await expect(matchingEngine.matchOrders(orderLeft, orderRight))
           .to.emit(matchingEngine, "Matched")
-          .to.emit(matchingEngine, "OrdersFilled");
+          .to.emit(matchingEngine, "OrdersFilled")
+          .withArgs([account1.address, account2.address], "10", "2");
       });
       it("Should match orders when left order address is 0", async () => {
         const orderLeft = Order(
