@@ -27,7 +27,7 @@ abstract contract MatchingEngineCore is PausableUpgradeable, AssetMatcher, Acces
     event Canceled(bytes32 indexed hash, address trader, address baseToken, uint256 amount, uint256 salt);
     event CanceledAll(address indexed trader, uint256 minSalt);
     event Matched(address[2] traders, uint64[2] deadline, uint256[2] salt, uint256 newLeftFill, uint256 newRightFill);
-    event OrdersFilled(uint256 totalLeftFill, uint256 totalRightFill);
+    event OrdersFilled(address[2] traders, uint256 totalLeftFill, uint256 totalRightFill);
 
     function grantMatchOrders(address account) external {
         require(hasRole(MATCHING_ENGINE_CORE_ADMIN, _msgSender()), "MatchingEngineCore: Not admin");
@@ -116,7 +116,7 @@ abstract contract MatchingEngineCore is PausableUpgradeable, AssetMatcher, Acces
         bytes32 rightOrderKeyHash = LibOrder.hashKey(orderRight);
 
         emit Matched([orderLeft.trader, orderRight.trader], [orderLeft.deadline, orderRight.deadline], [orderLeft.salt, orderRight.salt], newFill.leftValue, newFill.rightValue);
-        emit OrdersFilled(fills[leftOrderKeyHash], fills[rightOrderKeyHash]);
+        emit OrdersFilled([orderLeft.trader, orderRight.trader], fills[leftOrderKeyHash], fills[rightOrderKeyHash]);
     }
 
     function _updateObservation(
