@@ -120,6 +120,14 @@ contract Staking is ReentrancyGuardUpgradeable, AccessControlUpgradeable, BlockC
         minStakeRequired = _minStakeAmount;
     }
 
+    /**
+     * @dev Update relayer multisig address
+     */
+    function updateRelayerMultisig(IGnosisSafe _relayerMultisig) external virtual {
+        _requireStakerRole();
+        relayerMultisig = _relayerMultisig;
+    }
+
     function _requireStakerRole() internal view {
         require(hasRole(_STAKER_ROLE, _msgSender()), "Staking: not staker role");
     }
