@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: BUSL - 1.1
 
-pragma solidity =0.8.12;
+pragma solidity =0.8.18;
 
 abstract contract ERC1271 {
     bytes4 public constant ERC1271_INTERFACE_ID = 0xfb855dc9; // this.isValidSignature.selector

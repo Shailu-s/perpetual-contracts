@@ -10,13 +10,13 @@ import "@openzeppelin/hardhat-defender";
 import "@nomiclabs/hardhat-etherscan";
 import { HardhatUserConfig } from "hardhat/config";
 import "solidity-coverage";
-import 'hardhat-docgen'
+import 'hardhat-docgen';
 import { config as dotEnvConfig } from "dotenv";
 dotEnvConfig();
 
 const config: HardhatUserConfig = {
   solidity: {
-    version: "0.8.12",
+    version: "0.8.18",
     settings: {
       optimizer: { enabled: true, runs: 100 },
       evmVersion: "berlin",
@@ -48,6 +48,22 @@ const config: HardhatUserConfig = {
       gasMultiplier: 1.5,
       timeout: 36000000,
     },
+    zkEvm: {
+      url: `https://rpc.public.zkevm-test.net/`,
+      accounts: [`0x${process.env.PRIVATE_KEY}`],
+      throwOnTransactionFailures: true,
+      loggingEnabled: true,
+      // gasMultiplier: 1.5,
+      timeout: 36000000,
+    },
+    "arbitrum-goerli": {
+      url: `https://arb-goerli.g.alchemy.com/v2/${process.env.ARBITRUM_TESTNET_ALCHEMY_API_KEY}`,
+      accounts: [`0x${process.env.PRIVATE_KEY}`],
+      throwOnTransactionFailures: true,
+      loggingEnabled: true,
+      gasMultiplier: 1.5,
+      // timeout: 36000000,
+    }
   },
   contractSizer: {
     alphaSort: true,

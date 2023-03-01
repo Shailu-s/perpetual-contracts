@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: BUSL - 1.1
-pragma solidity =0.8.12;
+pragma solidity =0.8.18;
 
 import "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 
@@ -90,18 +90,6 @@ contract VolmexPerpPeriphery is AccessControlUpgradeable, IVolmexPerpPeriphery {
         emit TraderWhitelisted(_trader, _isWhitelist);
     }
 
-    function fillLimitOrder(
-        LibOrder.Order memory _leftLimitOrder,
-        bytes memory _signatureLeftLimitOrder,
-        LibOrder.Order memory _rightLimitOrder,
-        bytes memory _signatureRightLimitOrder,
-        bytes memory liquidator,
-        uint256 _index
-    ) external {
-        _requireVolmexPerpPeripheryRelayer();
-        _fillLimitOrder(_leftLimitOrder, _signatureLeftLimitOrder, _rightLimitOrder, _signatureRightLimitOrder, liquidator, _index);
-    }
-
     function depositToVault(
         uint64 _index,
         address _token,
@@ -166,29 +154,6 @@ contract VolmexPerpPeriphery is AccessControlUpgradeable, IVolmexPerpPeriphery {
         }
     }
 
-    function batchFillLimitOrders(
-        uint256 _index,
-        LibOrder.Order[] memory _leftLimitOrders,
-        bytes[] memory _signaturesLeftLimitOrder,
-        LibOrder.Order[] memory _rightLimitOrders,
-        bytes[] memory _signaturesRightLimitOrder,
-        bytes memory liquidator
-    ) external {
-        require(_leftLimitOrders.length == _rightLimitOrders.length, "Periphery: mismatch limit orders");
-        _requireVolmexPerpPeripheryRelayer();
-        uint256 ordersLength = _leftLimitOrders.length;
-        for (uint256 orderIndex = 0; orderIndex < ordersLength; orderIndex++) {
-            _fillLimitOrder(
-                _leftLimitOrders[orderIndex],
-                _signaturesLeftLimitOrder[orderIndex],
-                _rightLimitOrders[orderIndex],
-                _signaturesRightLimitOrder[orderIndex],
-                liquidator,
-                _index
-            );
-        }
-    }
-
     function transferToVault(
         IERC20Upgradeable _token,
         address _from,
@@ -212,22 +177,9 @@ contract VolmexPerpPeriphery is AccessControlUpgradeable, IVolmexPerpPeriphery {
         bytes memory liquidator
     ) internal {
         IPositioning positioning = perpView.positionings(_index);
+        if (_orderLeft.orderType != LibOrder.ORDER) require(_verifyTriggerPrice(_orderLeft, positioning), "Periphery: left order price verification failed");
+        if (_orderRight.orderType != LibOrder.ORDER) require(_verifyTriggerPrice(_orderRight, positioning), "Periphery: right order price verification failed");
         positioning.openPosition(_orderLeft, _signatureLeft, _orderRight, _signatureRight, liquidator);
-    }
-
-    function _fillLimitOrder(
-        LibOrder.Order memory _leftLimitOrder,
-        bytes memory _signatureLeftLimitOrder,
-        LibOrder.Order memory _rightLimitOrder,
-        bytes memory _signatureRightLimitOrder,
-        bytes memory liquidator,
-        uint256 _index
-    ) internal {
-        IPositioning positioning = perpView.positionings(_index);
-        if (_leftLimitOrder.orderType != LibOrder.ORDER) require(_verifyTriggerPrice(_leftLimitOrder, positioning), "Periphery: left order price verification failed");
-        if (_rightLimitOrder.orderType != LibOrder.ORDER) require(_verifyTriggerPrice(_rightLimitOrder, positioning), "Periphery: right order price verification failed");
-
-        positioning.openPosition(_leftLimitOrder, _signatureLeftLimitOrder, _rightLimitOrder, _signatureRightLimitOrder, liquidator);
     }
 
     function _requireVolmexPerpPeripheryAdmin() internal view {
