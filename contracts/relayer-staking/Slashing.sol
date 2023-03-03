@@ -14,7 +14,7 @@ contract Slashing is Staking {
     bytes32 private constant _SLASHER_ROLE = 0x12b42e8a160f6064dc959c6f251e3af0750ad213dbecf573b4710d67d6c28e39;
     uint256 private constant _SLASH_BASE = 10000;
 
-    address public insuranceFund;
+    address public slashingReciever;
     uint256 public slashPenalty;
 
     event Slashed(address indexed staker, uint256 inactiveAmount, uint256 activeAmount);
@@ -25,11 +25,11 @@ contract Slashing is Staking {
         address _stakingAdmin,
         address _slashingAdmin,
         uint256 _cooldownSeconds,
-        address _insuranceFund
+        address _slashingReciever
     ) external initializer {
         _Staking_init(_stakedToken, _relayerMultisig, _stakingAdmin, _cooldownSeconds);
         slashPenalty = 2500;
-        insuranceFund = _insuranceFund;
+        slashingReciever = _slashingReciever;
         _grantRole(_SLASHER_ROLE, _slashingAdmin);
         _setRoleAdmin(_SLASHER_ROLE, _SLASHER_ROLE);
     }
@@ -60,7 +60,7 @@ contract Slashing is Staking {
                     emit RelayerDeactivated(_account, stakerDetails.activeBalance);
                 }
             }
-            stakedToken.safeTransfer(insuranceFund, slashAmount);
+            stakedToken.safeTransfer(slashingReciever, slashAmount);
         }
         emit Slashed(_account, slashInactive, slashActive);
         return slashAmount;
