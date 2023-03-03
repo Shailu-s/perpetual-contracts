@@ -74,6 +74,14 @@ contract Slashing is Staking {
         slashPenalty = _slashPenalty;
     }
 
+    /**
+     * @dev Used to update slashing receiver penalty percent
+     */
+    function setSlashingReceiver(address _slashingReceiver) external virtual{
+        _requireSlasherRole();
+        slashingReciever = _slashingReceiver;
+    }
+
     function _requireSlasherRole() private view {
         require(hasRole(_SLASHER_ROLE, _msgSender()), "Slashing: not slasher role");
     }
