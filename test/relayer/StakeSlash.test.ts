@@ -52,7 +52,12 @@ describe("Stake & Slash", function () {
     const receipt = await slashing.deployed();
     expect(receipt.confirmations).not.equal(0);
   });
-
+ 
+  it("Should set slashing receiver ", async () => {
+    const aliceAddress = await alice.getAddress();
+    await slashing.connect(volmexSafe).setSlashingReceiver(aliceAddress)
+    expect(await slashing.slashingReceiver()).to.be.equal(aliceAddress)
+  });
   describe("Staking", function () {
     let aliceAddress: string;
     this.beforeEach(async () => {
