@@ -191,7 +191,7 @@ describe("VolmexPerpPeriphery", function () {
     await vaultController.connect(owner).setPositioning(positioning.address);
 
     await positioningConfig.connect(owner).setMaxMarketsPerAccount(5);
-    await positioningConfig.connect(owner).setSettlementTokenBalanceCap("1000000000000000");
+    await positioningConfig.connect(owner).setSettlementTokenBalanceCap("100000000000000000000000000000000000");
 
     await positioning.connect(owner).setMarketRegistry(marketRegistry.address);
     await positioning.connect(owner).setDefaultFeeReceiver(owner.address);
@@ -214,11 +214,13 @@ describe("VolmexPerpPeriphery", function () {
   });
 
   describe("Funding payment", () => {
-    const depositAmount = BigNumber.from("10000000000000");
-    let baseAmount = "50000000000000000000"; //50
-    let quoteAmount = "100000000000000000000"; //100
+    const depositAmount = BigNumber.from("100000000000000");
+    let baseAmount = "500000000000"; //50
+    let quoteAmount = "10000000000000"; //100
+
     this.beforeEach(async () => {
       // transfer balances
+
       await (await USDC.connect(owner).transfer(alice.address, depositAmount)).wait();
       await (await USDC.connect(owner).transfer(bob.address, depositAmount)).wait();
 
