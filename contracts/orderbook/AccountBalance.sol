@@ -1,10 +1,7 @@
 // SPDX-License-Identifier: BUSL - 1.1
-pragma solidity =0.8.12;
+pragma solidity =0.8.18;
 
 import { AddressUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol";
-import { Context } from "@openzeppelin/contracts/utils/Context.sol";
-import { ContextUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 
 import { LibAccountMarket } from "../libs/LibAccountMarket.sol";
 import { LibPerpMath } from "../libs/LibPerpMath.sol";
@@ -30,7 +27,6 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
     using LibPerpMath for uint160;
     using LibAccountMarket for LibAccountMarket.Info;
 
-    /// TODO: Discusss _MIN_PARTIAL_LIQUIDATE_POSITION_VALUE and its use cases.
     uint256 internal constant _MIN_PARTIAL_LIQUIDATE_POSITION_VALUE = 100e18 wei; // 100 USD in decimal 18
 
     function initialize(address positioningConfigArg) external initializer {

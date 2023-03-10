@@ -1,13 +1,12 @@
 // SPDX-License-Identifier: BUSL - 1.1
-pragma solidity =0.8.12;
+pragma solidity =0.8.18;
 
-import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 import { IPositioningConfig } from "../interfaces/IPositioningConfig.sol";
 import { PositioningConfigStorageV1 } from "../storage/PositioningConfigStorage.sol";
 
 // never inherit any new stateful contract. never change the orders of parent stateful contracts
-contract PositioningConfig is IPositioningConfig, Initializable, PositioningConfigStorageV1, AccessControlUpgradeable {
+contract PositioningConfig is IPositioningConfig, PositioningConfigStorageV1, AccessControlUpgradeable {
     event TwapIntervalChanged(uint256 twapInterval);
     event LiquidationPenaltyRatioChanged(uint24 liquidationPenaltyRatio);
     event PartialCloseRatioChanged(uint24 partialCloseRatio);

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: BUSL - 1.1
 
-pragma solidity ^0.8.12;
+pragma solidity =0.8.18;
 pragma abicoder v2;
 
 import "../matching-engine/MatchingEngine.sol";
@@ -10,7 +10,6 @@ contract MatchingEngineTest is MatchingEngine {
 
     function __MatchingEngineTest_init(address owner, IMarkPriceOracle markPriceOracle) external initializer {
         initialize(owner, markPriceOracle);
-        __Ownable_init_unchained();
         _grantRole(CAN_MATCH_ORDERS, _msgSender());
         _grantRole(CAN_MATCH_ORDERS, address(this));
     }

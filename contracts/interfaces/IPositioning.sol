@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: BUSL - 1.1
-pragma solidity =0.8.12;
+pragma solidity =0.8.18;
+
 import "../libs/LibOrder.sol";
-import "../libs/LibFill.sol";
-import "../libs/LibDeal.sol";
 
 interface IPositioning {
     struct InternalData {
@@ -42,10 +41,6 @@ interface IPositioning {
     /// @param liquidationFee The fee of liquidate
     /// @param liquidator The address of liquidator
     event PositionLiquidated(address indexed trader, address indexed baseToken, uint256 positionNotional, uint256 positionSize, uint256 liquidationFee, address liquidator);
-    // TODO: Implement this event
-    /// @notice Emitted when open position with non-zero referral code
-    /// @param referralCode The referral code by partners
-    event ReferredPositionChanged(bytes32 indexed referralCode);
     /// @notice Emitted when defualt fee receiver is changed
     event DefaultFeeReceiverChanged(address defaultFeeReceiver);
     /// @notice Emitted when taker's position is being changed
@@ -91,6 +86,8 @@ interface IPositioning {
     /// @notice Update funding rate inteval
     /// @param period should be the funding settlement period
     function setFundingPeriod(int256 period) external;
+    /// @notice If true, allows only whitelisted liquidators, else everyone can be liquidator
+    function toggleLiquidatorWhitelist() external;
     /// @notice Trader can call `openPosition` to long/short on baseToken market
     /// @param orderLeft PositionParams struct
     /// @param orderRight PositionParams struct

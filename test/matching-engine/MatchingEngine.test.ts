@@ -254,7 +254,6 @@ describe("MatchingEngine", function () {
       it("should fail to match orders as left order assets don't match", async () => {
         const [owner, account1, account2] = await ethers.getSigners();
 
-
         await virtualToken.connect(account1).approve(matchingEngine.address, 1000000000000000);
         await virtualToken.connect(account2).approve(matchingEngine.address, 1000000000000000);
 
@@ -289,7 +288,6 @@ describe("MatchingEngine", function () {
       });
       it("should fail to match orders as left order .takevalue == 0", async () => {
         const [owner, account1, account2] = await ethers.getSigners();
-
 
         await virtualToken.connect(account1).approve(matchingEngine.address, 1000000000000000);
         await virtualToken.connect(account2).approve(matchingEngine.address, 1000000000000000);
@@ -326,7 +324,6 @@ describe("MatchingEngine", function () {
       it(" should fail if trader for both the orders in same", async () => {
         const [owner, account1] = await ethers.getSigners();
 
-
         await virtualToken.connect(account1).approve(matchingEngine.address, 1000000000000000);
         await virtualToken.connect(account2).approve(matchingEngine.address, 1000000000000000);
 
@@ -361,7 +358,6 @@ describe("MatchingEngine", function () {
       });
       it("Should Not match orders since executer in not authorised", async () => {
         const [owner, account1, account2] = await ethers.getSigners();
-
 
         await virtualToken.connect(account1).approve(matchingEngine.address, 1000000000000000);
         await virtualToken.connect(account2).approve(matchingEngine.address, 1000000000000000);
@@ -400,7 +396,6 @@ describe("MatchingEngine", function () {
       it("should fail to match orders as left order take assets don't match", async () => {
         const [owner, account1, account2] = await ethers.getSigners();
 
-
         await virtualToken.connect(account1).approve(matchingEngine.address, 1000000000000000);
         await virtualToken.connect(account2).approve(matchingEngine.address, 1000000000000000);
 
@@ -437,34 +432,47 @@ describe("MatchingEngine", function () {
 
     describe("Success:", function () {
       it("should match orders & emit event", async () => {
-        await expect(matchingEngine.matchOrders(orderLeft, orderRight)).to.emit(
-          matchingEngine,
-          "Matched",
-        );
+        await expect(matchingEngine.matchOrders(orderLeft, orderRight))
+          .to.emit(matchingEngine, "Matched")
+          .to.emit(matchingEngine, "OrdersFilled")
+          .withArgs(
+            [account1.address, account2.address],
+            [1,2],
+            ["1000000000000000000",
+            "1000000000000000000"],
+          );
       });
 
       it("should match orders & emit event when orderRight salt is 0", async () => {
         orderRight.salt = 0;
 
-        await expect(matchingEngine.matchOrders(orderLeft, orderRight)).to.emit(
-          matchingEngine,
-          "Matched",
-        );
+        await expect(matchingEngine.matchOrders(orderLeft, orderRight))
+          .to.emit(matchingEngine, "Matched")
+          .to.emit(matchingEngine, "OrdersFilled")
+          .withArgs(
+            [account1.address, account2.address],
+            [1,0],
+            ["1000000000000000000", "0"],
+          );
       });
       it("should match orders & emit event when orderleft salt is 0", async () => {
         orderLeft.salt = 0;
 
-        await expect(matchingEngine.matchOrders(orderLeft, orderRight)).to.emit(
-          matchingEngine,
-          "Matched",
-        );
+        await expect(matchingEngine.matchOrders(orderLeft, orderRight))
+          .to.emit(matchingEngine, "Matched")
+          .to.emit(matchingEngine, "OrdersFilled")
+          .withArgs(
+            [account1.address, account2.address],
+            [0,2],
+            ["0", "1000000000000000000"],
+          );
       });
       it("Should match orders when when orderRight is short", async () => {
         const orderLeft = Order(
           ORDER,
           deadline,
           account1.address,
-          Asset(volmexBaseToken.address, "40"),
+          Asset(volmexBaseToken.address, "100"),
           Asset(virtualToken.address, "20"),
           1,
           0,
@@ -476,15 +484,15 @@ describe("MatchingEngine", function () {
           deadline,
           account2.address,
           Asset(virtualToken.address, "20"),
-          Asset(volmexBaseToken.address, "20"),
-          1,
+          Asset(volmexBaseToken.address, "10"),
+          2,
           0,
           true,
         );
-        await expect(matchingEngine.matchOrders(orderLeft, orderRight)).to.emit(
-          matchingEngine,
-          "Matched",
-        );
+        await expect(matchingEngine.matchOrders(orderLeft, orderRight))
+          .to.emit(matchingEngine, "Matched")
+          .to.emit(matchingEngine, "OrdersFilled")
+          .withArgs([account1.address, account2.address], [1,2], ["10", "2"]);
       });
       it("Should match orders when left order address is 0", async () => {
         const orderLeft = Order(
@@ -497,21 +505,22 @@ describe("MatchingEngine", function () {
           0,
           false,
         );
-
+     
+       
         const orderRight = Order(
           ORDER,
           deadline,
           account2.address,
           Asset(virtualToken.address, "20"),
           Asset(volmexBaseToken.address, "20"),
-          1,
+          2,
           0,
           true,
         );
-        await expect(matchingEngine.matchOrders(orderLeft, orderRight)).to.emit(
-          matchingEngine,
-          "Matched",
-        );
+        await expect(matchingEngine.matchOrders(orderLeft, orderRight))
+          .to.emit(matchingEngine, "Matched")
+          .to.emit(matchingEngine, "OrdersFilled")
+          .withArgs(["0x0000000000000000000000000000000000000000", account2.address], [1,2], ["20", "10"]);
       });
     });
   });
@@ -527,7 +536,7 @@ describe("MatchingEngine", function () {
       const [owner, account1, account2, account3, account4] = await ethers.getSigners();
 
       await virtualToken.mint(account1.address, 1000000000000000);
-      
+
       await virtualToken.connect(account1).approve(transferManagerTest.address, 1000000000000000);
       await virtualToken.connect(account2).approve(transferManagerTest.address, 1000000000000000);
 

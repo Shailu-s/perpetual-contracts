@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: BUSL - 1.1
-pragma solidity =0.8.12;
+pragma solidity =0.8.18;
 
 import { AddressUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol";
 import { ContextUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol";
@@ -9,8 +9,6 @@ import { ReentrancyGuardUpgradeable } from "@openzeppelin/contracts-upgradeable/
 import { LibAccountMarket } from "../libs/LibAccountMarket.sol";
 import { LibOrder } from "../libs/LibOrder.sol";
 import { LibFill } from "../libs/LibFill.sol";
-import { LibDeal } from "../libs/LibDeal.sol";
-import { LibAsset } from "../libs/LibAsset.sol";
 import { LibPerpMath } from "../libs/LibPerpMath.sol";
 import { LibSafeCastInt } from "../libs/LibSafeCastInt.sol";
 import { LibSafeCastUint } from "../libs/LibSafeCastUint.sol";
@@ -18,8 +16,6 @@ import { LibSignature } from "../libs/LibSignature.sol";
 import { EncodeDecode } from "../libs/EncodeDecode.sol";
 
 import { IAccountBalance } from "../interfaces/IAccountBalance.sol";
-import { IERC1271 } from "../interfaces/IERC1271.sol";
-import { IERC20Metadata } from "../interfaces/IERC20Metadata.sol";
 import { IIndexPrice } from "../interfaces/IIndexPrice.sol";
 import { IMatchingEngine } from "../interfaces/IMatchingEngine.sol";
 import { IMarketRegistry } from "../interfaces/IMarketRegistry.sol";
@@ -32,11 +28,9 @@ import { BlockContext } from "../helpers/BlockContext.sol";
 import { FundingRate } from "../funding-rate/FundingRate.sol";
 import { OwnerPausable } from "../helpers/OwnerPausable.sol";
 import { OrderValidator } from "./OrderValidator.sol";
-import { PositioningStorageV1 } from "../storage/PositioningStorage.sol";
-import { PositioningCallee } from "../helpers/PositioningCallee.sol";
 
 // never inherit any new stateful contract. never change the orders of parent stateful contracts
-contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, OwnerPausable, PositioningStorageV1, FundingRate, EIP712Upgradeable, OrderValidator {
+contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, OwnerPausable, FundingRate, EIP712Upgradeable, OrderValidator {
     using AddressUpgradeable for address;
     using LibSafeCastUint for uint256;
     using LibSafeCastInt for int256;
@@ -77,8 +71,9 @@ contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, 
         _matchingEngine = matchingEngineArg;
         _underlyingPriceIndex = underlyingPriceIndex;
         for (uint256 index = 0; index < 2; index++) {
-            isLiquidatorWhitelist[liquidators[index]] = true;
+            isLiquidatorWhitelisted[liquidators[index]] = true;
         }
+        isLiquidatorWhitelistEnabled = true;
 
         _grantRole(POSITIONING_ADMIN, _msgSender());
     }
@@ -118,9 +113,9 @@ contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, 
     /// @inheritdoc IPositioning
     function whitelistLiquidator(address liquidator, bool isWhitelist) external {
         _requirePositioningAdmin();
-        isLiquidatorWhitelist[liquidator] = isWhitelist;
+        isLiquidatorWhitelisted[liquidator] = isWhitelist;
         if (!isWhitelist) {
-            delete isLiquidatorWhitelist[liquidator];
+            delete isLiquidatorWhitelisted[liquidator];
         }
         emit LiquidatorWhitelisted(liquidator, isWhitelist);
     }
@@ -133,6 +128,11 @@ contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, 
         emit FundingPeriodSet(period);
     }
 
+    function toggleLiquidatorWhitelist() external {
+        _requirePositioningAdmin();
+        isLiquidatorWhitelistEnabled = !isLiquidatorWhitelistEnabled;
+    }
+
     /// @inheritdoc IPositioning
     function liquidate(
         address trader,
@@ -142,7 +142,7 @@ contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, 
         _liquidate(trader, baseToken, positionSize);
     }
 
-    ///TODO: Test if this function liquidate full position even with when only partial was needed
+    ///Note for Auditor: Check full position liquidation even when partial was needed
     /// @inheritdoc IPositioning
     function liquidateFullPosition(address trader, address baseToken) external override whenNotPaused nonReentrant {
         // positionSizeToBeLiquidated = 0 means liquidating as much as possible
@@ -283,7 +283,9 @@ contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, 
         // P_EAV: enough account value
         require(_isAccountLiquidatable(trader), "P_EAV");
         address liquidator = _msgSender();
-        _requireWhitelistLiquidator(liquidator);
+        if (isLiquidatorWhitelistEnabled) {
+            _requireWhitelistLiquidator(liquidator);
+        }
 
         int256 positionSize = _getTakerPosition(trader, baseToken);
 
@@ -389,7 +391,7 @@ contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, 
         }
 
         OrderFees memory orderFees = _calculateFees(
-            true, // TODO: This is hardcoded right now but changes it during relayer development
+            true, // left order is maker
             internalData.leftExchangedPositionNotional,
             internalData.rightExchangedPositionNotional
         );
@@ -659,7 +661,7 @@ contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, 
     }
 
     function _requireWhitelistLiquidator(address liquidator) internal view {
-        require(isLiquidatorWhitelist[liquidator], "Positioning: liquidator not whitelisted");
+        require(isLiquidatorWhitelisted[liquidator], "Positioning: liquidator not whitelisted");
     }
 
     function _getPnlToBeRealized(InternalRealizePnlParams memory params) internal pure returns (int256) {

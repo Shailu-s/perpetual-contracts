@@ -380,6 +380,19 @@ describe("Positioning", function () {
     });
   });
 
+  describe("toggleLiquidatorWhitelist", async () => {
+    it("should fail to set whitelisted flag if caller doesn't have admin role", async () => {
+      await expect(
+        positioning.connect(account1).toggleLiquidatorWhitelist(),
+      ).to.be.revertedWith("Positioning: Not admin");
+    });
+
+    it("should set whitelisted flag if caller has admin role", async () => {
+      const tx = positioning.toggleLiquidatorWhitelist();
+      expect(tx.confirmations).not.equal(0);
+    });
+  });
+
   describe("Match orders:", function () {
     describe("Success:", function () {
       it("should match orders and open position", async () => {
@@ -1369,11 +1382,11 @@ describe("Positioning", function () {
       });
 
       it("test for liquidators", async () => {
-        await expect(await positioning.isLiquidatorWhitelist(owner.address)).to.equal(true);
+        await expect(await positioning.isLiquidatorWhitelisted(owner.address)).to.equal(true);
 
-        await expect(await positioning.isLiquidatorWhitelist(account2.address)).to.equal(true);
+        await expect(await positioning.isLiquidatorWhitelisted(account2.address)).to.equal(true);
 
-        await expect(await positioning.isLiquidatorWhitelist(account1.address)).to.equal(false);
+        await expect(await positioning.isLiquidatorWhitelisted(account1.address)).to.equal(false);
       });
 
       it("should whitelist a new liquidator", async () => {
@@ -1381,13 +1394,13 @@ describe("Positioning", function () {
           .to.emit(positioning, "LiquidatorWhitelisted")
           .withArgs(owner.address, false);
 
-        await expect(await positioning.isLiquidatorWhitelist(owner.address)).to.equal(false);
+        await expect(await positioning.isLiquidatorWhitelisted(owner.address)).to.equal(false);
 
         await expect(await positioning.whitelistLiquidator(account1.address, true))
           .to.emit(positioning, "LiquidatorWhitelisted")
           .withArgs(account1.address, true);
 
-        await expect(await positioning.isLiquidatorWhitelist(account1.address)).to.equal(true);
+        await expect(await positioning.isLiquidatorWhitelisted(account1.address)).to.equal(true);
       });
 
       it("should not be able to whitelist liquidator if not have appropriate role", async () => {
@@ -2234,6 +2247,60 @@ describe("Liquidation test in Positioning", function () {
 
         await expect(positionSizeAfter.toString()).to.be.equal("-90000000000000000000");
         await expect(positionSizeLiquidator.toString()).to.be.equal("90000000000000000000");
+      });
+
+      it("should fail to liquidate if account is not whitelisted & successfully liquidate if onlyWhitelisted is set to false", async () => {
+        let signatureLeft = await getSignature(orderLeft, account1.address);
+        let signatureRight = await getSignature(orderRight, account2.address);
+
+        await expect(
+          positioning.openPosition(
+            orderLeft,
+            signatureLeft,
+            orderRight,
+            signatureRight,
+            liquidator,
+          ),
+        ).to.emit(positioning, "PositionChanged");
+
+        const positionSize = await accountBalance1.getPositionSize(
+          account1.address,
+          orderLeft.makeAsset.virtualToken,
+        );
+        const positionSize1 = await accountBalance1.getPositionSize(
+          account2.address,
+          orderLeft.makeAsset.virtualToken,
+        );
+
+        await expect(positionSize.toString()).to.be.equal("-100000000000000000000");
+        await expect(positionSize1.toString()).to.be.equal("100000000000000000000");
+
+        const proofHash = "0x6c00000000000000000000000000000000000000000000000000000000000000";
+
+        for (let index = 0; index < 10; index++) {
+          await (
+            await indexPriceOracle.updateBatchVolatilityTokenPrice(
+              [0, 1],
+              [200000000, 200000000],
+              [proofHash, proofHash],
+            )
+          ).wait();
+        }
+        console.log("Testsssss", account2.address);
+        // liquidating the position
+        await expect(
+          positioning
+            .connect(account1)
+            .liquidate(account1.address, volmexBaseToken.address, "-10000000000000000000"),
+        ).to.be.revertedWith("Positioning: liquidator not whitelisted");
+
+        await positioning.toggleLiquidatorWhitelist();
+
+        await expect(
+          positioning
+            .connect(account2)
+            .liquidate(account1.address, volmexBaseToken.address, "-10000000000000000000"),
+        ).to.emit(positioning, "PositionLiquidated");
       });
 
       it("should liquidate whole position", async () => {

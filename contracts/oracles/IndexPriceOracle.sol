@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: BUSL-1.1
 
-pragma solidity =0.8.12;
+pragma solidity =0.8.18;
 
 import "@openzeppelin/contracts-upgradeable/utils/introspection/ERC165StorageUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
@@ -47,7 +47,6 @@ contract IndexPriceOracle is ERC165StorageUpgradeable, IndexTWAP, IIndexPriceOra
     function initialize(address _owner) external initializer {
         _updateTwapMaxDatapoints(_MAX_ALLOWED_TWAP_DATAPOINTS);
 
-        //TODO: should setting up initial price be in initialise parameter?
         _updateVolatilityMeta(indexCount, 100000000, "");
         volatilityIndexBySymbol["ETHV"] = indexCount;
         volatilityCapRatioByIndex[indexCount] = 400000000;

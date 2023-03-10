@@ -1,19 +1,16 @@
 // SPDX-License-Identifier: BUSL - 1.1
-pragma solidity =0.8.12;
+pragma solidity =0.8.18;
 
-import "@openzeppelin/contracts/proxy/Clones.sol";
 import { AddressUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol";
 import { ContextUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol";
 import { ReentrancyGuardUpgradeable } from "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 
 import { LibPerpMath } from "../libs/LibPerpMath.sol";
-import { LibSafeCastInt } from "../libs/LibSafeCastInt.sol";
 import { LibSafeCastUint } from "../libs/LibSafeCastUint.sol";
 import { LibSettlementTokenMath } from "../libs/LibSettlementTokenMath.sol";
 
 import { IAccountBalance } from "../interfaces/IAccountBalance.sol";
-import { IERC20Metadata } from "../interfaces/IERC20Metadata.sol";
 import { IPositioning } from "../interfaces/IPositioning.sol";
 import { IPositioningConfig } from "../interfaces/IPositioningConfig.sol";
 import { IVault } from "../interfaces/IVault.sol";
@@ -21,8 +18,6 @@ import { IVaultController } from "../interfaces/IVaultController.sol";
 import { IVolmexPerpPeriphery } from "../interfaces/IVolmexPerpPeriphery.sol";
 
 import { OwnerPausable } from "../helpers/OwnerPausable.sol";
-import { TestERC20 } from "../tests/TestERC20.sol";
-import { Vault } from "./Vault.sol";
 import { VaultControllerStorage } from "../storage/VaultControllerStorage.sol";
 
 contract VaultController is ReentrancyGuardUpgradeable, OwnerPausable, VaultControllerStorage, IVaultController, AccessControlUpgradeable {
@@ -60,7 +55,6 @@ contract VaultController is ReentrancyGuardUpgradeable, OwnerPausable, VaultCont
         // positioning not set
         require(_positioning != address(0), "VC_PNS");
 
-        // TODO From should be external user not periphery
         // VC_CWZA: can't deposit zero amount
         require(amount > 0, "VC_CDZA");
 

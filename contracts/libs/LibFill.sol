@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: BUSL - 1.1
 
-pragma solidity =0.8.12;
-
-import "@openzeppelin/contracts-upgradeable/utils/math/MathUpgradeable.sol";
+pragma solidity =0.8.18;
 
 import "./LibOrder.sol";
 

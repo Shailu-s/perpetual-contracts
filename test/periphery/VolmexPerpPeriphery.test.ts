@@ -240,6 +240,13 @@ describe("VolmexPerpPeriphery", function () {
     });
 
     it("Open position", async () => {
+      await expect(
+        volmexPerpPeriphery.whitelistTrader(alice.address, true)
+      ).to.emit(volmexPerpPeriphery, "TraderWhitelisted");
+      await expect(
+        volmexPerpPeriphery.whitelistTrader(bob.address, true)
+      ).to.emit(volmexPerpPeriphery, "TraderWhitelisted");
+
       let salt = 250;
       let txBefore = [];
       for (let index = 0; index < 10; index++) {
@@ -347,6 +354,49 @@ describe("VolmexPerpPeriphery", function () {
         }
       }
     });
+
+    it("Open position when not whitelisted", async () => {
+      let salt = 250;
+      let txBefore = [];
+      await volmexPerpPeriphery.toggleTraderWhitelistEnabled();
+      for (let index = 0; index < 10; index++) {
+        let orderLeft = Order(
+          ORDER,
+          deadline,
+          alice.address,
+          Asset(volmexBaseToken.address, baseAmount),
+          Asset(volmexQuoteToken.address, quoteAmount),
+          salt,
+          0,
+          true,
+        );
+
+        let orderRight = Order(
+          ORDER,
+          deadline,
+          bob.address,
+          Asset(volmexQuoteToken.address, quoteAmount),
+          Asset(volmexBaseToken.address, baseAmount),
+          salt++,
+          0,
+          false,
+        );
+
+        const signatureLeft = await getSignature(orderLeft, alice.address);
+        const signatureRight = await getSignature(orderRight, bob.address);
+
+        await expect(
+          volmexPerpPeriphery.openPosition(
+            0,
+            orderLeft,
+            signatureLeft,
+            orderRight,
+            signatureRight,
+            liquidator,
+          )
+        ).to.emit(positioning, "PositionChanged");
+      }
+    });
   });
 
   describe("VolmexPerpPeriphery deployment", async () => {
@@ -415,6 +465,19 @@ describe("VolmexPerpPeriphery", function () {
       ).to.be.revertedWith("VolmexPerpPeriphery: Not relayer");
     });
   });
+
+  describe("onlyWhitelisted", async () => {
+    it("should set onlyWhitelisted", async () => {      
+      volmexPerpPeriphery.toggleTraderWhitelistEnabled();
+    });
+
+    it("should fail to set onlyWhitelisted if caller doesn't have admin role", async () => {
+      await expect(
+        volmexPerpPeriphery.connect(account2).toggleTraderWhitelistEnabled()
+      ).to.be.revertedWith('Periphery: Not admin');
+    });
+  });
+
   describe("Add a vault to white list", function () {
     it("Add vault to white list", async () => {
       const vault1 = await upgrades.deployProxy(Vault, [
@@ -482,13 +545,13 @@ describe("VolmexPerpPeriphery", function () {
 
       await matchingEngine.grantMatchOrders(positioning.address);
 
-      let receipt = await volmexPerpPeriphery.fillLimitOrder(
+      let receipt = await volmexPerpPeriphery.openPosition(
+        0,
         orderLeft,
         signatureLeftLimitOrder,
         orderRight,
         signatureRightLimitOrder,
         owner.address,
-        0,
       );
       expect(receipt.confirmations).not.equal(0);
     });
@@ -524,13 +587,13 @@ describe("VolmexPerpPeriphery", function () {
       await expect(
         volmexPerpPeriphery
           .connect(account1)
-          .fillLimitOrder(
+          .openPosition(
+            0,
             orderLeft,
             signatureLeftLimitOrder,
             orderRight,
             signatureRightLimitOrder,
             owner.address,
-            0,
           ),
       ).to.be.revertedWith("VolmexPerpPeriphery: Not relayer");
     });
@@ -563,13 +626,13 @@ describe("VolmexPerpPeriphery", function () {
       await matchingEngine.grantMatchOrders(positioning.address);
 
       await expect(
-        volmexPerpPeriphery.fillLimitOrder(
+        volmexPerpPeriphery.openPosition(
+          0,
           orderLeft,
           signatureLeftLimitOrder,
           orderRight,
           signatureRightLimitOrder,
           owner.address,
-          0,
         ),
       ).to.be.revertedWith("Periphery: left order price verification failed");
     });
@@ -603,13 +666,13 @@ describe("VolmexPerpPeriphery", function () {
       await matchingEngine.grantMatchOrders(positioning.address);
 
       await expect(
-        volmexPerpPeriphery.fillLimitOrder(
+        volmexPerpPeriphery.openPosition(
+          0,
           orderLeft,
           signatureLeftLimitOrder,
           orderRight,
           signatureRightLimitOrder,
           owner.address,
-          0,
         ),
       ).to.be.revertedWith("Periphery: right order price verification failed");
     });
@@ -643,13 +706,13 @@ describe("VolmexPerpPeriphery", function () {
       await matchingEngine.grantMatchOrders(positioning.address);
 
       await expect(
-        volmexPerpPeriphery.fillLimitOrder(
+        volmexPerpPeriphery.openPosition(
+          0,
           orderLeft,
           signatureLeftLimitOrder,
           orderRight,
           signatureRightLimitOrder,
           owner.address,
-          0,
         ),
       ).to.be.revertedWith("Periphery: left order price verification failed");
     });
@@ -683,13 +746,13 @@ describe("VolmexPerpPeriphery", function () {
       await matchingEngine.grantMatchOrders(positioning.address);
 
       await expect(
-        volmexPerpPeriphery.fillLimitOrder(
+        volmexPerpPeriphery.openPosition(
+          0,
           orderLeft,
           signatureLeftLimitOrder,
           orderRight,
           signatureRightLimitOrder,
           owner.address,
-          0,
         ),
       ).to.be.revertedWith("Periphery: right order price verification failed");
     });
@@ -920,7 +983,7 @@ describe("VolmexPerpPeriphery", function () {
         signaturesLeft.push(signatureLeft);
         signaturesRight.push(signatureRight);
         await matchingEngine.grantMatchOrders(positioning.address);
-        await volmexPerpPeriphery.batchFillLimitOrders(
+        await volmexPerpPeriphery.batchOpenPosition(
           index,
           limitOrdersLeft,
           signaturesLeft,
@@ -977,7 +1040,7 @@ describe("VolmexPerpPeriphery", function () {
         limitOrdersLeft.push(orderLeft);
         await matchingEngine.grantMatchOrders(positioning.address);
         await expect(
-          volmexPerpPeriphery.batchFillLimitOrders(
+          volmexPerpPeriphery.batchOpenPosition(
             index,
             limitOrdersLeft,
             signaturesLeft,

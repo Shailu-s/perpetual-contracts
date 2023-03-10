@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: BUSL - 1.1
 
-pragma solidity =0.8.12;
+pragma solidity =0.8.18;
 pragma abicoder v2;
 
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
-import "../interfaces/ITransferManager.sol";
+import "../libs/LibDeal.sol";
 import "../matching-engine/TransferExecutor.sol";
 
 abstract contract TransferManager is OwnableUpgradeable, TransferExecutor {

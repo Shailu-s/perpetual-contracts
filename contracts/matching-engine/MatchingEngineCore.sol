@@ -1,13 +1,12 @@
 // SPDX-License-Identifier: BUSL - 1.1
 
-pragma solidity =0.8.12;
+pragma solidity =0.8.18;
 
 import { PausableUpgradeable } from "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 
 import "../libs/LibFill.sol";
 import "../interfaces/IMarkPriceOracle.sol";
-import "../interfaces/IMatchingEngine.sol";
 import "./AssetMatcher.sol";
 
 abstract contract MatchingEngineCore is PausableUpgradeable, AssetMatcher, AccessControlUpgradeable {
@@ -28,6 +27,7 @@ abstract contract MatchingEngineCore is PausableUpgradeable, AssetMatcher, Acces
     event Canceled(bytes32 indexed hash, address trader, address baseToken, uint256 amount, uint256 salt);
     event CanceledAll(address indexed trader, uint256 minSalt);
     event Matched(address[2] traders, uint64[2] deadline, uint256[2] salt, uint256 newLeftFill, uint256 newRightFill);
+    event OrdersFilled(address[2] traders, uint256[2] salts, uint256[2] fills);
 
     function grantMatchOrders(address account) external {
         require(hasRole(MATCHING_ENGINE_CORE_ADMIN, _msgSender()), "MatchingEngineCore: Not admin");
@@ -112,7 +112,11 @@ abstract contract MatchingEngineCore is PausableUpgradeable, AssetMatcher, Acces
             ? _updateObservation(newFill.rightValue, newFill.leftValue, orderLeft.makeAsset.virtualToken)
             : _updateObservation(newFill.leftValue, newFill.rightValue, orderRight.makeAsset.virtualToken);
 
+        bytes32 leftOrderKeyHash = LibOrder.hashKey(orderLeft);
+        bytes32 rightOrderKeyHash = LibOrder.hashKey(orderRight);
+
         emit Matched([orderLeft.trader, orderRight.trader], [orderLeft.deadline, orderRight.deadline], [orderLeft.salt, orderRight.salt], newFill.leftValue, newFill.rightValue);
+        emit OrdersFilled([orderLeft.trader, orderRight.trader], [orderLeft.salt, orderRight.salt], [fills[leftOrderKeyHash], fills[rightOrderKeyHash]]);
     }
 
     function _updateObservation(
