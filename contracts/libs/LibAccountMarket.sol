@@ -5,5 +5,6 @@ library LibAccountMarket {
     struct Info {
         int256 positionSize;
         int256 openNotional;
+        int256 lastTwPremiumGrowthGlobal;
     }
 }

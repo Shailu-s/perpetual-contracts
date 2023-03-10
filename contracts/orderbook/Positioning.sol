@@ -126,11 +126,11 @@ contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, 
     }
 
     /// @inheritdoc IPositioning
-    function setFundingInterval(int256 interval) external {
+    function setFundingPeriod(int256 period) external {
         _requirePositioningAdmin();
-        _fundingRateInterval = interval;
+        _fundingPeriod = period;
 
-        emit FundingIntervalSet(interval);
+        emit FundingPeriodSet(period);
     }
 
     /// @inheritdoc IPositioning
@@ -343,13 +343,18 @@ contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, 
 
     /// @dev Settle trader's funding payment to his/her realized pnl.
     function _settleFunding(address trader, address baseToken) internal {
-        int256 fundingPayment;
-        fundingPayment = settleFunding(trader, baseToken);
+        (int256 fundingPayment, int256 globalTwPremiumGrowth) = settleFunding(trader, baseToken);
 
         if (fundingPayment != 0) {
             IAccountBalance(_accountBalance).modifyOwedRealizedPnl(trader, fundingPayment.neg256(), baseToken);
             emit FundingPaymentSettled(trader, baseToken, fundingPayment);
         }
+
+        IAccountBalance(_accountBalance).updateTwPremiumGrowthGlobal(
+            trader,
+            baseToken,
+            globalTwPremiumGrowth
+        );
     }
 
     /// @dev Add given amount to PnL of the address provided

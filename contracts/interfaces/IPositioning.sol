@@ -76,7 +76,7 @@ interface IPositioning {
     /// @notice Emitted when liquidator is whitelisted or removed
     event LiquidatorWhitelisted(address indexed liquidator, bool isWhitelist);
     event IndexPriceSet(address indexed indexPriceOracle);
-    event FundingIntervalSet(int256 fundingInterval);
+    event FundingPeriodSet(int256 fundingInterval);
 
     /// @dev this function is public for testing
     function initialize(address positioningConfigArg, address vaultControllerArg, address accountBalanceArg, address matchingEngineArg, address markPriceArg, address indexPriceArg, uint64 underlyingPriceIndex, address[2] calldata liquidators) external;
@@ -89,8 +89,8 @@ interface IPositioning {
     /// @param isWhitelist if true, whitelist. is false remove whitelist
     function whitelistLiquidator(address liquidator, bool isWhitelist) external;
     /// @notice Update funding rate inteval
-    /// @param interval denominator for 24 hours and get interval value, eg 24/3 = 8 hour interval of funding payment
-    function setFundingInterval(int256 interval) external;
+    /// @param period should be the funding settlement period
+    function setFundingPeriod(int256 period) external;
     /// @notice Trader can call `openPosition` to long/short on baseToken market
     /// @param orderLeft PositionParams struct
     /// @param orderRight PositionParams struct

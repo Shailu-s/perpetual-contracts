@@ -19,6 +19,10 @@ abstract contract PositioningStorageV1 {
 
     address public defaultFeeReceiver;
     mapping(address => bool) public isLiquidatorWhitelist;
+    // the last timestamp when funding is settled
+    mapping(address => uint256) internal _lastSettledTimestampMap;
+    // base token => twPremium
+    mapping(address => int256) internal _globalFundingGrowthMap;
 
     uint256[50] private __gap;
 }
