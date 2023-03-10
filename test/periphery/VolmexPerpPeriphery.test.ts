@@ -518,6 +518,8 @@ describe("VolmexPerpPeriphery", function () {
       (
         await volmexPerpPeriphery.connect(account2).depositToVault(0, USDC.address, "1000000000")
       ).wait();
+      await volmexPerpPeriphery.whitelistTrader(account1.address,true);
+      await volmexPerpPeriphery.whitelistTrader(account2.address,true);
       const orderLeft = Order(
         STOP_LOSS_LIMIT_ORDER,
         deadline,
@@ -624,7 +626,8 @@ describe("VolmexPerpPeriphery", function () {
       const signatureRightLimitOrder = await getSignature(orderRight, account2.address);
 
       await matchingEngine.grantMatchOrders(positioning.address);
-
+      await volmexPerpPeriphery.whitelistTrader(account1.address,true);
+      await volmexPerpPeriphery.whitelistTrader(account2.address,true);
       await expect(
         volmexPerpPeriphery.openPosition(
           0,
@@ -664,7 +667,8 @@ describe("VolmexPerpPeriphery", function () {
       const signatureRightLimitOrder = await getSignature(orderRight, account2.address);
 
       await matchingEngine.grantMatchOrders(positioning.address);
-
+      await volmexPerpPeriphery.whitelistTrader(account1.address,true);
+      await volmexPerpPeriphery.whitelistTrader(account2.address,true);
       await expect(
         volmexPerpPeriphery.openPosition(
           0,
@@ -704,7 +708,8 @@ describe("VolmexPerpPeriphery", function () {
       const signatureRightLimitOrder = await getSignature(orderRight, account2.address);
 
       await matchingEngine.grantMatchOrders(positioning.address);
-
+      await volmexPerpPeriphery.whitelistTrader(account1.address,true);
+      await volmexPerpPeriphery.whitelistTrader(account2.address,true);
       await expect(
         volmexPerpPeriphery.openPosition(
           0,
@@ -744,7 +749,8 @@ describe("VolmexPerpPeriphery", function () {
       const signatureRightLimitOrder = await getSignature(orderRight, account2.address);
 
       await matchingEngine.grantMatchOrders(positioning.address);
-
+      await volmexPerpPeriphery.whitelistTrader(account1.address,true);
+      await volmexPerpPeriphery.whitelistTrader(account2.address,true);
       await expect(
         volmexPerpPeriphery.openPosition(
           0,
@@ -890,6 +896,8 @@ describe("VolmexPerpPeriphery", function () {
         await await USDC.transfer(account2.address, "1000000000");
         await USDC.connect(account1).approve(volmexPerpPeriphery.address, "1000000000");
         await USDC.connect(account2).approve(volmexPerpPeriphery.address, "1000000000");
+        await volmexPerpPeriphery.whitelistTrader(account1.address,true);
+        await volmexPerpPeriphery.whitelistTrader(account2.address,true);
         (
           await volmexPerpPeriphery
             .connect(account1)
@@ -945,6 +953,8 @@ describe("VolmexPerpPeriphery", function () {
         await await USDC.transfer(account2.address, "1000000000");
         await USDC.connect(account1).approve(volmexPerpPeriphery.address, "1000000000");
         await USDC.connect(account2).approve(volmexPerpPeriphery.address, "1000000000");
+        await volmexPerpPeriphery.whitelistTrader(account1.address,true);
+        await volmexPerpPeriphery.whitelistTrader(account2.address,true);
         (
           await volmexPerpPeriphery
             .connect(account1)
@@ -1048,7 +1058,7 @@ describe("VolmexPerpPeriphery", function () {
             signaturesRight,
             liquidator,
           ),
-        ).to.be.revertedWith("Periphery: mismatch limit orders");
+        ).to.be.revertedWith("Periphery: mismatch orders");
       });
       it("should fail to open position in batch", async () => {
         const ordersLeft = [];
@@ -1060,6 +1070,8 @@ describe("VolmexPerpPeriphery", function () {
         await await USDC.transfer(account2.address, "1000000000");
         await USDC.connect(account1).approve(volmexPerpPeriphery.address, "1000000000");
         await USDC.connect(account2).approve(volmexPerpPeriphery.address, "1000000000");
+        await volmexPerpPeriphery.whitelistTrader(account1.address,true);
+        await volmexPerpPeriphery.whitelistTrader(account2.address,true);
         (
           await volmexPerpPeriphery
             .connect(account1)
