@@ -83,7 +83,7 @@ contract FundingRate is IFundingRate, BlockContext, PositioningCallee, FundingRa
         if (_firstTradedTimestampMap[baseToken] != 0) {
             twapInterval = IPositioningConfig(_positioningConfig).getTwapInterval();
             uint256 deltaTimestamp = (timestamp - _firstTradedTimestampMap[baseToken]);
-            twapInterval = twapInterval < deltaTimestamp ? deltaTimestamp : twapInterval;
+            twapInterval = twapInterval > deltaTimestamp ? deltaTimestamp : twapInterval;
         }
 
         markTwap = IMarkPriceOracle(_markPriceOracleArg).getCumulativePrice(twapInterval, _underlyingPriceIndex);
