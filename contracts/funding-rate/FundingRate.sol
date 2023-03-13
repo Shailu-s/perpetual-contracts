@@ -66,7 +66,7 @@ contract FundingRate is IFundingRate, BlockContext, PositioningCallee, FundingRa
         int256 twPremiumGrowthGlobal,
         int256 userLastTwPremiumGrowthGlobal
     ) internal view virtual returns (int256 pendingFundingPayment) {
-        int256 marketFundingRate = twPremiumGrowthGlobal * _PRECISION_BASE - userLastTwPremiumGrowthGlobal;
+        int256 marketFundingRate = (twPremiumGrowthGlobal * _PRECISION_BASE) - (userLastTwPremiumGrowthGlobal * _PRECISION_BASE);
         int256 positionSize = IAccountBalance(_accountBalance).getPositionSize(trader, baseToken);
         pendingFundingPayment = (positionSize * marketFundingRate) / _PRECISION_BASE * _fundingPeriod;
     }
