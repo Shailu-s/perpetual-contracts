@@ -5,6 +5,7 @@ import { AddressUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/Ad
 
 import { LibAccountMarket } from "../libs/LibAccountMarket.sol";
 import { LibPerpMath } from "../libs/LibPerpMath.sol";
+import { LibFullMath } from "../libs/LibFullMath.sol";
 import { LibSafeCastUint } from "../libs/LibSafeCastUint.sol";
 import { LibSafeCastInt } from "../libs/LibSafeCastInt.sol";
 
@@ -150,11 +151,7 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
         uint256 maxLiquidateRatio = 1e6; // 100%
         if (accountValue >= marginRequirement / 2) {
             // maxLiquidateRatio = getTotalAbsPositionValue / ( getTotalPositionValueInMarket.abs * 2 )
-            maxLiquidateRatio = getTotalAbsPositionValue(trader) / (positionValueAbs * 2);
-
-            // FullMath
-            //     .mulDiv(getTotalAbsPositionValue(trader), 1e6, positionValueAbs.mul(2))
-            //     .toUint24();
+            maxLiquidateRatio = LibFullMath.mulDiv(getTotalAbsPositionValue(trader), 1e6, positionValueAbs * 2);
             if (maxLiquidateRatio > 1e6) {
                 maxLiquidateRatio = 1e6;
             }
