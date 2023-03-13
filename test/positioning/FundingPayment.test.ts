@@ -4,8 +4,7 @@ import { smock } from "@defi-wonderland/smock";
 import { parseUnits, zeroPad } from "ethers/lib/utils";
 const { Order, Asset, sign, encodeAddress } = require("../order");
 import { BigNumber } from "ethers";
-const { expectRevert, time } = require("@openzeppelin/test-helpers");
-
+import { time } from "@nomicfoundation/hardhat-network-helpers";
 describe("Funding payment test", function () {
   let MatchingEngine;
   let matchingEngine;
@@ -328,7 +327,14 @@ describe("Funding payment test", function () {
         account1.address,
         volmexBaseToken.address,
       );
-      time.increase(240000);
+      const blockbefore = await ethers.provider.getBlockNumber();
+      const num = await ethers.provider.getBlock(blockbefore);
+      console.log(num.timestamp);
+      await time.increase(24000);
+      const blockbefore1 = await ethers.provider.getBlockNumber();
+      const num2 = await ethers.provider.getBlock(blockbefore1);
+      console.log(num2.timestamp);
+
       expect(fundingPayment1.toString()).to.be.equal(fundingPayment2.toString());
       console.log(fundingPayment2.toString());
       const { lastTwPremiumGrowthGlobal } = await accountBalance1.getAccountInfo(
@@ -337,7 +343,7 @@ describe("Funding payment test", function () {
       );
       console.log(lastTwPremiumGrowthGlobal.toString());
     });
-    it("How funding payment changes for multiple orders", async () => {
+    it("How funding payment changes for multiple orders when trader goes short and long multiple times", async () => {
       await await USDC.transfer(account1.address, "1000000000000000000");
       await await USDC.transfer(account2.address, "1000000000000000000");
       await matchingEngine.grantMatchOrders(positioning.address);
@@ -394,7 +400,11 @@ describe("Funding payment test", function () {
         account2.address,
         volmexBaseToken.address,
       );
-      console.log(fundingPayment1.toString(), "Funding payment trader 2 ");
+      const accountInfo1 = await accountBalance1.getAccountInfo(
+        account1.address,
+        volmexBaseToken.address,
+      );
+      console.log(fundingPayment1.toString(), "Funding payment trader 1 ");
       console.log(fundingPayment2.toString(), "Funding payment trader 2 ");
 
       const orderLeft1 = Order(
@@ -436,13 +446,700 @@ describe("Funding payment test", function () {
         account2.address,
         volmexBaseToken.address,
       );
-      console.log(fundingPayment3.toString(), "Funding payment trader 1 ");
-      console.log(fundingPayment4.toString(), "Funding payment trader 2 ");
-      const { lastTwPremiumGrowthGlobal } = await accountBalance1.getAccountInfo(
+      console.log(
+        fundingPayment3.toString(),
+        "Funding payment of trader 1 on second short order  ",
+      );
+      console.log(
+        fundingPayment4.toString(),
+        "Funding payment trader of  trader 2 on second long order 2 ",
+      );
+      const accountInfo2 = await accountBalance1.getAccountInfo(
         account1.address,
         volmexBaseToken.address,
       );
-      console.log(lastTwPremiumGrowthGlobal.toString());
+      expect(accountInfo1.lastTwPremiumGrowthGlobal.toString()).to.not.equal(accountInfo2.lastTwPremiumGrowthGlobal.toString())
+     
+    });
+    it("How funding payment changes for multiple orders when trader goes short and long subsequently ", async () => {
+      await await USDC.transfer(account1.address, "1000000000000000000");
+      await await USDC.transfer(account2.address, "1000000000000000000");
+      await matchingEngine.grantMatchOrders(positioning.address);
+      await USDC.connect(account1).approve(volmexPerpPeriphery.address, "1000000000000000000");
+      await USDC.connect(account2).approve(volmexPerpPeriphery.address, "1000000000000000000");
+      await volmexPerpPeriphery.whitelistTrader(account1.address, true);
+      await volmexPerpPeriphery.whitelistTrader(account2.address, true);
+      (
+        await volmexPerpPeriphery
+          .connect(account1)
+          .depositToVault(index, USDC.address, "1000000000000000000")
+      ).wait();
+      (
+        await volmexPerpPeriphery
+          .connect(account2)
+          .depositToVault(index, USDC.address, "1000000000000000000")
+      ).wait();
+      const orderLeft = Order(
+        ORDER,
+        deadline,
+        account2.address,
+        Asset(volmexBaseToken.address, two.toString()),
+        Asset(virtualToken.address, two.toString()),
+        5,
+        (1e6).toString(),
+        true,
+      );
+      const orderRight = Order(
+        ORDER,
+        deadline,
+        account1.address,
+        Asset(virtualToken.address, two.toString()),
+        Asset(volmexBaseToken.address, two.toString()),
+        6,
+        (1e6).toString(),
+        false,
+      );
+
+      const signatureLeft = await getSignature(orderLeft, account2.address);
+      const signatureRight = await getSignature(orderRight, account1.address);
+      await volmexPerpPeriphery.openPosition(
+        index,
+        orderLeft,
+        signatureLeft,
+        orderRight,
+        signatureRight,
+        liquidator,
+      );
+      const fundingPayment1 = await positioning.getPendingFundingPayment(
+        account1.address,
+        volmexBaseToken.address,
+      );
+      const fundingPayment2 = await positioning.getPendingFundingPayment(
+        account2.address,
+        volmexBaseToken.address,
+      );
+      console.log(fundingPayment1.toString(), "Funding payment of trader 1 on first short order ");
+      console.log(fundingPayment2.toString(), "Funding payment of trader 2 on first long order");
+
+      const orderLeft1 = Order(
+        ORDER,
+        deadline,
+        account1.address,
+        Asset(volmexBaseToken.address, one.toString()),
+        Asset(virtualToken.address, one.toString()),
+        10,
+        (1e6).toString(),
+        true,
+      );
+      const orderRight1 = Order(
+        ORDER,
+        deadline,
+        account2.address,
+        Asset(virtualToken.address, one.toString()),
+        Asset(volmexBaseToken.address, one.toString()),
+        20,
+        (1e6).toString(),
+        false,
+      );
+
+      const signatureLeft1 = await getSignature(orderLeft1, account1.address);
+      const signatureRight1 = await getSignature(orderRight1, account2.address);
+      await volmexPerpPeriphery.openPosition(
+        index,
+        orderLeft1,
+        signatureLeft1,
+        orderRight1,
+        signatureRight1,
+        liquidator,
+      );
+      const fundingPayment3 = await positioning.getPendingFundingPayment(
+        account1.address,
+        volmexBaseToken.address,
+      );
+      const fundingPayment4 = await positioning.getPendingFundingPayment(
+        account2.address,
+        volmexBaseToken.address,
+      );
+      console.log(fundingPayment3.toString(), "Funding payment of trader 1 on second long order ");
+      console.log(
+        fundingPayment4.toString(),
+        "Funding payment of trader 2 on second short order  ",
+      );
+      let accountInfo = await accountBalance1.getAccountInfo(
+        account1.address,
+        volmexBaseToken.address,
+      );
+      console.log(
+        accountInfo.lastTwPremiumGrowthGlobal.toString(),
+        "lastTwPremiumGrowthGlobal trader 1 ",
+      );
+      accountInfo = await accountBalance1.getAccountInfo(
+        account2.address,
+        volmexBaseToken.address,
+      );
+      console.log(
+        accountInfo.lastTwPremiumGrowthGlobal.toString(),
+        "lastTwPremiumGrowthGlobal trader 2 ",
+      );
+    });
+    it("How funding payment behaves during 8 hour cycle", async () => {
+      await USDC.transfer(account1.address, "1000000000000000000");
+      await USDC.transfer(account2.address, "1000000000000000000");
+      await USDC.transfer(alice.address, "1000000000000000000");
+      await USDC.transfer(bob.address, "1000000000000000000");
+      await matchingEngine.grantMatchOrders(positioning.address);
+      await USDC.connect(account1).approve(volmexPerpPeriphery.address, "1000000000000000000");
+      await USDC.connect(account2).approve(volmexPerpPeriphery.address, "1000000000000000000");
+      await USDC.connect(alice).approve(volmexPerpPeriphery.address, "1000000000000000000");
+      await USDC.connect(bob).approve(volmexPerpPeriphery.address, "1000000000000000000");
+      await volmexPerpPeriphery.whitelistTrader(alice.address, true);
+      await volmexPerpPeriphery.whitelistTrader(bob.address, true);
+      await volmexPerpPeriphery.whitelistTrader(account1.address, true);
+      await volmexPerpPeriphery.whitelistTrader(account2.address, true);
+
+      (
+        await volmexPerpPeriphery
+          .connect(account1)
+          .depositToVault(index, USDC.address, "1000000000000000000")
+      ).wait();
+      (
+        await volmexPerpPeriphery
+          .connect(account2)
+          .depositToVault(index, USDC.address, "1000000000000000000")
+      ).wait();
+      (
+        await volmexPerpPeriphery
+          .connect(alice)
+          .depositToVault(index, USDC.address, "1000000000000000000")
+      ).wait();
+      (
+        await volmexPerpPeriphery
+          .connect(bob)
+          .depositToVault(index, USDC.address, "1000000000000000000")
+      ).wait();
+      const orderLeft = Order(
+        ORDER,
+        deadline,
+        account2.address,
+        Asset(volmexBaseToken.address, two.toString()),
+        Asset(virtualToken.address, two.toString()),
+        5,
+        (1e6).toString(),
+        true,
+      );
+      const orderRight = Order(
+        ORDER,
+        deadline,
+        account1.address,
+        Asset(virtualToken.address, two.toString()),
+        Asset(volmexBaseToken.address, two.toString()),
+        6,
+        (1e6).toString(),
+        false,
+      );
+
+      const signatureLeft = await getSignature(orderLeft, account2.address);
+      const signatureRight = await getSignature(orderRight, account1.address);
+      await volmexPerpPeriphery.openPosition(
+        index,
+        orderLeft,
+        signatureLeft,
+        orderRight,
+        signatureRight,
+        liquidator,
+      );
+
+      const orderLeft1 = Order(
+        ORDER,
+        deadline,
+        alice.address,
+        Asset(volmexBaseToken.address, "100000000"),
+        Asset(virtualToken.address, "1000000000"),
+        456,
+        (1e6).toString(),
+        true,
+      );
+      const orderRight1 = Order(
+        ORDER,
+        deadline,
+        bob.address,
+        Asset(virtualToken.address, "1000000000"),
+        Asset(volmexBaseToken.address, "100000000"),
+        134,
+        (1e6).toString(),
+        false,
+      );
+
+      const signatureLeft1 = await getSignature(orderLeft1, alice.address);
+      const signatureRight1 = await getSignature(orderRight1, bob.address);
+      await volmexPerpPeriphery.openPosition(
+        index,
+        orderLeft1,
+        signatureLeft1,
+        orderRight1,
+        signatureRight1,
+        liquidator,
+      );
+      for (let i = 34; i < 38; i++) {
+        const orderLeft = Order(
+          ORDER,
+          deadline,
+          alice.address,
+          Asset(volmexBaseToken.address, "100000000"),
+          Asset(virtualToken.address, "1000000000"),
+          i,
+          (1e6).toString(),
+          true,
+        );
+        const orderRight = Order(
+          ORDER,
+          deadline,
+          bob.address,
+          Asset(virtualToken.address, "1000000000"),
+          Asset(volmexBaseToken.address, "100000000"),
+          i + 1,
+          (1e6).toString(),
+          false,
+        );
+
+        const signatureLeft = await getSignature(orderLeft, alice.address);
+        const signatureRight = await getSignature(orderRight, bob.address);
+        await volmexPerpPeriphery.openPosition(
+          index,
+          orderLeft,
+          signatureLeft,
+          orderRight,
+          signatureRight,
+          liquidator,
+        );
+      }
+      const fundingPayment1 = await positioning.getPendingFundingPayment(
+        account1.address,
+        volmexBaseToken.address,
+      );
+      const fundingPayment2 = await positioning.getPendingFundingPayment(
+        account2.address,
+        volmexBaseToken.address,
+      );
+      console.log(fundingPayment1.toString(), "Funding payment of trader 1 before 8 hours ");
+      console.log(fundingPayment2.toString(), "Funding payment of trader 2 before 8 hours ");
+      await time.increase(30000);
+      const fundingPayment3 = await positioning.getPendingFundingPayment(
+        account1.address,
+        volmexBaseToken.address,
+      );
+      const fundingPayment4 = await positioning.getPendingFundingPayment(
+        account2.address,
+        volmexBaseToken.address,
+      );
+      console.log(fundingPayment3.toString(), "Funding payment of trader 1 after 8 hours ");
+      console.log(fundingPayment4.toString(), "Funding payment of trader 2 after 8 hours ");
+    });
+    it("How funding payment behaves during mutiple 8 hour cycle", async () => {
+      await USDC.transfer(account1.address, "1000000000000000000");
+      await USDC.transfer(account2.address, "1000000000000000000");
+      await USDC.transfer(alice.address, "1000000000000000000");
+      await USDC.transfer(bob.address, "1000000000000000000");
+      await matchingEngine.grantMatchOrders(positioning.address);
+      await USDC.connect(account1).approve(volmexPerpPeriphery.address, "1000000000000000000");
+      await USDC.connect(account2).approve(volmexPerpPeriphery.address, "1000000000000000000");
+      await USDC.connect(alice).approve(volmexPerpPeriphery.address, "1000000000000000000");
+      await USDC.connect(bob).approve(volmexPerpPeriphery.address, "1000000000000000000");
+      await volmexPerpPeriphery.whitelistTrader(alice.address, true);
+      await volmexPerpPeriphery.whitelistTrader(bob.address, true);
+      await volmexPerpPeriphery.whitelistTrader(account1.address, true);
+      await volmexPerpPeriphery.whitelistTrader(account2.address, true);
+
+      (
+        await volmexPerpPeriphery
+          .connect(account1)
+          .depositToVault(index, USDC.address, "1000000000000000000")
+      ).wait();
+      (
+        await volmexPerpPeriphery
+          .connect(account2)
+          .depositToVault(index, USDC.address, "1000000000000000000")
+      ).wait();
+      (
+        await volmexPerpPeriphery
+          .connect(alice)
+          .depositToVault(index, USDC.address, "1000000000000000000")
+      ).wait();
+      (
+        await volmexPerpPeriphery
+          .connect(bob)
+          .depositToVault(index, USDC.address, "1000000000000000000")
+      ).wait();
+      const orderLeft = Order(
+        ORDER,
+        deadline,
+        account2.address,
+        Asset(volmexBaseToken.address, two.toString()),
+        Asset(virtualToken.address, two.toString()),
+        5,
+        (1e6).toString(),
+        true,
+      );
+      const orderRight = Order(
+        ORDER,
+        deadline,
+        account1.address,
+        Asset(virtualToken.address, two.toString()),
+        Asset(volmexBaseToken.address, two.toString()),
+        6,
+        (1e6).toString(),
+        false,
+      );
+
+      const signatureLeft = await getSignature(orderLeft, account2.address);
+      const signatureRight = await getSignature(orderRight, account1.address);
+      await volmexPerpPeriphery.openPosition(
+        index,
+        orderLeft,
+        signatureLeft,
+        orderRight,
+        signatureRight,
+        liquidator,
+      );
+
+      const orderLeft1 = Order(
+        ORDER,
+        deadline,
+        alice.address,
+        Asset(volmexBaseToken.address, "100000000"),
+        Asset(virtualToken.address, "1000000000"),
+        456,
+        (1e6).toString(),
+        true,
+      );
+      const orderRight1 = Order(
+        ORDER,
+        deadline,
+        bob.address,
+        Asset(virtualToken.address, "1000000000"),
+        Asset(volmexBaseToken.address, "100000000"),
+        134,
+        (1e6).toString(),
+        false,
+      );
+
+      const signatureLeft1 = await getSignature(orderLeft1, alice.address);
+      const signatureRight1 = await getSignature(orderRight1, bob.address);
+      await volmexPerpPeriphery.openPosition(
+        index,
+        orderLeft1,
+        signatureLeft1,
+        orderRight1,
+        signatureRight1,
+        liquidator,
+      );
+      for (let i = 34; i < 38; i++) {
+        const orderLeft = Order(
+          ORDER,
+          deadline,
+          alice.address,
+          Asset(volmexBaseToken.address, "100000000"),
+          Asset(virtualToken.address, "1000000000"),
+          i,
+          (1e6).toString(),
+          true,
+        );
+        const orderRight = Order(
+          ORDER,
+          deadline,
+          bob.address,
+          Asset(virtualToken.address, "1000000000"),
+          Asset(volmexBaseToken.address, "100000000"),
+          i + 1,
+          (1e6).toString(),
+          false,
+        );
+
+        const signatureLeft = await getSignature(orderLeft, alice.address);
+        const signatureRight = await getSignature(orderRight, bob.address);
+        await volmexPerpPeriphery.openPosition(
+          index,
+          orderLeft,
+          signatureLeft,
+          orderRight,
+          signatureRight,
+          liquidator,
+        );
+      }
+      const fundingPayment1 = await positioning.getPendingFundingPayment(
+        account1.address,
+        volmexBaseToken.address,
+      );
+      const fundingPayment2 = await positioning.getPendingFundingPayment(
+        account2.address,
+        volmexBaseToken.address,
+      );
+      console.log(fundingPayment1.toString(), "Funding payment of trader 1 before 8 hours ");
+      console.log(fundingPayment2.toString(), "Funding payment of trader 2 before 8 hours ");
+      await time.increase(30000);
+      const fundingPayment3 = await positioning.getPendingFundingPayment(
+        account1.address,
+        volmexBaseToken.address,
+      );
+      const fundingPayment4 = await positioning.getPendingFundingPayment(
+        account2.address,
+        volmexBaseToken.address,
+      );
+      console.log(fundingPayment3.toString(), "Funding payment of trader 1 after  first 8 hours ");
+      console.log(fundingPayment4.toString(), "Funding payment of trader 2 after  first 8 hours ");
+      for (let i = 56; i < 60; i++) {
+        const orderLeft = Order(
+          ORDER,
+          deadline,
+          alice.address,
+          Asset(volmexBaseToken.address, "100000000"),
+          Asset(virtualToken.address, "1000000000"),
+          i,
+          (1e6).toString(),
+          true,
+        );
+        const orderRight = Order(
+          ORDER,
+          deadline,
+          bob.address,
+          Asset(virtualToken.address, "1000000000"),
+          Asset(volmexBaseToken.address, "100000000"),
+          i + 1,
+          (1e6).toString(),
+          false,
+        );
+
+        const signatureLeft = await getSignature(orderLeft, alice.address);
+        const signatureRight = await getSignature(orderRight, bob.address);
+        await volmexPerpPeriphery.openPosition(
+          index,
+          orderLeft,
+          signatureLeft,
+          orderRight,
+          signatureRight,
+          liquidator,
+        );
+      }
+      await time.increase(30000);
+      const fundingPayment5 = await positioning.getPendingFundingPayment(
+        account1.address,
+        volmexBaseToken.address,
+      );
+      const fundingPayment6 = await positioning.getPendingFundingPayment(
+        account2.address,
+        volmexBaseToken.address,
+      );
+      console.log(fundingPayment5.toString(), "Funding payment of trader 1 after  second 8 hours ");
+      console.log(fundingPayment6.toString(), "Funding payment of trader 2 after  second 8 hours ");
+    });
+    it("Funding payment of trader should update after 8 hours", async () => {
+      await USDC.transfer(account1.address, "1000000000000000000");
+      await USDC.transfer(account2.address, "1000000000000000000");
+      await USDC.transfer(alice.address, "1000000000000000000");
+      await USDC.transfer(bob.address, "1000000000000000000");
+      await matchingEngine.grantMatchOrders(positioning.address);
+      await USDC.connect(account1).approve(volmexPerpPeriphery.address, "1000000000000000000");
+      await USDC.connect(account2).approve(volmexPerpPeriphery.address, "1000000000000000000");
+      await USDC.connect(alice).approve(volmexPerpPeriphery.address, "1000000000000000000");
+      await USDC.connect(bob).approve(volmexPerpPeriphery.address, "1000000000000000000");
+      await volmexPerpPeriphery.whitelistTrader(alice.address, true);
+      await volmexPerpPeriphery.whitelistTrader(bob.address, true);
+      await volmexPerpPeriphery.whitelistTrader(account1.address, true);
+      await volmexPerpPeriphery.whitelistTrader(account2.address, true);
+
+      (
+        await volmexPerpPeriphery
+          .connect(account1)
+          .depositToVault(index, USDC.address, "1000000000000000000")
+      ).wait();
+      (
+        await volmexPerpPeriphery
+          .connect(account2)
+          .depositToVault(index, USDC.address, "1000000000000000000")
+      ).wait();
+      (
+        await volmexPerpPeriphery
+          .connect(alice)
+          .depositToVault(index, USDC.address, "1000000000000000000")
+      ).wait();
+      (
+        await volmexPerpPeriphery
+          .connect(bob)
+          .depositToVault(index, USDC.address, "1000000000000000000")
+      ).wait();
+      const orderLeft = Order(
+        ORDER,
+        deadline,
+        account2.address,
+        Asset(volmexBaseToken.address, two.toString()),
+        Asset(virtualToken.address, two.toString()),
+        5,
+        (1e6).toString(),
+        true,
+      );
+      const orderRight = Order(
+        ORDER,
+        deadline,
+        account1.address,
+        Asset(virtualToken.address, two.toString()),
+        Asset(volmexBaseToken.address, two.toString()),
+        6,
+        (1e6).toString(),
+        false,
+      );
+
+      const signatureLeft = await getSignature(orderLeft, account2.address);
+      const signatureRight = await getSignature(orderRight, account1.address);
+      await volmexPerpPeriphery.openPosition(
+        index,
+        orderLeft,
+        signatureLeft,
+        orderRight,
+        signatureRight,
+        liquidator,
+      );
+
+     
+     
+      const fundingPayment1 = await positioning.getPendingFundingPayment(
+        account1.address,
+        volmexBaseToken.address,
+      );
+      const fundingPayment2 = await positioning.getPendingFundingPayment(
+        account2.address,
+        volmexBaseToken.address,
+      );
+      console.log(fundingPayment1.toString(), "Funding payment of trader 1 before 8 hours ");
+      console.log(fundingPayment2.toString(), "Funding payment of trader 2 before 8 hours ");
+      await time.increase(14000);
+      for (let i = 34; i < 38; i++) {
+        const orderLeft = Order(
+          ORDER,
+          deadline,
+          alice.address,
+          Asset(volmexBaseToken.address, "100000000"),
+          Asset(virtualToken.address, "1000000000"),
+          i,
+          (1e6).toString(),
+          true,
+        );
+        const orderRight = Order(
+          ORDER,
+          deadline,
+          bob.address,
+          Asset(virtualToken.address, "1000000000"),
+          Asset(volmexBaseToken.address, "100000000"),
+          i + 1,
+          (1e6).toString(),
+          false,
+        );
+
+        const signatureLeft = await getSignature(orderLeft, alice.address);
+        const signatureRight = await getSignature(orderRight, bob.address);
+        await volmexPerpPeriphery.openPosition(
+          index,
+          orderLeft,
+          signatureLeft,
+          orderRight,
+          signatureRight,
+          liquidator,
+        );
+      }
+      const orderLeft1 = Order(
+        ORDER,
+        deadline,
+        alice.address,
+        Asset(volmexBaseToken.address, "100000000"),
+        Asset(virtualToken.address, "1000000000"),
+        456,
+        (1e6).toString(),
+        true,
+      );
+      const orderRight1 = Order(
+        ORDER,
+        deadline,
+        bob.address,
+        Asset(virtualToken.address, "1000000000"),
+        Asset(volmexBaseToken.address, "100000000"),
+        134,
+        (1e6).toString(),
+        false,
+      );
+
+      const signatureLeft1 = await getSignature(orderLeft1, alice.address);
+      const signatureRight1 = await getSignature(orderRight1, bob.address);
+      await volmexPerpPeriphery.openPosition(
+        index,
+        orderLeft1,
+        signatureLeft1,
+        orderRight1,
+        signatureRight1,
+        liquidator,
+      );
+      const fundingPayment3 = await positioning.getPendingFundingPayment(
+        account1.address,
+        volmexBaseToken.address,
+      );
+      const fundingPayment4 = await positioning.getPendingFundingPayment(
+        account2.address,
+        volmexBaseToken.address,
+      );
+      const fundingPayment5 = await positioning.getPendingFundingPayment(
+        alice.address,
+        volmexBaseToken.address,
+      );
+      const fundingPayment6 = await positioning.getPendingFundingPayment(
+        bob.address,
+        volmexBaseToken.address,
+      );
+      console.log(fundingPayment3.toString(), "Funding payment of trader 1 after 4 hours ");
+      const accountInfo = await accountBalance1.getAccountInfo(
+        account1.address,
+        volmexBaseToken.address,
+      );
+      console.log(accountInfo.lastTwPremiumGrowthGlobal.toString(),"trader 1 lastTwPremiumGrowthGlobal 4 hours");
+      console.log(fundingPayment4.toString(), "Funding payment of trader 2 after 4 hours ");
+      console.log(fundingPayment5.toString(), "Funding payment of alice now");
+      const accountInfo1 = await accountBalance1.getAccountInfo(
+        alice.address,
+        volmexBaseToken.address,
+      );
+      console.log(accountInfo1.lastTwPremiumGrowthGlobal.toString(),"alice lastTwPremiumGrowthGlobal 4 hours");
+      console.log(fundingPayment6.toString(), "Funding payment of bob now");
+      await time.increase(15000);
+      const fundingPayment7 = await positioning.getPendingFundingPayment(
+        account1.address,
+        volmexBaseToken.address,
+      );
+      const accountInfo2 = await accountBalance1.getAccountInfo(
+        account1.address,
+        volmexBaseToken.address,
+      );
+      console.log(accountInfo2.lastTwPremiumGrowthGlobal.toString(),"trader 1 lastTwPremiumGrowthGlobal 8 hours");
+      const fundingPayment8 = await positioning.getPendingFundingPayment(
+        account2.address,
+        volmexBaseToken.address,
+      );
+      const fundingPayment9 = await positioning.getPendingFundingPayment(
+        alice.address,
+        volmexBaseToken.address,
+      );
+      const fundingPayment10 = await positioning.getPendingFundingPayment(
+        bob.address,
+        volmexBaseToken.address,
+      );
+      const accountInfo3 = await accountBalance1.getAccountInfo(
+        alice.address,
+        volmexBaseToken.address,
+      );
+      console.log(accountInfo3.lastTwPremiumGrowthGlobal.toString(),"trader 1 lastTwPremiumGrowthGlobal 8 hours");
+      expect(accountInfo3.lastTwPremiumGrowthGlobal.toString()).to.equal(accountInfo1.lastTwPremiumGrowthGlobal.toString())
+      expect(fundingPayment3.toString()).to.not.equal(fundingPayment7.toString());
+      expect(fundingPayment4.toString()).to.not.equal(fundingPayment8.toString());
+      console.log("Funding payment of trader 1 and  trader 2 updated after complete 8 hours");
+      expect(fundingPayment5.toString()).to.not.equal(fundingPayment9.toString());
+      expect(fundingPayment6.toString()).to.not.equal(fundingPayment10.toString());
+      console.log("Funding payment of alice and  bob changes after 4 hours because 8 hour is cycle completed ");
     });
   });
 });
