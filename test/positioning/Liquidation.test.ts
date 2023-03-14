@@ -357,7 +357,7 @@ describe("Liquidation test in Positioning", function () {
         await expect(positionSizeLiquidator.toString()).to.be.equal("90000000000000000000");
       });
 
-      it("should liquidate trader when position size / total position size < 1 liquidable position size > 0  ", async () => {
+      it("should liquidate trader when position size / total position size < 1 liquidatable position size > 0  ", async () => {
         let signatureLeft = await getSignature(orderLeft, account1.address);
         let signatureRight = await getSignature(orderRight, account2.address);
 
@@ -400,7 +400,7 @@ describe("Liquidation test in Positioning", function () {
         );
         const positionSizeAbs = await accountBalance1.getTotalAbsPositionValue(account1.address);
         const accountValue = await vaultController.getAccountValue(account1.address);
-        const liquidatblePositionsize = await accountBalance1.getLiquidatablePositionSize(
+        const liquidatablePositionsize = await accountBalance1.getLiquidatablePositionSize(
           account1.address,
           orderLeft.makeAsset.virtualToken,
           accountValue.toString(),
@@ -409,7 +409,7 @@ describe("Liquidation test in Positioning", function () {
 
         expect(ratio).to.be.lessThan(1);
 
-        expect(liquidatblePositionsize.toString()).to.not.equal("0");
+        expect(liquidatablePositionsize.toString()).to.not.equal("0");
         // liquidating the position
         await expect(
           positioning
@@ -430,7 +430,7 @@ describe("Liquidation test in Positioning", function () {
         await expect(positionSizeAfter.toString()).to.be.equal("-90000000000000000000");
         await expect(positionSizeLiquidator.toString()).to.be.equal("90000000000000000000");
       });
-      it("when user opens position with multiple base tokens then getLiquidablePositionSize > 0", async () => {
+      it("when user opens position with multiple base tokens then getLiquidatablePositionSize > 0", async () => {
         let signatureLeft = await getSignature(orderLeft, account1.address);
         let signatureRight = await getSignature(orderRight, account2.address);
         let signatureLeft1 = await getSignature(orderLeft1, account1.address);
@@ -485,14 +485,14 @@ describe("Liquidation test in Positioning", function () {
         );
         const positionSizeAbs = await accountBalance1.getTotalAbsPositionValue(account1.address);
         const accountValue = await vaultController.getAccountValue(account1.address);
-        const liquidatblePositionsize = await accountBalance1.getLiquidatablePositionSize(
+        const liquidatablePositionsize = await accountBalance1.getLiquidatablePositionSize(
           account1.address,
           orderLeft.makeAsset.virtualToken,
           accountValue.toString(),
         );
         const ratio = parseInt(positionsize) / (parseInt(positionSizeAbs) * 2);
         expect(ratio).to.be.lessThan(1);
-        expect(liquidatblePositionsize.toString()).to.not.equal("0");
+        expect(liquidatablePositionsize.toString()).to.not.equal("0");
         // liquidating the position
         await expect(
           positioning
