@@ -430,7 +430,7 @@ describe("Liquidation test in Positioning", function () {
         await expect(positionSizeAfter.toString()).to.be.equal("-90000000000000000000");
         await expect(positionSizeLiquidator.toString()).to.be.equal("90000000000000000000");
       });
-      it("when user opens size with multiple base tokens then getLiquidablePositionSize > 0", async () => {
+      it("when user opens position with multiple base tokens then getLiquidablePositionSize > 0", async () => {
         let signatureLeft = await getSignature(orderLeft, account1.address);
         let signatureRight = await getSignature(orderRight, account2.address);
         let signatureLeft1 = await getSignature(orderLeft1, account1.address);
