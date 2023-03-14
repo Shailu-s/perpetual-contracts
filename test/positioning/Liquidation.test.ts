@@ -430,6 +430,89 @@ describe("Liquidation test in Positioning", function () {
         await expect(positionSizeAfter.toString()).to.be.equal("-90000000000000000000");
         await expect(positionSizeLiquidator.toString()).to.be.equal("90000000000000000000");
       });
+      it("when user opens size with multiple base tokens then getLiquidablePositionSize > 0", async () => {
+        let signatureLeft = await getSignature(orderLeft, account1.address);
+        let signatureRight = await getSignature(orderRight, account2.address);
+        let signatureLeft1 = await getSignature(orderLeft1, account1.address);
+        let signatureRight1 = await getSignature(orderRight1, account2.address);
+
+        await expect(
+          positioning.openPosition(
+            orderLeft,
+            signatureLeft,
+            orderRight,
+            signatureRight,
+            liquidator,
+          ),
+        ).to.emit(positioning, "PositionChanged");
+
+        await expect(
+          positioning.openPosition(
+            orderLeft1,
+            signatureLeft1,
+            orderRight1,
+            signatureRight1,
+            liquidator,
+          ),
+        ).to.emit(positioning, "PositionChanged");
+
+        const positionSize = await accountBalance1.getPositionSize(
+          account1.address,
+          orderLeft.makeAsset.virtualToken,
+        );
+        const positionSize1 = await accountBalance1.getPositionSize(
+          account2.address,
+          orderLeft.makeAsset.virtualToken,
+        );
+
+        await expect(positionSize.toString()).to.be.equal("-100000000000000000000");
+        await expect(positionSize1.toString()).to.be.equal("100000000000000000000");
+
+        const proofHash = "0x6c00000000000000000000000000000000000000000000000000000000000000";
+
+        for (let index = 0; index < 10; index++) {
+          await (
+            await indexPriceOracle.updateBatchVolatilityTokenPrice(
+              [0, 1],
+              [200000000, 200000000],
+              [proofHash, proofHash],
+            )
+          ).wait();
+        }
+        const positionsize = await accountBalance1.getTotalPositionValue(
+          account1.address,
+          orderLeft.makeAsset.virtualToken,
+        );
+        const positionSizeAbs = await accountBalance1.getTotalAbsPositionValue(account1.address);
+        const accountValue = await vaultController.getAccountValue(account1.address);
+        const liquidatblePositionsize = await accountBalance1.getLiquidatablePositionSize(
+          account1.address,
+          orderLeft.makeAsset.virtualToken,
+          accountValue.toString(),
+        );
+        const ratio = parseInt(positionsize) / (parseInt(positionSizeAbs) * 2);
+        expect(ratio).to.be.lessThan(1);
+        expect(liquidatblePositionsize.toString()).to.not.equal("0");
+        // liquidating the position
+        await expect(
+          positioning
+            .connect(account2)
+            .liquidate(account1.address, volmexBaseToken.address, "-10000000000000000000"),
+        ).to.emit(positioning, "PositionLiquidated");
+
+        const positionSizeAfter = await accountBalance1.getPositionSize(
+          account1.address,
+          volmexBaseToken.address,
+        );
+
+        const positionSizeLiquidator = await accountBalance1.getPositionSize(
+          account2.address,
+          volmexBaseToken.address,
+        );
+
+        await expect(positionSizeAfter.toString()).to.be.equal("-90000000000000000000");
+        await expect(positionSizeLiquidator.toString()).to.be.equal("90000000000000000000");
+      });
 
       it("should liquidate whole position", async () => {
         let signatureLeft = await getSignature(orderLeft, account1.address);
