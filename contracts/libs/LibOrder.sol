@@ -14,13 +14,13 @@ library LibOrder {
         LibAsset.Asset makeAsset;
         LibAsset.Asset takeAsset;
         uint256 salt;
-        uint128 triggerPrice;
+        uint128 limitOrderTriggerPrice;
         bool isShort;
     }
 
     bytes32 constant ORDER_TYPEHASH =
         keccak256(
-            "Order(bytes4 orderType,uint64 deadline,address trader,Asset makeAsset,Asset takeAsset,uint256 salt,uint128 triggerPrice,bool isShort)Asset(address virtualToken,uint256 value)"
+            "Order(bytes4 orderType,uint64 deadline,address trader,Asset makeAsset,Asset takeAsset,uint256 salt,uint128 limitOrderTriggerPrice,bool isShort)Asset(address virtualToken,uint256 value)"
         );
 
     // Generated using bytes4(keccack256(abi.encodePacked("Order")))
@@ -67,7 +67,7 @@ library LibOrder {
                     LibAsset.hash(order.makeAsset),
                     LibAsset.hash(order.takeAsset),
                     order.salt,
-                    order.triggerPrice,
+                    order.limitOrderTriggerPrice,
                     order.isShort
                 )
             );
@@ -84,7 +84,7 @@ library LibOrder {
                     LibAsset.hash(order.makeAsset),
                     LibAsset.hash(order.takeAsset),
                     order.salt,
-                    order.triggerPrice,
+                    order.limitOrderTriggerPrice,
                     order.isShort
                 )
             );
