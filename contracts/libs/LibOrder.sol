@@ -16,11 +16,12 @@ library LibOrder {
         uint256 salt;
         uint128 limitOrderTriggerPrice;
         bool isShort;
+        bytes4 twapType;
     }
 
     bytes32 constant ORDER_TYPEHASH =
         keccak256(
-            "Order(bytes4 orderType,uint64 deadline,address trader,Asset makeAsset,Asset takeAsset,uint256 salt,uint128 limitOrderTriggerPrice,bool isShort)Asset(address virtualToken,uint256 value)"
+            "Order(bytes4 orderType,uint64 deadline,address trader,Asset makeAsset,Asset takeAsset,uint256 salt,uint128 limitOrderTriggerPrice,bool isShort)Asset(address virtualToken,uint256 value, bytes4 twapType)"
         );
 
     // Generated using bytes4(keccack256(abi.encodePacked("Order")))
@@ -29,6 +30,12 @@ library LibOrder {
     bytes4 public constant STOP_LOSS_LIMIT_ORDER = 0xeeaed735;
     // Generated using bytes4(keccack256(abi.encodePacked("TakeProfitLimitOrder")))
     bytes4 public constant TAKE_PROFIT_LIMIT_ORDER = 0xe0fc7f94;
+    // Generated using bytes4(keccak256(abi.encodePacked("MARK_TWAP_1_MIN")))
+    bytes4 public constant MARK_TWAP_1_MIN = 0x32f09970;
+    // Generated using bytes4(keccak256(abi.encodePacked("MARK_TWAP")))
+    bytes4 public constant MARK_TWAP = 0xd37c576a;
+    // Generated using bytes4(keccak256(abi.encodePacked("INDEX_TWAP")))
+    bytes4 public constant INDEX_TWAP = 0x1444f8cf;
 
     function validate(LibOrder.Order memory order) internal view {
         require(order.deadline > block.timestamp, "V_PERP_M: Order deadline validation failed");
@@ -68,7 +75,8 @@ library LibOrder {
                     LibAsset.hash(order.takeAsset),
                     order.salt,
                     order.limitOrderTriggerPrice,
-                    order.isShort
+                    order.isShort,
+                    order.twapType
                 )
             );
     }
@@ -85,7 +93,8 @@ library LibOrder {
                     LibAsset.hash(order.takeAsset),
                     order.salt,
                     order.limitOrderTriggerPrice,
-                    order.isShort
+                    order.isShort,
+                    order.twapType
                 )
             );
     }

@@ -5,9 +5,10 @@ import {AccessControlUpgradeable} from "@openzeppelin/contracts-upgradeable/acce
 
 import {LibOrder} from "../libs/LibOrder.sol";
 import {IMarkPriceOracle} from "../interfaces/IMarkPriceOracle.sol";
+import {IIndexPriceOracle} from "../interfaces/IIndexPriceOracle.sol";
 import {IPositioning} from "../interfaces/IPositioning.sol";
 import {IVaultController} from "../interfaces/IVaultController.sol";
-import {IVolmexPerpPeriphery} from "../interfaces/IVolmexPerpPeriphery.sol";
+import {IVolmexPerpPeriphery, IERC20Upgradeable, IVirtualToken} from "../interfaces/IVolmexPerpPeriphery.sol";
 import {IVolmexPerpView} from "../interfaces/IVolmexPerpView.sol";
 import {IPositioningConfig} from "../interfaces/IPositioningConfig.sol";
 
@@ -28,6 +29,8 @@ contract VolmexPerpPeriphery is AccessControlUpgradeable, IVolmexPerpPeriphery {
 
     // Used to fetch base token price according to market
     IMarkPriceOracle public markPriceOracle;
+    // Used to fetch base volatility token index price
+    IIndexPriceOracle public indexPriceOracle;
     // Stores the address of VolmexPerpView contract
     IVolmexPerpView public perpView;
 
@@ -43,6 +46,7 @@ contract VolmexPerpPeriphery is AccessControlUpgradeable, IVolmexPerpPeriphery {
     function initialize(
         IVolmexPerpView _perpView,
         IMarkPriceOracle _markPriceOracle,
+        IIndexPriceOracle _indexPriceOracle,
         address[2] memory _vaults,
         address _owner,
         address _relayer
@@ -51,6 +55,7 @@ contract VolmexPerpPeriphery is AccessControlUpgradeable, IVolmexPerpPeriphery {
         require(_relayer != address(0), "VolmexPerpPeriphery: Relayer can't be address(0)");
         require(address(_perpView) != address(0), "VolmexPerpPeriphery: zero address");
         markPriceOracle = _markPriceOracle;
+        indexPriceOracle = _indexPriceOracle;
         perpView = _perpView;
 
         for (uint256 i = 0; i < 2; i++) {
@@ -230,6 +235,12 @@ contract VolmexPerpPeriphery is AccessControlUpgradeable, IVolmexPerpPeriphery {
         address baseToken = IVirtualToken(makeAsset).isBase() ? makeAsset : takeAsset;
 
         uint64 _index = markPriceOracle.indexByBaseToken(baseToken);
-        return markPriceOracle.getCumulativePrice(_twInterval, _index);
+        if (_order.twapType == LibOrder.MARK_TWAP) {
+            price = markPriceOracle.getCumulativePrice(_twInterval, _index);
+        } else if (_order.twapType == LibOrder.INDEX_TWAP) {
+            (price,,) = indexPriceOracle.getIndexTwap(_index);
+        } else {
+            price = markPriceOracle.getCumulativePrice(60, _index);
+        }
     }
 }
