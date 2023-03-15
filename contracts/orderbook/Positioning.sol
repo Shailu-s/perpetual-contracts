@@ -212,7 +212,7 @@ contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, 
         // require(order.fill >= , "V_PERP_M: order salt lower");
         bytes32 orderHashKey = LibOrder.hashKey(order);
         uint256 fills = IMatchingEngine(_matchingEngine).fills(orderHashKey);
-
+        require(fills < order.makeAsset.value, "V_PERP_M: Nothing to fill");
         require(fills < _UINT256_MAX, "V_PERP_M: order is cancelled");
         LibOrder.validate(order);
 
