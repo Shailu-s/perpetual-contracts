@@ -184,7 +184,7 @@ describe("MatchingEngine", function () {
         "V_PERP_M: 0 salt can't be used",
       );
     });
-    it.only("should fail to cancel order", async () => {
+    it("should fail to cancel order", async () => {
       const [owner, account1, accoun2] = await ethers.getSigners();
 
       const order = Order(
