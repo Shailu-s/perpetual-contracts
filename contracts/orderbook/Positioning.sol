@@ -209,11 +209,10 @@ contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, 
         require(order.trader != address(0), "V_PERP_M: order verification failed");
         require(order.salt != 0, "V_PERP_M: 0 salt can't be used");
         require(order.salt >= makerMinSalt[_msgSender()], "V_PERP_M: order salt lower");
-        // require(order.fill >= , "V_PERP_M: order salt lower");
         bytes32 orderHashKey = LibOrder.hashKey(order);
         uint256 fills = IMatchingEngine(_matchingEngine).fills(orderHashKey);
-
-        require(fills < _UINT256_MAX, "V_PERP_M: order is cancelled");
+        // order is cancelled, os there's nothing to fill
+        require(fills < order.makeAsset.value, "V_PERP_M: Nothing to fill");
         LibOrder.validate(order);
 
         uint24 imRatio = IPositioningConfig(_positioningConfig).getImRatio();
