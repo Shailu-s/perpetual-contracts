@@ -234,6 +234,7 @@ contract VolmexPerpPeriphery is AccessControlUpgradeable, IVolmexPerpPeriphery {
 
         address baseToken = IVirtualToken(makeAsset).isBase() ? makeAsset : takeAsset;
 
+        // TODO: change to index, mark and mark's latest price
         uint64 _index = markPriceOracle.indexByBaseToken(baseToken);
         if (_order.twapType == LibOrder.MARK_TWAP) {
             price = markPriceOracle.getCumulativePrice(_twInterval, _index);
