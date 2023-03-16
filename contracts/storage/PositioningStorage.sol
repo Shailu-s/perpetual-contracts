@@ -18,6 +18,12 @@ abstract contract PositioningStorageV1 {
     address internal _marketRegistry;
 
     address public defaultFeeReceiver;
+
+    // the last timestamp when funding is settled
+    mapping(address => uint256) internal _lastSettledTimestampMap;
+    // base token => twPremium
+    mapping(address => int256) internal _globalFundingGrowthMap;
+
     mapping(address => bool) public isLiquidatorWhitelisted;
     bool public isLiquidatorWhitelistEnabled;
 
