@@ -4,8 +4,6 @@ pragma solidity =0.8.18;
 import { SafeMathUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/math/SafeMathUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 
-import "../interfaces/IMatchingEngine.sol";
-
 /**
  * @title Volmex Oracle Mark SMA
  * @author volmex.finance [security@volmexlabs.com]
@@ -132,13 +130,20 @@ contract MarkPriceOracle is Initializable, AccessControlUpgradeable {
         Observation[] memory observations = observationsByIndex[_index];
         uint256 index = observations.length - 1;
         uint256 initialTimestamp = block.timestamp - _twInterval;
-        for (index = observations.length - 1; observations[index].timestamp >= initialTimestamp; index--) {
+        uint256 length = 0;
+        while (observations[index].timestamp >= initialTimestamp) {
             priceCumulative += observations[index].priceCumulative;
+            length++;
             if (index == 0) {
                 break;
             }
+            index--;
         }
-        priceCumulative = priceCumulative.div(observations.length.sub(index));
+        if (length > 0) {
+            priceCumulative = priceCumulative.div(length);
+        } else {
+            priceCumulative = 0;
+        }
     }
 
     /**
