@@ -2228,7 +2228,6 @@ describe("Liquidation test in Positioning", function () {
             )
           ).wait();
         }
-        console.log("Testsssss", account2.address);
         // liquidating the position
         await expect(
           positioning

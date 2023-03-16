@@ -62,6 +62,15 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
         _modifyOwedRealizedPnl(trader, amount, baseToken);
     }
 
+    function updateTwPremiumGrowthGlobal(
+        address trader,
+        address baseToken,
+        int256 lastTwPremiumGrowthGlobal
+    ) external override {
+        _requireOnlyPositioning();
+        _accountMarketMap[trader][baseToken].lastTwPremiumGrowthGlobal = lastTwPremiumGrowthGlobal;
+    }
+
     /// @inheritdoc IAccountBalance
     function settleOwedRealizedPnl(address trader) external override returns (int256) {
         // Account Balance: Not CAN_SETTLE_REALIZED_PNL
