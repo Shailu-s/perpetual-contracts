@@ -136,7 +136,7 @@ describe.only("Funding payment", function () {
       owner.address,
       markPriceOracle.address,
     ]);
-    await markPriceOracle.setMatchingEngine(matchingEngine.address);
+    await markPriceOracle.setObservationAdder(matchingEngine.address);
 
     virtualToken = await upgrades.deployProxy(VirtualToken, ["VirtualToken", "VTK", false], {
       initializer: "initialize",
@@ -210,7 +210,7 @@ describe.only("Funding payment", function () {
     await positioning.connect(owner).setDefaultFeeReceiver(owner.address);
     await positioning.connect(owner).setPositioning(positioning.address);
 
-    await (await markPriceOracle.setMatchingEngine(owner.address)).wait();
+    await (await markPriceOracle.setObservationAdder(owner.address)).wait();
     await (await matchingEngine.grantMatchOrders(positioning.address)).wait();
     for (let i = 0; i < 9; i++) {
       await markPriceOracle.addObservation(100000000, 0);

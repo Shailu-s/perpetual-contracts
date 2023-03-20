@@ -128,7 +128,7 @@ describe("MarkPriceOracle", function () {
     );
 
     await matchingEngine.deployed();
-    await markPriceOracle.setMatchingEngine(matchingEngine.address);
+    await markPriceOracle.setObservationAdder(matchingEngine.address);
 
     await exchangeTest.setMarkPriceOracle(markPriceOracle.address);
   });
@@ -232,12 +232,12 @@ describe("MarkPriceOracle", function () {
     it("should fail to set Matching engine as admin assecc is not provided", async () => {
       const [owner, account1] = await ethers.getSigners();
       await expect(
-        markPriceOracle.connect(account1).setMatchingEngine(matchingEngine.address),
+        markPriceOracle.connect(account1).setObservationAdder(matchingEngine.address),
       ).to.be.revertedWith("MarkPriceOracle: Not admin");
     });
     it("should fail to set Matching engine as admin assecc is not provided", async () => {
       const [owner, account1] = await ethers.getSigners();
-      await expect(markPriceOracle.setMatchingEngine(ZERO_ADDR)).to.be.revertedWith(
+      await expect(markPriceOracle.setObservationAdder(ZERO_ADDR)).to.be.revertedWith(
         "V_PERP_M: Can't be 0 address",
       );
     });

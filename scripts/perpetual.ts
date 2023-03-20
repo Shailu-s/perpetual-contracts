@@ -89,7 +89,7 @@ const positioning = async () => {
     markPriceOracle.address,
   ]);
   await matchingEngine.deployed();
-  await (await markPriceOracle.setMatchingEngine(matchingEngine.address)).wait();
+  await (await markPriceOracle.setObservationAdder(matchingEngine.address)).wait();
 
   console.log("Deploying Positioning Config ...");
   const positioningConfig = await upgrades.deployProxy(PositioningConfig, []);

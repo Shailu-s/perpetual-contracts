@@ -151,7 +151,7 @@ describe("Positioning", function () {
       },
     );
 
-    await markPriceOracle.setMatchingEngine(matchingEngine.address);
+    await markPriceOracle.setObservationAdder(matchingEngine.address);
 
     virtualToken = await upgrades.deployProxy(VirtualToken, ["VirtualToken", "VTK", false], {
       initializer: "initialize",
@@ -1374,7 +1374,7 @@ describe("Positioning", function () {
             .openPosition(orderLeft, signatureLeft, orderRight, signatureRight, liquidator),
         ).to.emit(positioning, "PositionChanged");
 
-        await markPriceOracle.setMatchingEngine(account1.address);
+        await markPriceOracle.setObservationAdder(account1.address);
         await markPriceOracle.connect(account1).addObservation(10000000000, 0);
         await markPriceOracle.connect(account1).addObservation(10000000000, 1);
 
@@ -2140,7 +2140,7 @@ describe("Liquidation test in Positioning", function () {
       },
     );
 
-    await markPriceOracle.setMatchingEngine(matchingEngine.address);
+    await markPriceOracle.setObservationAdder(matchingEngine.address);
 
     virtualToken = await upgrades.deployProxy(VirtualToken, ["VirtualToken", "VTK", false], {
       initializer: "initialize",

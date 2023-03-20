@@ -151,7 +151,7 @@ describe("Liquidation test in Positioning", function () {
       },
     );
 
-    await markPriceOracle.setMatchingEngine(matchingEngine.address);
+    await markPriceOracle.setObservationAdder(matchingEngine.address);
 
     virtualToken = await upgrades.deployProxy(VirtualToken, ["VirtualToken", "VTK", false], {
       initializer: "initialize",

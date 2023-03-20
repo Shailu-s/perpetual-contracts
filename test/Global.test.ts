@@ -134,7 +134,7 @@ describe("Global", function () {
       markPriceOracle.address,
     ]);
     await matchingEngine.deployed();
-    await (await markPriceOracle.setMatchingEngine(matchingEngine.address)).wait();
+    await (await markPriceOracle.setObservationAdder(matchingEngine.address)).wait();
 
     positioningConfig = await upgrades.deployProxy(PositioningConfig, []);
     await positioningConfig.deployed();

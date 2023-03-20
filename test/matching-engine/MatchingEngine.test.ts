@@ -83,7 +83,7 @@ describe("MatchingEngine", function () {
         initializer: "__MatchingEngineTest_init",
       },
     );
-    await markPriceOracle.setMatchingEngine(matchingEngine.address);
+    await markPriceOracle.setObservationAdder(matchingEngine.address);
 
     transferManagerTest = await upgrades.deployProxy(
       TransferManagerTest,
