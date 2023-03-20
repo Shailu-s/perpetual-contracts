@@ -202,20 +202,22 @@ const positioning = async () => {
   await (await perpView.grantViewStatesRole(factory.address)).wait();
 
   const addresses = {
-    USDC: usdcAddress,
+    AccountBalance: accountBalance.address,
+    BaseToken: volmexBaseToken.address,
+    Factory: factory.address,
     IndexPriceOracle: indexPriceOracle.address,
     MarkPriceOracle: markPriceOracle.address,
-    BaseToken: volmexBaseToken.address,
-    QuoteToken: volmexQuoteToken.address,
-    MatchingEngine: matchingEngine.address,
-    Vault: vault.address,
-    VaultController: vaultController.address,
     MarketRegistry: marketRegistry.address,
-    AccountBalance: accountBalance.address,
-    PositioningConfig: positioningConfig.address,
-    Positioning: positioning.address,
+    MatchingEngine: matchingEngine.address,
     Periphery: periphery.address,
     PerpView: perpView.address,
+    Positioning: positioning.address,
+    PositioningConfig: positioningConfig.address,
+    QuoteToken: volmexQuoteToken.address,
+    Vault: vault.address,
+    VaultController: vaultController.address,
+    USDC: usdcAddress,
+    Deployer: await owner.getAddress()
   };
   console.log("\n =====Deployment Successful===== \n");
   console.log(addresses);
