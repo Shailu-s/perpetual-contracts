@@ -184,7 +184,7 @@ describe("MatchingEngine", function () {
         "V_PERP_M: 0 salt can't be used",
       );
     });
-    xit("should fail to cancel order", async () => {
+    it("should fail to cancel order", async () => {
       const [owner, account1, accoun2] = await ethers.getSigners();
 
       const order = Order(
@@ -205,7 +205,7 @@ describe("MatchingEngine", function () {
       }
 
       await expect(matchingEngine.connect(account2).cancelAllOrders(0)).to.be.revertedWith(
-        "MEC_NCCAO",
+        "V_PERP_M: salt too low",
       );
     });
     // TODO: Need to check for event or something else
@@ -437,9 +437,8 @@ describe("MatchingEngine", function () {
           .to.emit(matchingEngine, "OrdersFilled")
           .withArgs(
             [account1.address, account2.address],
-            [1,2],
-            ["1000000000000000000",
-            "1000000000000000000"],
+            [1, 2],
+            ["1000000000000000000", "1000000000000000000"],
           );
       });
 
@@ -449,11 +448,7 @@ describe("MatchingEngine", function () {
         await expect(matchingEngine.matchOrders(orderLeft, orderRight))
           .to.emit(matchingEngine, "Matched")
           .to.emit(matchingEngine, "OrdersFilled")
-          .withArgs(
-            [account1.address, account2.address],
-            [1,0],
-            ["1000000000000000000", "0"],
-          );
+          .withArgs([account1.address, account2.address], [1, 0], ["1000000000000000000", "0"]);
       });
       it("should match orders & emit event when orderleft salt is 0", async () => {
         orderLeft.salt = 0;
@@ -461,11 +456,7 @@ describe("MatchingEngine", function () {
         await expect(matchingEngine.matchOrders(orderLeft, orderRight))
           .to.emit(matchingEngine, "Matched")
           .to.emit(matchingEngine, "OrdersFilled")
-          .withArgs(
-            [account1.address, account2.address],
-            [0,2],
-            ["0", "1000000000000000000"],
-          );
+          .withArgs([account1.address, account2.address], [0, 2], ["0", "1000000000000000000"]);
       });
       it("Should match orders when when orderRight is short", async () => {
         const orderLeft = Order(
@@ -492,7 +483,7 @@ describe("MatchingEngine", function () {
         await expect(matchingEngine.matchOrders(orderLeft, orderRight))
           .to.emit(matchingEngine, "Matched")
           .to.emit(matchingEngine, "OrdersFilled")
-          .withArgs([account1.address, account2.address], [1,2], ["10", "2"]);
+          .withArgs([account1.address, account2.address], [1, 2], ["10", "2"]);
       });
       it("Should match orders when left order address is 0", async () => {
         const orderLeft = Order(
@@ -505,8 +496,7 @@ describe("MatchingEngine", function () {
           0,
           false,
         );
-     
-       
+
         const orderRight = Order(
           ORDER,
           deadline,
@@ -520,7 +510,11 @@ describe("MatchingEngine", function () {
         await expect(matchingEngine.matchOrders(orderLeft, orderRight))
           .to.emit(matchingEngine, "Matched")
           .to.emit(matchingEngine, "OrdersFilled")
-          .withArgs(["0x0000000000000000000000000000000000000000", account2.address], [1,2], ["20", "10"]);
+          .withArgs(
+            ["0x0000000000000000000000000000000000000000", account2.address],
+            [1, 2],
+            ["20", "10"],
+          );
       });
     });
   });

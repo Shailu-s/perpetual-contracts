@@ -235,7 +235,7 @@ describe("Vault", function () {
         .withArgs(USDC.address, alice.address, amount);
 
       // // reduce alice balance
-      expect(await USDC.balanceOf(alice.address)).to.eq(parseUnits("900", await USDC.decimals()));
+      expect(await USDC.balanceOf(alice.address)).to.eq(parseUnits("99999999999999999900", await USDC.decimals()));
 
       // // increase vault balance
       expect(await USDC.balanceOf(USDCVaultAddress)).to.eq(
@@ -457,7 +457,7 @@ describe("Vault", function () {
 
       // update sender's balance
       expect(await vaultController.getBalanceByToken(alice.address, USDC.address)).to.eq(
-        "1000000000000000000000",
+        "100000000000000000000000000000000000000",
       );
     });
 
@@ -607,7 +607,7 @@ describe("Vault", function () {
         .withArgs(owner.address, amount);
 
       // reduce owner balance
-      expect(await USDC.balanceOf(owner.address)).to.eq("10000000000000000000900000000");
+      expect(await USDC.balanceOf(owner.address)).to.eq("10099999999999999999900000000");
 
       // increase vault balance
       expect(await USDC.balanceOf(vault.address)).to.eq(parseUnits("100", await USDC.decimals()));

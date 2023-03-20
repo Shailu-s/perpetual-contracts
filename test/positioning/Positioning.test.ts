@@ -1444,6 +1444,88 @@ describe("Positioning", function () {
           positioning.connect(account1).getOrderValidate(orderLeftLeverage),
         ).to.be.revertedWith("V_PERP_NEFC");
       });
+      it("should not use validate order after opening position ", async () => {
+        // const txn = await markPriceOracle.getCumulativePrice(10000000, 0);
+
+        await matchingEngine.grantMatchOrders(positioning.address);
+
+        await virtualToken.mint(account1.address, convert("1000"));
+        await virtualToken.mint(account2.address, convert("1000"));
+        
+
+        await virtualToken.connect(account1).approve(vault.address, convert("1000"));
+        await virtualToken.connect(account2).approve(vault.address, convert("1000"));
+        await virtualToken.connect(account1).approve(volmexPerpPeriphery.address, convert("1000"));
+        await virtualToken.connect(account2).approve(volmexPerpPeriphery.address, convert("1000"));
+        await vaultController
+          .connect(account1)
+          .deposit(
+            volmexPerpPeriphery.address,
+            virtualToken.address,
+            account1.address,
+            convert("1000"),
+          );
+        await vaultController
+          .connect(account2)
+          .deposit(
+            volmexPerpPeriphery.address,
+            virtualToken.address,
+            account2.address,
+            convert("1000"),
+          );
+
+        const orderLeftLeverage = Order(
+          ORDER,
+          deadline,
+          account1.address,
+          Asset(virtualToken.address, convert("4000")),
+          Asset(volmexBaseToken.address, convert("40")),
+          1,
+          0,
+          false,
+        );
+
+        const orderRightLeverage = Order(
+          ORDER,
+          deadline,
+          account2.address,
+          Asset(volmexBaseToken.address, convert("40")),
+          Asset(virtualToken.address, convert("4000")),
+          1,
+          0,
+          true,
+        );
+
+        let signatureLeft = await getSignature(orderLeftLeverage, account1.address);
+        let signatureRight = await getSignature(orderRightLeverage, account2.address);
+
+        await positioning.connect(account1).getOrderValidate(orderLeftLeverage);
+        await positioning.connect(account2).getOrderValidate(orderRightLeverage);
+        // let a = await indexPriceOracle
+        // opening the position here
+        await expect(
+          positioning
+            .connect(account1)
+            .openPosition(
+              orderLeftLeverage,
+              signatureLeft,
+              orderRightLeverage,
+              signatureRight,
+              liquidator,
+            ),
+        ).to.emit(positioning, "PositionChanged");
+
+        const positionSize = await accountBalance1.getPositionSize(
+          account1.address,
+          orderLeft.takeAsset.virtualToken,
+        );
+        const positionSize1 = await accountBalance1.getPositionSize(
+          account2.address,
+          orderLeft.takeAsset.virtualToken,
+        );
+
+        await expect(positioning.connect(account1).getOrderValidate(orderLeftLeverage)).to.be.revertedWith("V_PERP_M: Nothing to fill");
+      });
 
       it("failure for wrong basetoken given", async () => {
         const [owner, account1, account2] = await ethers.getSigners();
@@ -2228,7 +2310,6 @@ describe("Liquidation test in Positioning", function () {
             )
           ).wait();
         }
-        console.log("Testsssss", account2.address);
         // liquidating the position
         await expect(
           positioning
