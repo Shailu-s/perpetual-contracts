@@ -4,8 +4,6 @@ pragma solidity =0.8.18;
 import { SafeMathUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/math/SafeMathUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 
-import "../interfaces/IMatchingEngine.sol";
-
 /**
  * @title Volmex Oracle Mark SMA
  * @author volmex.finance [security@volmexlabs.com]
@@ -130,13 +128,10 @@ contract MarkPriceOracle is Initializable, AccessControlUpgradeable {
      */
     function getCumulativePrice(uint256 _twInterval, uint64 _index) external view returns (uint256 priceCumulative) {
         Observation[] memory observations = observationsByIndex[_index];
-        uint256 index = observations.length - 1;
+        uint256 index = observations.length;
         uint256 initialTimestamp = block.timestamp - _twInterval;
-        for (index = observations.length - 1; observations[index].timestamp >= initialTimestamp; index--) {
-            priceCumulative += observations[index].priceCumulative;
-            if (index == 0) {
-                break;
-            }
+        for (; index != 0 && observations[index - 1].timestamp >= initialTimestamp; index--) {
+            priceCumulative += observations[index - 1].priceCumulative;
         }
         priceCumulative = priceCumulative.div(observations.length.sub(index));
     }
