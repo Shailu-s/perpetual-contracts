@@ -130,8 +130,12 @@ contract MarkPriceOracle is Initializable, AccessControlUpgradeable {
         Observation[] memory observations = observationsByIndex[_index];
         uint256 index = observations.length;
         uint256 initialTimestamp = block.timestamp - _twInterval;
-        for (; index != 0 && observations[index - 1].timestamp >= initialTimestamp; index--) {
-            priceCumulative += observations[index - 1].priceCumulative;
+        for (; index != 0; index--) {
+            uint256 currentIndex = index - 1;
+            if (observations[currentIndex].timestamp < initialTimestamp) {
+                break;
+            }
+            priceCumulative += observations[currentIndex].priceCumulative;
         }
         priceCumulative = priceCumulative.div(observations.length.sub(index));
     }
