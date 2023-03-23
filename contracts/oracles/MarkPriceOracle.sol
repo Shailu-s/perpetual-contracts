@@ -133,7 +133,7 @@ contract MarkPriceOracle is Initializable, AccessControlUpgradeable {
         for (; index != 0 && observations[index - 1].timestamp >= initialTimestamp; index--) {
             priceCumulative += observations[index - 1].priceCumulative;
         }
-        priceCumulative = priceCumulative.div(observations.length.sub(index));
+        priceCumulative = observations.length != index ? priceCumulative.div(observations.length.sub(index)) : priceCumulative;
     }
 
     /**
