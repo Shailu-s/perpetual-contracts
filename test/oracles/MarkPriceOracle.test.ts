@@ -180,7 +180,7 @@ describe("MarkPriceOracle", function () {
     });
   });
 
-  describe.only("Add Observation", async () => {
+  describe("Add Observation", async () => {
     it("Should add observation", async () => {
       for (let i = 0; i < 9; i++) {
         await matchingEngine.addObservation(10000000, 0);
