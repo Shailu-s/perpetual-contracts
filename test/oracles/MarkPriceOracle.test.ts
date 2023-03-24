@@ -180,7 +180,7 @@ describe("MarkPriceOracle", function () {
     });
   });
 
-  describe.only("Add Observation", async () => {
+  describe("Add Observation", async () => {
     it("Should add observation", async () => {
       for (let i = 0; i < 9; i++) {
         await matchingEngine.addObservation(10000000, 0);
@@ -243,6 +243,34 @@ describe("MarkPriceOracle", function () {
       txns.forEach(txn => {
         expect(Number(txn)).equal(1000000);
       });
+    });
+
+    it("Should not error when there are no recent datapoints added for cumulative price", async () => {
+      const txn1 = await markPriceOracle.getCumulativePrice(20000, 0);
+      expect(Number(txn1)).equal(1000000);
+      for (let i = 0; i < 9; i++) {
+        await matchingEngine.addObservation(1000000, 0);
+        await time.increase(1000);
+      }
+      // this covers the case of zero recent datapoints
+      await time.increase(100000);
+      const txn2 = await markPriceOracle.getCumulativePrice(20000, 0);
+      expect(Number(txn2)).equal(0);
+      const txn3 = await markPriceOracle.getCumulativePrice(20000000, 0);
+      expect(Number(txn3)).equal(1000000);
+    });
+
+    it("Should not error when there are no recent datapoints then more datapoints are added for cumulative price", async () => {
+      await time.increase(200001);
+      const txn1 = await markPriceOracle.getCumulativePrice(20000, 0);
+      expect(Number(txn1)).equal(0);
+
+      for (let i = 0; i < 9; i++) {
+        await matchingEngine.addObservation(20000000, 0);
+        await time.increase(1000);
+      }
+      const txn2 = await markPriceOracle.getCumulativePrice(10000, 0);
+      expect(Number(txn2)).equal(20000000);
     });
 
     it("Should fail to  add multiple observations because uneuqal length of inputs", async () => {
