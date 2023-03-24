@@ -27,10 +27,14 @@ const positioning = async () => {
   await (await perpView.grantViewStatesRole(owner.address)).wait();
 
   console.log("Deploying Index Price Oracle ...");
-  const indexPriceOracle = await upgrades.deployProxy(IndexPriceOracle, [owner.address], {
-    initializer: "initialize",
-  });
-  await indexPriceOracle.deployed();
+  let indexOracle = process.env.INDEX_PRICE_ORACLE;
+  if (!process.env.INDEX_PRICE_ORACLE) {
+    const indexPriceOracle = await upgrades.deployProxy(IndexPriceOracle, [owner.address], {
+      initializer: "initialize",
+    });
+    await indexPriceOracle.deployed();
+    indexOracle = indexPriceOracle.address;
+  }
 
   console.log("Deploying Base Token ...");
   const volmexBaseToken = await upgrades.deployProxy(
@@ -38,7 +42,7 @@ const positioning = async () => {
     [
       "Virtual ETH Index Token", // nameArg
       "VEVIV", // symbolArg,
-      indexPriceOracle.address, // priceFeedArg
+      indexOracle, // priceFeedArg
       true, // isBase
     ],
     {
@@ -131,7 +135,7 @@ const positioning = async () => {
       accountBalance.address,
       matchingEngine.address,
       markPriceOracle.address,
-      indexPriceOracle.address,
+      indexOracle,
       0,
       [owner.address, `${process.env.LIQUIDATOR}`],
     ],
@@ -165,9 +169,9 @@ const positioning = async () => {
   console.log("Register vault ...");
   await (await vaultController.registerVault(vault.address, usdcAddress)).wait();
   console.log("Set maker fee ...");
-  await marketRegistry.setMakerFeeRatio(0.0004e6);
+  await marketRegistry.setMakerFeeRatio("400");
   console.log("Set taker fee ...");
-  await marketRegistry.setTakerFeeRatio(0.0009e6);
+  await marketRegistry.setTakerFeeRatio("900");
 
   console.log("Deploying Periphery contract ...");
   const periphery = await upgrades.deployProxy(VolmexPerpPeriphery, [
@@ -205,7 +209,7 @@ const positioning = async () => {
     AccountBalance: accountBalance.address,
     BaseToken: volmexBaseToken.address,
     Factory: factory.address,
-    IndexPriceOracle: indexPriceOracle.address,
+    IndexPriceOracle: indexOracle,
     MarkPriceOracle: markPriceOracle.address,
     MarketRegistry: marketRegistry.address,
     MatchingEngine: matchingEngine.address,
@@ -224,7 +228,7 @@ const positioning = async () => {
 
   try {
     await run("verify:verify", {
-      address: await proxyAdmin.getProxyImplementation(indexPriceOracle.address),
+      address: await proxyAdmin.getProxyImplementation(indexOracle),
     });
   } catch (error) {
     console.log("ERROR - verify - Index price oracle", error);
