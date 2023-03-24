@@ -3,7 +3,7 @@ import { ethers, upgrades } from "hardhat";
 const { Order, Asset, sign, encodeAddress } = require("../order");
 import { BigNumber } from "ethers";
 import { time } from "@nomicfoundation/hardhat-network-helpers";
-describe.only("Funding payment", function () {
+describe("Funding payment", function () {
   let MatchingEngine;
   let matchingEngine;
   let VirtualToken;
