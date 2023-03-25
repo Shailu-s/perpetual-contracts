@@ -25,7 +25,7 @@ contract PositioningConfig is IPositioningConfig, PositioningConfigStorageV1, Ac
 
     function initialize() external initializer {
         _maxMarketsPerAccount = type(uint8).max;
-        _imRatio = 0.2e6; // initial-margin ratio, 40% in decimal 6
+        _imRatio = 0.2e6; // initial-margin ratio, 20% in decimal 6
         _mmRatio = 0.2e6; // minimum-margin ratio, 20% in decimal 6
         _liquidationPenaltyRatio = 0.025e6; // initial penalty ratio, 2.5% in decimal 6
         _partialCloseRatio = 0.25e6; // partial close ratio, 25% in decimal 6
