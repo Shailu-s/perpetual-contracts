@@ -43,7 +43,6 @@ describe("VolmexPerpPeriphery", function () {
   const deadline = 87654321987654;
   const one = ethers.constants.WeiPerEther; // 1e18
   const two = ethers.constants.WeiPerEther.mul(BigNumber.from("2")); // 2e18
-  const twapType = "0x1444f8cf";
 
   const ORDER = "0xf555eb98";
   const STOP_LOSS_LIMIT_ORDER = "0xeeaed735";
@@ -51,6 +50,7 @@ describe("VolmexPerpPeriphery", function () {
   const ZERO_ADDR = "0x0000000000000000000000000000000000000000";
   const proofHash = "0x6c00000000000000000000000000000000000000000000000000000000000000";
   const capRatio = "250";
+  const twapType = "0x1444f8cf";
   this.beforeAll(async () => {
     VolmexPerpPeriphery = await ethers.getContractFactory("VolmexPerpPeriphery");
     MarkPriceOracle = await ethers.getContractFactory("MarkPriceOracle");

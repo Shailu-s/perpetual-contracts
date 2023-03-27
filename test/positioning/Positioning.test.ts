@@ -471,7 +471,7 @@ describe("Positioning", function () {
         await expect(positionSize1).to.be.equal(convert("-24"));
       });
 
-      it.only("should match orders and open position with leverage", async () => {
+      it("should match orders and open position with leverage", async () => {
         // const txn = await markPriceOracle.getCumulativePrice(10000000, 0);
 
         await matchingEngine.grantMatchOrders(positioning.address);
@@ -2053,7 +2053,7 @@ describe("Positioning", function () {
   }
 });
 
-describe.only("Liquidation test in Positioning", function () {
+describe("Liquidation test in Positioning", function () {
   let MatchingEngine;
   let matchingEngine;
   let VirtualToken;
@@ -2478,13 +2478,8 @@ describe.only("Liquidation test in Positioning", function () {
         const proofHash = "0x6c00000000000000000000000000000000000000000000000000000000000000";
 
         for (let index = 0; index < 10; index++) {
-          await (
-            await indexPriceOracle.updateBatchVolatilityTokenPrice(
-              [0, 1],
-              [200000000, 200000000],
-              [proofHash, proofHash],
-            )
-          ).wait();
+          await (await indexPriceOracle.addObservation(1, 200000000, proofHash)).wait();
+          await (await indexPriceOracle.addObservation(0, 200000000, proofHash)).wait();
         }
         // liquidating the position
         await expect(
@@ -2601,6 +2596,7 @@ describe.only("Liquidation test in Positioning", function () {
 
         for (let index = 0; index < 6; index++) {
           await (await indexPriceOracle.addObservation(0, 100000, proofHash)).wait();
+          await (await indexPriceOracle.addObservation(1, 100000, proofHash)).wait();
         }
 
         // liquidating the position
@@ -2684,6 +2680,7 @@ describe.only("Liquidation test in Positioning", function () {
         const proofHash = "0x6c00000000000000000000000000000000000000000000000000000000000000";
 
         for (let index = 0; index < 10; index++) {
+          await (await indexPriceOracle.addObservation(0, 100000, proofHash)).wait();
           await (await indexPriceOracle.addObservation(0, 100000, proofHash)).wait();
         }
 

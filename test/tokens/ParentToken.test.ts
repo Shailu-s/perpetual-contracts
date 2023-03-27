@@ -8,23 +8,31 @@ describe("ParentToken", function () {
   let IndexPriceOracle;
   let indexPriceOracle;
   let owner, account1, account2;
+  const proofHash = "0x6c00000000000000000000000000000000000000000000000000000000000000";
+  const capRatio = "250";
+  const twapType = "0x1444f8cf";
   this.beforeAll(async () => {
     VolmexBaseToken = await ethers.getContractFactory("VolmexBaseToken");
     IndexPriceOracle = await ethers.getContractFactory("IndexPriceOracle");
   });
   beforeEach(async () => {
     [owner, account1, account2] = await ethers.getSigners();
-    indexPriceOracle = await upgrades.deployProxy(IndexPriceOracle, [owner.address], {
-      initializer: "initialize",
-    });
 
     volmexBaseToken = await upgrades.deployProxy(
       VolmexBaseToken,
-      ["MyTestToken", "MKT", indexPriceOracle.address, true],
+      ["MyTestToken", "MKT", account1.address, true],
       {
         initializer: "initialize",
       },
     );
+    indexPriceOracle = await upgrades.deployProxy(
+      IndexPriceOracle,
+      [owner.address, [100000], [volmexBaseToken.address], [proofHash], [capRatio]],
+      {
+        initializer: "initialize",
+      },
+    );
+    await volmexBaseToken.setPriceFeed(indexPriceOracle.address);
   });
   describe("deployment", function () {
     it("should fail to again", async () => {
@@ -35,9 +43,13 @@ describe("ParentToken", function () {
   });
   describe("setter and getter methods", function () {
     it("Should set price feed", async () => {
-      const volmexPriceOracle = await upgrades.deployProxy(IndexPriceOracle, [owner.address], {
-        initializer: "initialize",
-      });
+      const volmexPriceOracle = await upgrades.deployProxy(
+        IndexPriceOracle,
+        [owner.address, [100000], [volmexBaseToken.address], [proofHash], [capRatio]],
+        {
+          initializer: "initialize",
+        },
+      );
       expect(await volmexBaseToken.setPriceFeed(volmexPriceOracle.address))
         .to.emit(volmexBaseToken, "PriceFeedChanged")
         .withArgs(volmexPriceOracle.address);
@@ -45,7 +57,7 @@ describe("ParentToken", function () {
     });
     describe("Getters", function () {
       it("Should get index price", async () => {
-        expect(await volmexBaseToken.getIndexPrice(0)).to.eq(10000000000);
+        expect(await volmexBaseToken.getIndexPrice(0)).to.eq(10000000);
       });
     });
   });

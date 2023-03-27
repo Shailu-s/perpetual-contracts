@@ -47,6 +47,9 @@ describe("Funding payment", function () {
   const STOP_LOSS_LIMIT_ORDER = "0xeeaed735";
   const TAKE_PROFIT_LIMIT_ORDER = "0xe0fc7f94";
   const ZERO_ADDR = "0x0000000000000000000000000000000000000000";
+  const proofHash = "0x6c00000000000000000000000000000000000000000000000000000000000000";
+  const capRatio = "250";
+  const twapType = "0x1444f8cf";
   async function getSignature(orderObj, signer) {
     return sign(orderObj, signer, positioning.address);
   }
@@ -96,9 +99,14 @@ describe("Funding payment", function () {
     await volmexBaseToken.deployed();
 
     await (await perpView.setBaseToken(volmexBaseToken.address)).wait();
-    indexPriceOracle = await upgrades.deployProxy(IndexPriceOracle, [owner.address], {
-      initializer: "initialize",
-    });
+    indexPriceOracle = await upgrades.deployProxy(
+      IndexPriceOracle,
+      [owner.address, [100000], [volmexBaseToken.address], [proofHash], [capRatio]],
+      {
+        initializer: "initialize",
+      },
+    );
+    await indexPriceOracle.deployed();
     volmexQuoteToken = await upgrades.deployProxy(
       VolmexQuoteToken,
       [
@@ -115,7 +123,7 @@ describe("Funding payment", function () {
 
     markPriceOracle = await upgrades.deployProxy(
       MarkPriceOracle,
-      [[1000000], [volmexBaseToken.address]],
+      [[100000], [volmexBaseToken.address], [proofHash], [capRatio], owner.address],
       {
         initializer: "initialize",
       },
@@ -214,6 +222,7 @@ describe("Funding payment", function () {
     volmexPerpPeriphery = await upgrades.deployProxy(VolmexPerpPeriphery, [
       perpView.address,
       markPriceOracle.address,
+      indexPriceOracle.address,
       [vault.address, vault.address],
       owner.address,
       owner.address, // replace with replayer address

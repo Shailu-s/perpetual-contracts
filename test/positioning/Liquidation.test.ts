@@ -352,6 +352,7 @@ describe("Liquidation test in Positioning", function () {
 
         for (let index = 0; index < 10; index++) {
           await (await indexPriceOracle.addObservation(0, 200000000, proofHash)).wait();
+          await (await indexPriceOracle.addObservation(1, 200000000, proofHash)).wait();
         }
 
         // liquidating the position
@@ -405,6 +406,7 @@ describe("Liquidation test in Positioning", function () {
 
         for (let index = 0; index < 10; index++) {
           await (await indexPriceOracle.addObservation(0, 200000000, proofHash)).wait();
+          await (await indexPriceOracle.addObservation(1, 200000000, proofHash)).wait();
         }
         const positionsize = await accountBalance1.getTotalPositionValue(
           account1.address,
@@ -484,6 +486,7 @@ describe("Liquidation test in Positioning", function () {
 
         for (let index = 0; index < 10; index++) {
           await (await indexPriceOracle.addObservation(0, 200000000, proofHash)).wait();
+          await (await indexPriceOracle.addObservation(1, 200000000, proofHash)).wait();
         }
         const positionsize = await accountBalance1.getTotalPositionValue(
           account1.address,
@@ -550,6 +553,7 @@ describe("Liquidation test in Positioning", function () {
 
         for (let index = 0; index < 10; index++) {
           await (await indexPriceOracle.addObservation(0, 200000000, proofHash)).wait();
+          await (await indexPriceOracle.addObservation(1, 200000000, proofHash)).wait();
         }
         // liquidating the position
         await expect(
@@ -633,6 +637,7 @@ describe("Liquidation test in Positioning", function () {
 
         for (let index = 0; index < 10; index++) {
           await (await indexPriceOracle.addObservation(0, 200000000, proofHash)).wait();
+          await (await indexPriceOracle.addObservation(1, 200000000, proofHash)).wait();
         }
 
         // liquidating the position
