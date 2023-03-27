@@ -125,7 +125,6 @@ contract BaseOracle is AccessControlUpgradeable {
     }
 
     function _addAssets(uint256[] calldata _underlyingPrices, address[] calldata _assets, bytes32[] calldata _proofHash, uint256[] calldata _capRatio) internal {
-        _requireOracleAdmin();
         uint256 underlyingPriceLength = _underlyingPrices.length;
         require(underlyingPriceLength == _assets.length, "BaseOracle: Unequal length of prices & assets");
 
