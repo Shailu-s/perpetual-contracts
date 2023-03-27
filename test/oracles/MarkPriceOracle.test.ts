@@ -33,6 +33,12 @@ describe("MarkPriceOracle", function () {
   let perpViewFake;
   let MarketRegistry;
   let marketRegistry;
+  let owner;
+  let account1;
+  let account2;
+  let account3;
+  let account4;
+  const proofHash = "0x6c00000000000000000000000000000000000000000000000000000000000000";
   const ZERO_ADDR = "0x0000000000000000000000000000000000000000";
   this.beforeAll(async () => {
     MarkPriceOracle = await ethers.getContractFactory("MarkPriceOracle");
@@ -51,7 +57,7 @@ describe("MarkPriceOracle", function () {
   });
 
   beforeEach(async () => {
-    const [owner, account1, account2, account3, account4] = await ethers.getSigners();
+    [owner, account1, account2, account3, account4] = await ethers.getSigners();
 
     exchangeTest = await ExchangeTest.deploy();
     perpViewFake = await smock.fake("VolmexPerpView");
@@ -113,13 +119,13 @@ describe("MarkPriceOracle", function () {
 
     markPriceOracle = await upgrades.deployProxy(
       MarkPriceOracle,
-      [[1000000], [volmexBaseToken.address]],
+      [[1000000], [volmexBaseToken.address], [proofHash], owner.address],
       {
         initializer: "initialize",
       },
     );
     await markPriceOracle.deployed();
-
+    console.log("here");
     matchingEngine = await upgrades.deployProxy(
       MatchingEngine,
       [owner.address, markPriceOracle.address],
@@ -129,7 +135,8 @@ describe("MarkPriceOracle", function () {
     );
 
     await matchingEngine.deployed();
-    await markPriceOracle.setObservationAdder(matchingEngine.address);
+
+    await markPriceOracle.connect(owner).setObservationAdder(matchingEngine.address);
 
     await exchangeTest.setMarkPriceOracle(markPriceOracle.address);
   });
@@ -138,7 +145,7 @@ describe("MarkPriceOracle", function () {
     it("Should deploy successfully", async () => {
       let receipt = await upgrades.deployProxy(
         MarkPriceOracle,
-        [[10000000], [volmexBaseToken.address]],
+        [[10000000], [volmexBaseToken.address], [proofHash], owner.address],
         {
           initializer: "initialize",
         },
