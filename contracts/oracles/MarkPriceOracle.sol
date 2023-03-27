@@ -15,6 +15,7 @@ contract MarkPriceOracle is BaseOracle {
      * @param _asset Array of addresses of the assets
      */
     function initialize(uint256[] calldata _priceCumulative, address[] calldata _asset, bytes32[] calldata _proofHash, uint256[] calldata _capRatio, address _admin) external initializer {
-        _BaseOracle_init(_priceCumulative, _asset, _proofHash, _capRatio, _admin);
+        _BaseOracle_init(_priceCumulative, _asset, _proofHash, _capRatio);
+        _grantRole(PRICE_ORACLE_ADMIN, _admin);
     }
 }

@@ -19,8 +19,8 @@ contract IndexPriceOracle is BaseOracle, ERC165StorageUpgradeable {
      * @notice Initializes the contract setting the deployer as the initial owner.
      */
     function initialize(address _admin, uint256[] calldata _volatilityPrices, address[] calldata _volatilityIndex, bytes32[] calldata _proofHash, uint256[] calldata _capRatio) external initializer {
-        _BaseOracle_init(_volatilityPrices, _volatilityIndex, _proofHash, _capRatio, _admin);
-
+        _BaseOracle_init(_volatilityPrices, _volatilityIndex, _proofHash, _capRatio);
+        _grantRole(PRICE_ORACLE_ADMIN, _admin);
         __ERC165Storage_init();
         _registerInterface(_IVOLMEX_ORACLE_ID);
     }

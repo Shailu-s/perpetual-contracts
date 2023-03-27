@@ -40,11 +40,9 @@ contract BaseOracle is AccessControlUpgradeable {
         uint256[] calldata _underlyingPrice,
         address[] calldata _asset,
         bytes32[] calldata _proofHash,
-        uint256[] calldata _capRatio,
-        address _admin
+        uint256[] calldata _capRatio
     ) internal onlyInitializing {
         _addAssets(_underlyingPrice, _asset, _proofHash, _capRatio);
-        _grantRole(PRICE_ORACLE_ADMIN, _admin);
         _setRoleAdmin(PRICE_ORACLE_ADMIN, PRICE_ORACLE_ADMIN);
     }
 
@@ -129,8 +127,7 @@ contract BaseOracle is AccessControlUpgradeable {
     function _addAssets(uint256[] calldata _underlyingPrices, address[] calldata _assets, bytes32[] calldata _proofHash, uint256[] calldata _capRatio) internal {
         _requireOracleAdmin();
         uint256 underlyingPriceLength = _underlyingPrices.length;
-        uint256 assetLength = _assets.length;
-        require(underlyingPriceLength == assetLength, "BaseOracle: Unequal length of prices & assets");
+        require(underlyingPriceLength == _assets.length, "BaseOracle: Unequal length of prices & assets");
 
         for (uint256 index; index < underlyingPriceLength; index++) {
             require(_assets[index] != address(0), "BaseOracle: Asset address can't be 0");
