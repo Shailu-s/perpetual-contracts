@@ -120,13 +120,13 @@ contract BaseOracle is AccessControlUpgradeable {
 
     function _getCumulativePrice(uint256 _twInterval, uint64 _index) internal view returns (uint256 priceCumulative, uint256 lastUpdatedTimestamp) {
         Observation[] memory observations = observationsByIndex[_index];
-        uint256 index = observations.length - 1;
-        lastUpdatedTimestamp = observations[index].timestamp;
+        uint256 index = observations.length;
+        lastUpdatedTimestamp = observations[index - 1].timestamp;
         uint256 initialTimestamp = block.timestamp - _twInterval;
-        for (; index != 0 && observations[index].timestamp >= initialTimestamp; index--) {
-            priceCumulative += observations[index].underlyingPrice;
+        for (; index != 0 && observations[index - 1].timestamp >= initialTimestamp; index--) {
+            priceCumulative += observations[index - 1].underlyingPrice;
         }
-        priceCumulative = priceCumulative / (observations.length - index);
+        priceCumulative = observations.length != index ? priceCumulative / (observations.length - index) : priceCumulative;
     }
 
     function _addAssets(uint256[] calldata _underlyingPrices, address[] calldata _assets, bytes32[] calldata _proofHash, uint256[] calldata _capRatio) internal {
