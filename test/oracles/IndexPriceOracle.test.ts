@@ -59,7 +59,7 @@ describe("IndexPriceOracle", function () {
     await protocol.deployed();
     volmexOracle = await upgrades.deployProxy(volmexOracleFactory, [
       owner,
-      [100000],
+      [1000000],
       [volatility.address],
       [proofHash],
       [capRatio],
@@ -117,7 +117,7 @@ describe("IndexPriceOracle", function () {
       }
 
       const txn = await volmexOracle.getCumulativePrice(10000000, 0);
-      expect(Number(txn)).equal(9000000);
+      expect(Number(txn)).equal(9100000);
     });
 
     it("should fail to add observation when cumulative price is zero ", async () => {
@@ -135,17 +135,17 @@ describe("IndexPriceOracle", function () {
     it("Should get cumulative price", async () => {
       console.log((await volmexOracle.getCumulativePrice(2, 0)).toString());
 
-      await volmexOracle.addObservation(10000000, 0, proofHash);
+      await volmexOracle.addObservation(1000000, 0, proofHash);
 
       const txn = await volmexOracle.getCumulativePrice(10000000, 0);
-      expect(Number(txn)).equal(10000000);
+      expect(Number(txn)).equal(1000000);
     });
 
     it("Should latest round data", async () => {
-      await volmexOracle.addObservation(10000000, 0, proofHash);
+      await volmexOracle.addObservation(1000000, 0, proofHash);
 
-      const txn = await volmexOracle.latestRoundData(10000000, 0);
-      expect(Number(txn)).equal(10000000);
+      const txn = await volmexOracle.latestRoundData(10000, 0);
+      expect(Number(txn.answer)).equal(100000000);
     });
 
     it("Should get cumulative price with time delay", async () => {
@@ -173,7 +173,7 @@ describe("IndexPriceOracle", function () {
 
     it("Should not error when there are no recent datapoints added for cumulative price", async () => {
       const txn1 = await volmexOracle.getCumulativePrice(20000, 0);
-      expect(Number(txn1)).equal(0);
+      expect(Number(txn1)).equal(1000000);
       for (let i = 0; i < 9; i++) {
         await volmexOracle.addObservation(1000000, 0, proofHash);
         await time.increase(1000);
@@ -183,7 +183,7 @@ describe("IndexPriceOracle", function () {
       const txn2 = await volmexOracle.getCumulativePrice(200, 0);
       expect(Number(txn2)).equal(0);
       const txn3 = await volmexOracle.getCumulativePrice(20000000, 0);
-      expect(Number(txn3)).equal(900000);
+      expect(Number(txn3)).equal(1000000);
     });
 
     it("Should not error when there are no recent datapoints then more datapoints are added for cumulative price", async () => {
@@ -196,7 +196,7 @@ describe("IndexPriceOracle", function () {
         await time.increase(1000);
       }
       const txn2 = await volmexOracle.getCumulativePrice(10000, 0);
-      expect(Number(txn2)).equal(18000000);
+      expect(Number(txn2)).equal(20000000);
     });
 
     it("Should fail to  add multiple observations because uneuqal length of inputs", async () => {

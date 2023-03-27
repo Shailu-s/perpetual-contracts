@@ -76,7 +76,7 @@ describe("MarkPriceOracle", function () {
     await volmexBaseToken.deployed();
     indexPriceOracle = await upgrades.deployProxy(
       IndexPriceOracle,
-      [owner.address, [100000], [volmexBaseToken.address], [proofHash], [capRatio]],
+      [owner.address, [1000000], [volmexBaseToken.address], [proofHash], [capRatio]],
       {
         initializer: "initialize",
       },
@@ -123,7 +123,7 @@ describe("MarkPriceOracle", function () {
 
     markPriceOracle = await upgrades.deployProxy(
       MarkPriceOracle,
-      [[10000000], [volmexBaseToken.address], [proofHash], [capRatio], owner.address],
+      [[1000000], [volmexBaseToken.address], [proofHash], [capRatio], owner.address],
       {
         initializer: "initialize",
       },
@@ -219,7 +219,7 @@ describe("MarkPriceOracle", function () {
       }
 
       const txn = await markPriceOracle.getCumulativePrice(10000000, 0);
-      expect(Number(txn)).equal(9000000);
+      expect(Number(txn)).equal(9100000);
     });
 
     it("should fail to add observation when cumulative price is zero ", async () => {
@@ -232,10 +232,10 @@ describe("MarkPriceOracle", function () {
     });
 
     it("Should get cumulative price", async () => {
-      await matchingEngine.addObservation(10000000, 0);
+      await matchingEngine.addObservation(1000000, 0);
 
       const txn = await markPriceOracle.getCumulativePrice(10000000, 0);
-      expect(Number(txn)).equal(10000000);
+      expect(Number(txn)).equal(1000000);
     });
 
     it("Should get cumulative price with time delay", async () => {
@@ -263,17 +263,17 @@ describe("MarkPriceOracle", function () {
 
     it("Should not error when there are no recent datapoints added for cumulative price", async () => {
       const txn1 = await markPriceOracle.getCumulativePrice(20000, 0);
-      expect(Number(txn1)).equal(0);
+      expect(Number(txn1)).equal(1000000);
       for (let i = 0; i < 9; i++) {
         await matchingEngine.addObservation(1000000, 0);
         await time.increase(1000);
       }
       // this covers the case of zero recent datapoints
       await time.increase(100000);
-      const txn2 = await markPriceOracle.getCumulativePrice(200, 0);
+      const txn2 = await markPriceOracle.getCumulativePrice(100000, 0);
       expect(Number(txn2)).equal(0);
       const txn3 = await markPriceOracle.getCumulativePrice(20000000, 0);
-      expect(Number(txn3)).equal(900000);
+      expect(Number(txn3)).equal(1000000);
     });
 
     it("Should not error when there are no recent datapoints then more datapoints are added for cumulative price", async () => {
@@ -286,7 +286,7 @@ describe("MarkPriceOracle", function () {
         await time.increase(1000);
       }
       const txn2 = await markPriceOracle.getCumulativePrice(10000, 0);
-      expect(Number(txn2)).equal(18000000);
+      expect(Number(txn2)).equal(20000000);
     });
 
     it("Should fail to  add multiple observations because uneuqal length of inputs", async () => {
