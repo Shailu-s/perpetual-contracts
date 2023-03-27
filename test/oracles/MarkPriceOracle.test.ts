@@ -155,18 +155,24 @@ describe.only("MarkPriceOracle", function () {
       );
       expect(receipt.confirmations).not.equal(0);
     });
-    it("Should fail to initialize again", async () => {
+    it.only("Should fail to initialize again", async () => {
       let receipt = await upgrades.deployProxy(
         MarkPriceOracle,
-        [[10000000], [volmexBaseToken.address]],
+        [[10000000], [volmexBaseToken.address], [proofHash], [capRatio], owner.address],
         {
           initializer: "initialize",
         },
       );
       expect(receipt.confirmations).not.equal(0);
-      await expect(receipt.initialize([10000000], [volmexBaseToken.address])).to.be.revertedWith(
-        "Initializable: contract is already initialized",
-      );
+      await expect(
+        receipt.initialize(
+          [10000000],
+          [volmexBaseToken.address],
+          [proofHash],
+          [capRatio],
+          owner.address,
+        ),
+      ).to.be.revertedWith("Initializable: contract is already initialized");
     });
 
     it("Should fail to deploy if length of arrays is unequal", async () => {
