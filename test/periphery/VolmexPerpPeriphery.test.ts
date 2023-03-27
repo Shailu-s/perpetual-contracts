@@ -40,7 +40,7 @@ describe.only("VolmexPerpPeriphery", function () {
   let USDC;
   let owner, account1, account2, account3, account4, alice, bob;
   let liquidator;
-  const twapType = 0x1444f8cf;
+  const twapType = "0x1444f8cf";
   const deadline = 87654321987654;
   const one = ethers.constants.WeiPerEther; // 1e18
   const two = ethers.constants.WeiPerEther.mul(BigNumber.from("2")); // 2e18
@@ -224,8 +224,8 @@ describe.only("VolmexPerpPeriphery", function () {
 
   describe("Funding payment", () => {
     const depositAmount = BigNumber.from("100000000000000");
-    let baseAmount = "500000000000"; //50
-    let quoteAmount = "10000000000000"; //100
+    let baseAmount = BigNumber.from("500000000000"); //50
+    let quoteAmount = BigNumber.from("10000000000000"); //100
 
     this.beforeEach(async () => {
       // transfer balances
@@ -250,7 +250,7 @@ describe.only("VolmexPerpPeriphery", function () {
       ).wait();
     });
 
-    it("Open position", async () => {
+    it.only("Open position", async () => {
       await expect(volmexPerpPeriphery.whitelistTrader(alice.address, true)).to.emit(
         volmexPerpPeriphery,
         "TraderWhitelisted",
@@ -267,24 +267,24 @@ describe.only("VolmexPerpPeriphery", function () {
           ORDER,
           deadline,
           alice.address,
-          Asset(volmexBaseToken.address, baseAmount),
-          Asset(volmexQuoteToken.address, quoteAmount),
+          Asset(volmexBaseToken.address, baseAmount.toString()),
+          Asset(volmexQuoteToken.address, quoteAmount.toString()),
           salt++,
           0,
-          0,
           true,
+          twapType,
         );
 
         let orderRight = Order(
           ORDER,
           deadline,
           bob.address,
-          Asset(volmexQuoteToken.address, quoteAmount),
-          Asset(volmexBaseToken.address, baseAmount),
+          Asset(volmexQuoteToken.address, quoteAmount.toString()),
+          Asset(volmexBaseToken.address, baseAmount.toString()),
           salt++,
           0,
-          0,
           false,
+          twapType,
         );
 
         const signatureLeft = await getSignature(orderLeft, alice.address);
@@ -298,7 +298,10 @@ describe.only("VolmexPerpPeriphery", function () {
           signatureRight,
           liquidator,
         );
+
+        console.log("here");
         const receipt = await tx.wait();
+
         let txDataBefore = {
           "Mark price": (await markPriceOracle.getCumulativePrice("3600", 0)).toString(),
           "Alice position": (
@@ -315,29 +318,30 @@ describe.only("VolmexPerpPeriphery", function () {
           ).toString(),
         };
         txBefore.push(txDataBefore);
+
         if (index == 9) {
           let orderLeft = Order(
             ORDER,
             deadline,
             alice.address,
-            Asset(volmexQuoteToken.address, quoteAmount),
-            Asset(volmexBaseToken.address, baseAmount),
+            Asset(volmexQuoteToken.address, quoteAmount.toString()),
+            Asset(volmexBaseToken.address, baseAmount.toString()),
             salt++,
             0,
-            0,
             false,
+            twapType,
           );
 
           let orderRight = Order(
             ORDER,
             deadline,
             bob.address,
-            Asset(volmexBaseToken.address, baseAmount),
-            Asset(volmexQuoteToken.address, quoteAmount),
+            Asset(volmexBaseToken.address, baseAmount.toString()),
+            Asset(volmexQuoteToken.address, quoteAmount.toString()),
             salt++,
             0,
-            0,
             true,
+            twapType,
           );
 
           const signatureLeft = await getSignature(orderLeft, alice.address);
