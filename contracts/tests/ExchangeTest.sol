@@ -10,11 +10,7 @@ contract ExchangeTest {
         markPriceOracle = _markPriceOracle;
     }
 
-    function addObservation(
-        uint256 _priceCumulative,
-        uint64 _index,
-        bytes32 _proofHash
-    ) external {
-        markPriceOracle.addObservation(_priceCumulative, _index, _proofHash);
+    function addObservation(uint256 _priceCumulative, uint64 _index) external {
+        markPriceOracle.addObservation(_priceCumulative, _index, 0x6c00000000000000000000000000000000000000000000000000000000000000);
     }
 }
