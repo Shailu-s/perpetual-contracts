@@ -877,7 +877,7 @@ describe("VolmexPerpPeriphery", function () {
       );
     });
 
-    it.only("Should open the position", async () => {
+    it("Should open the position", async () => {
       await matchingEngine.grantMatchOrders(positioning.address);
 
       await await USDC.transfer(account1.address, "100000000");
