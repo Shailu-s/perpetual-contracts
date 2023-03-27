@@ -6,7 +6,7 @@ import { FundingRate, IndexPriceOracle, MarkPriceOracle } from "../../typechain"
 import { BigNumber } from "ethers";
 import { max } from "lodash";
 
-describe.only("Positioning", function () {
+describe("Positioning", function () {
   let MatchingEngine;
   let matchingEngine;
   let VirtualToken;
