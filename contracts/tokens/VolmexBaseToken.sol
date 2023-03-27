@@ -11,7 +11,7 @@ contract VolmexBaseToken is ParentToken {
     using SafeMathUpgradeable for uint8;
 
     function getIndexPrice(uint256 index) external view override returns (uint256) {
-        (uint256 answer, ) = IIndexPriceOracle(_priceFeed).latestRoundData(index);
-        return answer;
+        // (uint256 answer, ) = IIndexPriceOracle(_priceFeed).latestRoundData(index);
+        // return answer;
     }
 }

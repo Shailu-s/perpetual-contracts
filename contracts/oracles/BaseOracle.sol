@@ -23,6 +23,8 @@ contract BaseOracle is AccessControlUpgradeable {
     mapping(address => uint64) public indexByBaseToken;
     // mapping to store baseToken to Observations
     mapping(uint64 => Observation[]) public observationsByIndex;
+    // Store the volatilitycapratio by index
+    mapping(uint256 => uint256) public volatilityCapRatioByIndex;
 
     event ObservationAdderSet(address indexed matchingEngine);
     event ObservationAdded(uint64 index, uint256 underlyingPrice, uint256 timestamp);
@@ -38,10 +40,9 @@ contract BaseOracle is AccessControlUpgradeable {
         uint256[] calldata _underlyingPrice,
         address[] calldata _asset,
         bytes32[] calldata _proofHash,
-        address _admin
+        uint256[] calldata _capRatio
     ) internal onlyInitializing {
-        _addAssets(_underlyingPrice, _asset, _proofHash);
-        _grantRole(PRICE_ORACLE_ADMIN, _admin);
+        _addAssets(_underlyingPrice, _asset, _proofHash, _capRatio);
         _setRoleAdmin(PRICE_ORACLE_ADMIN, PRICE_ORACLE_ADMIN);
     }
 
@@ -63,9 +64,9 @@ contract BaseOracle is AccessControlUpgradeable {
      * @param _underlyingPrice Array of current prices
      * @param _asset Array of assets {base token addresses}
      */
-    function addAssets(uint256[] calldata _underlyingPrice, address[] calldata _asset, bytes32[] calldata _proofHash) external {
+    function addAssets(uint256[] calldata _underlyingPrice, address[] calldata _asset, bytes32[] calldata _proofHash, uint256[] calldata _capRatio) external {
         _requireOracleAdmin();
-        _addAssets(_underlyingPrice, _asset, _proofHash);
+        _addAssets(_underlyingPrice, _asset, _proofHash, _capRatio);
     }
 
     /**
@@ -88,16 +89,10 @@ contract BaseOracle is AccessControlUpgradeable {
      *
      * @param _twInterval Time in seconds of the range
      * @param _index Index of the observation, the index base token mapping
-     * @return priceCumulaive The SMA price of the asset
+     * @return priceCumulative The SMA price of the asset
      */
-    function getCumulativePrice(uint256 _twInterval, uint64 _index) external view returns (uint256 priceCumulaive) {
-        Observation[] memory observations = observationsByIndex[_index];
-        uint256 index = observations.length - 1;
-        uint256 initialTimestamp = block.timestamp - _twInterval;
-        for (; index != 0 && observations[index].timestamp >= initialTimestamp; index--) {
-            priceCumulaive += observations[index].underlyingPrice;
-        }
-        priceCumulaive = priceCumulaive / (observations.length - index);
+    function getCumulativePrice(uint256 _twInterval, uint64 _index) external view returns (uint256 priceCumulative) {
+        (priceCumulative,) = _getCumulativePrice(_twInterval, _index);
     }
 
     /**
@@ -118,11 +113,21 @@ contract BaseOracle is AccessControlUpgradeable {
         return _indexCount;
     }
 
-    function _addAssets(uint256[] calldata _underlyingPrices, address[] calldata _assets, bytes32[] calldata _proofHash) internal {
+    function _getCumulativePrice(uint256 _twInterval, uint64 _index) internal view returns (uint256 priceCumulaive, uint256 lastUpdatedTimestamp) {
+        Observation[] memory observations = observationsByIndex[_index];
+        uint256 index = observations.length - 1;
+        lastUpdatedTimestamp = observations[index].timestamp;
+        uint256 initialTimestamp = block.timestamp - _twInterval;
+        for (; index != 0 && observations[index].timestamp >= initialTimestamp; index--) {
+            priceCumulaive += observations[index].underlyingPrice;
+        }
+        priceCumulaive = priceCumulaive / (observations.length - index);
+    }
+
+    function _addAssets(uint256[] calldata _underlyingPrices, address[] calldata _assets, bytes32[] calldata _proofHash, uint256[] calldata _capRatio) internal {
         _requireOracleAdmin();
         uint256 underlyingPriceLength = _underlyingPrices.length;
-        uint256 assetLength = _assets.length;
-        require(underlyingPriceLength == assetLength, "BaseOracle: Unequal length of prices & assets");
+        require(underlyingPriceLength == _assets.length, "BaseOracle: Unequal length of prices & assets");
 
         for (uint256 index; index < underlyingPriceLength; index++) {
             require(_assets[index] != address(0), "BaseOracle: Asset address can't be 0");
@@ -135,6 +140,7 @@ contract BaseOracle is AccessControlUpgradeable {
             observation = Observation({ timestamp: currentTimestamp, underlyingPrice: _underlyingPrices[index], proofHash: _proofHash[index] });
             baseTokenByIndex[indexCount] = _assets[index];
             indexByBaseToken[_assets[index]] = indexCount;
+            volatilityCapRatioByIndex[indexCount] = _capRatio[index];
             Observation[] storage observations = observationsByIndex[indexCount];
             observations.push(observation);
             indexCount++;

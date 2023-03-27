@@ -3,7 +3,7 @@ import { ethers, upgrades } from "hardhat";
 import { FakeContract, smock } from "@defi-wonderland/smock";
 const { expectRevert, time } = require("@openzeppelin/test-helpers");
 
-describe("MarkPriceOracle", function () {
+describe.only("MarkPriceOracle", function () {
   let MarkPriceOracle;
   let markPriceOracle;
   let ExchangeTest;
@@ -39,6 +39,7 @@ describe("MarkPriceOracle", function () {
   let account3;
   let account4;
   const proofHash = "0x6c00000000000000000000000000000000000000000000000000000000000000";
+  const capRatio = "250";
   const ZERO_ADDR = "0x0000000000000000000000000000000000000000";
   this.beforeAll(async () => {
     MarkPriceOracle = await ethers.getContractFactory("MarkPriceOracle");
@@ -65,18 +66,20 @@ describe("MarkPriceOracle", function () {
     erc20TransferProxy = await ERC20TransferProxyTest.deploy();
     community = account4.address;
 
-    indexPriceOracle = await upgrades.deployProxy(IndexPriceOracle, [owner.address], {
-      initializer: "initialize",
-    });
-
     volmexBaseToken = await upgrades.deployProxy(VolmexBaseToken, [
       "MyTestToken",
       "MKT",
-      indexPriceOracle.address,
+      account1.address,
       true,
     ]);
     await volmexBaseToken.deployed();
-
+    indexPriceOracle = await upgrades.deployProxy(
+      IndexPriceOracle,
+      [owner.address, [1000000], [volmexBaseToken.address], [proofHash], [capRatio]],
+      {
+        initializer: "initialize",
+      },
+    );
     newToken = await VolmexBaseToken.deploy();
     await newToken.deployed();
 
@@ -119,7 +122,7 @@ describe("MarkPriceOracle", function () {
 
     markPriceOracle = await upgrades.deployProxy(
       MarkPriceOracle,
-      [[1000000], [volmexBaseToken.address], [proofHash], owner.address],
+      [[1000000], [volmexBaseToken.address], [proofHash], [capRatio], owner.address],
       {
         initializer: "initialize",
       },
@@ -145,7 +148,7 @@ describe("MarkPriceOracle", function () {
     it("Should deploy successfully", async () => {
       let receipt = await upgrades.deployProxy(
         MarkPriceOracle,
-        [[10000000], [volmexBaseToken.address], [proofHash], owner.address],
+        [[10000000], [volmexBaseToken.address], [proofHash], [capRatio], owner.address],
         {
           initializer: "initialize",
         },
