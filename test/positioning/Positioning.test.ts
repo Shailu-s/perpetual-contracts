@@ -6,7 +6,7 @@ import { FundingRate, IndexPriceOracle, MarkPriceOracle } from "../../typechain"
 import { BigNumber } from "ethers";
 import { max } from "lodash";
 
-describe("Positioning", function () {
+describe.only("Positioning", function () {
   let MatchingEngine;
   let matchingEngine;
   let VirtualToken;
@@ -56,6 +56,10 @@ describe("Positioning", function () {
   const ORDER = "0xf555eb98";
   const STOP_LOSS_LIMIT_ORDER = "0xeeaed735";
   const TAKE_PROFIT_LIMIT_ORDER = "0xe0fc7f94";
+  const ZERO_ADDR = "0x0000000000000000000000000000000000000000";
+  const proofHash = "0x6c00000000000000000000000000000000000000000000000000000000000000";
+  const capRatio = "250";
+  const twapType = "0x1444f8cf";
 
   this.beforeAll(async () => {
     VolmexPerpPeriphery = await ethers.getContractFactory("VolmexPerpPeriphery");
@@ -81,17 +85,13 @@ describe("Positioning", function () {
 
   beforeEach(async () => {
     liquidator = encodeAddress(owner.address);
-    indexPriceOracle = await upgrades.deployProxy(IndexPriceOracle, [owner.address], {
-      initializer: "initialize",
-    });
-    await indexPriceOracle.deployed();
 
     volmexBaseToken = await upgrades.deployProxy(
       VolmexBaseToken,
       [
         "VolmexBaseToken", // nameArg
         "VBT", // symbolArg,
-        indexPriceOracle.address, // priceFeedArg
+        account1.address, // priceFeedArg
         true, // isBase
       ],
       {
@@ -100,11 +100,23 @@ describe("Positioning", function () {
     );
     await volmexBaseToken.deployed();
 
+    indexPriceOracle = await upgrades.deployProxy(
+      IndexPriceOracle,
+      [owner.address, [100000], [volmexBaseToken.address], [proofHash], [capRatio]],
+      {
+        initializer: "initialize",
+      },
+    );
+    await indexPriceOracle.deployed();
+    await volmexBaseToken.setPriceFeed(indexPriceOracle.address);
     markPriceOracle = await upgrades.deployProxy(
       MarkPriceOracle,
       [
         [1000, 1000],
         [volmexBaseToken.address, volmexBaseToken.address],
+        [proofHash, proofHash],
+        [capRatio, capRatio],
+        owner.address,
       ],
       {
         initializer: "initialize",
@@ -261,6 +273,7 @@ describe("Positioning", function () {
     volmexPerpPeriphery = await upgrades.deployProxy(VolmexPerpPeriphery, [
       perpViewFake.address,
       markPriceOracle.address,
+      indexPriceOracle.address,
       [vault.address, vault2.address],
       owner.address,
       relayer.address,
@@ -382,9 +395,9 @@ describe("Positioning", function () {
 
   describe("toggleLiquidatorWhitelist", async () => {
     it("should fail to set whitelisted flag if caller doesn't have admin role", async () => {
-      await expect(
-        positioning.connect(account1).toggleLiquidatorWhitelist(),
-      ).to.be.revertedWith("Positioning: Not admin");
+      await expect(positioning.connect(account1).toggleLiquidatorWhitelist()).to.be.revertedWith(
+        "Positioning: Not admin",
+      );
     });
 
     it("should set whitelisted flag if caller has admin role", async () => {
@@ -406,7 +419,7 @@ describe("Positioning", function () {
 
         await virtualToken.mint(account1.address, convert("1000"));
         await virtualToken.mint(account2.address, convert("1000"));
-        
+
         await virtualToken.connect(account1).approve(vault.address, convert("1000"));
         await virtualToken.connect(account2).approve(vault.address, convert("1000"));
         await virtualToken.connect(account1).approve(volmexPerpPeriphery.address, convert("1000"));
@@ -459,7 +472,6 @@ describe("Positioning", function () {
 
         await virtualToken.mint(account1.address, convert("1000"));
         await virtualToken.mint(account2.address, convert("1000"));
-        
 
         await virtualToken.connect(account1).approve(vault.address, convert("1000"));
         await virtualToken.connect(account2).approve(vault.address, convert("1000"));
@@ -540,7 +552,6 @@ describe("Positioning", function () {
 
         await virtualToken.mint(account1.address, convert("1000"));
         await virtualToken.mint(account2.address, convert("1000"));
-        
 
         await virtualToken.connect(account1).approve(vault.address, convert("1000"));
         await virtualToken.connect(account2).approve(vault.address, convert("1000"));
@@ -625,7 +636,6 @@ describe("Positioning", function () {
 
         await virtualToken.mint(account1.address, convert("1000"));
         await virtualToken.mint(account2.address, convert("1000"));
-        
 
         await virtualToken.connect(account1).approve(vault.address, convert("1000"));
         await virtualToken.connect(account2).approve(vault.address, convert("1000"));
@@ -761,7 +771,6 @@ describe("Positioning", function () {
 
         await virtualToken.mint(account1.address, convert("1000"));
         await virtualToken.mint(account2.address, convert("1000"));
-        
 
         await virtualToken.connect(account1).approve(vault.address, convert("1000"));
         await virtualToken.connect(account2).approve(vault.address, convert("1000"));
@@ -901,7 +910,6 @@ describe("Positioning", function () {
 
         await virtualToken.mint(account1.address, convert("1000"));
         await virtualToken.mint(account2.address, convert("1000"));
-        
 
         await virtualToken.connect(account1).approve(vault.address, convert("1000"));
         await virtualToken.connect(account2).approve(vault.address, convert("1000"));
@@ -1030,7 +1038,6 @@ describe("Positioning", function () {
 
         await virtualToken.mint(account1.address, convert("1000"));
         await virtualToken.mint(account2.address, convert("1000"));
-        
 
         await virtualToken.connect(account1).approve(vault.address, convert("1000"));
         await virtualToken.connect(account2).approve(vault.address, convert("1000"));
@@ -1117,7 +1124,6 @@ describe("Positioning", function () {
 
         await virtualToken.mint(account1.address, convert("1000"));
         await virtualToken.mint(account2.address, convert("1000"));
-        
 
         await virtualToken.connect(account1).approve(vault.address, convert("1000"));
         await virtualToken.connect(account2).approve(vault.address, convert("1000"));
@@ -1207,7 +1213,7 @@ describe("Positioning", function () {
 
         await virtualToken.mint(account1.address, convert("1000"));
         await virtualToken.mint(account2.address, convert("1000"));
-        
+
         await virtualToken.connect(account1).approve(vault.address, convert("1000"));
         await virtualToken.connect(account2).approve(vault.address, convert("1000"));
         await virtualToken.connect(account1).approve(volmexPerpPeriphery.address, convert("1000"));
@@ -1341,7 +1347,7 @@ describe("Positioning", function () {
 
         await virtualToken.mint(account1.address, ten.toString());
         await virtualToken.mint(account2.address, ten.toString());
-        
+
         await virtualToken.connect(account1).approve(vault.address, ten.toString());
         await virtualToken.connect(account2).approve(vault.address, ten.toString());
         await virtualToken.connect(account1).approve(volmexPerpPeriphery.address, ten.toString());
@@ -1416,7 +1422,6 @@ describe("Positioning", function () {
         await matchingEngine.grantMatchOrders(positioning.address);
 
         await virtualToken.mint(account1.address, convert("1000"));
-        
 
         await virtualToken.connect(account1).approve(vault.address, convert("1000"));
         await virtualToken.connect(account1).approve(volmexPerpPeriphery.address, convert("1000"));
@@ -1451,7 +1456,6 @@ describe("Positioning", function () {
 
         await virtualToken.mint(account1.address, convert("1000"));
         await virtualToken.mint(account2.address, convert("1000"));
-        
 
         await virtualToken.connect(account1).approve(vault.address, convert("1000"));
         await virtualToken.connect(account2).approve(vault.address, convert("1000"));
@@ -1524,7 +1528,9 @@ describe("Positioning", function () {
           orderLeft.takeAsset.virtualToken,
         );
 
-        await expect(positioning.connect(account1).getOrderValidate(orderLeftLeverage)).to.be.revertedWith("V_PERP_M: Nothing to fill");
+        await expect(
+          positioning.connect(account1).getOrderValidate(orderLeftLeverage),
+        ).to.be.revertedWith("V_PERP_M: Nothing to fill");
       });
 
       it("failure for wrong basetoken given", async () => {
@@ -1532,7 +1538,7 @@ describe("Positioning", function () {
 
         await virtualToken.mint(account1.address, convert("1000"));
         await virtualToken.mint(account2.address, convert("1000"));
-        
+
         await virtualToken.connect(account1).approve(vault.address, convert("1000"));
         await virtualToken.connect(account2).approve(vault.address, convert("1000"));
 
@@ -1575,7 +1581,7 @@ describe("Positioning", function () {
       it("failure for opening with zero amount", async () => {
         await virtualToken.mint(account1.address, 1000000000000000);
         await virtualToken.mint(account2.address, 1000000000000000);
-        
+
         await virtualToken.connect(account1).approve(vault.address, 1000000000000000);
         await virtualToken.connect(account2).approve(vault.address, 1000000000000000);
 
@@ -1619,7 +1625,7 @@ describe("Positioning", function () {
       it("failure not enough free collateral", async () => {
         await virtualToken.mint(account1.address, convert("1000"));
         await virtualToken.mint(account2.address, convert("1000"));
-        
+
         await virtualToken.connect(account1).approve(vault.address, convert("1000"));
         await virtualToken.connect(account2).approve(vault.address, convert("1000"));
 
@@ -1649,7 +1655,6 @@ describe("Positioning", function () {
 
         await virtualToken.mint(account1.address, convert("1000"));
         await virtualToken.mint(account2.address, convert("1000"));
-        
 
         await virtualToken.connect(account1).approve(vault.address, convert("1000"));
         await virtualToken.connect(account2).approve(vault.address, convert("1000"));
@@ -1717,7 +1722,7 @@ describe("Positioning", function () {
 
         await virtualToken.mint(account1.address, convert("1000"));
         await virtualToken.mint(account2.address, convert("1000"));
-        
+
         await virtualToken.connect(account1).approve(vault.address, convert("1000"));
         await virtualToken.connect(account2).approve(vault.address, convert("1000"));
         await virtualToken.connect(account1).approve(volmexPerpPeriphery.address, convert("1000"));
@@ -1755,7 +1760,7 @@ describe("Positioning", function () {
 
         await virtualToken.mint(account1.address, convert("1000"));
         await virtualToken.mint(account2.address, convert("1000"));
-        
+
         await virtualToken.connect(account1).approve(vault.address, convert("1000"));
         await virtualToken.connect(account2).approve(vault.address, convert("1000"));
         await virtualToken.connect(account1).approve(volmexPerpPeriphery.address, convert("1000"));
@@ -1852,8 +1857,6 @@ describe("Positioning", function () {
       it("should fail to match orders as order maker is contract but signature cannot be verified", async () => {
         erc1271Test = await ERC1271Test.deploy();
 
-        
-        
         await virtualToken.connect(account1).approve(matchingEngine.address, 1000000000000000);
         await virtualToken.connect(account2).approve(matchingEngine.address, 1000000000000000);
 
@@ -1868,8 +1871,7 @@ describe("Positioning", function () {
 
         await virtualToken.mint(account1.address, convert("1000"));
         await virtualToken.mint(erc1271Test.address, convert("1000"));
-        
-        
+
         await virtualToken.connect(account1).approve(vault.address, convert("1000"));
         await virtualToken.connect(account2).approve(vault.address, convert("1000"));
         await virtualToken.connect(account1).approve(volmexPerpPeriphery.address, convert("1000"));
@@ -1928,7 +1930,7 @@ describe("Positioning", function () {
 
         await virtualToken.mint(account1.address, convert("1000"));
         await virtualToken.mint(account2.address, convert("1000"));
-        
+
         await virtualToken.connect(account1).approve(vault.address, convert("1000"));
         await virtualToken.connect(account2).approve(vault.address, convert("1000"));
         await virtualToken.connect(account1).approve(volmexPerpPeriphery.address, convert("1000"));
@@ -2219,7 +2221,6 @@ describe("Liquidation test in Positioning", function () {
 
     await virtualToken.mint(account1.address, ten.toString());
     await virtualToken.mint(account2.address, ten.toString());
-    
 
     await virtualToken.connect(account1).approve(vault.address, ten.toString());
     await virtualToken.connect(account2).approve(vault.address, ten.toString());
