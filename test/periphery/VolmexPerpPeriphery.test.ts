@@ -40,6 +40,7 @@ describe.only("VolmexPerpPeriphery", function () {
   let USDC;
   let owner, account1, account2, account3, account4, alice, bob;
   let liquidator;
+  const twapType = 0x1444f8cf;
   const deadline = 87654321987654;
   const one = ethers.constants.WeiPerEther; // 1e18
   const two = ethers.constants.WeiPerEther.mul(BigNumber.from("2")); // 2e18
@@ -445,7 +446,6 @@ describe.only("VolmexPerpPeriphery", function () {
         volmexPerpPeriphery.initialize(
           perpView.address,
           markPriceOracle.address,
-          indexPriceOracle.address,
           [vault.address, vault.address],
           owner.address,
           owner.address,
@@ -457,7 +457,6 @@ describe.only("VolmexPerpPeriphery", function () {
         upgrades.deployProxy(VolmexPerpPeriphery, [
           perpView.address,
           markPriceOracle.address,
-          indexPriceOracle.address,
           [vault.address, vault.address],
           owner.address,
           ZERO_ADDR, // replace with relayer address
