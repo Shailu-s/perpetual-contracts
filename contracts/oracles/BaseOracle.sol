@@ -64,7 +64,12 @@ contract BaseOracle is AccessControlUpgradeable {
      * @param _underlyingPrice Array of current prices
      * @param _asset Array of assets {base token addresses}
      */
-    function addAssets(uint256[] calldata _underlyingPrice, address[] calldata _asset, bytes32[] calldata _proofHash, uint256[] calldata _capRatio) external {
+    function addAssets(
+        uint256[] calldata _underlyingPrice,
+        address[] calldata _asset,
+        bytes32[] calldata _proofHash,
+        uint256[] calldata _capRatio
+    ) external {
         _requireOracleAdmin();
         _addAssets(_underlyingPrice, _asset, _proofHash, _capRatio);
     }
@@ -74,7 +79,11 @@ contract BaseOracle is AccessControlUpgradeable {
      *
      * @param _underlyingPrice Price of the asset
      */
-    function addObservation(uint256 _underlyingPrice, uint64 _index, bytes32 _proofHash) external {
+    function addObservation(
+        uint256 _underlyingPrice,
+        uint64 _index,
+        bytes32 _proofHash
+    ) external {
         _requireCanAddObservation();
         require(_underlyingPrice != 0, "BaseOracle: Not zero");
         Observation memory observation = Observation({ timestamp: block.timestamp, underlyingPrice: _underlyingPrice, proofHash: _proofHash });
@@ -82,7 +91,6 @@ contract BaseOracle is AccessControlUpgradeable {
         observations.push(observation);
         emit ObservationAdded(_index, _underlyingPrice, block.timestamp);
     }
-
 
     /**
      * @notice Get the single moving average price of the asset
@@ -92,7 +100,7 @@ contract BaseOracle is AccessControlUpgradeable {
      * @return priceCumulative The SMA price of the asset
      */
     function getCumulativePrice(uint256 _twInterval, uint64 _index) external view returns (uint256 priceCumulative) {
-        (priceCumulative,) = _getCumulativePrice(_twInterval, _index);
+        (priceCumulative, ) = _getCumulativePrice(_twInterval, _index);
     }
 
     /**
@@ -113,18 +121,23 @@ contract BaseOracle is AccessControlUpgradeable {
         return _indexCount;
     }
 
-    function _getCumulativePrice(uint256 _twInterval, uint64 _index) internal view returns (uint256 priceCumulaive, uint256 lastUpdatedTimestamp) {
+    function _getCumulativePrice(uint256 _twInterval, uint64 _index) internal view returns (uint256 priceCumulative, uint256 lastUpdatedTimestamp) {
         Observation[] memory observations = observationsByIndex[_index];
         uint256 index = observations.length - 1;
         lastUpdatedTimestamp = observations[index].timestamp;
         uint256 initialTimestamp = block.timestamp - _twInterval;
         for (; index != 0 && observations[index].timestamp >= initialTimestamp; index--) {
-            priceCumulaive += observations[index].underlyingPrice;
+            priceCumulative += observations[index].underlyingPrice;
         }
-        priceCumulaive = priceCumulaive / (observations.length - index);
+        priceCumulative = observations.length != index ? priceCumulative / (observations.length - index) : priceCumulative;
     }
 
-    function _addAssets(uint256[] calldata _underlyingPrices, address[] calldata _assets, bytes32[] calldata _proofHash, uint256[] calldata _capRatio) internal {
+    function _addAssets(
+        uint256[] calldata _underlyingPrices,
+        address[] calldata _assets,
+        bytes32[] calldata _proofHash,
+        uint256[] calldata _capRatio
+    ) internal {
         uint256 underlyingPriceLength = _underlyingPrices.length;
         require(underlyingPriceLength == _assets.length, "BaseOracle: Unequal length of prices & assets");
 

@@ -24,7 +24,8 @@ describe("MatchingEngine", function () {
   let indexPriceOracle;
   let TestERC20;
   let USDC;
-
+  const proofHash = "0x6c00000000000000000000000000000000000000000000000000000000000000";
+  const capRatio = "250";
   let transferManagerTest;
   const deadline = 87654321987654;
 
@@ -56,16 +57,18 @@ describe("MatchingEngine", function () {
     erc20TransferProxy = await ERC20TransferProxyTest.deploy();
     community = account4.address;
 
-    indexPriceOracle = await upgrades.deployProxy(IndexPriceOracle, [owner.address], {
-      initializer: "initialize",
-    });
-
     volmexBaseToken = await VolmexBaseToken.deploy();
     await volmexBaseToken.deployed();
-
+    indexPriceOracle = await upgrades.deployProxy(
+      IndexPriceOracle,
+      [owner.address, [100000], [volmexBaseToken.address], [proofHash], [capRatio]],
+      {
+        initializer: "initialize",
+      },
+    );
     markPriceOracle = await upgrades.deployProxy(
       MarkPriceOracle,
-      [[1000000], [volmexBaseToken.address]],
+      [[1000000], [volmexBaseToken.address], [proofHash], [capRatio], owner.address],
       {
         initializer: "initialize",
       },
@@ -149,16 +152,17 @@ describe("MatchingEngine", function () {
     it("Should cancel order successfully", async () => {
       const order1 = Order(
         ORDER,
-        deadline,
+        deadline.toString(),
         owner.address,
         orderLeft.makeAsset,
         orderLeft.takeAsset,
-        1,
-        0,
+        "1",
+        "0",
         true,
       );
-      await matchingEngine.setMakerMinSalt(100);
-      await expect(matchingEngine.cancelOrder(order1)).to.be.revertedWith(
+      await matchingEngine.setMakerMinSalt("100");
+      console.log("here");
+      expect(await matchingEngine.cancelOrder(order1)).to.be.revertedWith(
         "V_PERP_M: order salt lower",
       );
     });

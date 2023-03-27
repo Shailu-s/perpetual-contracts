@@ -5,7 +5,7 @@ import { Signer, ContractReceipt, ContractTransaction } from "ethers";
 import { VolmexOracle } from "../../typechain/VolmexOracle";
 const { expectRevert, time } = require("@openzeppelin/test-helpers");
 
-describe.only("IndexPriceOracle", function () {
+describe("IndexPriceOracle", function () {
   let owner: string;
   let accounts: Signer[];
   let volmexOracleFactory: any;

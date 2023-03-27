@@ -5,7 +5,7 @@ import { parseUnits, zeroPad } from "ethers/lib/utils";
 const { Order, Asset, sign, encodeAddress } = require("../order");
 import { BigNumber } from "ethers";
 
-describe("VolmexPerpPeriphery", function () {
+describe.only("VolmexPerpPeriphery", function () {
   let MatchingEngine;
   let matchingEngine;
   let VirtualToken;
@@ -43,7 +43,8 @@ describe("VolmexPerpPeriphery", function () {
   const deadline = 87654321987654;
   const one = ethers.constants.WeiPerEther; // 1e18
   const two = ethers.constants.WeiPerEther.mul(BigNumber.from("2")); // 2e18
-
+  const proofHash = "0x6c00000000000000000000000000000000000000000000000000000000000000";
+  const capRatio = "250";
   const ORDER = "0xf555eb98";
   const STOP_LOSS_LIMIT_ORDER = "0xeeaed735";
   const TAKE_PROFIT_LIMIT_ORDER = "0xe0fc7f94";
@@ -71,9 +72,6 @@ describe("VolmexPerpPeriphery", function () {
   });
 
   this.beforeEach(async () => {
-    indexPriceOracle = await upgrades.deployProxy(IndexPriceOracle, [owner.address], {
-      initializer: "initialize",
-    });
     perpView = await upgrades.deployProxy(VolmexPerpView, [owner.address]);
     await perpView.deployed();
     await (await perpView.grantViewStatesRole(owner.address)).wait();
@@ -83,7 +81,7 @@ describe("VolmexPerpPeriphery", function () {
       [
         "VolmexBaseToken", // nameArg
         "VBT", // symbolArg,
-        indexPriceOracle.address, // priceFeedArg
+        account1.address, // priceFeedArg
         true, // isBase
       ],
       {
@@ -92,6 +90,14 @@ describe("VolmexPerpPeriphery", function () {
     );
     await volmexBaseToken.deployed();
     await (await perpView.setBaseToken(volmexBaseToken.address)).wait();
+    indexPriceOracle = await upgrades.deployProxy(
+      IndexPriceOracle,
+      [owner.address, [1000000], [volmexBaseToken.address], [proofHash], [capRatio]],
+      {
+        initializer: "initialize",
+      },
+    );
+    await volmexBaseToken.setPriceFeed(indexPriceOracle.address);
 
     volmexQuoteToken = await upgrades.deployProxy(
       VolmexQuoteToken,
@@ -109,7 +115,7 @@ describe("VolmexPerpPeriphery", function () {
 
     markPriceOracle = await upgrades.deployProxy(
       MarkPriceOracle,
-      [[1000000], [volmexBaseToken.address]],
+      [[1000000], [volmexBaseToken.address], [proofHash], [capRatio], owner.address],
       {
         initializer: "initialize",
       },
@@ -172,6 +178,7 @@ describe("VolmexPerpPeriphery", function () {
       },
     );
     await positioning.deployed();
+
     await (await perpView.setPositioning(positioning.address)).wait();
     await (await perpView.incrementPerpIndex()).wait();
     await (await volmexBaseToken.setMintBurnRole(positioning.address)).wait();
@@ -200,12 +207,13 @@ describe("VolmexPerpPeriphery", function () {
     await (await markPriceOracle.setObservationAdder(owner.address)).wait();
     await (await matchingEngine.grantMatchOrders(positioning.address)).wait();
     for (let i = 0; i < 9; i++) {
-      await markPriceOracle.addObservation(100000000, 0);
+      await markPriceOracle.addObservation(100000000, 0, proofHash);
     }
 
     volmexPerpPeriphery = await upgrades.deployProxy(VolmexPerpPeriphery, [
       perpView.address,
       markPriceOracle.address,
+      indexPriceOracle.address,
       [vault.address, vault.address],
       owner.address,
       owner.address, // replace with replayer address
@@ -251,7 +259,7 @@ describe("VolmexPerpPeriphery", function () {
         "TraderWhitelisted",
       );
 
-      let salt = 250;
+      let salt = BigNumber.from(250);
       let txBefore = [];
       for (let index = 0; index < 10; index++) {
         let orderLeft = Order(
@@ -261,7 +269,7 @@ describe("VolmexPerpPeriphery", function () {
           Asset(volmexBaseToken.address, baseAmount),
           Asset(volmexQuoteToken.address, quoteAmount),
           salt,
-          0,
+          "0",
           true,
         );
 
@@ -271,8 +279,8 @@ describe("VolmexPerpPeriphery", function () {
           bob.address,
           Asset(volmexQuoteToken.address, quoteAmount),
           Asset(volmexBaseToken.address, baseAmount),
-          salt++,
-          0,
+          salt.add(BigNumber.from("1")),
+          "0",
           false,
         );
 

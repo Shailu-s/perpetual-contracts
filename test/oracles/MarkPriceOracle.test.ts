@@ -4,7 +4,7 @@ import { FakeContract, smock } from "@defi-wonderland/smock";
 import { utils } from "ethers";
 const { expectRevert, time } = require("@openzeppelin/test-helpers");
 
-describe.only("MarkPriceOracle", function () {
+describe("MarkPriceOracle", function () {
   let MarkPriceOracle;
   let markPriceOracle;
   let ExchangeTest;
@@ -129,7 +129,6 @@ describe.only("MarkPriceOracle", function () {
       },
     );
     await markPriceOracle.deployed();
-    console.log("here");
     matchingEngine = await upgrades.deployProxy(
       MatchingEngine,
       [owner.address, markPriceOracle.address],
@@ -233,8 +232,6 @@ describe.only("MarkPriceOracle", function () {
     });
 
     it("Should get cumulative price", async () => {
-      console.log((await markPriceOracle.getCumulativePrice(2, 0)).toString());
-
       await matchingEngine.addObservation(10000000, 0);
 
       const txn = await markPriceOracle.getCumulativePrice(10000000, 0);
