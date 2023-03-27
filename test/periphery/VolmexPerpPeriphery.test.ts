@@ -259,7 +259,7 @@ describe.only("VolmexPerpPeriphery", function () {
         "TraderWhitelisted",
       );
 
-      let salt = BigNumber.from(250);
+      let salt = 260;
       let txBefore = [];
       for (let index = 0; index < 10; index++) {
         let orderLeft = Order(
@@ -268,8 +268,9 @@ describe.only("VolmexPerpPeriphery", function () {
           alice.address,
           Asset(volmexBaseToken.address, baseAmount),
           Asset(volmexQuoteToken.address, quoteAmount),
-          salt,
-          "0",
+          salt++,
+          0,
+          0,
           true,
         );
 
@@ -279,8 +280,9 @@ describe.only("VolmexPerpPeriphery", function () {
           bob.address,
           Asset(volmexQuoteToken.address, quoteAmount),
           Asset(volmexBaseToken.address, baseAmount),
-          salt.add(BigNumber.from("1")),
-          "0",
+          salt++,
+          0,
+          0,
           false,
         );
 
@@ -321,6 +323,7 @@ describe.only("VolmexPerpPeriphery", function () {
             Asset(volmexBaseToken.address, baseAmount),
             salt++,
             0,
+            0,
             false,
           );
 
@@ -331,6 +334,7 @@ describe.only("VolmexPerpPeriphery", function () {
             Asset(volmexBaseToken.address, baseAmount),
             Asset(volmexQuoteToken.address, quoteAmount),
             salt++,
+            0,
             0,
             true,
           );
@@ -416,6 +420,7 @@ describe.only("VolmexPerpPeriphery", function () {
       volmexPerpPeriphery = await upgrades.deployProxy(VolmexPerpPeriphery, [
         perpView.address,
         markPriceOracle.address,
+        indexPriceOracle.address,
         [vault.address, vault.address],
         owner.address,
         owner.address, // replace with relayer address
@@ -428,6 +433,7 @@ describe.only("VolmexPerpPeriphery", function () {
         upgrades.deployProxy(VolmexPerpPeriphery, [
           perpView.address,
           markPriceOracle.address,
+          indexPriceOracle.address,
           [vault.address, vault.address],
           ZERO_ADDR,
           owner.address, // replace with relayer address
@@ -439,6 +445,7 @@ describe.only("VolmexPerpPeriphery", function () {
         volmexPerpPeriphery.initialize(
           perpView.address,
           markPriceOracle.address,
+          indexPriceOracle.address,
           [vault.address, vault.address],
           owner.address,
           owner.address,
@@ -450,6 +457,7 @@ describe.only("VolmexPerpPeriphery", function () {
         upgrades.deployProxy(VolmexPerpPeriphery, [
           perpView.address,
           markPriceOracle.address,
+          indexPriceOracle.address,
           [vault.address, vault.address],
           owner.address,
           ZERO_ADDR, // replace with relayer address

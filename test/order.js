@@ -29,6 +29,7 @@ const Types = {
         { name: "makeAsset", type: "Asset" },
         { name: "takeAsset", type: "Asset" },
         { name: "salt", type: "uint256" },
+        { name: "limitOrderTriggerPrice", type: "uint128" },
         { name: "triggerPrice", type: "uint128" },
         { name: "isShort", type: "bool" },
     ],

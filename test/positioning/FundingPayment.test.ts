@@ -43,6 +43,7 @@ describe("Funding payment", function () {
   const two = ethers.constants.WeiPerEther.mul(BigNumber.from("2")); // 2e18
   const index = 0;
   const ORDER = "0xf555eb98";
+  const MARK_TWAP_1_MIN = 0x32f09970;
   const STOP_LOSS_LIMIT_ORDER = "0xeeaed735";
   const TAKE_PROFIT_LIMIT_ORDER = "0xe0fc7f94";
   const ZERO_ADDR = "0x0000000000000000000000000000000000000000";

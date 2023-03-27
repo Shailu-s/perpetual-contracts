@@ -121,6 +121,11 @@ contract BaseOracle is AccessControlUpgradeable {
         return _indexCount;
     }
 
+    function getLastUpdatedTimestamp(uint64 _index) external view returns (uint256 lastUpdatedTimestamp) {
+        Observation[] memory observations = observationsByIndex[_index];
+        lastUpdatedTimestamp = observations[observations.length - 1].timestamp;
+    }
+
     function _getCumulativePrice(uint256 _twInterval, uint64 _index) internal view returns (uint256 priceCumulative, uint256 lastUpdatedTimestamp) {
         Observation[] memory observations = observationsByIndex[_index];
         uint256 index = observations.length - 1;
