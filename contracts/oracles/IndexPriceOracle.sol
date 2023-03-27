@@ -36,6 +36,16 @@ contract IndexPriceOracle is BaseOracle, ERC165StorageUpgradeable {
         answer *= 100;
     }
 
+    /**
+     * @notice Get volatility indices price of normal and inverse with last timestamp
+     * @param _twInterval time interval for twap
+     * @param _index Position of the observation
+     */
+    function getIndexTwap(uint256 _twInterval, uint64 _index) external view returns (uint256 volatilityTokenTwap, uint256 iVolatilityTokenTwap, uint256 lastUpdateTimestamp) {
+        (volatilityTokenTwap, lastUpdateTimestamp) = _getCumulativePrice(_twInterval, _index);
+        iVolatilityTokenTwap = volatilityCapRatioByIndex[_index] - volatilityTokenTwap;
+    }
+
     function supportsInterface(
         bytes4 interfaceId
     ) public view virtual override(AccessControlUpgradeable, ERC165StorageUpgradeable) returns (bool) {
