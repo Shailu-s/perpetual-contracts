@@ -6,7 +6,8 @@ import { AccessControlUpgradeable } from "@openzeppelin/contracts-upgradeable/ac
 contract BaseOracle is AccessControlUpgradeable {
     struct Observation {
         uint256 timestamp;
-        uint256 priceCumulative;
+        uint256 underlyingPrice;
+        bytes32 proofHash;
     }
 
     // price oracle admin role
@@ -24,21 +25,22 @@ contract BaseOracle is AccessControlUpgradeable {
     mapping(uint64 => Observation[]) public observationsByIndex;
 
     event ObservationAdderSet(address indexed matchingEngine);
-    event ObservationAdded(uint64 index, uint256 priceCumulative, uint256 timestamp);
-    event AssetsAdded(uint256 indexed lastIndex, address[] assets, uint256[] priceCumulatives);
+    event ObservationAdded(uint64 index, uint256 underlyingPrice, uint256 timestamp);
+    event AssetsAdded(uint256 indexed lastIndex, address[] assets, uint256[] underlyingPrices);
 
     /**
      * @notice Initialize the contract
      *
-     * @param _priceCumulative Array of initial prices of the assets
+     * @param _underlyingPrice Array of initial prices of the assets
      * @param _asset Array of addresses of the assets
      */
     function _BaseOracle_init(
-        uint256[] memory _priceCumulative,
-        address[] memory _asset,
+        uint256[] calldata _underlyingPrice,
+        address[] calldata _asset,
+        bytes32[] calldata _proofHash,
         address _admin
     ) internal onlyInitializing {
-        _addAssets(_priceCumulative, _asset);
+        _addAssets(_underlyingPrice, _asset, _proofHash);
         _grantRole(PRICE_ORACLE_ADMIN, _admin);
         _setRoleAdmin(PRICE_ORACLE_ADMIN, PRICE_ORACLE_ADMIN);
     }
@@ -58,26 +60,26 @@ contract BaseOracle is AccessControlUpgradeable {
     /**
      * @notice Add new observation corresponding to the asset
      *
-     * @param _priceCumulative Array of current prices
+     * @param _underlyingPrice Array of current prices
      * @param _asset Array of assets {base token addresses}
      */
-    function addAssets(uint256[] memory _priceCumulative, address[] memory _asset) internal {
+    function addAssets(uint256[] calldata _underlyingPrice, address[] calldata _asset, bytes32[] calldata _proofHash) external {
         _requireOracleAdmin();
-        _addAssets(_priceCumulative, _asset);
+        _addAssets(_underlyingPrice, _asset, _proofHash);
     }
 
     /**
      * @notice Used to add price cumulative of an asset at a given timestamp
      *
-     * @param _priceCumulative Price of the asset
+     * @param _underlyingPrice Price of the asset
      */
-    function addObservation(uint256 _priceCumulative, uint64 _index) external {
+    function addObservation(uint256 _underlyingPrice, uint64 _index, bytes32 _proofHash) external {
         _requireCanAddObservation();
-        require(_priceCumulative != 0, "BaseOracle: Not zero");
-        Observation memory observation = Observation({ timestamp: block.timestamp, priceCumulative: _priceCumulative });
+        require(_underlyingPrice != 0, "BaseOracle: Not zero");
+        Observation memory observation = Observation({ timestamp: block.timestamp, underlyingPrice: _underlyingPrice, proofHash: _proofHash });
         Observation[] storage observations = observationsByIndex[_index];
         observations.push(observation);
-        emit ObservationAdded(_index, _priceCumulative, block.timestamp);
+        emit ObservationAdded(_index, _underlyingPrice, block.timestamp);
     }
 
 
@@ -86,16 +88,16 @@ contract BaseOracle is AccessControlUpgradeable {
      *
      * @param _twInterval Time in seconds of the range
      * @param _index Index of the observation, the index base token mapping
-     * @return priceCumulative The SMA price of the asset
+     * @return priceCumulaive The SMA price of the asset
      */
-    function getCumulativePrice(uint256 _twInterval, uint64 _index) external view returns (uint256 priceCumulative) {
+    function getCumulativePrice(uint256 _twInterval, uint64 _index) external view returns (uint256 priceCumulaive) {
         Observation[] memory observations = observationsByIndex[_index];
         uint256 index = observations.length - 1;
         uint256 initialTimestamp = block.timestamp - _twInterval;
         for (; index != 0 && observations[index].timestamp >= initialTimestamp; index--) {
-            priceCumulative += observations[index].priceCumulative;
+            priceCumulaive += observations[index].underlyingPrice;
         }
-        priceCumulative = priceCumulative / (observations.length - index);
+        priceCumulaive = priceCumulaive / (observations.length - index);
     }
 
     /**
@@ -103,37 +105,43 @@ contract BaseOracle is AccessControlUpgradeable {
      *
      * @param _index Index of the observation, the index base token mapping
      */
-    function getLatestPrice(uint64 _index) external view returns (uint256 latestPrice) {
+    function getLatestPrice(uint64 _index) external view returns (uint256 underlyingLastPrice) {
         Observation[] memory observations = observationsByIndex[_index];
         uint256 index = observations.length - 1;
-        latestPrice = observations[index].priceCumulative;
+        underlyingLastPrice = observations[index].underlyingPrice;
     }
 
+    /**
+     * @notice Get index count of assets
+     */
+    function getIndexCount() external view returns (uint64) {
+        return _indexCount;
+    }
 
-    function _addAssets(uint256[] memory _priceCumulative, address[] memory _asset) internal {
+    function _addAssets(uint256[] calldata _underlyingPrices, address[] calldata _assets, bytes32[] calldata _proofHash) internal {
         _requireOracleAdmin();
-        uint256 priceCumulativeLength = _priceCumulative.length;
-        uint256 assetLength = _asset.length;
-        require(priceCumulativeLength == assetLength, "BaseOracle: Unequal length of prices & assets");
+        uint256 underlyingPriceLength = _underlyingPrices.length;
+        uint256 assetLength = _assets.length;
+        require(underlyingPriceLength == assetLength, "BaseOracle: Unequal length of prices & assets");
 
-        for (uint256 index; index < priceCumulativeLength; index++) {
-            require(_asset[index] != address(0), "BaseOracle: Asset address can't be 0");
+        for (uint256 index; index < underlyingPriceLength; index++) {
+            require(_assets[index] != address(0), "BaseOracle: Asset address can't be 0");
         }
 
         Observation memory observation;
         uint64 indexCount = _indexCount;
         uint256 currentTimestamp = block.timestamp;
-        for (uint256 index; index < priceCumulativeLength; index++) {
-            observation = Observation({ timestamp: currentTimestamp, priceCumulative: _priceCumulative[index] });
-            baseTokenByIndex[indexCount] = _asset[index];
-            indexByBaseToken[_asset[index]] = indexCount;
+        for (uint256 index; index < underlyingPriceLength; index++) {
+            observation = Observation({ timestamp: currentTimestamp, underlyingPrice: _underlyingPrices[index], proofHash: _proofHash[index] });
+            baseTokenByIndex[indexCount] = _assets[index];
+            indexByBaseToken[_assets[index]] = indexCount;
             Observation[] storage observations = observationsByIndex[indexCount];
             observations.push(observation);
             indexCount++;
         }
         _indexCount = indexCount;
 
-        emit AssetsAdded(_indexCount, _asset, _priceCumulative);
+        emit AssetsAdded(_indexCount, _assets, _underlyingPrices);
     }
 
     function _requireOracleAdmin() internal view {
