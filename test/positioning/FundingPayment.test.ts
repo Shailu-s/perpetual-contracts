@@ -3,7 +3,7 @@ import { ethers, upgrades } from "hardhat";
 const { Order, Asset, sign, encodeAddress } = require("../order");
 import { BigNumber } from "ethers";
 import { time } from "@nomicfoundation/hardhat-network-helpers";
-describe("Funding payment", function () {
+describe.only("Funding payment", function () {
   let MatchingEngine;
   let matchingEngine;
   let VirtualToken;
@@ -89,7 +89,7 @@ describe("Funding payment", function () {
       [
         "VolmexBaseToken", // nameArg
         "VBT", // symbolArg,
-        indexPriceOracle.address, // priceFeedArg
+        account1.address, // priceFeedArg
         true, // isBase
       ],
       {
@@ -147,6 +147,7 @@ describe("Funding payment", function () {
     await virtualToken.deployed();
 
     accountBalance1 = await upgrades.deployProxy(AccountBalance, [positioningConfig.address]);
+
     await accountBalance1.deployed();
     await (await perpView.setAccount(accountBalance1.address)).wait();
     vaultController = await upgrades.deployProxy(VaultController, [
@@ -216,9 +217,9 @@ describe("Funding payment", function () {
     await (await markPriceOracle.setObservationAdder(owner.address)).wait();
     await (await matchingEngine.grantMatchOrders(positioning.address)).wait();
     for (let i = 0; i < 9; i++) {
-      await markPriceOracle.addObservation(100000000, 0);
+      await markPriceOracle.addObservation(100000000, 0, proofHash);
     }
-
+    await (await markPriceOracle.setObservationAdder(matchingEngine.address)).wait();
     volmexPerpPeriphery = await upgrades.deployProxy(VolmexPerpPeriphery, [
       perpView.address,
       markPriceOracle.address,
@@ -228,6 +229,7 @@ describe("Funding payment", function () {
       owner.address, // replace with replayer address
     ]);
     await volmexPerpPeriphery.deployed();
+    console.log("here");
   });
 
   describe("Funding Payment", function () {

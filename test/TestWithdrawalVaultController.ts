@@ -26,6 +26,9 @@ describe("Vault Controller tests for withdrawal", function () {
   let volmexPerpPeriphery;
   let perpViewFake;
   let owner, alice, relayer;
+  const proofHash = "0x6c00000000000000000000000000000000000000000000000000000000000000";
+  const capRatio = "250";
+  const twapType = "0x1444f8cf";
 
   this.beforeEach(async function () {
     [owner, alice, relayer] = await ethers.getSigners();
@@ -57,7 +60,7 @@ describe("Vault Controller tests for withdrawal", function () {
 
     markPriceOracle = await upgrades.deployProxy(
       MarkPriceOracle,
-      [[1000000], [volmexBaseToken.address]],
+      [[100000], [volmexBaseToken.address], [proofHash], [capRatio], owner.address],
       {
         initializer: "initialize",
       },

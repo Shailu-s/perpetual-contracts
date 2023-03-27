@@ -97,6 +97,7 @@ describe("Vault Controller Mock tests for account value", function () {
     volmexPerpPeriphery = await upgrades.deployProxy(VolmexPerpPeriphery, [
       prepViewFake.address,
       markPriceFake.address,
+      indexPriceFake.address,
       [vault.address, vault.address],
       owner.address,
       relayer.address,
