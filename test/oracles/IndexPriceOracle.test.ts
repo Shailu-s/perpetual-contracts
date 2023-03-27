@@ -20,7 +20,8 @@ describe("IndexPriceOracle", function () {
   let volatility: any;
   let inverseVolatility: any;
   let zeroAddress: any;
-
+  const proofHash = "0x6c00000000000000000000000000000000000000000000000000000000000000";
+  const capRatio = "250";
   this.beforeAll(async function () {
     accounts = await ethers.getSigners();
     volmexOracleFactory = await ethers.getContractFactory("IndexPriceOracle");
@@ -54,7 +55,13 @@ describe("IndexPriceOracle", function () {
       "250",
     ]);
     await protocol.deployed();
-    volmexOracle = await upgrades.deployProxy(volmexOracleFactory, [owner]);
+    volmexOracle = await upgrades.deployProxy(volmexOracleFactory, [
+      owner,
+      [100000],
+      [volatility.address],
+      [proofHash],
+      [capRatio],
+    ]);
 
     await volmexOracle.deployed();
   });
@@ -63,7 +70,6 @@ describe("IndexPriceOracle", function () {
     const receipt = await volmexOracle.deployed();
 
     expect(receipt.confirmations).not.equal(0);
-    await volmexOracle.updateTwapMaxDatapoints(180);
 
     assert.equal(await protocol.collateral(), collateral.address);
     assert.equal(await protocol.volatilityToken(), volatility.address);
