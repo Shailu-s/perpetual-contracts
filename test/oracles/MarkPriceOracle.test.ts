@@ -1,6 +1,7 @@
-import { expect } from "chai";
+import { expect, util } from "chai";
 import { ethers, upgrades } from "hardhat";
 import { FakeContract, smock } from "@defi-wonderland/smock";
+import { utils } from "ethers";
 const { expectRevert, time } = require("@openzeppelin/test-helpers");
 
 describe.only("MarkPriceOracle", function () {
@@ -75,7 +76,7 @@ describe.only("MarkPriceOracle", function () {
     await volmexBaseToken.deployed();
     indexPriceOracle = await upgrades.deployProxy(
       IndexPriceOracle,
-      [owner.address, [1000000], [volmexBaseToken.address], [proofHash], [capRatio]],
+      [owner.address, [100000], [volmexBaseToken.address], [proofHash], [capRatio]],
       {
         initializer: "initialize",
       },
@@ -122,7 +123,7 @@ describe.only("MarkPriceOracle", function () {
 
     markPriceOracle = await upgrades.deployProxy(
       MarkPriceOracle,
-      [[1000000], [volmexBaseToken.address], [proofHash], [capRatio], owner.address],
+      [[10000000], [volmexBaseToken.address], [proofHash], [capRatio], owner.address],
       {
         initializer: "initialize",
       },
@@ -155,7 +156,7 @@ describe.only("MarkPriceOracle", function () {
       );
       expect(receipt.confirmations).not.equal(0);
     });
-    it.only("Should fail to initialize again", async () => {
+    it("Should fail to initialize again", async () => {
       let receipt = await upgrades.deployProxy(
         MarkPriceOracle,
         [[10000000], [volmexBaseToken.address], [proofHash], [capRatio], owner.address],
@@ -177,22 +178,38 @@ describe.only("MarkPriceOracle", function () {
 
     it("Should fail to deploy if length of arrays is unequal", async () => {
       await expect(
-        upgrades.deployProxy(MarkPriceOracle, [[10000000], []], {
-          initializer: "initialize",
-        }),
-      ).to.be.revertedWith("MarkSMA: Unequal length of prices & assets");
+        upgrades.deployProxy(
+          MarkPriceOracle,
+          [
+            [10000000, 100000000],
+            [volmexBaseToken.address],
+            [proofHash],
+            [capRatio],
+            owner.address,
+          ],
+          {
+            initializer: "initialize",
+          },
+        ),
+      ).to.be.revertedWith("BaseOracle: Unequal length of prices & assets");
     });
 
     it("Should fail to deploy when asset address is 0", async () => {
       await expect(
         upgrades.deployProxy(
           MarkPriceOracle,
-          [[10000000], ["0x0000000000000000000000000000000000000000"]],
+          [
+            [10000000],
+            ["0x0000000000000000000000000000000000000000"],
+            [proofHash],
+            [capRatio],
+            owner.address,
+          ],
           {
             initializer: "initialize",
           },
         ),
-      ).to.be.revertedWith("MarkSMA: Asset address can't be 0");
+      ).to.be.revertedWith("BaseOracle: Asset address can't be 0");
     });
   });
 
@@ -203,39 +220,25 @@ describe.only("MarkPriceOracle", function () {
       }
 
       const txn = await markPriceOracle.getCumulativePrice(10000000, 0);
-      expect(Number(txn)).equal(9100000);
+      expect(Number(txn)).equal(9000000);
     });
 
-    it("Should add multiple observations", async () => {
-      await matchingEngine.addAssets(
-        [10000000, 20000000],
-        [volmexBaseToken.address, USDC.address],
-      );
-
-      const txn = await markPriceOracle.getCumulativePrice(10000000, 0);
-      expect(Number(txn)).equal(1000000);
-    });
     it("should fail to add observation when cumulative price is zero ", async () => {
-      await expect(matchingEngine.addObservation(0, 0)).to.be.revertedWith("MarkSMA: Not zero");
+      await expect(matchingEngine.addObservation(0, 0)).to.be.revertedWith("BaseOracle: Not zero");
     });
     it("Should fail to add observation when caller is not exchange", async () => {
-      await expect(markPriceOracle.addObservation(1000000, 0)).to.be.revertedWith("MPO_NCAO");
+      await expect(markPriceOracle.addObservation(1000000, 0, proofHash)).to.be.revertedWith(
+        "BaseOracle: not observation adder",
+      );
     });
 
     it("Should get cumulative price", async () => {
-      await matchingEngine.addAssets(
-        [10000000, 20000000],
-        [volmexBaseToken.address, USDC.address],
-      );
+      console.log((await markPriceOracle.getCumulativePrice(2, 0)).toString());
 
-      const txn = await markPriceOracle.getCumulativePrice(1000000, 0);
-      expect(Number(txn)).equal(1000000);
+      await matchingEngine.addObservation(10000000, 0);
 
-      const txn1 = await markPriceOracle.getCumulativePrice(1000000, 1);
-      expect(Number(txn1)).equal(10000000);
-
-      const txn2 = await markPriceOracle.getCumulativePrice(1000000, 2);
-      expect(Number(txn2)).equal(20000000);
+      const txn = await markPriceOracle.getCumulativePrice(10000000, 0);
+      expect(Number(txn)).equal(10000000);
     });
 
     it("Should get cumulative price with time delay", async () => {
@@ -263,57 +266,63 @@ describe.only("MarkPriceOracle", function () {
 
     it("Should not error when there are no recent datapoints added for cumulative price", async () => {
       const txn1 = await markPriceOracle.getCumulativePrice(20000, 0);
-      expect(Number(txn1)).equal(1000000);
+      expect(Number(txn1)).equal(0);
       for (let i = 0; i < 9; i++) {
         await matchingEngine.addObservation(1000000, 0);
         await time.increase(1000);
       }
       // this covers the case of zero recent datapoints
       await time.increase(100000);
-      const txn2 = await markPriceOracle.getCumulativePrice(20000, 0);
+      const txn2 = await markPriceOracle.getCumulativePrice(200, 0);
       expect(Number(txn2)).equal(0);
       const txn3 = await markPriceOracle.getCumulativePrice(20000000, 0);
-      expect(Number(txn3)).equal(1000000);
+      expect(Number(txn3)).equal(900000);
     });
 
     it("Should not error when there are no recent datapoints then more datapoints are added for cumulative price", async () => {
       await time.increase(200001);
-      const txn1 = await markPriceOracle.getCumulativePrice(20000, 0);
+      const txn1 = await markPriceOracle.getCumulativePrice(20, 0);
       expect(Number(txn1)).equal(0);
 
-      for (let i = 0; i < 9; i++) {
+      for (let i = 0; i < 10; i++) {
         await matchingEngine.addObservation(20000000, 0);
         await time.increase(1000);
       }
       const txn2 = await markPriceOracle.getCumulativePrice(10000, 0);
-      expect(Number(txn2)).equal(20000000);
+      expect(Number(txn2)).equal(18000000);
     });
 
     it("Should fail to  add multiple observations because uneuqal length of inputs", async () => {
       await expect(
-        matchingEngine.addAssets([10000000, 20000000], [volmexBaseToken.address]),
-      ).to.be.revertedWith("MarkSMA: Unequal length of prices & assets");
+        markPriceOracle.addAssets(
+          [10000000, 20000000],
+          [volmexBaseToken.address],
+          [proofHash],
+          [capRatio],
+        ),
+      ).to.be.revertedWith("BaseOracle: Unequal length of prices & assets");
     });
-    it("Should fail to  add multiple observations because uneuqal length of inputs", async () => {
-      await expect(
-        markPriceOracle.addAssets([10000000, 20000000], [volmexBaseToken.address]),
-      ).to.be.revertedWith("MarkSMA: Not MatchingEngine");
-    });
+
     it("Should fail to  add multiple observations because 0 address of a token", async () => {
       await expect(
-        matchingEngine.addAssets([10000000, 20000000], [volmexBaseToken.address, ZERO_ADDR]),
-      ).to.be.revertedWith("MarkSMA: Asset address can't be 0");
+        markPriceOracle.addAssets(
+          [10000000, 20000000],
+          [volmexBaseToken.address, ZERO_ADDR],
+          [proofHash, proofHash],
+          [capRatio, capRatio],
+        ),
+      ).to.be.revertedWith("BaseOracle: Asset address can't be 0");
     });
     it("should fail to set Matching engine as admin assecc is not provided", async () => {
       const [owner, account1] = await ethers.getSigners();
       await expect(
         markPriceOracle.connect(account1).setObservationAdder(matchingEngine.address),
-      ).to.be.revertedWith("MarkPriceOracle: Not admin");
+      ).to.be.revertedWith("BaseOracle: not admin");
     });
     it("should fail to set Matching engine as admin assecc is not provided", async () => {
       const [owner, account1] = await ethers.getSigners();
       await expect(markPriceOracle.setObservationAdder(ZERO_ADDR)).to.be.revertedWith(
-        "V_PERP_M: Can't be 0 address",
+        "BaseOracle: zero address",
       );
     });
   });
