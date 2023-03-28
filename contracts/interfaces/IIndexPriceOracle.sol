@@ -7,4 +7,5 @@ import "./IBaseOracle.sol";
 interface IIndexPriceOracle is IBaseOracle {
     // Getter  methods
     function latestRoundData(uint256 _twInterval, uint64 _index) external view returns (uint256 answer, uint256 lastUpdateTimestamp);
+    function getIndexTwap(uint256 _twInterval, uint64 _index) external view returns (uint256 volatilityTokenTwap, uint256 iVolatilityTokenTwap, uint256 lastUpdateTimestamp);
 }

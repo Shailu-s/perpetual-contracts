@@ -6,7 +6,7 @@ interface IBaseOracle {
     function getCumulativePrice(uint256 _twInterval, uint64 _index) external view returns (uint256 priceCumulative);
     function indexByBaseToken(address _baseToken) external view returns (uint64 index);
     function baseTokenByIndex(uint64 _index) external view returns (address baseToken);
-    // function observationsByIndex(uint64 _index) external view returns 
+    function getCustomCumulativePrice(uint64 _index, uint256 _startTimestamp, uint256 _endTimestamp) external view returns (uint256 priceCumulative);
     function getIndexCount() external view returns (uint64);
     function getLatestPrice(uint64 _index) external view returns (uint256 underlyingLastPrice);
 
