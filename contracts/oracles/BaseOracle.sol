@@ -190,10 +190,12 @@ contract BaseOracle is AccessControlUpgradeable {
                 startIndex = index - 1;
             }
         }
+        index = 0; // re-used to get total observation count
         for (; startIndex > endIndex; startIndex++) {
             priceCumulative += observations[startIndex].underlyingPrice;
+            index++;
         }
-        priceCumulative = priceCumulative / (endIndex - startIndex + 1);
+        priceCumulative = priceCumulative / (index);
     }
 
     function _requireOracleAdmin() internal view {
