@@ -4,7 +4,6 @@ const { Order, Asset, sign, encodeAddress } = require("../order");
 import { FakeContract, smock } from "@defi-wonderland/smock";
 import { FundingRate, IndexPriceOracle, MarkPriceOracle } from "../../typechain";
 import { BigNumber } from "ethers";
-import { max } from "lodash";
 
 describe("Positioning", function () {
   let MatchingEngine;
@@ -102,7 +101,7 @@ describe("Positioning", function () {
 
     indexPriceOracle = await upgrades.deployProxy(
       IndexPriceOracle,
-      [owner.address, [10000000], [volmexBaseToken.address], [proofHash], [capRatio]],
+      [owner.address, [75000000], [volmexBaseToken.address], [proofHash], [capRatio]],
       {
         initializer: "initialize",
       },
@@ -2170,7 +2169,7 @@ describe("Liquidation test in Positioning", function () {
       IndexPriceOracle,
       [
         owner.address,
-        [10000000, 10000000],
+        [75000000, 75000000],
         [volmexBaseToken.address, volmexBaseToken1.address],
         [proofHash, proofHash],
         [capRatio, capRatio],
