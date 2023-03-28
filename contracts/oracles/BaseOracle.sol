@@ -195,7 +195,7 @@ contract BaseOracle is AccessControlUpgradeable {
             priceCumulative += observations[startIndex].underlyingPrice;
             index++;
         }
-        priceCumulative = priceCumulative / (index);
+        priceCumulative = priceCumulative / index;
     }
 
     function _requireOracleAdmin() internal view {
