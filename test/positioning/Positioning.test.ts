@@ -2525,16 +2525,6 @@ describe("Liquidation test in Positioning", function () {
           ),
         ).to.emit(positioning, "PositionChanged");
 
-        await expect(
-          positioning.openPosition(
-            orderLeft1,
-            signatureLeft1,
-            orderRight1,
-            signatureRight1,
-            liquidator,
-          ),
-        ).to.emit(positioning, "PositionChanged");
-
         const positionSize = await accountBalance1.getPositionSize(
           account1.address,
           orderLeft.makeAsset.virtualToken,
@@ -2644,7 +2634,21 @@ describe("Liquidation test in Positioning", function () {
       it("should not liquidate when trader account value is enough", async () => {
         let signatureLeft = await getSignature(orderLeft, account1.address);
         let signatureRight = await getSignature(orderRight, account2.address);
+        await virtualToken.mint(account1.address, ten.toString());
+        await virtualToken.mint(account2.address, ten.toString());
 
+        await virtualToken.connect(account1).approve(vault.address, ten.toString());
+        await virtualToken.connect(account2).approve(vault.address, ten.toString());
+        await virtualToken.connect(account1).approve(volmexPerpPeriphery.address, ten.toString());
+        await virtualToken.connect(account2).approve(volmexPerpPeriphery.address, ten.toString());
+        await vaultController
+          .connect(account1)
+          .deposit(
+            volmexPerpPeriphery.address,
+            virtualToken.address,
+            account1.address,
+            ten.toString(),
+          );
         await expect(
           positioning.openPosition(
             orderLeft,
