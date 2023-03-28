@@ -111,7 +111,7 @@ describe("Positioning", function () {
     markPriceOracle = await upgrades.deployProxy(
       MarkPriceOracle,
       [
-        [10000000, 10000000],
+        [100000000, 100000000],
         [volmexBaseToken.address, volmexBaseToken.address],
         [proofHash, proofHash],
         [capRatio, capRatio],
@@ -237,7 +237,7 @@ describe("Positioning", function () {
     await vaultController.connect(owner).setPositioning(positioning.address);
 
     await positioningConfig.connect(owner).setMaxMarketsPerAccount(5);
-    await positioningConfig.connect(owner).setSettlementTokenBalanceCap(convert("1000000"));
+    await positioningConfig.connect(owner).setSettlementTokenBalanceCap(convert("10000000000000"));
 
     await positioning.connect(owner).setMarketRegistry(marketRegistry.address);
     await positioning.connect(owner).setDefaultFeeReceiver(owner.address);
@@ -267,9 +267,9 @@ describe("Positioning", function () {
       twapType,
     );
 
-    // for (let i = 0; i < 9; i++) {
-    //   await matchingEngine.addObservation(10000000, 0);
-    // }
+    for (let i = 0; i < 9; i++) {
+      await matchingEngine.addObservation(100000000, 0);
+    }
     perpViewFake = await smock.fake("VolmexPerpView");
     volmexPerpPeriphery = await upgrades.deployProxy(VolmexPerpPeriphery, [
       perpViewFake.address,
@@ -637,29 +637,29 @@ describe("Positioning", function () {
         await expect(positionSize1.toString()).to.be.equal(convert("-40"));
       });
 
-      it.only("should match orders and open position with multiple orders funding rate should not be greator than 0.08", async () => {
+      it("should match orders and open position with multiple orders funding rate should not be greator than 0.08", async () => {
         // const txn = await markPriceOracle.getCumulativePrice(10000000, 0);
 
         await matchingEngine.grantMatchOrders(positioning.address);
 
-        await virtualToken.mint(account1.address, convert("10000"));
-        await virtualToken.mint(account2.address, convert("10000"));
+        await virtualToken.mint(account1.address, convert("1000000000"));
+        await virtualToken.mint(account2.address, convert("1000000000"));
 
-        await virtualToken.connect(account1).approve(vault.address, convert("10000"));
-        await virtualToken.connect(account2).approve(vault.address, convert("10000"));
+        await virtualToken.connect(account1).approve(vault.address, convert("1000000000"));
+        await virtualToken.connect(account2).approve(vault.address, convert("1000000000"));
         await virtualToken
           .connect(account1)
-          .approve(volmexPerpPeriphery.address, convert("10000"));
+          .approve(volmexPerpPeriphery.address, convert("1000000000"));
         await virtualToken
           .connect(account2)
-          .approve(volmexPerpPeriphery.address, convert("10000"));
+          .approve(volmexPerpPeriphery.address, convert("1000000000"));
         await vaultController
           .connect(account1)
           .deposit(
             volmexPerpPeriphery.address,
             virtualToken.address,
             account1.address,
-            convert("1000"),
+            convert("1000000000"),
           );
         await vaultController
           .connect(account2)
@@ -667,7 +667,7 @@ describe("Positioning", function () {
             volmexPerpPeriphery.address,
             virtualToken.address,
             account2.address,
-            convert("1000"),
+            convert("1000000000"),
           );
 
         const orderLeftLeverage = Order(
@@ -802,7 +802,7 @@ describe("Positioning", function () {
             volmexPerpPeriphery.address,
             virtualToken.address,
             account1.address,
-            convert("1000"),
+            convert("10000"),
           );
         await vaultController
           .connect(account2)
@@ -810,7 +810,7 @@ describe("Positioning", function () {
             volmexPerpPeriphery.address,
             virtualToken.address,
             account2.address,
-            convert("1000"),
+            convert("10000"),
           );
 
         const orderLeftLeverage = Order(
@@ -2185,7 +2185,7 @@ describe("Liquidation test in Positioning", function () {
       IndexPriceOracle,
       [
         owner.address,
-        [75000000, 75000000],
+        [100000000, 100000000],
         [volmexBaseToken.address, volmexBaseToken1.address],
         [proofHash, proofHash],
         [capRatio, capRatio],
@@ -2299,7 +2299,9 @@ describe("Liquidation test in Positioning", function () {
     await vaultController.connect(owner).setPositioning(positioning.address);
 
     await positioningConfig.connect(owner).setMaxMarketsPerAccount(5);
-    await positioningConfig.connect(owner).setSettlementTokenBalanceCap(hundred.toString());
+    await positioningConfig
+      .connect(owner)
+      .setSettlementTokenBalanceCap("1000000000000000000000000000000000000000000");
 
     await positioning.connect(owner).setMarketRegistry(marketRegistry.address);
     await positioning.connect(owner).setDefaultFeeReceiver(owner.address);
