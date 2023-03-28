@@ -287,9 +287,6 @@ describe("VolmexPerpPeriphery", function () {
 
         const signatureLeft = await getSignature(orderLeft, alice.address);
         const signatureRight = await getSignature(orderRight, bob.address);
-        console.log(orderLeft, signatureLeft, orderRight, signatureRight, liquidator);
-        console.log(alice.address);
-        console.log(bob.address);
         const tx = await volmexPerpPeriphery.openPosition(
           0,
           orderLeft,
