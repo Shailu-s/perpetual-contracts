@@ -46,9 +46,22 @@ contract IndexPriceOracle is BaseOracle, ERC165StorageUpgradeable {
         iVolatilityTokenTwap = volatilityCapRatioByIndex[_index] - volatilityTokenTwap;
     }
 
-    function getCustomIndexTwap(uint64 _index, uint256 startTimestamp, uint256 endTimestamp) external view returns (uint256 priceCumulative) {
-        uint256 twInterval = endTimestamp - startTimestamp;
-        (priceCumulative, ) = _getCumulativePrice(twInterval, _index);
+    function getCustomCumulativePrice(uint64 _index, uint256 startTimestamp, uint256 endTimestamp) external view returns (uint256 priceCumulative) {
+        Observation[] memory observations = observationsByIndex[_index];
+        uint256 index = observations.length;
+        uint256 startIndex;
+        uint256 endIndex;
+        for (; index != 0 && index >= startIndex; index--) {
+            if (observations[index - 1].timestamp >= endTimestamp) {
+                endIndex = index - 1;
+            } else if (observations[index - 1].timestamp >= startTimestamp) {
+                startIndex = index - 1;
+            }
+        }
+        for (; startIndex > endIndex; startIndex++) {
+            priceCumulative += observations[startIndex].underlyingPrice;
+        }
+        priceCumulative = priceCumulative / (endIndex - startIndex + 1);
     }
 
     function supportsInterface(
