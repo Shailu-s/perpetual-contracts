@@ -3,7 +3,7 @@ import { ethers, upgrades } from "hardhat";
 const { Order, Asset, sign, encodeAddress } = require("./order");
 import { BigNumber } from "ethers";
 
-describe("Global", function () {
+describe.only("Global", function () {
   let owner;
   let account1, account2;
   let MatchingEngine;
@@ -99,7 +99,7 @@ describe("Global", function () {
     await volmexBaseToken.deployed();
     indexPriceOracle = await upgrades.deployProxy(
       IndexPriceOracle,
-      [owner.address, [100000], [volmexBaseToken.address], [proofHash], [capRatio]],
+      [owner.address, [100000000], [volmexBaseToken.address], [proofHash], [capRatio]],
       {
         initializer: "initialize",
       },
@@ -126,7 +126,7 @@ describe("Global", function () {
     markPriceOracle = await upgrades.deployProxy(
       MarkPriceOracle,
       [
-        [100000, 100000],
+        [10000000, 10000000],
         [volmexBaseToken.address, volmexBaseToken.address],
         [proofHash, proofHash],
         [capRatio, capRatio],
@@ -153,7 +153,7 @@ describe("Global", function () {
     positioningConfig = await upgrades.deployProxy(PositioningConfig, []);
     await positioningConfig.deployed();
     await positioningConfig.setMaxMarketsPerAccount(5);
-    await positioningConfig.setSettlementTokenBalanceCap("1000000000000000000");
+    await positioningConfig.setSettlementTokenBalanceCap("10000000000000000000000000");
 
     accountBalance = await upgrades.deployProxy(AccountBalance, [positioningConfig.address]);
     await accountBalance.deployed();
@@ -242,20 +242,20 @@ describe("Global", function () {
 
     await matchingEngine.grantMatchOrders(positioning.address);
 
-    await usdc.connect(owner).mint(account1.address, "1000000000000000");
-    await usdc.connect(owner).mint(account2.address, "1000000000000000");
+    await usdc.connect(owner).mint(account1.address, "10000000000000000000");
+    await usdc.connect(owner).mint(account2.address, "10000000000000000000");
 
-    await usdc.connect(account1).approve(periphery.address, "1000000000000000");
-    await usdc.connect(account2).approve(periphery.address, "1000000000000000");
-    await periphery.connect(account1).depositToVault(0, usdc.address, "10000000000");
-    await periphery.connect(account2).depositToVault(0, usdc.address, "10000000000");
+    await usdc.connect(account1).approve(periphery.address, "10000000000000000000");
+    await usdc.connect(account2).approve(periphery.address, "10000000000000000000");
+    await periphery.connect(account1).depositToVault(0, usdc.address, "10000000000000000000");
+    await periphery.connect(account2).depositToVault(0, usdc.address, "10000000000000000000");
 
     orderLeft = Order(
       ORDER,
       deadline,
       account1.address,
       Asset(volmexQuoteToken.address, one.toString()),
-      Asset(volmexBaseToken.address, two.toString()),
+      Asset(volmexBaseToken.address, one.toString()),
       5,
       0,
       false,
@@ -266,7 +266,7 @@ describe("Global", function () {
       ORDER,
       deadline,
       account2.address,
-      Asset(volmexBaseToken.address, two.toString()),
+      Asset(volmexBaseToken.address, one.toString()),
       Asset(volmexQuoteToken.address, one.toString()),
       6,
       0,
@@ -312,21 +312,21 @@ describe("Global", function () {
     ]);
     console.log("Another call \n");
 
-    expect(positionSize).to.be.equal("2000000000000000000");
-    expect(positionSize1).to.be.equal("-2000000000000000000");
+    expect(positionSize).to.be.equal("1000000000000000000");
+    expect(positionSize1).to.be.equal("-1000000000000000000");
 
     const proofHash = "0x6c00000000000000000000000000000000000000000000000000000000000000";
 
     for (let index = 0; index < 10; index++) {
-      await (await indexPriceOracle.addObservation(100000, 0, proofHash)).wait();
-      await (await indexPriceOracle.addObservation(100000, 1, proofHash)).wait();
+      await (await indexPriceOracle.addObservation(100000000, 0, proofHash)).wait();
+      await (await indexPriceOracle.addObservation(100000000, 1, proofHash)).wait();
     }
 
     orderLeft = Order(
       ORDER,
       deadline,
       account1.address,
-      Asset(volmexBaseToken.address, three.toString()),
+      Asset(volmexBaseToken.address, one.toString()),
       Asset(volmexQuoteToken.address, one.toString()),
       1,
       0,
@@ -339,7 +339,7 @@ describe("Global", function () {
       deadline,
       account2.address,
       Asset(volmexQuoteToken.address, one.toString()),
-      Asset(volmexBaseToken.address, three.toString()),
+      Asset(volmexBaseToken.address, one.toString()),
       2,
       0,
       false,
@@ -388,8 +388,8 @@ describe("Global", function () {
       ORDER,
       deadline,
       account1.address,
-      Asset(volmexBaseToken.address, three.toString()),
-      Asset(volmexQuoteToken.address, two.toString()),
+      Asset(volmexBaseToken.address, one.toString()),
+      Asset(volmexQuoteToken.address, one.toString()),
       3,
       0,
       true,
@@ -400,8 +400,8 @@ describe("Global", function () {
       ORDER,
       deadline,
       account2.address,
-      Asset(volmexQuoteToken.address, two.toString()),
-      Asset(volmexBaseToken.address, three.toString()),
+      Asset(volmexQuoteToken.address, one.toString()),
+      Asset(volmexBaseToken.address, one.toString()),
       4,
       0,
       false,
@@ -453,22 +453,22 @@ describe("Global", function () {
 
     await matchingEngine.grantMatchOrders(positioning.address);
 
-    await usdc.connect(owner).mint(account1.address, "1000000000000000");
-    await usdc.connect(owner).mint(account2.address, "1000000000000000");
+    await usdc.connect(owner).mint(account1.address, "10000000000000000000");
+    await usdc.connect(owner).mint(account2.address, "10000000000000000000");
 
-    await usdc.connect(account1).approve(periphery.address, "1000000000000000");
-    await usdc.connect(account2).approve(periphery.address, "1000000000000000");
+    await usdc.connect(account1).approve(periphery.address, "10000000000000000000");
+    await usdc.connect(account2).approve(periphery.address, "10000000000000000000");
 
-    await periphery.connect(account1).depositToVault(0, usdc.address, "10000000000");
-    await periphery.connect(account2).depositToVault(0, usdc.address, "10000000000");
+    await periphery.connect(account1).depositToVault(0, usdc.address, "10000000000000000000");
+    await periphery.connect(account2).depositToVault(0, usdc.address, "10000000000000000000");
 
     // Both partial filled {5, 2} {3, 1}
     orderLeft = Order(
       ORDER,
       deadline,
       account1.address,
-      Asset(volmexQuoteToken.address, five.toString()),
-      Asset(volmexBaseToken.address, two.toString()),
+      Asset(volmexQuoteToken.address, three.toString()),
+      Asset(volmexBaseToken.address, one.toString()),
       1,
       0,
       false,
@@ -479,7 +479,7 @@ describe("Global", function () {
       ORDER,
       deadline,
       account2.address,
-      Asset(volmexBaseToken.address, three.toString()),
+      Asset(volmexBaseToken.address, two.toString()),
       Asset(volmexQuoteToken.address, one.toString()),
       1,
       0,
@@ -526,14 +526,14 @@ describe("Global", function () {
     console.log("observations", observations.toString());
     console.log("Another call \n");
 
-    expect(positionSize).to.be.equal("400000000000000000");
-    expect(positionSize1).to.be.equal("-400000000000000000");
+    expect(positionSize).to.be.equal("333333333333333333");
+    expect(positionSize1).to.be.equal("-333333333333333333");
 
     const proofHash = "0x6c00000000000000000000000000000000000000000000000000000000000000";
 
     for (let index = 0; index < 10; index++) {
-      await (await indexPriceOracle.addObservation(100000, 0, proofHash)).wait();
-      await (await indexPriceOracle.addObservation(100000, 1, proofHash)).wait();
+      await (await indexPriceOracle.addObservation(100000000, 0, proofHash)).wait();
+      await (await indexPriceOracle.addObservation(100000000, 1, proofHash)).wait();
     }
 
     // both partially filled {2, 3} {2, 1}
@@ -541,8 +541,8 @@ describe("Global", function () {
       ORDER,
       deadline,
       account1.address,
-      Asset(volmexBaseToken.address, two.toString()),
-      Asset(volmexQuoteToken.address, three.toString()),
+      Asset(volmexBaseToken.address, one.toString()),
+      Asset(volmexQuoteToken.address, two.toString()),
       1,
       0,
       true,
@@ -598,6 +598,7 @@ describe("Global", function () {
 
     observations = await markPriceOracle.getCumulativePrice(3600, index);
     console.log("observations", observations.toString());
+
     console.log("Another call \n");
 
     // right partially filled {2, 1} {2, 3}
