@@ -2785,6 +2785,7 @@ describe("Liquidation test in Positioning", function () {
             account1.address,
             ten.toString(),
           );
+
         await expect(
           positioning.openPosition(
             orderLeft,
@@ -2810,7 +2811,7 @@ describe("Liquidation test in Positioning", function () {
         await expect(
           positioning
             .connect(account2)
-            .liquidate(account1.address, volmexBaseToken.address, "10000000000000000000"),
+            .liquidate(account2.address, volmexBaseToken.address, "10000000000000000000"),
         ).to.be.revertedWith("P_EAV");
       });
       it("should not liquidate in wrong direction", async () => {
