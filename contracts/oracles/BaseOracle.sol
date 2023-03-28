@@ -104,6 +104,17 @@ contract BaseOracle is AccessControlUpgradeable {
     }
 
     /**
+     * @notice Get price cumulative of custom window of the observations
+     *
+     * @param _index Position of the asset in Observations
+     * @param _startTimestamp timestamp of start of window
+     * @param _endTimestamp timestamp of last of window
+     */
+    function getCustomCumulativePrice(uint64 _index, uint256 _startTimestamp, uint256 _endTimestamp) external view returns (uint256 priceCumulative) {
+        priceCumulative = _getCustomCumulativePrice(_index, _startTimestamp, _endTimestamp);
+    }
+
+    /**
      * @notice Get latest price of asset
      *
      * @param _index Index of the observation, the index base token mapping
