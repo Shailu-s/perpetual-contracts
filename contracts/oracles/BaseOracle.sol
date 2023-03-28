@@ -126,17 +126,6 @@ contract BaseOracle is AccessControlUpgradeable {
         lastUpdatedTimestamp = observations[observations.length - 1].timestamp;
     }
 
-    function _getCumulativePrice(uint256 _twInterval, uint64 _index) internal view returns (uint256 priceCumulative, uint256 lastUpdatedTimestamp) {
-        Observation[] memory observations = observationsByIndex[_index];
-        uint256 index = observations.length;
-        lastUpdatedTimestamp = observations[index - 1].timestamp;
-        uint256 initialTimestamp = block.timestamp - _twInterval;
-        for (; index != 0 && observations[index - 1].timestamp >= initialTimestamp; index--) {
-            priceCumulative += observations[index - 1].underlyingPrice;
-        }
-        priceCumulative = observations.length != index ? priceCumulative / (observations.length - index) : priceCumulative;
-    }
-
     function _addAssets(
         uint256[] calldata _underlyingPrices,
         address[] calldata _assets,
@@ -165,6 +154,35 @@ contract BaseOracle is AccessControlUpgradeable {
         _indexCount = indexCount;
 
         emit AssetsAdded(_indexCount, _assets, _underlyingPrices);
+    }
+
+    function _getCumulativePrice(uint256 _twInterval, uint64 _index) internal view returns (uint256 priceCumulative, uint256 lastUpdatedTimestamp) {
+        Observation[] memory observations = observationsByIndex[_index];
+        uint256 index = observations.length;
+        lastUpdatedTimestamp = observations[index - 1].timestamp;
+        uint256 initialTimestamp = block.timestamp - _twInterval;
+        for (; index != 0 && observations[index - 1].timestamp >= initialTimestamp; index--) {
+            priceCumulative += observations[index - 1].underlyingPrice;
+        }
+        priceCumulative = observations.length != index ? priceCumulative / (observations.length - index) : priceCumulative;
+    }
+
+    function _getCustomCumulativePrice(uint64 _index, uint256 _startTimestamp, uint256 _endTimestamp) internal view returns (uint256 priceCumulative) {
+        Observation[] memory observations = observationsByIndex[_index];
+        uint256 index = observations.length;
+        uint256 startIndex;
+        uint256 endIndex;
+        for (; index != 0 && index >= startIndex; index--) {
+            if (observations[index - 1].timestamp >= _endTimestamp) {
+                endIndex = index - 1;
+            } else if (observations[index - 1].timestamp >= _startTimestamp) {
+                startIndex = index - 1;
+            }
+        }
+        for (; startIndex > endIndex; startIndex++) {
+            priceCumulative += observations[startIndex].underlyingPrice;
+        }
+        priceCumulative = priceCumulative / (endIndex - startIndex + 1);
     }
 
     function _requireOracleAdmin() internal view {
