@@ -1410,8 +1410,8 @@ describe("Positioning", function () {
         ).to.emit(positioning, "PositionChanged");
 
         await markPriceOracle.setObservationAdder(account1.address);
-        await markPriceOracle.connect(account1).addObservation(10000000000, 0);
-        await markPriceOracle.connect(account1).addObservation(10000000000, 1);
+        await markPriceOracle.connect(account1).addObservation(10000000000, 0, proofHash);
+        await markPriceOracle.connect(account1).addObservation(10000000000, 1, proofHash);
 
         await positioning.settleAllFunding(account1.address);
       });
