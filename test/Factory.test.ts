@@ -75,6 +75,7 @@ describe("PerpFactory", function () {
       },
     );
     await volmexBaseToken.setPriceFeed(indexPriceOracle.address);
+    await indexPriceOracle.setObservationAdder(owner.address);
     volmexQuoteToken = await VolmexQuoteToken.deploy();
     await volmexQuoteToken.deployed();
 

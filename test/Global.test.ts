@@ -105,6 +105,7 @@ describe("Global", function () {
       },
     );
     await indexPriceOracle.deployed();
+    await indexPriceOracle.setObservationAdder(owner.address);
     await volmexBaseToken.setPriceFeed(indexPriceOracle.address);
     await (await perpView.setBaseToken(volmexBaseToken.address)).wait();
 
@@ -125,7 +126,7 @@ describe("Global", function () {
     markPriceOracle = await upgrades.deployProxy(
       MarkPriceOracle,
       [
-        [1000, 1000],
+        [100000, 100000],
         [volmexBaseToken.address, volmexBaseToken.address],
         [proofHash, proofHash],
         [capRatio, capRatio],
@@ -317,8 +318,8 @@ describe("Global", function () {
     const proofHash = "0x6c00000000000000000000000000000000000000000000000000000000000000";
 
     for (let index = 0; index < 10; index++) {
-      await (await indexPriceOracle.addObservation(0, 100000, proofHash)).wait();
-      await (await indexPriceOracle.addObservation(1, 100000, proofHash)).wait();
+      await (await indexPriceOracle.addObservation(100000, 0, proofHash)).wait();
+      await (await indexPriceOracle.addObservation(100000, 1, proofHash)).wait();
     }
 
     orderLeft = Order(
@@ -330,6 +331,7 @@ describe("Global", function () {
       1,
       0,
       true,
+      twapType,
     );
 
     orderRight = Order(
@@ -341,6 +343,7 @@ describe("Global", function () {
       2,
       0,
       false,
+      twapType,
     );
 
     signatureLeft = await getSignature(orderLeft, account1.address);
@@ -390,6 +393,7 @@ describe("Global", function () {
       3,
       0,
       true,
+      twapType,
     );
 
     orderRight = Order(
@@ -401,6 +405,7 @@ describe("Global", function () {
       4,
       0,
       false,
+      twapType,
     );
 
     signatureLeft = await getSignature(orderLeft, account1.address);
@@ -467,6 +472,7 @@ describe("Global", function () {
       1,
       0,
       false,
+      twapType,
     );
 
     orderRight = Order(
@@ -478,6 +484,7 @@ describe("Global", function () {
       1,
       0,
       true,
+      twapType,
     );
 
     let signatureLeft = await getSignature(orderLeft, account1.address);
@@ -525,8 +532,8 @@ describe("Global", function () {
     const proofHash = "0x6c00000000000000000000000000000000000000000000000000000000000000";
 
     for (let index = 0; index < 10; index++) {
-      await (await indexPriceOracle.addObservation(0, 100000, proofHash)).wait();
-      await (await indexPriceOracle.addObservation(2, 100000, proofHash)).wait();
+      await (await indexPriceOracle.addObservation(100000, 0, proofHash)).wait();
+      await (await indexPriceOracle.addObservation(100000, 1, proofHash)).wait();
     }
 
     // both partially filled {2, 3} {2, 1}
@@ -539,6 +546,7 @@ describe("Global", function () {
       1,
       0,
       true,
+      twapType,
     );
 
     orderRight = Order(
@@ -550,6 +558,7 @@ describe("Global", function () {
       2,
       0,
       false,
+      twapType,
     );
 
     signatureLeft = await getSignature(orderLeft, account1.address);
@@ -601,6 +610,7 @@ describe("Global", function () {
       1,
       0,
       true,
+      twapType,
     );
 
     orderRight = Order(
@@ -612,6 +622,7 @@ describe("Global", function () {
       2,
       0,
       false,
+      twapType,
     );
 
     signatureLeft = await getSignature(orderLeft, account1.address);

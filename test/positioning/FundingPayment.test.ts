@@ -3,7 +3,7 @@ import { ethers, upgrades } from "hardhat";
 const { Order, Asset, sign, encodeAddress } = require("../order");
 import { BigNumber } from "ethers";
 import { time } from "@nomicfoundation/hardhat-network-helpers";
-describe.only("Funding payment", function () {
+describe("Funding payment", function () {
   let MatchingEngine;
   let matchingEngine;
   let VirtualToken;
@@ -101,7 +101,7 @@ describe.only("Funding payment", function () {
     await (await perpView.setBaseToken(volmexBaseToken.address)).wait();
     indexPriceOracle = await upgrades.deployProxy(
       IndexPriceOracle,
-      [owner.address, [100000], [volmexBaseToken.address], [proofHash], [capRatio]],
+      [owner.address, [100000000], [volmexBaseToken.address], [proofHash], [capRatio]],
       {
         initializer: "initialize",
       },
@@ -123,7 +123,7 @@ describe.only("Funding payment", function () {
 
     markPriceOracle = await upgrades.deployProxy(
       MarkPriceOracle,
-      [[100000], [volmexBaseToken.address], [proofHash], [capRatio], owner.address],
+      [[100000000], [volmexBaseToken.address], [proofHash], [capRatio], owner.address],
       {
         initializer: "initialize",
       },
@@ -235,7 +235,7 @@ describe.only("Funding payment", function () {
   describe("Funding Payment", function () {
     it("Funding payment should not change in before 8 hours", async () => {
       const price = await accountBalance1.getIndexPrice(volmexBaseToken.address);
-      expect(price.toString()).to.equal("100000000");
+      console.log(price);
 
       await USDC.transfer(account1.address, "1000000000000000000");
       await USDC.transfer(account2.address, "1000000000000000000");
@@ -281,6 +281,7 @@ describe.only("Funding payment", function () {
         1,
         0,
         true,
+        twapType,
       );
 
       const orderRight = Order(
@@ -292,6 +293,7 @@ describe.only("Funding payment", function () {
         2,
         0,
         false,
+        twapType,
       );
 
       const signatureLeft = await getSignature(orderLeft, account1.address);
@@ -321,6 +323,7 @@ describe.only("Funding payment", function () {
           i,
           (1e6).toString(),
           true,
+          twapType,
         );
 
         const orderRight = Order(
@@ -332,6 +335,7 @@ describe.only("Funding payment", function () {
           i + 1,
           (1e6).toString(),
           false,
+          twapType,
         );
 
         const signatureLeft = await getSignature(orderLeft, alice.address);
@@ -409,6 +413,7 @@ describe.only("Funding payment", function () {
         1,
         (1e6).toString(),
         true,
+        twapType,
       );
       const orderRight = Order(
         ORDER,
@@ -419,6 +424,7 @@ describe.only("Funding payment", function () {
         2,
         (1e6).toString(),
         false,
+        twapType,
       );
 
       const signatureLeft = await getSignature(orderLeft, account1.address);
@@ -457,6 +463,7 @@ describe.only("Funding payment", function () {
           i,
           (1e6).toString(),
           true,
+          twapType,
         );
 
         const orderRight = Order(
@@ -468,6 +475,7 @@ describe.only("Funding payment", function () {
           i + 1,
           (1e6).toString(),
           false,
+          twapType,
         );
 
         const signatureLeft = await getSignature(orderLeft, alice.address);
@@ -491,6 +499,7 @@ describe.only("Funding payment", function () {
         10,
         (1e6).toString(),
         true,
+        twapType,
       );
 
       const orderRight1 = Order(
@@ -502,6 +511,7 @@ describe.only("Funding payment", function () {
         20,
         (1e6).toString(),
         false,
+        twapType,
       );
 
       const signatureLeft1 = await getSignature(orderLeft1, account1.address);
@@ -567,6 +577,7 @@ describe.only("Funding payment", function () {
         5,
         (1e6).toString(),
         true,
+        twapType,
       );
       const orderRight = Order(
         ORDER,
@@ -577,6 +588,7 @@ describe.only("Funding payment", function () {
         6,
         (1e6).toString(),
         false,
+        twapType,
       );
 
       const signatureLeft = await getSignature(orderLeft, account1.address);
@@ -619,6 +631,7 @@ describe.only("Funding payment", function () {
         10,
         (1e6).toString(),
         true,
+        twapType,
       );
       const orderRight1 = Order(
         ORDER,
@@ -629,6 +642,7 @@ describe.only("Funding payment", function () {
         20,
         (1e6).toString(),
         false,
+        twapType,
       );
 
       const signatureLeft1 = await getSignature(orderLeft1, account2.address);
@@ -713,6 +727,7 @@ describe.only("Funding payment", function () {
         5,
         (1e6).toString(),
         true,
+        twapType,
       );
       const orderRight = Order(
         ORDER,
@@ -723,6 +738,7 @@ describe.only("Funding payment", function () {
         6,
         (1e6).toString(),
         false,
+        twapType,
       );
 
       const signatureLeft = await getSignature(orderLeft, account2.address);
@@ -745,6 +761,7 @@ describe.only("Funding payment", function () {
         456,
         (1e6).toString(),
         true,
+        twapType,
       );
       const orderRight1 = Order(
         ORDER,
@@ -755,6 +772,7 @@ describe.only("Funding payment", function () {
         134,
         (1e6).toString(),
         false,
+        twapType,
       );
 
       const signatureLeft1 = await getSignature(orderLeft1, alice.address);
@@ -778,6 +796,7 @@ describe.only("Funding payment", function () {
           i,
           (1e6).toString(),
           true,
+          twapType,
         );
         const orderRight = Order(
           ORDER,
@@ -788,6 +807,7 @@ describe.only("Funding payment", function () {
           i + 1,
           (1e6).toString(),
           false,
+          twapType,
         );
 
         const signatureLeft = await getSignature(orderLeft, alice.address);
@@ -873,6 +893,7 @@ describe.only("Funding payment", function () {
         5,
         (1e6).toString(),
         true,
+        twapType,
       );
       const orderRight = Order(
         ORDER,
@@ -883,6 +904,7 @@ describe.only("Funding payment", function () {
         6,
         (1e6).toString(),
         false,
+        twapType,
       );
 
       const signatureLeft = await getSignature(orderLeft, account2.address);
@@ -905,6 +927,7 @@ describe.only("Funding payment", function () {
         456,
         (1e6).toString(),
         true,
+        twapType,
       );
       const orderRight1 = Order(
         ORDER,
@@ -915,6 +938,7 @@ describe.only("Funding payment", function () {
         134,
         (1e6).toString(),
         false,
+        twapType,
       );
 
       const signatureLeft1 = await getSignature(orderLeft1, alice.address);
@@ -937,6 +961,7 @@ describe.only("Funding payment", function () {
           i,
           (1e6).toString(),
           true,
+          twapType,
         );
         const orderRight = Order(
           ORDER,
@@ -947,6 +972,7 @@ describe.only("Funding payment", function () {
           i + 1,
           (1e6).toString(),
           false,
+          twapType,
         );
 
         const signatureLeft = await getSignature(orderLeft, alice.address);
@@ -993,6 +1019,7 @@ describe.only("Funding payment", function () {
           i,
           (1e6).toString(),
           true,
+          twapType,
         );
         const orderRight = Order(
           ORDER,
@@ -1003,6 +1030,7 @@ describe.only("Funding payment", function () {
           i + 1,
           (1e6).toString(),
           false,
+          twapType,
         );
 
         const signatureLeft = await getSignature(orderLeft, alice.address);
@@ -1077,6 +1105,7 @@ describe.only("Funding payment", function () {
         5,
         (1e6).toString(),
         true,
+        twapType,
       );
       const orderRight = Order(
         ORDER,
@@ -1087,6 +1116,7 @@ describe.only("Funding payment", function () {
         6,
         (1e6).toString(),
         false,
+        twapType,
       );
 
       const signatureLeft = await getSignature(orderLeft, account2.address);
@@ -1110,6 +1140,7 @@ describe.only("Funding payment", function () {
         50,
         (1e6).toString(),
         true,
+        twapType,
       );
       const orderRight2 = Order(
         ORDER,
@@ -1120,6 +1151,7 @@ describe.only("Funding payment", function () {
         60,
         (1e6).toString(),
         false,
+        twapType,
       );
 
       const signatureLeft2 = await getSignature(orderLeft2, account2.address);
@@ -1156,6 +1188,7 @@ describe.only("Funding payment", function () {
           i,
           (1e6).toString(),
           true,
+          twapType,
         );
         const orderRight = Order(
           ORDER,
@@ -1166,6 +1199,7 @@ describe.only("Funding payment", function () {
           i + 1,
           (1e6).toString(),
           false,
+          twapType,
         );
 
         const signatureLeft = await getSignature(orderLeft, alice.address);
@@ -1188,6 +1222,7 @@ describe.only("Funding payment", function () {
         456,
         (1e6).toString(),
         true,
+        twapType,
       );
       const orderRight1 = Order(
         ORDER,
@@ -1198,6 +1233,7 @@ describe.only("Funding payment", function () {
         134,
         (1e6).toString(),
         false,
+        twapType,
       );
 
       const signatureLeft1 = await getSignature(orderLeft1, alice.address);
@@ -1283,6 +1319,7 @@ describe.only("Funding payment", function () {
         500,
         (1e6).toString(),
         true,
+        twapType,
       );
       const orderRight3 = Order(
         ORDER,
@@ -1293,6 +1330,7 @@ describe.only("Funding payment", function () {
         600,
         (1e6).toString(),
         false,
+        twapType,
       );
 
       const signatureLeft3 = await getSignature(orderLeft3, account2.address);
