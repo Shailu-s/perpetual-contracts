@@ -21,7 +21,7 @@ library LibOrder {
 
     bytes32 constant ORDER_TYPEHASH =
         keccak256(
-            "Order(bytes4 orderType,uint64 deadline,address trader,Asset makeAsset,Asset takeAsset,uint256 salt,uint128 limitOrderTriggerPrice,bool isShort)Asset(address virtualToken,uint256 value, bytes4 twapType)"
+            "Order(bytes4 orderType,uint64 deadline,address trader,Asset makeAsset,Asset takeAsset,uint256 salt,uint128 limitOrderTriggerPrice,bool isShort,bytes4 twapType)Asset(address virtualToken,uint256 value)"
         );
 
     // Generated using bytes4(keccack256(abi.encodePacked("Order")))
@@ -43,23 +43,15 @@ library LibOrder {
         bool isMakeAssetBase = IVirtualToken(order.makeAsset.virtualToken).isBase();
         bool isTakeAssetBase = IVirtualToken(order.takeAsset.virtualToken).isBase();
 
-        require(
-            (isMakeAssetBase && !isTakeAssetBase) || (!isMakeAssetBase && isTakeAssetBase),
-            "Both makeAsset & takeAsset can't be baseTokens"
-        );
+        require((isMakeAssetBase && !isTakeAssetBase) || (!isMakeAssetBase && isTakeAssetBase), "Both makeAsset & takeAsset can't be baseTokens");
 
         require(
-            (order.isShort && isMakeAssetBase && !isTakeAssetBase) ||
-                (!order.isShort && !isMakeAssetBase && isTakeAssetBase),
+            (order.isShort && isMakeAssetBase && !isTakeAssetBase) || (!order.isShort && !isMakeAssetBase && isTakeAssetBase),
             "Short order can't have takeAsset as a baseToken/Long order can't have makeAsset as baseToken"
         );
     }
 
-    function calculateRemaining(Order memory order, uint256 fill)
-        internal
-        pure
-        returns (uint256 baseValue, uint256 quoteValue)
-    {
+    function calculateRemaining(Order memory order, uint256 fill) internal pure returns (uint256 baseValue, uint256 quoteValue) {
         baseValue = order.makeAsset.value - fill;
         quoteValue = LibMath.safeGetPartialAmountFloor(order.takeAsset.value, order.makeAsset.value, baseValue);
     }

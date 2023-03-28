@@ -131,8 +131,8 @@ contract BaseOracle is AccessControlUpgradeable {
         uint256 index = observations.length;
         lastUpdatedTimestamp = observations[index - 1].timestamp;
         uint256 initialTimestamp = block.timestamp - _twInterval;
-        for (; index != 0 && observations[index].timestamp >= initialTimestamp; index--) {
-            priceCumulative += observations[index].underlyingPrice;
+        for (; index != 0 && observations[index - 1].timestamp >= initialTimestamp; index--) {
+            priceCumulative += observations[index - 1].underlyingPrice;
         }
         priceCumulative = observations.length != index ? priceCumulative / (observations.length - index) : priceCumulative;
     }
