@@ -87,6 +87,7 @@ contract FundingRate is IFundingRate, BlockContext, PositioningCallee, FundingRa
         }
 
         markTwap = IMarkPriceOracle(_markPriceOracleArg).getCumulativePrice(twapInterval, _underlyingPriceIndex);
+        twapInterval = IPositioningConfig(_positioningConfig).getTwapInterval();
         indexTwap = IIndexPriceOracle(_indexPriceOracleArg).getCumulativePrice(twapInterval, _underlyingPriceIndex);
 
         uint256 lastSettledTimestamp = _lastSettledTimestampMap[baseToken];
