@@ -3,7 +3,7 @@ import { ethers, upgrades } from "hardhat";
 const { Order, Asset, sign, encodeAddress } = require("./order");
 import { BigNumber } from "ethers";
 
-describe.only("Global", function () {
+describe("Global", function () {
   let owner;
   let account1, account2;
   let MatchingEngine;

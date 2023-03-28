@@ -353,7 +353,7 @@ describe("PerpFactory", function () {
 
   describe("Index Price", () => {
     it("Should return the current index price", async () => {
-      await indexPriceOracle.addObservation(0, 250000000, proofHash);
+      await indexPriceOracle.addObservation(250000000, 0, proofHash);
       const newVolmexBaseToken = await upgrades.deployProxy(
         VolmexBaseToken,
         [
@@ -368,7 +368,7 @@ describe("PerpFactory", function () {
       );
 
       const volmexBaseTokenIndexPrice = await newVolmexBaseToken.getIndexPrice(0);
-      const priceFeedIndexPrice = await indexPriceOracle.latestRoundData(0);
+      const priceFeedIndexPrice = await indexPriceOracle.latestRoundData(28800, 0);
       expect(volmexBaseTokenIndexPrice).to.equal(priceFeedIndexPrice.answer);
     });
   });

@@ -94,7 +94,7 @@ describe("VolmexPerpPeriphery", function () {
 
     indexPriceOracle = await upgrades.deployProxy(
       IndexPriceOracle,
-      [owner.address, [100000], [volmexBaseToken.address], [proofHash], [capRatio]],
+      [owner.address, [1000000], [volmexBaseToken.address], [proofHash], [capRatio]],
       {
         initializer: "initialize",
       },
@@ -116,7 +116,7 @@ describe("VolmexPerpPeriphery", function () {
 
     markPriceOracle = await upgrades.deployProxy(
       MarkPriceOracle,
-      [[100000], [volmexBaseToken.address], [proofHash], [capRatio], owner.address],
+      [[1000000], [volmexBaseToken.address], [proofHash], [capRatio], owner.address],
       {
         initializer: "initialize",
       },
@@ -198,7 +198,9 @@ describe("VolmexPerpPeriphery", function () {
     await vaultController.connect(owner).setPositioning(positioning.address);
 
     await positioningConfig.connect(owner).setMaxMarketsPerAccount(5);
-    await positioningConfig.connect(owner).setSettlementTokenBalanceCap("1000000000000000");
+    await positioningConfig
+      .connect(owner)
+      .setSettlementTokenBalanceCap("100000000000000000000000");
 
     await positioning.connect(owner).setMarketRegistry(marketRegistry.address);
     await positioning.connect(owner).setDefaultFeeReceiver(owner.address);
@@ -207,7 +209,7 @@ describe("VolmexPerpPeriphery", function () {
     await (await matchingEngine.grantMatchOrders(positioning.address)).wait();
     await markPriceOracle.setObservationAdder(owner.address);
     for (let i = 0; i < 9; i++) {
-      await markPriceOracle.addObservation(100000000, 0, proofHash);
+      await markPriceOracle.addObservation(1000000, 0, proofHash);
     }
     await markPriceOracle.setObservationAdder(matchingEngine.address);
 
@@ -223,9 +225,9 @@ describe("VolmexPerpPeriphery", function () {
   });
 
   describe("Funding payment", () => {
-    const depositAmount = BigNumber.from("10000000000000");
-    let baseAmount = "50000000000000000000"; //50
-    let quoteAmount = "100000000000000000000"; //100
+    const depositAmount = BigNumber.from("100000000000000");
+    let baseAmount = "50000000000000"; //50
+    let quoteAmount = "100000000000000"; //100
     this.beforeEach(async () => {
       // transfer balances
       await (await USDC.connect(owner).transfer(alice.address, depositAmount)).wait();

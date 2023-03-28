@@ -101,7 +101,7 @@ describe("Positioning", function () {
 
     indexPriceOracle = await upgrades.deployProxy(
       IndexPriceOracle,
-      [owner.address, [75000000], [volmexBaseToken.address], [proofHash], [capRatio]],
+      [owner.address, [100000000], [volmexBaseToken.address], [proofHash], [capRatio]],
       {
         initializer: "initialize",
       },
@@ -637,18 +637,22 @@ describe("Positioning", function () {
         await expect(positionSize1.toString()).to.be.equal(convert("-40"));
       });
 
-      it("should match orders and open position with multiple orders funding rate should not be greator than 0.08", async () => {
+      it.only("should match orders and open position with multiple orders funding rate should not be greator than 0.08", async () => {
         // const txn = await markPriceOracle.getCumulativePrice(10000000, 0);
 
         await matchingEngine.grantMatchOrders(positioning.address);
 
-        await virtualToken.mint(account1.address, convert("1000"));
-        await virtualToken.mint(account2.address, convert("1000"));
+        await virtualToken.mint(account1.address, convert("10000"));
+        await virtualToken.mint(account2.address, convert("10000"));
 
-        await virtualToken.connect(account1).approve(vault.address, convert("1000"));
-        await virtualToken.connect(account2).approve(vault.address, convert("1000"));
-        await virtualToken.connect(account1).approve(volmexPerpPeriphery.address, convert("1000"));
-        await virtualToken.connect(account2).approve(volmexPerpPeriphery.address, convert("1000"));
+        await virtualToken.connect(account1).approve(vault.address, convert("10000"));
+        await virtualToken.connect(account2).approve(vault.address, convert("10000"));
+        await virtualToken
+          .connect(account1)
+          .approve(volmexPerpPeriphery.address, convert("10000"));
+        await virtualToken
+          .connect(account2)
+          .approve(volmexPerpPeriphery.address, convert("10000"));
         await vaultController
           .connect(account1)
           .deposit(
@@ -781,13 +785,17 @@ describe("Positioning", function () {
 
         await matchingEngine.grantMatchOrders(positioning.address);
 
-        await virtualToken.mint(account1.address, convert("1000"));
-        await virtualToken.mint(account2.address, convert("1000"));
+        await virtualToken.mint(account1.address, convert("10000"));
+        await virtualToken.mint(account2.address, convert("10000"));
 
-        await virtualToken.connect(account1).approve(vault.address, convert("1000"));
-        await virtualToken.connect(account2).approve(vault.address, convert("1000"));
-        await virtualToken.connect(account1).approve(volmexPerpPeriphery.address, convert("1000"));
-        await virtualToken.connect(account2).approve(volmexPerpPeriphery.address, convert("1000"));
+        await virtualToken.connect(account1).approve(vault.address, convert("10000"));
+        await virtualToken.connect(account2).approve(vault.address, convert("10000"));
+        await virtualToken
+          .connect(account1)
+          .approve(volmexPerpPeriphery.address, convert("10000"));
+        await virtualToken
+          .connect(account2)
+          .approve(volmexPerpPeriphery.address, convert("10000"));
         await vaultController
           .connect(account1)
           .deposit(
@@ -924,13 +932,17 @@ describe("Positioning", function () {
 
         await matchingEngine.grantMatchOrders(positioning.address);
 
-        await virtualToken.mint(account1.address, convert("1000"));
-        await virtualToken.mint(account2.address, convert("1000"));
+        await virtualToken.mint(account1.address, convert("10000"));
+        await virtualToken.mint(account2.address, convert("10000"));
 
-        await virtualToken.connect(account1).approve(vault.address, convert("1000"));
-        await virtualToken.connect(account2).approve(vault.address, convert("1000"));
-        await virtualToken.connect(account1).approve(volmexPerpPeriphery.address, convert("1000"));
-        await virtualToken.connect(account2).approve(volmexPerpPeriphery.address, convert("1000"));
+        await virtualToken.connect(account1).approve(vault.address, convert("10000"));
+        await virtualToken.connect(account2).approve(vault.address, convert("10000"));
+        await virtualToken
+          .connect(account1)
+          .approve(volmexPerpPeriphery.address, convert("10000"));
+        await virtualToken
+          .connect(account2)
+          .approve(volmexPerpPeriphery.address, convert("10000"));
         await vaultController
           .connect(account1)
           .deposit(
@@ -1144,13 +1156,17 @@ describe("Positioning", function () {
 
         await matchingEngine.grantMatchOrders(positioning.address);
 
-        await virtualToken.mint(account1.address, convert("1000"));
-        await virtualToken.mint(account2.address, convert("1000"));
+        await virtualToken.mint(account1.address, convert("10000"));
+        await virtualToken.mint(account2.address, convert("10000"));
 
-        await virtualToken.connect(account1).approve(vault.address, convert("1000"));
-        await virtualToken.connect(account2).approve(vault.address, convert("1000"));
-        await virtualToken.connect(account1).approve(volmexPerpPeriphery.address, convert("1000"));
-        await virtualToken.connect(account2).approve(volmexPerpPeriphery.address, convert("1000"));
+        await virtualToken.connect(account1).approve(vault.address, convert("10000"));
+        await virtualToken.connect(account2).approve(vault.address, convert("10000"));
+        await virtualToken
+          .connect(account1)
+          .approve(volmexPerpPeriphery.address, convert("10000"));
+        await virtualToken
+          .connect(account2)
+          .approve(volmexPerpPeriphery.address, convert("10000"));
 
         await vaultController
           .connect(account1)
