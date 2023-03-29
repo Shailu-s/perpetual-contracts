@@ -26,9 +26,10 @@ contract FundingRate is IFundingRate, BlockContext, PositioningCallee, FundingRa
 
     /// @inheritdoc IFundingRate
     function settleFunding(address trader, address baseToken) public virtual override returns (int256 fundingPayment, int256 globalTwPremiumGrowth) {
-        (int256 twPremium, uint256 markTwap, uint256 indexTwap) = _getFundingGlobalPremiumAndTwaps(baseToken);
+        uint256 markTwap; uint256 indexTwap;
+        (globalTwPremiumGrowth, markTwap, indexTwap) = _getFundingGlobalPremiumAndTwaps(baseToken);
         int256 userTwPremium = IAccountBalance(_accountBalance).getAccountInfo(trader, baseToken).lastTwPremiumGrowthGlobal;
-        fundingPayment = _getFundingPayment(trader, baseToken, twPremium, userTwPremium);
+        fundingPayment = _getFundingPayment(trader, baseToken, globalTwPremiumGrowth, userTwPremium);
 
         uint256 timestamp = _blockTimestamp();
         uint256 lastSettledTimestamp = _lastSettledTimestampMap[baseToken];
@@ -39,10 +40,11 @@ contract FundingRate is IFundingRate, BlockContext, PositioningCallee, FundingRa
             (
                 _lastSettledTimestampMap[baseToken],
                 _globalFundingGrowthMap[baseToken]
-            ) = (fundingLatestTimestamp, twPremium);
+            ) = (fundingLatestTimestamp, globalTwPremiumGrowth);
+            _lastFundingIndexPrice[baseToken] = indexTwap;
         }
         emit FundingUpdated(baseToken, markTwap, indexTwap);
-        return (fundingPayment, twPremium);
+        return (fundingPayment, globalTwPremiumGrowth);
     }
 
     /// @inheritdoc IFundingRate
@@ -50,6 +52,21 @@ contract FundingRate is IFundingRate, BlockContext, PositioningCallee, FundingRa
         (int256 twPremium, , ) = _getFundingGlobalPremiumAndTwaps(baseToken);
         int256 userTwPremium = IAccountBalance(_accountBalance).getAccountInfo(trader, baseToken).lastTwPremiumGrowthGlobal;
         return _getFundingPayment(trader, baseToken, twPremium, userTwPremium);
+    }
+
+    /// @inheritdoc IFundingRate
+    function getLastFundingRate(address baseToken) external view returns (int256 lastFundingRate) {
+        lastFundingRate = (_globalFundingGrowthMap[baseToken] * _ORACLE_BASE_X6.toInt256()) / (_lastFundingIndexPrice[baseToken]).toInt256();
+    }
+
+    /// @inheritdoc IFundingRate
+    function getLastSettledTimestampMap(address baseToken) external view returns (uint256 nextFundingInterval) {
+        nextFundingInterval = block.timestamp - _lastSettledTimestampMap[baseToken]; // nextFundingInterval = Time Untill Next Funding
+    }
+
+    /// @inheritdoc IFundingRate
+    function getFundingPeriod() external view returns (uint256 fundingPeriod) {
+        fundingPeriod = _fundingPeriod;
     }
 
     function __FundingRate_init(address markPriceOracleArg, address indexPriceOracleArg) internal onlyInitializing {
