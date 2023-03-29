@@ -2,8 +2,9 @@
 pragma solidity =0.8.18;
 
 import "../libs/LibOrder.sol";
+import "../interfaces/IFundingRate.sol";
 
-interface IPositioning {
+interface IPositioning is IFundingRate {
     struct InternalData {
         int256 leftExchangedPositionSize;
         int256 leftExchangedPositionNotional;
