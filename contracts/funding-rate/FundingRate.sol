@@ -31,13 +31,15 @@ contract FundingRate is IFundingRate, BlockContext, PositioningCallee, FundingRa
         fundingPayment = _getFundingPayment(trader, baseToken, twPremium, userTwPremium);
 
         uint256 timestamp = _blockTimestamp();
-        // update states before further actions in this block; once per block
-        if (timestamp != _lastSettledTimestampMap[baseToken]) {
+        uint256 lastSettledTimestamp = _lastSettledTimestampMap[baseToken];
+        // update states before further actions in this funding epoch; once per epoch
+        if (timestamp - lastSettledTimestamp > _fundingPeriod) {
+            uint256 fundingLatestTimestamp = lastSettledTimestamp + ((timestamp - lastSettledTimestamp) / _fundingPeriod) * _fundingPeriod;
             // update fundingGrowthGlobal and _lastSettledTimestamp
             (
                 _lastSettledTimestampMap[baseToken],
                 _globalFundingGrowthMap[baseToken]
-            ) = (timestamp, twPremium);
+            ) = (fundingLatestTimestamp, twPremium);
         }
         emit FundingUpdated(baseToken, markTwap, indexTwap);
         return (fundingPayment, twPremium);
@@ -68,7 +70,7 @@ contract FundingRate is IFundingRate, BlockContext, PositioningCallee, FundingRa
     ) internal view virtual returns (int256 pendingFundingPayment) {
         int256 marketFundingRate = (twPremiumGrowthGlobal * _PRECISION_BASE) - (userLastTwPremiumGrowthGlobal * _PRECISION_BASE);
         int256 positionSize = IAccountBalance(_accountBalance).getPositionSize(trader, baseToken);
-        pendingFundingPayment = (positionSize * marketFundingRate) / _PRECISION_BASE * _fundingPeriod;
+        pendingFundingPayment = (positionSize * marketFundingRate) * _fundingPeriod.toInt256()/ _PRECISION_BASE * 86400;
     }
 
     /// @dev this function calculates the up-to-date twaps and pass them out
@@ -77,29 +79,39 @@ contract FundingRate is IFundingRate, BlockContext, PositioningCallee, FundingRa
     /// @return markTwap only for settleFunding()
     /// @return indexTwap only for settleFunding()
     function _getFundingGlobalPremiumAndTwaps(address baseToken) internal view virtual returns (int256 globalTwPremium, uint256 markTwap, uint256 indexTwap) {
-        uint256 twapInterval;
+        uint256 twapInterval = IPositioningConfig(_positioningConfig).getTwapInterval();
         uint256 timestamp = _blockTimestamp();
         // shorten twapInterval if prior observations are not enough
+        // in first epoch, block-based funding is applicable
         if (_firstTradedTimestampMap[baseToken] != 0) {
-            twapInterval = IPositioningConfig(_positioningConfig).getTwapInterval();
             uint256 deltaTimestamp = (timestamp - _firstTradedTimestampMap[baseToken]);
             twapInterval = twapInterval > deltaTimestamp ? deltaTimestamp : twapInterval;
         }
 
-        markTwap = IMarkPriceOracle(_markPriceOracleArg).getCumulativePrice(twapInterval, _underlyingPriceIndex);
-        twapInterval = IPositioningConfig(_positioningConfig).getTwapInterval();
-        indexTwap = IIndexPriceOracle(_indexPriceOracleArg).getCumulativePrice(twapInterval, _underlyingPriceIndex);
+
 
         uint256 lastSettledTimestamp = _lastSettledTimestampMap[baseToken];
         int256 lastTwPremium= _globalFundingGrowthMap[baseToken];
-        if (timestamp == lastSettledTimestamp || lastSettledTimestamp == 0) {
+        if (timestamp - lastSettledTimestamp < _fundingPeriod) {
+            //when funding period is not over
+            uint256 fundingStartTime = lastSettledTimestamp - _fundingPeriod;
+            markTwap = IMarkPriceOracle(_markPriceOracleArg).getCustomCumulativePrice(_underlyingPriceIndex, fundingStartTime, lastSettledTimestamp);
+            indexTwap = IIndexPriceOracle(_indexPriceOracleArg).getCustomCumulativePrice(_underlyingPriceIndex, fundingStartTime, lastSettledTimestamp);
             // if this is the latest updated timestamp, values in _globalFundingGrowthX96Map are up-to-date already
             globalTwPremium = lastTwPremium;
+        } else if (lastSettledTimestamp == 0){
+            markTwap = IMarkPriceOracle(_markPriceOracleArg).getCumulativePrice(twapInterval, _underlyingPriceIndex);
+            indexTwap = IIndexPriceOracle(_indexPriceOracleArg).getCumulativePrice(twapInterval, _underlyingPriceIndex);
+            globalTwPremium = lastTwPremium;
         } else {
+            //when funding period is over
+            uint256 fundingLatestTimestamp = lastSettledTimestamp + ((timestamp - lastSettledTimestamp) / _fundingPeriod) * _fundingPeriod;
+            markTwap = IMarkPriceOracle(_markPriceOracleArg).getCustomCumulativePrice(_underlyingPriceIndex, lastSettledTimestamp, fundingLatestTimestamp);
+            indexTwap = IIndexPriceOracle(_indexPriceOracleArg).getCustomCumulativePrice(_underlyingPriceIndex, lastSettledTimestamp, fundingLatestTimestamp);
             // deltaTwPremium = (markTwap - indexTwap) * (now - lastSettledTimestamp)
             int256 deltaTwPremiumX96 =
                 _getDeltaTwap(markTwap, indexTwap) *
-                    (timestamp - lastSettledTimestamp).toInt256();
+                    (fundingLatestTimestamp - lastSettledTimestamp).toInt256();
             globalTwPremium = lastTwPremium + deltaTwPremiumX96;
         }
 
