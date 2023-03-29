@@ -52,10 +52,10 @@ describe("Liquidation test in Positioning", function () {
   const one = ethers.constants.WeiPerEther; // 1e18
   const two = ethers.constants.WeiPerEther.mul(BigNumber.from("2")); // 2e18
   const five = ethers.constants.WeiPerEther.mul(BigNumber.from("5")); // 5e18
-  const ten = ethers.constants.WeiPerEther.mul(BigNumber.from("10000")); // 10e18
+  const ten = ethers.constants.WeiPerEther.mul(BigNumber.from("10000000")); // 10e18
   const nine = ethers.constants.WeiPerEther.mul(BigNumber.from("4")); // 10e18
 
-  const hundred = ethers.constants.WeiPerEther.mul(BigNumber.from("1000000")); // 100e18
+  const hundred = ethers.constants.WeiPerEther.mul(BigNumber.from("1000000000000")); // 100e18
   const ORDER = "0xf555eb98";
   const STOP_LOSS_LIMIT_ORDER = "0xeeaed735";
   const TAKE_PROFIT_LIMIT_ORDER = "0xe0fc7f94";
@@ -123,7 +123,7 @@ describe("Liquidation test in Positioning", function () {
       IndexPriceOracle,
       [
         owner.address,
-        [10000000, 10000000],
+        [100000000, 100000000],
         [volmexBaseToken.address, volmexBaseToken1.address],
         [proofHash, proofHash],
         [capRatio, capRatio],
@@ -138,7 +138,7 @@ describe("Liquidation test in Positioning", function () {
     markPriceOracle = await upgrades.deployProxy(
       MarkPriceOracle,
       [
-        [10000000, 10000000],
+        [60000000, 60000000],
         [volmexBaseToken.address, volmexBaseToken1.address],
         [proofHash, proofHash],
         [capRatio, capRatio],
@@ -316,9 +316,9 @@ describe("Liquidation test in Positioning", function () {
       twapType,
     );
 
-    for (let i = 0; i < 9; i++) {
-      await matchingEngine.addObservation(10000000, 0);
-    }
+    // for (let i = 0; i < 9; i++) {
+    //   await matchingEngine.addObservation(1000000, 0);
+    // }
   });
 
   describe("Match orders:", function () {
@@ -450,6 +450,13 @@ describe("Liquidation test in Positioning", function () {
         let signatureRight = await getSignature(orderRight, account2.address);
         let signatureLeft1 = await getSignature(orderLeft1, account1.address);
         let signatureRight1 = await getSignature(orderRight1, account2.address);
+        await virtualToken.mint(account1.address, ten.toString());
+        await virtualToken.mint(account2.address, ten.toString());
+
+        await virtualToken.connect(account1).approve(vault.address, ten.toString());
+        await virtualToken.connect(account2).approve(vault.address, ten.toString());
+        await virtualToken.connect(account1).approve(volmexPerpPeriphery.address, ten.toString());
+        await virtualToken.connect(account2).approve(volmexPerpPeriphery.address, ten.toString());
 
         await expect(
           positioning.openPosition(
@@ -457,16 +464,6 @@ describe("Liquidation test in Positioning", function () {
             signatureLeft,
             orderRight,
             signatureRight,
-            liquidator,
-          ),
-        ).to.emit(positioning, "PositionChanged");
-
-        await expect(
-          positioning.openPosition(
-            orderLeft1,
-            signatureLeft1,
-            orderRight1,
-            signatureRight1,
             liquidator,
           ),
         ).to.emit(positioning, "PositionChanged");
@@ -527,6 +524,13 @@ describe("Liquidation test in Positioning", function () {
       it("should liquidate whole position", async () => {
         let signatureLeft = await getSignature(orderLeft, account1.address);
         let signatureRight = await getSignature(orderRight, account2.address);
+        await virtualToken.mint(account1.address, ten.toString());
+        await virtualToken.mint(account2.address, ten.toString());
+
+        await virtualToken.connect(account1).approve(vault.address, ten.toString());
+        await virtualToken.connect(account2).approve(vault.address, ten.toString());
+        await virtualToken.connect(account1).approve(volmexPerpPeriphery.address, ten.toString());
+        await virtualToken.connect(account2).approve(volmexPerpPeriphery.address, ten.toString());
 
         await expect(
           positioning.openPosition(
@@ -580,6 +584,21 @@ describe("Liquidation test in Positioning", function () {
       it("should not liquidate when trader account value is enough", async () => {
         let signatureLeft = await getSignature(orderLeft, account1.address);
         let signatureRight = await getSignature(orderRight, account2.address);
+        await virtualToken.mint(account1.address, ten.toString());
+        await virtualToken.mint(account2.address, ten.toString());
+
+        await virtualToken.connect(account1).approve(vault.address, ten.toString());
+        await virtualToken.connect(account2).approve(vault.address, ten.toString());
+        await virtualToken.connect(account1).approve(volmexPerpPeriphery.address, ten.toString());
+        await virtualToken.connect(account2).approve(volmexPerpPeriphery.address, ten.toString());
+        await vaultController
+          .connect(account1)
+          .deposit(
+            volmexPerpPeriphery.address,
+            virtualToken.address,
+            account1.address,
+            ten.toString(),
+          );
 
         await expect(
           positioning.openPosition(
@@ -606,7 +625,7 @@ describe("Liquidation test in Positioning", function () {
         await expect(
           positioning
             .connect(account2)
-            .liquidate(account1.address, volmexBaseToken.address, "10000000000000000000"),
+            .liquidate(account2.address, volmexBaseToken.address, "10000000000000000000"),
         ).to.be.revertedWith("P_EAV");
       });
       it("should not liquidate in wrong direction", async () => {

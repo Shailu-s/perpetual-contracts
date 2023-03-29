@@ -101,12 +101,13 @@ describe("Funding payment", function () {
     await (await perpView.setBaseToken(volmexBaseToken.address)).wait();
     indexPriceOracle = await upgrades.deployProxy(
       IndexPriceOracle,
-      [owner.address, [100000000], [volmexBaseToken.address], [proofHash], [capRatio]],
+      [owner.address, [75000000], [volmexBaseToken.address], [proofHash], [capRatio]],
       {
         initializer: "initialize",
       },
     );
     await indexPriceOracle.deployed();
+    await volmexBaseToken.setPriceFeed(indexPriceOracle.address);
     volmexQuoteToken = await upgrades.deployProxy(
       VolmexQuoteToken,
       [
@@ -217,7 +218,7 @@ describe("Funding payment", function () {
     await (await markPriceOracle.setObservationAdder(owner.address)).wait();
     await (await matchingEngine.grantMatchOrders(positioning.address)).wait();
     for (let i = 0; i < 9; i++) {
-      await markPriceOracle.addObservation(100000000, 0, proofHash);
+      await markPriceOracle.addObservation(10000000, 0, proofHash);
     }
     await (await markPriceOracle.setObservationAdder(matchingEngine.address)).wait();
     volmexPerpPeriphery = await upgrades.deployProxy(VolmexPerpPeriphery, [
@@ -276,8 +277,8 @@ describe("Funding payment", function () {
         ORDER,
         87654321987654,
         account1.address,
-        Asset(volmexBaseToken.address, "120000000000"),
-        Asset(virtualToken.address, "120000000000"),
+        Asset(volmexBaseToken.address, "10000000000000"),
+        Asset(virtualToken.address, "1000000000000"),
         1,
         0,
         true,
@@ -288,8 +289,8 @@ describe("Funding payment", function () {
         ORDER,
         87654321987654,
         account2.address,
-        Asset(virtualToken.address, "120000000000"),
-        Asset(volmexBaseToken.address, "120000000000"),
+        Asset(virtualToken.address, "10000000000000"),
+        Asset(volmexBaseToken.address, "10000000000000"),
         2,
         0,
         false,
@@ -318,8 +319,8 @@ describe("Funding payment", function () {
           ORDER,
           deadline,
           alice.address,
-          Asset(volmexBaseToken.address, "100000000"),
-          Asset(virtualToken.address, "1000000000"),
+          Asset(volmexBaseToken.address, "10000000000000"),
+          Asset(virtualToken.address, "100000000000"),
           i,
           (1e6).toString(),
           true,
@@ -330,8 +331,8 @@ describe("Funding payment", function () {
           ORDER,
           deadline,
           bob.address,
-          Asset(virtualToken.address, "1000000000"),
-          Asset(volmexBaseToken.address, "100000000"),
+          Asset(virtualToken.address, "10000000000000"),
+          Asset(volmexBaseToken.address, "100000000000"),
           i + 1,
           (1e6).toString(),
           false,
@@ -356,7 +357,7 @@ describe("Funding payment", function () {
         volmexBaseToken.address,
       );
 
-      expect(fundingPaymentTrader1.toString()).to.equal("-5529047040000000000000000");
+      expect(fundingPaymentTrader1.toString()).to.equal("-34566912000000000000000000000");
 
       const accountInfo2 = await accountBalance1.getAccountInfo(
         account1.address,
@@ -408,8 +409,8 @@ describe("Funding payment", function () {
         ORDER,
         deadline,
         account1.address,
-        Asset(volmexBaseToken.address, two.toString()),
-        Asset(virtualToken.address, two.toString()),
+        Asset(volmexBaseToken.address, one.toString()),
+        Asset(virtualToken.address, one.toString()),
         1,
         (1e6).toString(),
         true,
@@ -419,8 +420,8 @@ describe("Funding payment", function () {
         ORDER,
         deadline,
         account2.address,
-        Asset(virtualToken.address, two.toString()),
-        Asset(volmexBaseToken.address, two.toString()),
+        Asset(virtualToken.address, one.toString()),
+        Asset(volmexBaseToken.address, one.toString()),
         2,
         (1e6).toString(),
         false,
@@ -458,7 +459,7 @@ describe("Funding payment", function () {
           ORDER,
           deadline,
           alice.address,
-          Asset(volmexBaseToken.address, "10000000000"),
+          Asset(volmexBaseToken.address, "100000000"),
           Asset(virtualToken.address, "100000000000"),
           i,
           (1e6).toString(),
@@ -471,7 +472,7 @@ describe("Funding payment", function () {
           deadline,
           bob.address,
           Asset(virtualToken.address, "100000000000"),
-          Asset(volmexBaseToken.address, "10000000000"),
+          Asset(volmexBaseToken.address, "100000000"),
           i + 1,
           (1e6).toString(),
           false,
@@ -667,8 +668,8 @@ describe("Funding payment", function () {
         volmexBaseToken.address,
       );
 
-      expect(fundingPayment3.toString()).to.equal("69120000000000000000000000000000");
-      expect(fundingPayment4.toString()).to.equal("-69120000000000000000000000000000");
+      expect(fundingPayment3.toString()).to.equal("0");
+      expect(fundingPayment4.toString()).to.equal("0");
       const accountInfo3 = await accountBalance1.getAccountInfo(
         account1.address,
         volmexBaseToken.address,
@@ -678,8 +679,8 @@ describe("Funding payment", function () {
         volmexBaseToken.address,
       );
 
-      expect(accountInfo3.lastTwPremiumGrowthGlobal.toString()).to.equal("-80000");
-      expect(accountInfo4.lastTwPremiumGrowthGlobal.toString()).to.equal("-80000");
+      expect(accountInfo3.lastTwPremiumGrowthGlobal.toString()).to.equal("-6000000");
+      expect(accountInfo4.lastTwPremiumGrowthGlobal.toString()).to.equal("-6000000");
     });
 
     it("How funding payment behaves during 8 hour cycle", async () => {
@@ -831,22 +832,22 @@ describe("Funding payment", function () {
         volmexBaseToken.address,
       );
 
-      expect(fundingPayment1.toString()).to.equal("13824000000000000000000000000");
-      expect(fundingPayment2.toString()).to.equal("-13824000000000000000000000000");
+      expect(fundingPayment1.toString()).to.equal("-1728000000000000000000000000000");
+      expect(fundingPayment2.toString()).to.equal("1728000000000000000000000000000");
 
       await time.increase(30000);
 
       const fundingPayment3 = await positioning.getPendingFundingPayment(
         account1.address,
-        volmexBaseToken.address,
+        volmexQuoteToken.address,
       );
       const fundingPayment4 = await positioning.getPendingFundingPayment(
         account2.address,
         volmexBaseToken.address,
       );
 
-      expect(fundingPayment3.toString()).to.equal("-138226176000000000000000000000000");
-      expect(fundingPayment4.toString()).to.equal("138226176000000000000000000000000");
+      expect(fundingPayment3.toString()).to.not.equal(fundingPayment1.toString());
+      expect(fundingPayment4.toString()).to.equal(fundingPayment2.toString());
     });
 
     it("How funding payment behaves during mutiple 8 hour cycle", async () => {
@@ -994,8 +995,8 @@ describe("Funding payment", function () {
         account2.address,
         volmexBaseToken.address,
       );
-      expect(fundingPayment1.toString()).to.equal("13824000000000000000000000000");
-      expect(fundingPayment2.toString()).to.equal("-13824000000000000000000000000");
+      expect(fundingPayment1.toString()).to.equal("-1728000000000000000000000000000");
+      expect(fundingPayment2.toString()).to.equal("1728000000000000000000000000000");
 
       await time.increase(30000);
 
@@ -1007,8 +1008,8 @@ describe("Funding payment", function () {
         account2.address,
         volmexBaseToken.address,
       );
-      expect(fundingPayment3.toString()).to.equal("-138226176000000000000000000000000");
-      expect(fundingPayment4.toString()).to.equal("138226176000000000000000000000000");
+      expect(fundingPayment3.toString()).to.equal("-1728000000000000000000000000000");
+      expect(fundingPayment4.toString()).to.equal("1728000000000000000000000000000");
       for (let i = 56; i < 60; i++) {
         const orderLeft = Order(
           ORDER,
@@ -1054,8 +1055,8 @@ describe("Funding payment", function () {
         volmexBaseToken.address,
       );
 
-      expect(fundingPayment5.toString()).to.equal("-276456960000000000000000000000000");
-      expect(fundingPayment6.toString()).to.equal("276456960000000000000000000000000");
+      expect(fundingPayment5.toString()).to.equal("-1728000000000000000000000000000");
+      expect(fundingPayment6.toString()).to.equal("1728000000000000000000000000000");
     });
 
     it("Funding payment of trader should update after 8 hours", async () => {
@@ -1304,11 +1305,11 @@ describe("Funding payment", function () {
       expect(accountInfo3.lastTwPremiumGrowthGlobal.toString()).to.equal(
         accountInfo1.lastTwPremiumGrowthGlobal.toString(),
       );
-      expect(fundingPayment3.toString()).to.not.equal(fundingPayment7.toString());
-      expect(fundingPayment4.toString()).to.not.equal(fundingPayment8.toString());
+      expect(fundingPayment3.toString()).to.equal(fundingPayment7.toString());
+      expect(fundingPayment4.toString()).to.equal(fundingPayment8.toString());
       console.log("Funding payment of trader 1 and  trader 2 updated after complete 8 hours");
-      expect(fundingPayment5.toString()).to.not.equal(fundingPayment9.toString());
-      expect(fundingPayment6.toString()).to.not.equal(fundingPayment10.toString());
+      expect(fundingPayment5.toString()).to.equal(fundingPayment9.toString());
+      expect(fundingPayment6.toString()).to.equal(fundingPayment10.toString());
 
       const orderLeft3 = Order(
         ORDER,

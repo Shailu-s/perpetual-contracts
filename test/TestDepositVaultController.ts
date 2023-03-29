@@ -3,6 +3,7 @@ import { expect } from "chai";
 import { ethers, upgrades } from "hardhat";
 import { IndexPriceOracle, MarkPriceOracle } from "../typechain";
 import { FakeContract, smock } from "@defi-wonderland/smock";
+import { sample } from "lodash";
 
 describe("Vault Controller deposit tests", function () {
   let USDC;
@@ -13,6 +14,8 @@ describe("Vault Controller deposit tests", function () {
   let vaultController;
   let vaultFactory;
   let DAI;
+  let MarkPriceOracle;
+  let IndexPriceOracle;
   let markPriceFake: FakeContract<MarkPriceOracle>;
   let indexPriceFake: FakeContract<IndexPriceOracle>;
   let matchingEngineFake: FakeContract<MarkPriceOracle>;
@@ -22,6 +25,9 @@ describe("Vault Controller deposit tests", function () {
   let volmexPerpPeriphery;
   let prepViewFake;
   let owner, alice, relayer;
+  const proofHash = "0x6c00000000000000000000000000000000000000000000000000000000000000";
+  const capRatio = "250";
+  const twapType = "0x1444f8cf";
 
   beforeEach(async function () {
     VolmexPerpPeriphery = await ethers.getContractFactory("VolmexPerpPeriphery");

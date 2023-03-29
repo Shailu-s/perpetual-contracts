@@ -39,17 +39,12 @@ describe("Vault Controller tests for withdrawal", function () {
     VolmexBaseToken = await ethers.getContractFactory("VolmexBaseToken");
     perpViewFake = await smock.fake("VolmexPerpView");
 
-    indexPriceOracle = await upgrades.deployProxy(IndexPriceOracle, [owner.address], {
-      initializer: "initialize",
-    });
-    await indexPriceOracle.deployed();
-
     volmexBaseToken = await upgrades.deployProxy(
       VolmexBaseToken,
       [
         "VolmexBaseToken", // nameArg
         "VBT", // symbolArg,
-        indexPriceOracle.address, // priceFeedArg
+        alice.address, // priceFeedArg
         true, // isBase
       ],
       {
@@ -57,7 +52,15 @@ describe("Vault Controller tests for withdrawal", function () {
       },
     );
     await volmexBaseToken.deployed();
-
+    indexPriceOracle = await upgrades.deployProxy(
+      IndexPriceOracle,
+      [owner.address, [100000], [volmexBaseToken.address], [proofHash], [capRatio]],
+      {
+        initializer: "initialize",
+      },
+    );
+    await indexPriceOracle.deployed();
+    await volmexBaseToken.setPriceFeed(indexPriceOracle.address);
     markPriceOracle = await upgrades.deployProxy(
       MarkPriceOracle,
       [[100000], [volmexBaseToken.address], [proofHash], [capRatio], owner.address],
@@ -148,6 +151,7 @@ describe("Vault Controller tests for withdrawal", function () {
     volmexPerpPeriphery = await upgrades.deployProxy(VolmexPerpPeriphery, [
       perpViewFake.address,
       markPriceOracle.address,
+      indexPriceOracle.address,
       [vault.address, vault.address],
       owner.address,
       relayer.address,
