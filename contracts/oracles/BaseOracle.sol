@@ -119,7 +119,7 @@ contract BaseOracle is AccessControlUpgradeable {
      *
      * @param _index Index of the observation, the index base token mapping
      */
-    function getLatestPrice(uint64 _index) external view returns (uint256 underlyingLastPrice) {
+    function getLatestPrice(uint64 _index) public view returns (uint256 underlyingLastPrice) {
         Observation[] memory observations = observationsByIndex[_index];
         uint256 index = observations.length - 1;
         underlyingLastPrice = observations[index].underlyingPrice;
