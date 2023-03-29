@@ -191,7 +191,7 @@ contract BaseOracle is AccessControlUpgradeable {
             }
         }
         index = 0; // re-used to get total observation count
-        for (; startIndex > endIndex; startIndex++) {
+        for (; startIndex <= endIndex; startIndex++) {
             priceCumulative += observations[startIndex].underlyingPrice;
             index++;
         }
