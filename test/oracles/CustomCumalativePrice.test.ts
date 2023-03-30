@@ -33,36 +33,11 @@ const getCustomCumulativePrice = (
   return priceCumulative;
 };
 
-describe("MarkPriceOracle", function () {
+describe("Custom Cumulative Price", function () {
   let MarkPriceOracle;
   let markPriceOracle;
-  let ExchangeTest;
-  let exchangeTest;
-  let factory;
-  let PerpFactory;
   let volmexBaseToken;
-  let newToken;
   let VolmexBaseToken;
-  let indexPriceOracle;
-  let IndexPriceOracle;
-  let MatchingEngine;
-  let matchingEngine;
-  let erc20TransferProxy;
-  let ERC20TransferProxyTest;
-  let community;
-  let VaultController;
-  let vaultController;
-  let Vault;
-  let vault;
-  let Positioning;
-  let positioning;
-  let AccountBalance;
-  let accountBalance;
-  let TestERC20;
-  let USDC;
-  let perpViewFake;
-  let MarketRegistry;
-  let marketRegistry;
   let owner;
   let account1;
   let account2;
@@ -79,29 +54,11 @@ describe("MarkPriceOracle", function () {
   let thirdTimestamp;
   this.beforeAll(async () => {
     MarkPriceOracle = await ethers.getContractFactory("MarkPriceOracle");
-    MatchingEngine = await ethers.getContractFactory("MatchingEngineTest");
-    ExchangeTest = await ethers.getContractFactory("ExchangeTest");
-    PerpFactory = await ethers.getContractFactory("PerpFactory");
     VolmexBaseToken = await ethers.getContractFactory("VolmexBaseToken");
-    IndexPriceOracle = await ethers.getContractFactory("IndexPriceOracle");
-    ERC20TransferProxyTest = await ethers.getContractFactory("ERC20TransferProxyTest");
-    VaultController = await ethers.getContractFactory("VaultController");
-    Vault = await ethers.getContractFactory("Vault");
-    Positioning = await ethers.getContractFactory("Positioning");
-    AccountBalance = await ethers.getContractFactory("AccountBalance");
-    TestERC20 = await ethers.getContractFactory("TestERC20");
-    MarketRegistry = await ethers.getContractFactory("MarketRegistry");
   });
 
   beforeEach(async () => {
     [owner, account1, account2, account3, account4] = await ethers.getSigners();
-
-    exchangeTest = await ExchangeTest.deploy();
-    perpViewFake = await smock.fake("VolmexPerpView");
-
-    erc20TransferProxy = await ERC20TransferProxyTest.deploy();
-    community = account4.address;
-
     volmexBaseToken = await upgrades.deployProxy(VolmexBaseToken, [
       "MyTestToken",
       "MKT",
@@ -118,24 +75,13 @@ describe("MarkPriceOracle", function () {
       },
     );
     await markPriceOracle.deployed();
-    matchingEngine = await upgrades.deployProxy(
-      MatchingEngine,
-      [owner.address, markPriceOracle.address],
-      {
-        initializer: "__MatchingEngineTest_init",
-      },
-    );
-
-    await matchingEngine.deployed();
-
-    await markPriceOracle.connect(owner).setObservationAdder(matchingEngine.address);
+    await markPriceOracle.setObservationAdder(owner.address);
   });
   describe("Custom window ", async () => {
     it("should return cumulative price between first time stamp and second and third", async () => {
       firstTimestamp = getCurrentTimestamp();
       secondTimestamp = firstTimestamp + interval;
       thirdTimestamp = secondTimestamp + interval;
-      await markPriceOracle.setObservationAdder(owner.address);
       for (index = 0; index < 96; index++) {
         // add obeservation in every 5 minutes
         await time.increase(300);
@@ -200,7 +146,6 @@ describe("MarkPriceOracle", function () {
         };
         observations.push(observation);
       }
-      console.log(firstTimestamp);
       const cumulativePrice1 = await markPriceOracle.getCustomCumulativePrice(
         0,
         firstTimestamp + 300,
