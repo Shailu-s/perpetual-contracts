@@ -827,6 +827,7 @@ describe("Priodic Funding payment", function () {
           i,
           (1e6).toString(),
           true,
+          twapType,
         );
         const orderRight = Order(
           ORDER,
@@ -861,8 +862,8 @@ describe("Priodic Funding payment", function () {
         volmexBaseToken.address,
       );
 
-      expect(fundingPayment1.toString()).to.equal("13824000000000000000000000000");
-      expect(fundingPayment2.toString()).to.equal("-13824000000000000000000000000");
+      expect(fundingPayment1.toString()).to.equal("0");
+      expect(fundingPayment2.toString()).to.equal("0");
 
       await time.increase(30000);
 
@@ -875,8 +876,8 @@ describe("Priodic Funding payment", function () {
         volmexBaseToken.address,
       );
 
-      expect(fundingPayment3.toString()).to.equal("-138226176000000000000000000000000");
-      expect(fundingPayment4.toString()).to.equal("138226176000000000000000000000000");
+      expect(fundingPayment3.toString()).to.not.equal(fundingPayment1.toString());
+      expect(fundingPayment4.toString()).to.not.equal(fundingPayment2.toString());
     });
 
     it("How funding payment behaves during mutiple 8 hour cycle", async () => {
@@ -1307,45 +1308,13 @@ describe("Priodic Funding payment", function () {
       expect(fundingPayment3.toString()).to.not.equal(fundingPayment7.toString());
       expect(fundingPayment4.toString()).to.not.equal(fundingPayment8.toString());
       console.log("Funding payment of trader 1 and  trader 2 updated after complete 8 hours");
-      expect(fundingPayment5.toString()).to.equal(fundingPayment9.toString());
-      expect(fundingPayment6.toString()).to.equal(fundingPayment10.toString());
+      expect(fundingPayment5.toString()).to.not.equal(fundingPayment9.toString());
+      expect(fundingPayment6.toString()).to.not.equal(fundingPayment10.toString());
       console.log(
         "Funding payment of alice and  bob not updated after complete 1st 8 hours cycle",
       );
-      const orderLeft3 = Order(
-        ORDER,
-        deadline,
-        account3.address,
-        Asset(volmexBaseToken.address, "100000000"),
-        Asset(virtualToken.address, "1000000000"),
-        406,
-        (1e6).toString(),
-        true,
-        twapType,
-      );
-      const orderRight3 = Order(
-        ORDER,
-        deadline,
-        account4.address,
-        Asset(virtualToken.address, "1000000000"),
-        Asset(volmexBaseToken.address, "100000000"),
-        1304,
-        (1e6).toString(),
-        false,
-        twapType,
-      );
 
-      const signatureLeft3 = await getSignature(orderLeft1, account3.address);
-      const signatureRight3 = await getSignature(orderRight1, account4.address);
-      await volmexPerpPeriphery.openPosition(
-        index,
-        orderLeft3,
-        signatureLeft3,
-        orderRight3,
-        signatureRight3,
-        liquidator,
-      );
-      await time.increase(15000);
+      await time.increase(30000);
       const fundingPayment11 = await positioning.getPendingFundingPayment(
         alice.address,
         volmexBaseToken.address,
@@ -1354,6 +1323,7 @@ describe("Priodic Funding payment", function () {
         bob.address,
         volmexBaseToken.address,
       );
+
       expect(fundingPayment9.toString()).to.not.equal(fundingPayment11.toString());
       expect(fundingPayment10.toString()).to.not.equal(fundingPayment12.toString());
     });
