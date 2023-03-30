@@ -34,7 +34,7 @@ contract FundingRate is IFundingRate, BlockContext, PositioningCallee, FundingRa
         uint256 lastSettledTimestamp = _lastSettledTimestampMap[baseToken];
         // update states before further actions in this funding epoch; once per epoch
         if (timestamp - lastSettledTimestamp > _fundingPeriod) {
-            uint256 fundingLatestTimestamp = lastSettledTimestamp + ((timestamp - lastSettledTimestamp) / _fundingPeriod) * _fundingPeriod;
+            uint256 fundingLatestTimestamp = lastSettledTimestamp == 0 ? timestamp : lastSettledTimestamp + ((timestamp - lastSettledTimestamp) / _fundingPeriod) * _fundingPeriod;
             // update fundingGrowthGlobal and _lastSettledTimestamp
             (
                 _lastSettledTimestampMap[baseToken],
@@ -87,8 +87,6 @@ contract FundingRate is IFundingRate, BlockContext, PositioningCallee, FundingRa
             uint256 deltaTimestamp = (timestamp - _firstTradedTimestampMap[baseToken]);
             twapInterval = twapInterval > deltaTimestamp ? deltaTimestamp : twapInterval;
         }
-
-
 
         uint256 lastSettledTimestamp = _lastSettledTimestampMap[baseToken];
         int256 lastTwPremium= _globalFundingGrowthMap[baseToken];

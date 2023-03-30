@@ -121,7 +121,7 @@ contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, 
     }
 
     /// @inheritdoc IPositioning
-    function setFundingPeriod(int256 period) external {
+    function setFundingPeriod(uint256 period) external {
         _requirePositioningAdmin();
         _fundingPeriod = period;
 

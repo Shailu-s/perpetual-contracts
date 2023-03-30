@@ -236,6 +236,7 @@ describe.only("Priodic Funding payment", function () {
       const price = await accountBalance1.getIndexPrice(volmexBaseToken.address);
       expect(price.toString()).to.equal("7500000000");
 
+      //ye before each me aana chahiye
       await USDC.transfer(account1.address, "1000000000000000000");
       await USDC.transfer(account2.address, "1000000000000000000");
       await USDC.transfer(alice.address, "1000000000000000000");
@@ -270,6 +271,7 @@ describe.only("Priodic Funding payment", function () {
           .connect(bob)
           .depositToVault(index, USDC.address, "1000000000000000000")
       ).wait();
+      //yaha tk
 
       const orderLeft = Order(
         ORDER,
@@ -311,6 +313,8 @@ describe.only("Priodic Funding payment", function () {
         account1.address,
         volmexBaseToken.address,
       );
+      console.log(accountInfo1, "ACCINFO111")
+      // console.log(accountInfo2, "ACCINFO222")
 
       for (let i = 34; i < 38; i++) {
         const orderLeft = Order(
@@ -357,11 +361,11 @@ describe.only("Priodic Funding payment", function () {
         volmexBaseToken.address,
       );
 
-      console.log(await time.latest());
+      console.log(await time.latest(), "before time increase");
       await time.increase(1000);
       const stamp = await time.latest();
 
-      console.log(stamp);
+      console.log(stamp, "after time increase");
       const fundingPayment3 = await positioning.getPendingFundingPayment(
         account1.address,
         volmexBaseToken.address,
