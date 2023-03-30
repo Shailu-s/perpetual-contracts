@@ -5,6 +5,7 @@ import { BaseOracle } from "./BaseOracle.sol";
 import { IPositioning } from "../interfaces/IPositioning.sol";
 import { IIndexPriceOracle } from "../interfaces/IIndexPriceOracle.sol";
 import { LibSafeCastUint } from "../libs/LibSafeCastUint.sol";
+import { LibPerpMath } from "../libs/LibPerpMath.sol";
 
 /**
  * @title Volmex Oracle Mark SMA
@@ -73,18 +74,18 @@ contract MarkPriceOracle is BaseOracle {
         indexTwInterval = _indexTwInterval;
     }
 
-    function getMarkPrice(address _baseToken, uint64 _index) external view returns (uint256 markPrice) {
+    function getMarkPrice(address _baseToken, uint64 _index) external view returns (int256 markPrice) {
         int256 lastFundingRate = positioning.getLastFundingRate(_baseToken);
         uint256 nextFunding = positioning.getLastSettledTimestampMap(_baseToken);
         uint256 fundingPeriod = positioning.getFundingPeriod();
 
-        uint256[3] memory prices;
-        uint256 indexPrice = indexOracle.getCumulativePrice(indexTwInterval, _index);
-        // TODO: Check for decimal precisions
-        // TODO: Check if we can use lastFundingRate in uint256
-        prices[0] = uint256(indexPrice.toInt256() * (1 + lastFundingRate * (nextFunding.toInt256() / fundingPeriod.toInt256())));
-        (prices[1],) = _getCumulativePrice(markTwInterval, _index);
-        prices[2] = getLatestPrice(_index);
-        // TODO: get median of all three prices
+        int256[3] memory prices;
+        int256 indexPrice = indexOracle.getCumulativePrice(indexTwInterval, _index).toInt256();
+        // Note: Check for actual precision and data type
+        prices[0] = indexPrice * (1 + lastFundingRate * (nextFunding.toInt256() / fundingPeriod.toInt256()));
+        (uint256 markTwap,) = _getCumulativePrice(markTwInterval, _index);
+        prices[1] = markTwap.toInt256();
+        prices[2] = getLatestPrice(_index).toInt256();
+        markPrice = LibPerpMath.median(prices[0], prices[1], prices[2]);
     }
 }
