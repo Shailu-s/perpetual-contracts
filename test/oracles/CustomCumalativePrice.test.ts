@@ -109,52 +109,6 @@ describe("MarkPriceOracle", function () {
       true,
     ]);
     await volmexBaseToken.deployed();
-    indexPriceOracle = await upgrades.deployProxy(
-      IndexPriceOracle,
-      [owner.address, [1000000], [volmexBaseToken.address], [proofHash], [capRatio]],
-      {
-        initializer: "initialize",
-      },
-    );
-    newToken = await VolmexBaseToken.deploy();
-    await newToken.deployed();
-
-    positioning = await Positioning.deploy();
-    await positioning.deployed();
-
-    accountBalance = await AccountBalance.deploy();
-    await accountBalance.deployed();
-
-    vault = await Vault.deploy();
-    await vault.deployed();
-
-    vaultController = await VaultController.deploy();
-    await vaultController.deployed();
-
-    USDC = await TestERC20.deploy();
-    await USDC.__TestERC20_init("TestUSDC", "USDC", 6);
-    await USDC.deployed();
-
-    marketRegistry = await MarketRegistry.deploy();
-    marketRegistry.initialize(USDC.address);
-
-    factory = await upgrades.deployProxy(
-      PerpFactory,
-      [
-        volmexBaseToken.address,
-        volmexBaseToken.address,
-        vaultController.address,
-        vault.address,
-        positioning.address,
-        accountBalance.address,
-        marketRegistry.address,
-        perpViewFake.address,
-      ],
-      {
-        initializer: "initialize",
-      },
-    );
-    await factory.deployed();
 
     markPriceOracle = await upgrades.deployProxy(
       MarkPriceOracle,
@@ -175,8 +129,6 @@ describe("MarkPriceOracle", function () {
     await matchingEngine.deployed();
 
     await markPriceOracle.connect(owner).setObservationAdder(matchingEngine.address);
-
-    await exchangeTest.setMarkPriceOracle(markPriceOracle.address);
   });
   describe("Custom window ", async () => {
     it("should return cumulative price between first time stamp and second and third", async () => {
