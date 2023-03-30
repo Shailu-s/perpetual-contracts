@@ -20,7 +20,7 @@ interface IFundingRate {
     function getLastFundingRate(address baseToken) external view returns (int256 lastFundingRate);
     /// @dev get time until next funding is seconds
     /// @param baseToken Address of base asset in perp
-    function getLastSettledTimestampMap(address baseToken) external view returns (uint256 nextFundingInterval);
+    function getNextFunding(address baseToken) external view returns (uint256 nextFundingInterval);
     /// @dev get funding period
     function getFundingPeriod() external view returns (uint256 fundingPeriod);
 }

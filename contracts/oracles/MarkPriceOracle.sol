@@ -76,7 +76,7 @@ contract MarkPriceOracle is BaseOracle {
 
     function getMarkPrice(address _baseToken, uint64 _index) external view returns (int256 markPrice) {
         int256 lastFundingRate = positioning.getLastFundingRate(_baseToken);
-        uint256 nextFunding = positioning.getLastSettledTimestampMap(_baseToken);
+        uint256 nextFunding = positioning.getNextFunding(_baseToken);
         uint256 fundingPeriod = positioning.getFundingPeriod();
 
         int256[3] memory prices;

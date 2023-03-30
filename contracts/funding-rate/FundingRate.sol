@@ -60,8 +60,8 @@ contract FundingRate is IFundingRate, BlockContext, PositioningCallee, FundingRa
     }
 
     /// @inheritdoc IFundingRate
-    function getLastSettledTimestampMap(address baseToken) external view returns (uint256 nextFundingInterval) {
-        nextFundingInterval = block.timestamp - _lastSettledTimestampMap[baseToken]; // nextFundingInterval = Time Untill Next Funding
+    function getNextFunding(address baseToken) external view returns (uint256 nextFunding) {
+        nextFunding = block.timestamp - _lastSettledTimestampMap[baseToken]; // nextFundingInterval = Time Untill Next Funding
     }
 
     /// @inheritdoc IFundingRate
