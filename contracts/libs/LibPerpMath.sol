@@ -63,4 +63,10 @@ library LibPerpMath {
 
         return result;
     }
+
+    function median(int256 a, int256 b, int256 c) internal pure returns (int256 mid) {
+        int256 mx = max(max(a,b),c);
+        int256 mn = min(min(a,b),c);
+        mid = a^b^c^mx^mn;
+    }
 }
