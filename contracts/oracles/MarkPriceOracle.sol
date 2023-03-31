@@ -85,7 +85,7 @@ contract MarkPriceOracle is BaseOracle {
         uint256 _underlyingPrice,
         uint256 _index,
         bytes32 _proofHash
-    ) external {
+    ) external virtual {
         _requireCanAddObservation();
         _addObservation(_underlyingPrice, _index, _proofHash);
     }
