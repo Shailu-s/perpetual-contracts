@@ -93,7 +93,7 @@ contract BaseOracle is AccessControlUpgradeable {
      * @param _startTimestamp timestamp of start of window
      * @param _endTimestamp timestamp of last of window
      */
-    function getCustomCumulativePrice(uint256 _index, uint256 _startTimestamp, uint256 _endTimestamp) external view returns (uint256 priceCumulative) {
+    function getCustomTwap(uint256 _index, uint256 _startTimestamp, uint256 _endTimestamp) external view returns (uint256 priceCumulative) {
         (priceCumulative,) = _getCustomCumulativePrice(_index, _startTimestamp, _endTimestamp);
     }
 

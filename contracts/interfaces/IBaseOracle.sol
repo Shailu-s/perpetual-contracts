@@ -6,7 +6,7 @@ interface IBaseOracle {
     function getLastTwap(uint256 _twInterval, uint256 _index) external view returns (uint256 priceCumulative);
     function indexByBaseToken(address _baseToken) external view returns (uint256 index);
     function baseTokenByIndex(uint256 _index) external view returns (address baseToken);
-    function getCustomCumulativePrice(uint256 _index, uint256 _startTimestamp, uint256 _endTimestamp) external view returns (uint256 priceCumulative);
+    function getCustomTwap(uint256 _index, uint256 _startTimestamp, uint256 _endTimestamp) external view returns (uint256 priceCumulative);
     function getIndexCount() external view returns (uint256);
     function getLastPrice(uint256 _index) external view returns (uint256 underlyingLastPrice);
 
