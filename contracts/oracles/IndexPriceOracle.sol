@@ -34,7 +34,7 @@ contract IndexPriceOracle is BaseOracle, ERC165StorageUpgradeable {
      */
     function addObservation(
         uint256 _underlyingPrice,
-        uint64 _index,
+        uint256 _index,
         bytes32 _proofHash
     ) external {
         _requireCanAddObservation();
@@ -47,7 +47,7 @@ contract IndexPriceOracle is BaseOracle, ERC165StorageUpgradeable {
      * @param _twInterval time for averaging observations
      * @return answer is the answer for the given round
      */
-    function latestRoundData(uint256 _twInterval, uint64 _index) external view virtual returns (uint256 answer, uint256 lastUpdateTimestamp) {
+    function latestRoundData(uint256 _twInterval, uint256 _index) external view virtual returns (uint256 answer, uint256 lastUpdateTimestamp) {
         (answer, lastUpdateTimestamp) = _getCumulativePrice(_twInterval, _index);
         answer *= 100;
     }
@@ -57,7 +57,7 @@ contract IndexPriceOracle is BaseOracle, ERC165StorageUpgradeable {
      * @param _twInterval time interval for twap
      * @param _index Position of the observation
      */
-    function getIndexTwap(uint256 _twInterval, uint64 _index) external view returns (uint256 volatilityTokenTwap, uint256 iVolatilityTokenTwap, uint256 lastUpdateTimestamp) {
+    function getIndexTwap(uint256 _twInterval, uint256 _index) external view returns (uint256 volatilityTokenTwap, uint256 iVolatilityTokenTwap, uint256 lastUpdateTimestamp) {
         (volatilityTokenTwap, lastUpdateTimestamp) = _getCumulativePrice(_twInterval, _index);
         iVolatilityTokenTwap = volatilityCapRatioByIndex[_index] - volatilityTokenTwap;
     }

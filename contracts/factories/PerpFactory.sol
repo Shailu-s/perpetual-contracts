@@ -156,7 +156,7 @@ contract PerpFactory is Initializable, IPerpFactory, AccessControlUpgradeable {
         address _markPriceOracle,
         address _indexPriceOracle,
         address _quoteToken,
-        uint64 _underlyingPriceIndex,
+        uint256 _underlyingPriceIndex,
         address[2] calldata _liquidators
     ) external returns (address[4] memory perpEcosystem) {
         _requireClonesDeployer();
@@ -200,7 +200,7 @@ contract PerpFactory is Initializable, IPerpFactory, AccessControlUpgradeable {
         address _accountBalance,
         address _markPriceOracle,
         address _indexPriceOracle,
-        uint64 _underlyingPriceIndex,
+        uint256 _underlyingPriceIndex,
         address[2] calldata _liquidators
     ) private returns (IPositioning positioning) {
         bytes32 salt = keccak256(abi.encodePacked(_perpIndex, _positioningConfig));

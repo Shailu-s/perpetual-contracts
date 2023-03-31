@@ -48,7 +48,7 @@ contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, 
         address matchingEngineArg,
         address markPriceArg,
         address indexPriceArg,
-        uint64 underlyingPriceIndex,
+        uint256 underlyingPriceIndex,
         address[2] calldata liquidators
     ) external initializer {
         // P_VANC: Vault address is not contract

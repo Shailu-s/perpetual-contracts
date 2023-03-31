@@ -83,14 +83,14 @@ contract MarkPriceOracle is BaseOracle {
      */
     function addObservation(
         uint256 _underlyingPrice,
-        uint64 _index,
+        uint256 _index,
         bytes32 _proofHash
     ) external {
         _requireCanAddObservation();
         _addObservation(_underlyingPrice, _index, _proofHash);
     }
 
-    function getMarkPrice(address _baseToken, uint64 _index) external view returns (int256 markPrice) {
+    function getMarkPrice(address _baseToken, uint256 _index) external view returns (int256 markPrice) {
         int256 lastFundingRate = positioning.getLastFundingRate(_baseToken);
         uint256 nextFunding = positioning.getNextFunding(_baseToken);
         uint256 fundingPeriod = positioning.getFundingPeriod();

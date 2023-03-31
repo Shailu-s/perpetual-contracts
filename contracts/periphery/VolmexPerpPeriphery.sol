@@ -96,7 +96,7 @@ contract VolmexPerpPeriphery is AccessControlUpgradeable, IVolmexPerpPeriphery {
     }
 
     function depositToVault(
-        uint64 _index,
+        uint256 _index,
         address _token,
         uint256 _amount
     ) external payable {
@@ -109,7 +109,7 @@ contract VolmexPerpPeriphery is AccessControlUpgradeable, IVolmexPerpPeriphery {
     }
 
     function withdrawFromVault(
-        uint64 _index,
+        uint256 _index,
         address _token,
         address payable _to,
         uint256 _amount
@@ -119,7 +119,7 @@ contract VolmexPerpPeriphery is AccessControlUpgradeable, IVolmexPerpPeriphery {
     }
 
     function openPosition(
-        uint64 _index,
+        uint256 _index,
         LibOrder.Order memory _orderLeft,
         bytes memory _signatureLeft,
         LibOrder.Order memory _orderRight,
@@ -135,7 +135,7 @@ contract VolmexPerpPeriphery is AccessControlUpgradeable, IVolmexPerpPeriphery {
     }
 
     function batchOpenPosition(
-        uint64 _index,
+        uint256 _index,
         LibOrder.Order[] memory _ordersLeft,
         bytes[] memory _signaturesLeft,
         LibOrder.Order[] memory _ordersRight,
@@ -174,7 +174,7 @@ contract VolmexPerpPeriphery is AccessControlUpgradeable, IVolmexPerpPeriphery {
      */
 
     function _openPosition(
-        uint64 _index,
+        uint256 _index,
         LibOrder.Order memory _orderLeft,
         bytes memory _signatureLeft,
         LibOrder.Order memory _orderRight,
@@ -235,7 +235,7 @@ contract VolmexPerpPeriphery is AccessControlUpgradeable, IVolmexPerpPeriphery {
         address baseToken = IVirtualToken(makeAsset).isBase() ? makeAsset : takeAsset;
 
         // TODO: change to index, mark and mark's latest price
-        uint64 _index = markPriceOracle.indexByBaseToken(baseToken);
+        uint256 _index = markPriceOracle.indexByBaseToken(baseToken);
         if (_order.twapType == LibOrder.MARK_TWAP) {
             price = markPriceOracle.getCumulativePrice(_twInterval, _index);
         } else if (_order.twapType == LibOrder.INDEX_TWAP) {

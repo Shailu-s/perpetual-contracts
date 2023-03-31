@@ -25,7 +25,7 @@ contract MatchingEngineTest is MatchingEngine {
         markPriceOracle.addAssets(_underlyingPrices, _assets, _proofHash, _capRatio);
     }
 
-    function addObservation(uint256 _priceCumulative, uint64 _index) public {
+    function addObservation(uint256 _priceCumulative, uint256 _index) public {
         markPriceOracle.addObservation(_priceCumulative, _index, bytes32(0));
     }
 
