@@ -16,11 +16,11 @@ contract BaseOracle is AccessControlUpgradeable {
     bytes32 public constant CAN_ADD_OBSERVATION = keccak256("CAN_ADD_OBSERVATION");
 
     // indices of volatility index {0: ETHV, 1: BTCV}
-    uint64 internal _indexCount;
+    uint64 internal _indexCount; // TODO: Use uint256
     // mapping to store index to the address of the baseToken
-    mapping(uint64 => address) public baseTokenByIndex;
+    mapping(uint64 => address) public baseTokenByIndex; // TODO: use uint256
     // mapping to store index by base token address
-    mapping(address => uint64) public indexByBaseToken;
+    mapping(address => uint64) public indexByBaseToken; // TODO: use uint256
     // mapping to store baseToken to Observations
     mapping(uint64 => Observation[]) public observationsByIndex;
     // Store the volatilitycapratio by index
@@ -74,22 +74,20 @@ contract BaseOracle is AccessControlUpgradeable {
         _addAssets(_underlyingPrice, _asset, _proofHash, _capRatio);
     }
 
-    /**
-     * @notice Used to add price cumulative of an asset at a given timestamp
-     *
-     * @param _underlyingPrice Price of the asset
-     */
-    function addObservation(
+    function _addObservation(
         uint256 _underlyingPrice,
         uint64 _index,
         bytes32 _proofHash
-    ) external {
-        _requireCanAddObservation();
+    ) internal {
         require(_underlyingPrice != 0, "BaseOracle: Not zero");
         Observation memory observation = Observation({ timestamp: block.timestamp, underlyingPrice: _underlyingPrice, proofHash: _proofHash });
         Observation[] storage observations = observationsByIndex[_index];
         observations.push(observation);
         emit ObservationAdded(_index, _underlyingPrice, block.timestamp);
+        // TODO: Do mark price calculation here and store in Observation struct {adding markPrice param}
+        // TODO: add pushMarkPrice method defination here, and implementation if MarkPriceOracle contract.
+        // TODO: fetch IndexPrice at this point
+        // TODO: 
     }
 
     /**
@@ -99,7 +97,7 @@ contract BaseOracle is AccessControlUpgradeable {
      * @param _index Index of the observation, the index base token mapping
      * @return priceCumulative The SMA price of the asset
      */
-    function getCumulativePrice(uint256 _twInterval, uint64 _index) external view returns (uint256 priceCumulative) {
+    function getCumulativePrice(uint256 _twInterval, uint64 _index) external view returns (uint256 priceCumulative) { // TODO: getLastPriceTwap, call get custom window method and pass end time as current time
         (priceCumulative, ) = _getCumulativePrice(_twInterval, _index);
     }
 
@@ -110,7 +108,7 @@ contract BaseOracle is AccessControlUpgradeable {
      * @param _startTimestamp timestamp of start of window
      * @param _endTimestamp timestamp of last of window
      */
-    function getCustomCumulativePrice(uint64 _index, uint256 _startTimestamp, uint256 _endTimestamp) external view returns (uint256 priceCumulative) {
+    function getCustomCumulativePrice(uint64 _index, uint256 _startTimestamp, uint256 _endTimestamp) external view returns (uint256 priceCumulative) { // TODO:
         priceCumulative = _getCustomCumulativePrice(_index, _startTimestamp, _endTimestamp);
     }
 
@@ -119,7 +117,7 @@ contract BaseOracle is AccessControlUpgradeable {
      *
      * @param _index Index of the observation, the index base token mapping
      */
-    function getLatestPrice(uint64 _index) public view returns (uint256 underlyingLastPrice) {
+    function getLatestPrice(uint64 _index) public view returns (uint256 underlyingLastPrice) { // TODO: getLastPrice
         Observation[] memory observations = observationsByIndex[_index];
         uint256 index = observations.length - 1;
         underlyingLastPrice = observations[index].underlyingPrice;

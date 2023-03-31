@@ -26,6 +26,22 @@ contract IndexPriceOracle is BaseOracle, ERC165StorageUpgradeable {
     }
 
     /**
+     * @notice Used to add price cumulative of an asset at a given timestamp
+     *
+     * @param _underlyingPrice Price of the asset
+     * @param _index position of the asset
+     * @param _underlyingPrice hash of price collection
+     */
+    function addObservation(
+        uint256 _underlyingPrice,
+        uint64 _index,
+        bytes32 _proofHash
+    ) external {
+        _requireCanAddObservation();
+        _addObservation(_underlyingPrice, _index, _proofHash);
+    }
+
+    /**
      * @notice Emulate the Chainlink Oracle interface for retrieving Volmex TWAP volatility index
      * @param _index Datapoints volatility index id {0}
      * @param _twInterval time for averaging observations
