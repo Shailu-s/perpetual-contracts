@@ -74,22 +74,6 @@ contract BaseOracle is AccessControlUpgradeable {
         _addAssets(_underlyingPrice, _asset, _proofHash, _capRatio);
     }
 
-    function _addObservation(
-        uint256 _underlyingPrice,
-        uint64 _index,
-        bytes32 _proofHash
-    ) internal {
-        require(_underlyingPrice != 0, "BaseOracle: Not zero");
-        Observation memory observation = Observation({ timestamp: block.timestamp, underlyingPrice: _underlyingPrice, proofHash: _proofHash });
-        Observation[] storage observations = observationsByIndex[_index];
-        observations.push(observation);
-        emit ObservationAdded(_index, _underlyingPrice, block.timestamp);
-        // TODO: Do mark price calculation here and store in Observation struct {adding markPrice param}
-        // TODO: add pushMarkPrice method defination here, and implementation if MarkPriceOracle contract.
-        // TODO: fetch IndexPrice at this point
-        // TODO: 
-    }
-
     /**
      * @notice Get the single moving average price of the asset
      *
@@ -163,6 +147,22 @@ contract BaseOracle is AccessControlUpgradeable {
         _indexCount = indexCount;
 
         emit AssetsAdded(_indexCount, _assets, _underlyingPrices);
+    }
+
+    function _addObservation(
+        uint256 _underlyingPrice,
+        uint64 _index,
+        bytes32 _proofHash
+    ) internal {
+        require(_underlyingPrice != 0, "BaseOracle: Not zero");
+        Observation memory observation = Observation({ timestamp: block.timestamp, underlyingPrice: _underlyingPrice, proofHash: _proofHash });
+        Observation[] storage observations = observationsByIndex[_index];
+        observations.push(observation);
+        emit ObservationAdded(_index, _underlyingPrice, block.timestamp);
+        // TODO: Do mark price calculation here and store in Observation struct {adding markPrice param}
+        // TODO: add pushMarkPrice method defination here, and implementation if MarkPriceOracle contract.
+        // TODO: fetch IndexPrice at this point
+        // TODO: 
     }
 
     function _getCumulativePrice(uint256 _twInterval, uint64 _index) internal view returns (uint256 priceCumulative, uint256 lastUpdatedTimestamp) {
