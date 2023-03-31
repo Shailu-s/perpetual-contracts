@@ -104,7 +104,7 @@ contract MarkPriceOracle is BaseOracle {
         int256 indexPrice = indexOracle.getLastTwap(indexTwInterval, _index).toInt256();
         // Note: Check for actual precision and data type
         prices[0] = indexPrice * (1 + lastFundingRate * (nextFunding.toInt256() / fundingPeriod.toInt256()));
-        (uint256 markTwap,) = _getCumulativePrice(markTwInterval, _index);
+        uint256 markTwap = getLastTwap(markTwInterval, _index);
         prices[1] = markTwap.toInt256();
         prices[2] = getLastPrice(_index).toInt256();
         markPrice = LibPerpMath.median(prices[0], prices[1], prices[2]);

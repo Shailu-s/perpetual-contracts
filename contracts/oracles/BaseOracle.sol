@@ -81,8 +81,9 @@ contract BaseOracle is AccessControlUpgradeable {
      * @param _index Index of the observation, the index base token mapping
      * @return priceCumulative The SMA price of the asset
      */
-    function getLastTwap(uint256 _twInterval, uint256 _index) external view returns (uint256 priceCumulative) { // TODO: getLastPriceTwap, call get custom window method and pass end time as current time
-        (priceCumulative, ) = _getCumulativePrice(_twInterval, _index);
+    function getLastTwap(uint256 _twInterval, uint256 _index) public view returns (uint256 priceCumulative) {
+        uint256 startTimestamp = block.timestamp - _twInterval;
+        (priceCumulative,) = _getCustomCumulativePrice(_index, startTimestamp, block.timestamp);
     }
 
     /**
@@ -92,8 +93,8 @@ contract BaseOracle is AccessControlUpgradeable {
      * @param _startTimestamp timestamp of start of window
      * @param _endTimestamp timestamp of last of window
      */
-    function getCustomCumulativePrice(uint256 _index, uint256 _startTimestamp, uint256 _endTimestamp) external view returns (uint256 priceCumulative) { // TODO:
-        priceCumulative = _getCustomCumulativePrice(_index, _startTimestamp, _endTimestamp);
+    function getCustomCumulativePrice(uint256 _index, uint256 _startTimestamp, uint256 _endTimestamp) external view returns (uint256 priceCumulative) {
+        (priceCumulative,) = _getCustomCumulativePrice(_index, _startTimestamp, _endTimestamp);
     }
 
     /**
@@ -161,22 +162,15 @@ contract BaseOracle is AccessControlUpgradeable {
         emit ObservationAdded(_index, _underlyingPrice, block.timestamp);
     }
 
-    function _getCumulativePrice(uint256 _twInterval, uint256 _index) internal view returns (uint256 priceCumulative, uint256 lastUpdatedTimestamp) {
+    function _getCustomCumulativePrice(uint256 _index, uint256 _startTimestamp, uint256 _endTimestamp) internal view returns (uint256 priceCumulative, uint256 lastUpdatedTimestamp) {
         Observation[] memory observations = observationsByIndex[_index];
         uint256 index = observations.length;
         lastUpdatedTimestamp = observations[index - 1].timestamp;
-        uint256 initialTimestamp = block.timestamp - _twInterval;
-        for (; index != 0 && observations[index - 1].timestamp >= initialTimestamp; index--) {
-            priceCumulative += observations[index - 1].underlyingPrice;
-        }
-        priceCumulative = observations.length != index ? priceCumulative / (observations.length - index) : priceCumulative;
-    }
-
-    function _getCustomCumulativePrice(uint256 _index, uint256 _startTimestamp, uint256 _endTimestamp) internal view returns (uint256 priceCumulative) {
-        Observation[] memory observations = observationsByIndex[_index];
-        uint256 index = observations.length;
         uint256 startIndex;
         uint256 endIndex;
+        if (observations[index - 1].timestamp < _endTimestamp) {
+            _endTimestamp = observations[index - 1].timestamp;
+        }
         for (; index != 0 && index >= startIndex; index--) {
             if (observations[index - 1].timestamp >= _endTimestamp) {
                 endIndex = index - 1;
