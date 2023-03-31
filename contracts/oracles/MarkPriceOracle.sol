@@ -13,6 +13,7 @@ import { LibPerpMath } from "../libs/LibPerpMath.sol";
  */
 contract MarkPriceOracle is BaseOracle {
     using LibSafeCastUint for uint256;
+    using LibPerpMath for int256;
 
     IPositioning public positioning;
     IIndexPriceOracle public indexOracle;
@@ -87,15 +88,13 @@ contract MarkPriceOracle is BaseOracle {
         bytes32 _proofHash
     ) external virtual {
         _requireCanAddObservation();
-        _addObservation(_underlyingPrice, _index, _proofHash);
-
-        // TODO: Do mark price calculation here and store in Observation struct {adding markPrice param}
-        // TODO: add pushMarkPrice method defination here, and implementation if MarkPriceOracle contract.
-        // TODO: fetch IndexPrice at this point
-        // TODO: 
+        require(_underlyingPrice != 0, "MarkPriceOracle: Not zero");
+        uint256 markPrice = _getMarkPrice(baseTokenByIndex[_index], _index).abs();
+        _pushOrderPrice(_index, _underlyingPrice, markPrice, _proofHash);
+        emit ObservationAdded(_index, _underlyingPrice, markPrice, block.timestamp);
     }
 
-    function getMarkPrice(address _baseToken, uint256 _index) external view returns (int256 markPrice) {
+    function _getMarkPrice(address _baseToken, uint256 _index) internal view returns (int256 markPrice) {
         int256 lastFundingRate = positioning.getLastFundingRate(_baseToken);
         uint256 nextFunding = positioning.getNextFunding(_baseToken);
         uint256 fundingPeriod = positioning.getFundingPeriod();
@@ -107,6 +106,6 @@ contract MarkPriceOracle is BaseOracle {
         uint256 markTwap = getLastTwap(markTwInterval, _index);
         prices[1] = markTwap.toInt256();
         prices[2] = getLastPrice(_index).toInt256();
-        markPrice = LibPerpMath.median(prices[0], prices[1], prices[2]);
+        markPrice = prices[0].median(prices[1], prices[2]);
     }
 }

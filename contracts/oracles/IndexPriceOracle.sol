@@ -38,7 +38,9 @@ contract IndexPriceOracle is BaseOracle, ERC165StorageUpgradeable {
         bytes32 _proofHash
     ) external virtual {
         _requireCanAddObservation();
-        _addObservation(_underlyingPrice, _index, _proofHash);
+        require(_underlyingPrice != 0, "IndexPriceOracle: Not zero");
+        _pushOrderPrice(_underlyingPrice, _index, 0, _proofHash);
+        emit ObservationAdded(_index, _underlyingPrice, 0, block.timestamp);
     }
 
     /**

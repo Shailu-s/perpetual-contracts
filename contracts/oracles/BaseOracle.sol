@@ -8,6 +8,7 @@ contract BaseOracle is AccessControlUpgradeable {
         uint256 timestamp;
         uint256 underlyingPrice;
         bytes32 proofHash;
+        uint256 markPrice; // not required in IndexPriceOracle
     }
 
     // price oracle admin role
@@ -27,7 +28,7 @@ contract BaseOracle is AccessControlUpgradeable {
     mapping(uint256 => uint256) public volatilityCapRatioByIndex;
 
     event ObservationAdderSet(address indexed matchingEngine);
-    event ObservationAdded(uint256 index, uint256 underlyingPrice, uint256 timestamp);
+    event ObservationAdded(uint256 indexed index, uint256 underlyingPrice, uint256 markPrice, uint256 timestamp);
     event AssetsAdded(uint256 indexed lastIndex, address[] assets, uint256[] underlyingPrices);
 
     /**
@@ -137,7 +138,7 @@ contract BaseOracle is AccessControlUpgradeable {
         uint256 indexCount = _indexCount;
         uint256 currentTimestamp = block.timestamp;
         for (uint256 index; index < underlyingPriceLength; index++) {
-            observation = Observation({ timestamp: currentTimestamp, underlyingPrice: _underlyingPrices[index], proofHash: _proofHash[index] });
+            observation = Observation({ timestamp: currentTimestamp, underlyingPrice: _underlyingPrices[index], proofHash: _proofHash[index], markPrice: _underlyingPrices[index] });
             baseTokenByIndex[indexCount] = _assets[index];
             indexByBaseToken[_assets[index]] = indexCount;
             volatilityCapRatioByIndex[indexCount] = _capRatio[index];
@@ -150,16 +151,15 @@ contract BaseOracle is AccessControlUpgradeable {
         emit AssetsAdded(_indexCount, _assets, _underlyingPrices);
     }
 
-    function _addObservation(
-        uint256 _underlyingPrice,
+    function _pushOrderPrice(
         uint256 _index,
+        uint256 _underlyingPrice,
+        uint256 _markPrice,
         bytes32 _proofHash
     ) internal {
-        require(_underlyingPrice != 0, "BaseOracle: Not zero");
-        Observation memory observation = Observation({ timestamp: block.timestamp, underlyingPrice: _underlyingPrice, proofHash: _proofHash });
+        Observation memory observation = Observation({ timestamp: block.timestamp, underlyingPrice: _underlyingPrice, proofHash: _proofHash, markPrice: _markPrice });
         Observation[] storage observations = observationsByIndex[_index];
         observations.push(observation);
-        emit ObservationAdded(_index, _underlyingPrice, block.timestamp);
     }
 
     function _getCustomCumulativePrice(uint256 _index, uint256 _startTimestamp, uint256 _endTimestamp) internal view returns (uint256 priceCumulative, uint256 lastUpdatedTimestamp) {
