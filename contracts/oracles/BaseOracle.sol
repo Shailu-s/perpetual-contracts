@@ -84,7 +84,7 @@ contract BaseOracle is AccessControlUpgradeable {
      */
     function getLastTwap(uint256 _twInterval, uint256 _index) public view returns (uint256 priceCumulative) {
         uint256 startTimestamp = block.timestamp - _twInterval;
-        (priceCumulative,) = _getCustomCumulativePrice(_index, startTimestamp, block.timestamp);
+        (priceCumulative,) = _getCustomTwap(_index, startTimestamp, block.timestamp);
     }
 
     /**
@@ -95,7 +95,7 @@ contract BaseOracle is AccessControlUpgradeable {
      * @param _endTimestamp timestamp of last of window
      */
     function getCustomTwap(uint256 _index, uint256 _startTimestamp, uint256 _endTimestamp) external view returns (uint256 priceCumulative) {
-        (priceCumulative,) = _getCustomCumulativePrice(_index, _startTimestamp, _endTimestamp);
+        (priceCumulative,) = _getCustomTwap(_index, _startTimestamp, _endTimestamp);
     }
 
     /**
@@ -162,7 +162,7 @@ contract BaseOracle is AccessControlUpgradeable {
         observations.push(observation);
     }
 
-    function _getCustomCumulativePrice(uint256 _index, uint256 _startTimestamp, uint256 _endTimestamp) internal view returns (uint256 priceCumulative, uint256 lastUpdatedTimestamp) {
+    function _getCustomTwap(uint256 _index, uint256 _startTimestamp, uint256 _endTimestamp) internal view returns (uint256 priceCumulative, uint256 lastUpdatedTimestamp) {
         Observation[] memory observations = observationsByIndex[_index];
         uint256 index = observations.length;
         lastUpdatedTimestamp = observations[index - 1].timestamp;
