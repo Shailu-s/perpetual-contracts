@@ -101,7 +101,7 @@ contract BaseOracle is AccessControlUpgradeable {
      *
      * @param _index Index of the observation, the index base token mapping
      */
-    function getLatestPrice(uint256 _index) public view returns (uint256 underlyingLastPrice) { // TODO: getLastPrice
+    function getLastPrice(uint256 _index) public view returns (uint256 underlyingLastPrice) { // TODO: getLastPrice
         Observation[] memory observations = observationsByIndex[_index];
         uint256 index = observations.length - 1;
         underlyingLastPrice = observations[index].underlyingPrice;
@@ -159,10 +159,6 @@ contract BaseOracle is AccessControlUpgradeable {
         Observation[] storage observations = observationsByIndex[_index];
         observations.push(observation);
         emit ObservationAdded(_index, _underlyingPrice, block.timestamp);
-        // TODO: Do mark price calculation here and store in Observation struct {adding markPrice param}
-        // TODO: add pushMarkPrice method defination here, and implementation if MarkPriceOracle contract.
-        // TODO: fetch IndexPrice at this point
-        // TODO: 
     }
 
     function _getCumulativePrice(uint256 _twInterval, uint256 _index) internal view returns (uint256 priceCumulative, uint256 lastUpdatedTimestamp) {

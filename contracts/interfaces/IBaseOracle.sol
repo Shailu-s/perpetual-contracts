@@ -8,7 +8,7 @@ interface IBaseOracle {
     function baseTokenByIndex(uint256 _index) external view returns (address baseToken);
     function getCustomCumulativePrice(uint256 _index, uint256 _startTimestamp, uint256 _endTimestamp) external view returns (uint256 priceCumulative);
     function getIndexCount() external view returns (uint256);
-    function getLatestPrice(uint256 _index) external view returns (uint256 underlyingLastPrice);
+    function getLastPrice(uint256 _index) external view returns (uint256 underlyingLastPrice);
 
     function addObservation(uint256 _underlyingPrice, uint256 _index, bytes32 _proofHash) external;
     function addAssets(uint256[] calldata _underlyingPrice, address[] calldata _asset, bytes32[] calldata _proofHash, uint256[] calldata _capRatio) external;

@@ -88,6 +88,11 @@ contract MarkPriceOracle is BaseOracle {
     ) external virtual {
         _requireCanAddObservation();
         _addObservation(_underlyingPrice, _index, _proofHash);
+
+        // TODO: Do mark price calculation here and store in Observation struct {adding markPrice param}
+        // TODO: add pushMarkPrice method defination here, and implementation if MarkPriceOracle contract.
+        // TODO: fetch IndexPrice at this point
+        // TODO: 
     }
 
     function getMarkPrice(address _baseToken, uint256 _index) external view returns (int256 markPrice) {
@@ -101,7 +106,7 @@ contract MarkPriceOracle is BaseOracle {
         prices[0] = indexPrice * (1 + lastFundingRate * (nextFunding.toInt256() / fundingPeriod.toInt256()));
         (uint256 markTwap,) = _getCumulativePrice(markTwInterval, _index);
         prices[1] = markTwap.toInt256();
-        prices[2] = getLatestPrice(_index).toInt256();
+        prices[2] = getLastPrice(_index).toInt256();
         markPrice = LibPerpMath.median(prices[0], prices[1], prices[2]);
     }
 }
