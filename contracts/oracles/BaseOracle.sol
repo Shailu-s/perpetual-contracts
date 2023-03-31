@@ -14,7 +14,7 @@ contract BaseOracle is AccessControlUpgradeable {
     // price oracle admin role
     bytes32 public constant PRICE_ORACLE_ADMIN = keccak256("PRICE_ORACLE_ADMIN");
     // role of observation collection
-    bytes32 public constant CAN_ADD_OBSERVATION = keccak256("CAN_ADD_OBSERVATION");
+    bytes32 public constant ADD_OBSERVATION_ROLE = keccak256("ADD_OBSERVATION_ROLE");
 
     // indices of volatility index {0: ETHV, 1: BTCV}
     uint256 internal _indexCount;
@@ -55,7 +55,7 @@ contract BaseOracle is AccessControlUpgradeable {
     function setObservationAdder(address _adder) external {
         _requireOracleAdmin();
         require(_adder != address(0), "BaseOracle: zero address");
-        _grantRole(CAN_ADD_OBSERVATION, _adder);
+        _grantRole(ADD_OBSERVATION_ROLE, _adder);
         emit ObservationAdderSet(_adder);
     }
 
@@ -191,6 +191,6 @@ contract BaseOracle is AccessControlUpgradeable {
     }
 
     function _requireCanAddObservation() internal view {
-        require(hasRole(CAN_ADD_OBSERVATION, _msgSender()), "BaseOracle: not observation adder");
+        require(hasRole(ADD_OBSERVATION_ROLE, _msgSender()), "BaseOracle: not observation adder");
     }
 }
