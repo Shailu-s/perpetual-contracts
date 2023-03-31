@@ -59,7 +59,7 @@ async function getSignature() {
     `${process.env.INDEX_PRICE_ORACLE}`,
   );
   const indexPrice = (await indexPriceOracle.getIndexTwap(0))[0];
-  const markPrice = await markPriceOracle.getCumulativePrice("14400", 0);
+  const markPrice = await markPriceOracle.getLastTwap("14400", 0);
 
   const time = new Date().getTime();
   const deadline = time + 50000000;
@@ -124,7 +124,7 @@ async function getSignature() {
     );
   const receipt = await tx.wait();
   console.log("Tx Hash: ", receipt.transactionHash);
-  console.log("final", (await markPriceOracle.getCumulativePrice("14400", 0)).toString());
+  console.log("final", (await markPriceOracle.getLastTwap("14400", 0)).toString());
 
   const requiredData = {
     owedUnRealizedPnl: (await accountBalance.getPnlAndPendingFee(account3.address)).toString(),

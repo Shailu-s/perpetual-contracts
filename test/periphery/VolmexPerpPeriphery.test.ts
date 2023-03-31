@@ -299,7 +299,7 @@ describe("VolmexPerpPeriphery", function () {
         );
         const receipt = await tx.wait();
         let txDataBefore = {
-          "Mark price": (await markPriceOracle.getCumulativePrice("3600", 0)).toString(),
+          "Mark price": (await markPriceOracle.getLastTwap("3600", 0)).toString(),
           "Alice position": (
             await accountBalance1.getPositionSize(alice.address, volmexBaseToken.address)
           ).toString(),
@@ -352,7 +352,7 @@ describe("VolmexPerpPeriphery", function () {
           );
           const receipt = await tx.wait();
           txDataBefore = {
-            "Mark price": (await markPriceOracle.getCumulativePrice("3600", 0)).toString(),
+            "Mark price": (await markPriceOracle.getLastTwap("3600", 0)).toString(),
             "Alice position": (
               await accountBalance1.getPositionSize(alice.address, volmexBaseToken.address)
             ).toString(),

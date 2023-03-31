@@ -218,7 +218,7 @@ describe("MarkPriceOracle", function () {
         await matchingEngine.addObservation(10000000, 0);
       }
 
-      const txn = await markPriceOracle.getCumulativePrice(10000000, 0);
+      const txn = await markPriceOracle.getLastTwap(10000000, 0);
       expect(Number(txn)).equal(9100000);
     });
 
@@ -234,7 +234,7 @@ describe("MarkPriceOracle", function () {
     it("Should get cumulative price", async () => {
       await matchingEngine.addObservation(1000000, 0);
 
-      const txn = await markPriceOracle.getCumulativePrice(10000000, 0);
+      const txn = await markPriceOracle.getLastTwap(10000000, 0);
       expect(Number(txn)).equal(1000000);
     });
 
@@ -244,17 +244,17 @@ describe("MarkPriceOracle", function () {
         await time.increase(1000);
       }
       const txns = await Promise.all([
-        markPriceOracle.getCumulativePrice(1000, 0),
-        markPriceOracle.getCumulativePrice(2000, 0),
-        markPriceOracle.getCumulativePrice(3000, 0),
-        markPriceOracle.getCumulativePrice(4000, 0),
-        markPriceOracle.getCumulativePrice(5000, 0),
-        markPriceOracle.getCumulativePrice(6000, 0),
-        markPriceOracle.getCumulativePrice(7000, 0),
-        markPriceOracle.getCumulativePrice(8000, 0),
-        markPriceOracle.getCumulativePrice(9000, 0),
-        markPriceOracle.getCumulativePrice(10000, 0),
-        markPriceOracle.getCumulativePrice(20000, 0),
+        markPriceOracle.getLastTwap(1000, 0),
+        markPriceOracle.getLastTwap(2000, 0),
+        markPriceOracle.getLastTwap(3000, 0),
+        markPriceOracle.getLastTwap(4000, 0),
+        markPriceOracle.getLastTwap(5000, 0),
+        markPriceOracle.getLastTwap(6000, 0),
+        markPriceOracle.getLastTwap(7000, 0),
+        markPriceOracle.getLastTwap(8000, 0),
+        markPriceOracle.getLastTwap(9000, 0),
+        markPriceOracle.getLastTwap(10000, 0),
+        markPriceOracle.getLastTwap(20000, 0),
       ]);
       txns.forEach(txn => {
         expect(Number(txn)).equal(1000000);
@@ -262,7 +262,7 @@ describe("MarkPriceOracle", function () {
     });
 
     it("Should not error when there are no recent datapoints added for cumulative price", async () => {
-      const txn1 = await markPriceOracle.getCumulativePrice(20000, 0);
+      const txn1 = await markPriceOracle.getLastTwap(20000, 0);
       expect(Number(txn1)).equal(1000000);
       for (let i = 0; i < 9; i++) {
         await matchingEngine.addObservation(1000000, 0);
@@ -270,22 +270,22 @@ describe("MarkPriceOracle", function () {
       }
       // this covers the case of zero recent datapoints
       await time.increase(100000);
-      const txn2 = await markPriceOracle.getCumulativePrice(100000, 0);
+      const txn2 = await markPriceOracle.getLastTwap(100000, 0);
       expect(Number(txn2)).equal(0);
-      const txn3 = await markPriceOracle.getCumulativePrice(20000000, 0);
+      const txn3 = await markPriceOracle.getLastTwap(20000000, 0);
       expect(Number(txn3)).equal(1000000);
     });
 
     it("Should not error when there are no recent datapoints then more datapoints are added for cumulative price", async () => {
       await time.increase(200001);
-      const txn1 = await markPriceOracle.getCumulativePrice(20, 0);
+      const txn1 = await markPriceOracle.getLastTwap(20, 0);
       expect(Number(txn1)).equal(0);
 
       for (let i = 0; i < 10; i++) {
         await matchingEngine.addObservation(20000000, 0);
         await time.increase(1000);
       }
-      const txn2 = await markPriceOracle.getCumulativePrice(10000, 0);
+      const txn2 = await markPriceOracle.getLastTwap(10000, 0);
       expect(Number(txn2)).equal(20000000);
     });
 

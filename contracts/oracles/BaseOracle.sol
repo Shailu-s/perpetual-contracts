@@ -81,7 +81,7 @@ contract BaseOracle is AccessControlUpgradeable {
      * @param _index Index of the observation, the index base token mapping
      * @return priceCumulative The SMA price of the asset
      */
-    function getCumulativePrice(uint256 _twInterval, uint256 _index) external view returns (uint256 priceCumulative) { // TODO: getLastPriceTwap, call get custom window method and pass end time as current time
+    function getLastTwap(uint256 _twInterval, uint256 _index) external view returns (uint256 priceCumulative) { // TODO: getLastPriceTwap, call get custom window method and pass end time as current time
         (priceCumulative, ) = _getCumulativePrice(_twInterval, _index);
     }
 
@@ -101,7 +101,7 @@ contract BaseOracle is AccessControlUpgradeable {
      *
      * @param _index Index of the observation, the index base token mapping
      */
-    function getLastPrice(uint256 _index) public view returns (uint256 underlyingLastPrice) { // TODO: getLastPrice
+    function getLastPrice(uint256 _index) public view returns (uint256 underlyingLastPrice) {
         Observation[] memory observations = observationsByIndex[_index];
         uint256 index = observations.length - 1;
         underlyingLastPrice = observations[index].underlyingPrice;

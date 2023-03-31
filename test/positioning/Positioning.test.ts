@@ -412,7 +412,7 @@ describe("Positioning", function () {
   describe("Match orders:", function () {
     describe("Success:", function () {
       it("should match orders and open position", async () => {
-        // const txn = await markPriceOracle.getCumulativePrice(10000000, 0);
+        // const txn = await markPriceOracle.getLastTwap(10000000, 0);
 
         // indexPriceOracle.getIndexTwap.whenCalledWith(0).returns(['1000000000000000', '0', '0']);
         // indexPriceOracle.getIndexTwap.whenCalledWith(3600).returns(['1000000000000000', '0', '0']);
@@ -473,7 +473,7 @@ describe("Positioning", function () {
       });
 
       it("should match orders and open position with leverage", async () => {
-        // const txn = await markPriceOracle.getCumulativePrice(10000000, 0);
+        // const txn = await markPriceOracle.getLastTwap(10000000, 0);
 
         await matchingEngine.grantMatchOrders(positioning.address);
 
@@ -554,7 +554,7 @@ describe("Positioning", function () {
         await expect(positionSize1.toString()).to.be.equal(convert("-20"));
       });
       it("should use order validation before opening position ", async () => {
-        // const txn = await markPriceOracle.getCumulativePrice(10000000, 0);
+        // const txn = await markPriceOracle.getLastTwap(10000000, 0);
 
         await matchingEngine.grantMatchOrders(positioning.address);
 
@@ -640,7 +640,7 @@ describe("Positioning", function () {
       });
 
       it("should match orders and open position with multiple orders funding rate should not be greator than 0.08", async () => {
-        // const txn = await markPriceOracle.getCumulativePrice(10000000, 0);
+        // const txn = await markPriceOracle.getLastTwap(10000000, 0);
 
         await matchingEngine.grantMatchOrders(positioning.address);
 
@@ -811,7 +811,7 @@ describe("Positioning", function () {
         expect(Math.abs(pendingFunding2 / parseInt(positionSize2))).to.be.lessThan(maxFundingRate);
       });
       it("should match orders and open position with multiple orders funding rate should not be greator than 0.08 with chnage in prices", async () => {
-        // const txn = await markPriceOracle.getCumulativePrice(10000000, 0);
+        // const txn = await markPriceOracle.getLastTwap(10000000, 0);
 
         await matchingEngine.grantMatchOrders(positioning.address);
         await virtualToken.mint(account1.address, convert("1000000000000"));
@@ -983,7 +983,7 @@ describe("Positioning", function () {
       });
 
       it("should match orders and open position with multiple orders", async () => {
-        // const txn = await markPriceOracle.getCumulativePrice(10000000, 0);
+        // const txn = await markPriceOracle.getLastTwap(10000000, 0);
 
         await matchingEngine.grantMatchOrders(positioning.address);
 
@@ -1146,7 +1146,7 @@ describe("Positioning", function () {
       });
 
       it("should match orders and open position with 5x leverage", async () => {
-        // const txn = await markPriceOracle.getCumulativePrice(10000000, 0);
+        // const txn = await markPriceOracle.getLastTwap(10000000, 0);
 
         await matchingEngine.grantMatchOrders(positioning.address);
 
@@ -1597,7 +1597,7 @@ describe("Positioning", function () {
     });
     describe("failure", function () {
       it("should not use order validation before opening position", async () => {
-        // const txn = await markPriceOracle.getCumulativePrice(10000000, 0);
+        // const txn = await markPriceOracle.getLastTwap(10000000, 0);
 
         await matchingEngine.grantMatchOrders(positioning.address);
 
@@ -1631,7 +1631,7 @@ describe("Positioning", function () {
         ).to.be.revertedWith("V_PERP_NEFC");
       });
       it("should not use validate order after opening position ", async () => {
-        // const txn = await markPriceOracle.getCumulativePrice(10000000, 0);
+        // const txn = await markPriceOracle.getLastTwap(10000000, 0);
 
         await matchingEngine.grantMatchOrders(positioning.address);
 
@@ -1836,7 +1836,7 @@ describe("Positioning", function () {
       });
 
       it("should not open position with more that 5x leverage", async () => {
-        // const txn = await markPriceOracle.getCumulativePrice(10000000, 0);
+        // const txn = await markPriceOracle.getLastTwap(10000000, 0);
 
         await matchingEngine.grantMatchOrders(positioning.address);
 

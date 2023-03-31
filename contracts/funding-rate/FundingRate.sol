@@ -117,8 +117,8 @@ contract FundingRate is IFundingRate, BlockContext, PositioningCallee, FundingRa
             // if this is the latest updated timestamp, values in _globalFundingGrowthX96Map are up-to-date already
             globalTwPremium = lastTwPremium;
         } else if (lastSettledTimestamp == 0){
-            markTwap = IMarkPriceOracle(_markPriceOracleArg).getCumulativePrice(twapInterval, _underlyingPriceIndex);
-            indexTwap = IIndexPriceOracle(_indexPriceOracleArg).getCumulativePrice(twapInterval, _underlyingPriceIndex);
+            markTwap = IMarkPriceOracle(_markPriceOracleArg).getLastTwap(twapInterval, _underlyingPriceIndex);
+            indexTwap = IIndexPriceOracle(_indexPriceOracleArg).getLastTwap(twapInterval, _underlyingPriceIndex);
             globalTwPremium = lastTwPremium;
         } else {
             //when funding period is over

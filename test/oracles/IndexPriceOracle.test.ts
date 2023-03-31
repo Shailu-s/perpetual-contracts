@@ -116,7 +116,7 @@ describe("IndexPriceOracle", function () {
         await volmexOracle.addObservation(10000000, 0, proofHash);
       }
 
-      const txn = await volmexOracle.getCumulativePrice(10000000, 0);
+      const txn = await volmexOracle.getLastTwap(10000000, 0);
       expect(Number(txn)).equal(9100000);
     });
 
@@ -133,11 +133,11 @@ describe("IndexPriceOracle", function () {
     });
 
     it("Should get cumulative price", async () => {
-      console.log((await volmexOracle.getCumulativePrice(2, 0)).toString());
+      console.log((await volmexOracle.getLastTwap(2, 0)).toString());
 
       await volmexOracle.addObservation(1000000, 0, proofHash);
 
-      const txn = await volmexOracle.getCumulativePrice(10000000, 0);
+      const txn = await volmexOracle.getLastTwap(10000000, 0);
       expect(Number(txn)).equal(1000000);
     });
 
@@ -154,17 +154,17 @@ describe("IndexPriceOracle", function () {
         await time.increase(1000);
       }
       const txns = await Promise.all([
-        volmexOracle.getCumulativePrice(1000, 0),
-        volmexOracle.getCumulativePrice(2000, 0),
-        volmexOracle.getCumulativePrice(3000, 0),
-        volmexOracle.getCumulativePrice(4000, 0),
-        volmexOracle.getCumulativePrice(5000, 0),
-        volmexOracle.getCumulativePrice(6000, 0),
-        volmexOracle.getCumulativePrice(7000, 0),
-        volmexOracle.getCumulativePrice(8000, 0),
-        volmexOracle.getCumulativePrice(9000, 0),
-        volmexOracle.getCumulativePrice(10000, 0),
-        volmexOracle.getCumulativePrice(20000, 0),
+        volmexOracle.getLastTwap(1000, 0),
+        volmexOracle.getLastTwap(2000, 0),
+        volmexOracle.getLastTwap(3000, 0),
+        volmexOracle.getLastTwap(4000, 0),
+        volmexOracle.getLastTwap(5000, 0),
+        volmexOracle.getLastTwap(6000, 0),
+        volmexOracle.getLastTwap(7000, 0),
+        volmexOracle.getLastTwap(8000, 0),
+        volmexOracle.getLastTwap(9000, 0),
+        volmexOracle.getLastTwap(10000, 0),
+        volmexOracle.getLastTwap(20000, 0),
       ]);
       txns.forEach(txn => {
         expect(Number(txn)).equal(1000000);
@@ -172,7 +172,7 @@ describe("IndexPriceOracle", function () {
     });
 
     it("Should not error when there are no recent datapoints added for cumulative price", async () => {
-      const txn1 = await volmexOracle.getCumulativePrice(20000, 0);
+      const txn1 = await volmexOracle.getLastTwap(20000, 0);
       expect(Number(txn1)).equal(1000000);
       for (let i = 0; i < 9; i++) {
         await volmexOracle.addObservation(1000000, 0, proofHash);
@@ -180,22 +180,22 @@ describe("IndexPriceOracle", function () {
       }
       // this covers the case of zero recent datapoints
       await time.increase(100000);
-      const txn2 = await volmexOracle.getCumulativePrice(200, 0);
+      const txn2 = await volmexOracle.getLastTwap(200, 0);
       expect(Number(txn2)).equal(0);
-      const txn3 = await volmexOracle.getCumulativePrice(20000000, 0);
+      const txn3 = await volmexOracle.getLastTwap(20000000, 0);
       expect(Number(txn3)).equal(1000000);
     });
 
     it("Should not error when there are no recent datapoints then more datapoints are added for cumulative price", async () => {
       await time.increase(200001);
-      const txn1 = await volmexOracle.getCumulativePrice(20, 0);
+      const txn1 = await volmexOracle.getLastTwap(20, 0);
       expect(Number(txn1)).equal(0);
 
       for (let i = 0; i < 10; i++) {
         await volmexOracle.addObservation(20000000, 0, proofHash);
         await time.increase(1000);
       }
-      const txn2 = await volmexOracle.getCumulativePrice(10000, 0);
+      const txn2 = await volmexOracle.getLastTwap(10000, 0);
       expect(Number(txn2)).equal(20000000);
     });
 

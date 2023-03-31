@@ -101,7 +101,7 @@ contract MarkPriceOracle is BaseOracle {
         uint256 fundingPeriod = positioning.getFundingPeriod();
 
         int256[3] memory prices;
-        int256 indexPrice = indexOracle.getCumulativePrice(indexTwInterval, _index).toInt256();
+        int256 indexPrice = indexOracle.getLastTwap(indexTwInterval, _index).toInt256();
         // Note: Check for actual precision and data type
         prices[0] = indexPrice * (1 + lastFundingRate * (nextFunding.toInt256() / fundingPeriod.toInt256()));
         (uint256 markTwap,) = _getCumulativePrice(markTwInterval, _index);
