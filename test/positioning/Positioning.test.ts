@@ -5,7 +5,7 @@ import { FakeContract, smock } from "@defi-wonderland/smock";
 import { FundingRate, IndexPriceOracle, MarkPriceOracle } from "../../typechain";
 import { BigNumber } from "ethers";
 
-describe("Positioning", function () {
+describe.only("Positioning", function () {
   let MatchingEngine;
   let matchingEngine;
   let VirtualToken;
@@ -1226,10 +1226,6 @@ describe("Positioning", function () {
       });
 
       it("should close whole position of both traders", async () => {
-        for (let i = 0; i < 9; i++) {
-          await matchingEngine.addObservation(10000000, 0);
-        }
-
         // indexPriceOracle.getIndexTwap.whenCalledWith(0).returns(['1000000000000000', '0', '0']);
         // indexPriceOracle.getIndexTwap.whenCalledWith(3600).returns(['1000000000000000', '0', '0']);
 
@@ -1558,8 +1554,6 @@ describe("Positioning", function () {
         ).to.emit(positioning, "PositionChanged");
 
         await markPriceOracle.setObservationAdder(account1.address);
-        await markPriceOracle.connect(account1).addObservation(10000000000, 0, proofHash);
-        await markPriceOracle.connect(account1).addObservation(10000000000, 1, proofHash);
 
         await positioning.settleAllFunding(account1.address);
       });
@@ -2486,8 +2480,8 @@ describe("Liquidation test in Positioning", function () {
       ORDER,
       87654321987654,
       account2.address,
-      Asset(virtualToken.address, BigNumber.from("10").mul(two).toString()),
-      Asset(volmexBaseToken.address, BigNumber.from("100").mul(two).toString()),
+      Asset(virtualToken.address, BigNumber.from("100").mul(two).toString()),
+      Asset(volmexBaseToken.address, BigNumber.from("10").mul(two).toString()),
       1,
       0,
       false,

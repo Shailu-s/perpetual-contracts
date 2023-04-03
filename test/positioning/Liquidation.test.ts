@@ -52,7 +52,7 @@ describe("Liquidation test in Positioning", function () {
   const one = ethers.constants.WeiPerEther; // 1e18
   const two = ethers.constants.WeiPerEther.mul(BigNumber.from("2")); // 2e18
   const five = ethers.constants.WeiPerEther.mul(BigNumber.from("5")); // 5e18
-  const ten = ethers.constants.WeiPerEther.mul(BigNumber.from("10000")); // 10e18
+  const ten = ethers.constants.WeiPerEther.mul(BigNumber.from("10000000")); // 10e18
   const nine = ethers.constants.WeiPerEther.mul(BigNumber.from("4")); // 10e18
 
   const hundred = ethers.constants.WeiPerEther.mul(BigNumber.from("1000000000000")); // 100e18
