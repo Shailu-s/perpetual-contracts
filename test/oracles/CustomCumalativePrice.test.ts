@@ -126,7 +126,7 @@ describe("Custom Cumulative Price", function () {
 
     indexPriceOracle = await upgrades.deployProxy(
       IndexPriceOracle,
-      [owner.address, [65000000], [volmexBaseToken.address], [proofHash], [capRatio]],
+      [owner.address, [75000000], [volmexBaseToken.address], [proofHash], [capRatio]],
       {
         initializer: "initialize",
       },
@@ -149,7 +149,7 @@ describe("Custom Cumulative Price", function () {
     positioningConfig = await upgrades.deployProxy(PositioningConfig, []);
     markPriceOracle = await upgrades.deployProxy(
       MarkPriceOracle,
-      [[60000000], [volmexBaseToken.address], [proofHash], [capRatio], owner.address],
+      [[70000000], [volmexBaseToken.address], [proofHash], [capRatio], owner.address],
       {
         initializer: "initialize",
       },
@@ -242,7 +242,7 @@ describe("Custom Cumulative Price", function () {
     await markPriceOracle.setPositioning(positioning.address);
     await markPriceOracle.setIndexOracle(indexPriceOracle.address);
     await markPriceOracle.setMarkTwInterval(300);
-    await markPriceOracle.setIndexTwInterval(36000);
+    await markPriceOracle.setIndexTwInterval(3600);
 
     volmexPerpPeriphery = await upgrades.deployProxy(VolmexPerpPeriphery, [
       perpView.address,
@@ -351,11 +351,31 @@ describe("Custom Cumulative Price", function () {
         };
         observations.push(observation);
       }
-      console.log(observations[1]);
       for (index = 0; index < 96; index++) {
         // add obeservation in every 5 minutes
         await time.increase(300);
         const tx = await markPriceOracle.addObservation(75000000, 0, proofHash);
+        const { events } = await tx.wait();
+        let data;
+        events.forEach((log: any) => {
+          if (log["event"] == "ObservationAdded") {
+            data = log["data"];
+          }
+        });
+        const logData = ethers.utils.defaultAbiCoder.decode(
+          ["uint256", "uint256", "uint256"],
+          data,
+        );
+        const observation: Observation = {
+          timestamp: parseInt(logData[2]),
+          price: parseInt(logData[0]),
+        };
+        observations.push(observation);
+      }
+      for (index = 0; index < 96; index++) {
+        // add obeservation in every 5 minutes
+        await time.increase(300);
+        const tx = await markPriceOracle.addObservation(80000000, 0, proofHash);
         const { events } = await tx.wait();
         let data;
         events.forEach((log: any) => {

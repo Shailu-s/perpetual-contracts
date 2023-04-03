@@ -52,7 +52,7 @@ describe("Liquidation test in Positioning", function () {
   const one = ethers.constants.WeiPerEther; // 1e18
   const two = ethers.constants.WeiPerEther.mul(BigNumber.from("2")); // 2e18
   const five = ethers.constants.WeiPerEther.mul(BigNumber.from("5")); // 5e18
-  const ten = ethers.constants.WeiPerEther.mul(BigNumber.from("10000000")); // 10e18
+  const ten = ethers.constants.WeiPerEther.mul(BigNumber.from("10000")); // 10e18
   const nine = ethers.constants.WeiPerEther.mul(BigNumber.from("4")); // 10e18
 
   const hundred = ethers.constants.WeiPerEther.mul(BigNumber.from("1000000000000")); // 100e18
@@ -315,7 +315,10 @@ describe("Liquidation test in Positioning", function () {
       false,
       twapType,
     );
-
+    await (await markPriceOracle.setPositioning(positioning.address)).wait();
+    await (await markPriceOracle.setIndexOracle(indexPriceOracle.address)).wait();
+    await (await markPriceOracle.setMarkTwInterval(300)).wait();
+    await (await markPriceOracle.setIndexTwInterval(3600)).wait();
     // for (let i = 0; i < 9; i++) {
     //   await matchingEngine.addObservation(1000000, 0);
     // }

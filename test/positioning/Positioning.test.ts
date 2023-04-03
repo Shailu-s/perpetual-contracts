@@ -110,13 +110,7 @@ describe("Positioning", function () {
     await volmexBaseToken.setPriceFeed(indexPriceOracle.address);
     markPriceOracle = await upgrades.deployProxy(
       MarkPriceOracle,
-      [
-        [100000000, 100000000],
-        [volmexBaseToken.address, volmexBaseToken.address],
-        [proofHash, proofHash],
-        [capRatio, capRatio],
-        owner.address,
-      ],
+      [[100000000], [volmexBaseToken.address], [proofHash], [capRatio], owner.address],
       {
         initializer: "initialize",
       },
@@ -268,7 +262,10 @@ describe("Positioning", function () {
       true,
       twapType,
     );
-
+    await (await markPriceOracle.setPositioning(positioning.address)).wait();
+    await (await markPriceOracle.setIndexOracle(indexPriceOracle.address)).wait();
+    await (await markPriceOracle.setMarkTwInterval(300)).wait();
+    await (await markPriceOracle.setIndexTwInterval(3600)).wait();
     // for (let i = 0; i < 9; i++) {
     //   await matchingEngine.addObservation(10000000, 0);
     // }
@@ -2450,6 +2447,10 @@ describe("Liquidation test in Positioning", function () {
     await virtualToken.connect(account2).approve(vault.address, ten.toString());
     await virtualToken.connect(account1).approve(volmexPerpPeriphery.address, ten.toString());
     await virtualToken.connect(account2).approve(volmexPerpPeriphery.address, ten.toString());
+    await (await markPriceOracle.setPositioning(positioning.address)).wait();
+    await (await markPriceOracle.setIndexOracle(indexPriceOracle.address)).wait();
+    await (await markPriceOracle.setMarkTwInterval(300)).wait();
+    await (await markPriceOracle.setIndexTwInterval(3600)).wait();
 
     // volmexPerpPeriphery.address, USDC.address, alice.address, amount
     await vaultController
@@ -2473,8 +2474,8 @@ describe("Liquidation test in Positioning", function () {
       ORDER,
       87654321987654,
       account1.address,
-      Asset(volmexBaseToken.address, BigNumber.from("100").mul(two).toString()),
-      Asset(virtualToken.address, BigNumber.from("10").mul(two).toString()),
+      Asset(volmexBaseToken.address, BigNumber.from("10").mul(two).toString()),
+      Asset(virtualToken.address, BigNumber.from("100").mul(two).toString()),
       1,
       0,
       true,
@@ -2485,8 +2486,8 @@ describe("Liquidation test in Positioning", function () {
       ORDER,
       87654321987654,
       account2.address,
-      Asset(virtualToken.address, BigNumber.from("100").mul(two).toString()),
-      Asset(volmexBaseToken.address, BigNumber.from("10").mul(two).toString()),
+      Asset(virtualToken.address, BigNumber.from("10").mul(two).toString()),
+      Asset(volmexBaseToken.address, BigNumber.from("100").mul(two).toString()),
       1,
       0,
       false,
@@ -2496,8 +2497,8 @@ describe("Liquidation test in Positioning", function () {
       ORDER,
       87654321987654,
       account1.address,
-      Asset(volmexBaseToken1.address, BigNumber.from("10").mul(two).toString()),
-      Asset(virtualToken.address, BigNumber.from("100").mul(two).toString()),
+      Asset(volmexBaseToken1.address, BigNumber.from("10").mul(one).toString()),
+      Asset(virtualToken.address, BigNumber.from("100").mul(one).toString()),
       10,
       0,
       true,
@@ -2515,10 +2516,6 @@ describe("Liquidation test in Positioning", function () {
       false,
       twapType,
     );
-
-    for (let i = 0; i < 9; i++) {
-      await matchingEngine.addObservation(10000000, 0);
-    }
   });
 
   describe("Match orders:", function () {

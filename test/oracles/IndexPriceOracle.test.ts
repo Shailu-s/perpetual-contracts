@@ -117,12 +117,12 @@ describe("IndexPriceOracle", function () {
       }
 
       const txn = await volmexOracle.getLastTwap(10000000, 0);
-      expect(Number(txn)).equal(9100000);
+      expect(Number(txn)).equal(1000000);
     });
 
     it("should fail to add observation when cumulative price is zero ", async () => {
       await expect(volmexOracle.addObservation(0, 0, proofHash)).to.be.revertedWith(
-        "BaseOracle: Not zero",
+        "IndexPriceOracle: Not zero",
       );
     });
     it("Should fail to add observation when caller is not observation adder", async () => {
@@ -181,7 +181,7 @@ describe("IndexPriceOracle", function () {
       // this covers the case of zero recent datapoints
       await time.increase(100000);
       const txn2 = await volmexOracle.getLastTwap(200, 0);
-      expect(Number(txn2)).equal(0);
+      expect(Number(txn2)).equal(1000000);
       const txn3 = await volmexOracle.getLastTwap(20000000, 0);
       expect(Number(txn3)).equal(1000000);
     });
@@ -189,7 +189,7 @@ describe("IndexPriceOracle", function () {
     it("Should not error when there are no recent datapoints then more datapoints are added for cumulative price", async () => {
       await time.increase(200001);
       const txn1 = await volmexOracle.getLastTwap(20, 0);
-      expect(Number(txn1)).equal(0);
+      expect(Number(txn1)).equal(1000000);
 
       for (let i = 0; i < 10; i++) {
         await volmexOracle.addObservation(20000000, 0, proofHash);

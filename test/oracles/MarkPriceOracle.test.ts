@@ -446,7 +446,7 @@ describe("MarkPriceOracle", function () {
     it("Should not error when there are no recent datapoints then more datapoints are added for cumulative price", async () => {
       await time.increase(200001);
       const txn1 = await markPriceOracle.getLastTwap(20000, 0);
-      expect(Number(txn1)).equal(0);
+      expect(Number(txn1)).equal(60000000);
 
       for (let i = 0; i < 10; i++) {
         await markPriceOracle.addObservation(20000000, 0, proofHash);
