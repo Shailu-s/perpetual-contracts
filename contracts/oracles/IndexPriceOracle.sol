@@ -18,7 +18,13 @@ contract IndexPriceOracle is BaseOracle, ERC165StorageUpgradeable {
     /**
      * @notice Initializes the contract setting the deployer as the initial owner.
      */
-    function initialize(address _admin, uint256[] calldata _volatilityPrices, address[] calldata _volatilityIndex, bytes32[] calldata _proofHash, uint256[] calldata _capRatio) external initializer {
+    function initialize(
+        address _admin,
+        uint256[] calldata _volatilityPrices,
+        address[] calldata _volatilityIndex,
+        bytes32[] calldata _proofHash,
+        uint256[] calldata _capRatio
+    ) external initializer {
         _BaseOracle_init(_volatilityPrices, _volatilityIndex, _proofHash, _capRatio);
         _grantRole(PRICE_ORACLE_ADMIN, _admin);
         __ERC165Storage_init();
@@ -51,7 +57,7 @@ contract IndexPriceOracle is BaseOracle, ERC165StorageUpgradeable {
      */
     function latestRoundData(uint256 _twInterval, uint256 _index) external view virtual returns (uint256 answer, uint256 lastUpdateTimestamp) {
         uint256 startTimestamp = block.timestamp - _twInterval;
-        (answer, lastUpdateTimestamp) = _getCustomCumulativePrice(_index, startTimestamp, block.timestamp);
+        (answer, lastUpdateTimestamp) = _getCustomTwap(_index, startTimestamp, block.timestamp);
         answer *= 100;
     }
 
@@ -60,15 +66,21 @@ contract IndexPriceOracle is BaseOracle, ERC165StorageUpgradeable {
      * @param _twInterval time interval for twap
      * @param _index Position of the observation
      */
-    function getIndexTwap(uint256 _twInterval, uint256 _index) external view returns (uint256 volatilityTokenTwap, uint256 iVolatilityTokenTwap, uint256 lastUpdateTimestamp) {
+    function getIndexTwap(uint256 _twInterval, uint256 _index)
+        external
+        view
+        returns (
+            uint256 volatilityTokenTwap,
+            uint256 iVolatilityTokenTwap,
+            uint256 lastUpdateTimestamp
+        )
+    {
         uint256 startTimestamp = block.timestamp - _twInterval;
-        (volatilityTokenTwap, lastUpdateTimestamp) = _getCustomCumulativePrice(_index, startTimestamp, block.timestamp);
+        (volatilityTokenTwap, lastUpdateTimestamp) = _getCustomTwap(_index, startTimestamp, block.timestamp);
         iVolatilityTokenTwap = volatilityCapRatioByIndex[_index] - volatilityTokenTwap;
     }
 
-    function supportsInterface(
-        bytes4 interfaceId
-    ) public view virtual override(AccessControlUpgradeable, ERC165StorageUpgradeable) returns (bool) {
+    function supportsInterface(bytes4 interfaceId) public view virtual override(AccessControlUpgradeable, ERC165StorageUpgradeable) returns (bool) {
         return super.supportsInterface(interfaceId);
     }
 }
