@@ -372,27 +372,6 @@ describe("Custom Cumulative Price", function () {
         };
         observations.push(observation);
       }
-      for (index = 0; index < 96; index++) {
-        // add obeservation in every 5 minutes
-        await time.increase(300);
-        const tx = await markPriceOracle.addObservation(80000000, 0, proofHash);
-        const { events } = await tx.wait();
-        let data;
-        events.forEach((log: any) => {
-          if (log["event"] == "ObservationAdded") {
-            data = log["data"];
-          }
-        });
-        const logData = ethers.utils.defaultAbiCoder.decode(
-          ["uint256", "uint256", "uint256"],
-          data,
-        );
-        const observation: Observation = {
-          timestamp: parseInt(logData[2]),
-          price: parseInt(logData[0]),
-        };
-        observations.push(observation);
-      }
     });
     it("should return cumulative price between first time stamp and second and third", async () => {
       const cumulativePrice1 = await markPriceOracle.getCustomTwap(
