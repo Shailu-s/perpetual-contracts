@@ -17,6 +17,8 @@ contract VolmexPerpPeriphery is AccessControlUpgradeable, IVolmexPerpPeriphery {
     bytes32 public constant VOLMEX_PERP_PERIPHERY = keccak256("VOLMEX_PERP_PERIPHERY");
     // role of relayer to execute open position
     bytes32 public constant RELAYER_MULTISIG = keccak256("RELAYER_MULTISIG");
+    // role for whitelisting traders
+    bytes32 public constant TRADER_WHITELISTER = keccak256("TRADER_WHITELISTER");
 
     // Store the whitelist Vaults
     mapping(address => bool) private _isVaultWhitelist;
@@ -63,7 +65,10 @@ contract VolmexPerpPeriphery is AccessControlUpgradeable, IVolmexPerpPeriphery {
         }
         isTraderWhitelistEnabled = true;
         _grantRole(VOLMEX_PERP_PERIPHERY, _owner);
+        _grantRole(TRADER_WHITELISTER, _owner);
+        _setRoleAdmin(TRADER_WHITELISTER, TRADER_WHITELISTER);
         _grantRole(RELAYER_MULTISIG, _relayer);
+        _setRoleAdmin(RELAYER_MULTISIG, RELAYER_MULTISIG);
     }
 
     function setMarkPriceOracle(IMarkPriceOracle _markPriceOracle) external {
@@ -90,7 +95,7 @@ contract VolmexPerpPeriphery is AccessControlUpgradeable, IVolmexPerpPeriphery {
     }
 
     function whitelistTrader(address _trader, bool _isWhitelist) external {
-        _requireVolmexPerpPeripheryAdmin();
+        _requireTraderWhitelister();
         isTraderWhitelisted[_trader] = _isWhitelist;
         emit TraderWhitelisted(_trader, _isWhitelist);
     }
@@ -197,6 +202,10 @@ contract VolmexPerpPeriphery is AccessControlUpgradeable, IVolmexPerpPeriphery {
 
     function _requireWhitelistedTrader(address trader) internal view {
         require(isTraderWhitelisted[trader], "Periphery: trader not whitelisted");
+    }
+
+    function _requireTraderWhitelister() internal view {
+        require(hasRole(TRADER_WHITELISTER, _msgSender()), "VolmexPerpPeriphery: Not whitelister");
     }
 
     // Note for V2: Change the logic to round id, if Volmex Oracle implements price by round id functionality
