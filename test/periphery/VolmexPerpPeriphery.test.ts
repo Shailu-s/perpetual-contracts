@@ -45,6 +45,8 @@ describe("VolmexPerpPeriphery", function () {
   const two = ethers.constants.WeiPerEther.mul(BigNumber.from("2")); // 2e18
 
   const ORDER = "0xf555eb98";
+  const traderWhiteListerRole =
+    "0x2fb89cb8e2c481f376f65f284214892b25912128a308376bc38815249326e026";
   const STOP_LOSS_LIMIT_ORDER = "0xeeaed735";
   const TAKE_PROFIT_LIMIT_ORDER = "0xe0fc7f94";
   const ZERO_ADDR = "0x0000000000000000000000000000000000000000";
@@ -207,10 +209,11 @@ describe("VolmexPerpPeriphery", function () {
     await positioning.connect(owner).setPositioning(positioning.address);
 
     await (await matchingEngine.grantMatchOrders(positioning.address)).wait();
-    await markPriceOracle.setObservationAdder(owner.address);
-    for (let i = 0; i < 9; i++) {
-      await markPriceOracle.addObservation(1000000, 0, proofHash);
-    }
+    await (await markPriceOracle.setPositioning(positioning.address)).wait();
+    await (await markPriceOracle.setIndexOracle(indexPriceOracle.address)).wait();
+    await (await markPriceOracle.setMarkTwInterval(300)).wait();
+    await (await markPriceOracle.setIndexTwInterval(3600)).wait();
+
     await markPriceOracle.setObservationAdder(matchingEngine.address);
 
     volmexPerpPeriphery = await upgrades.deployProxy(VolmexPerpPeriphery, [
@@ -299,7 +302,7 @@ describe("VolmexPerpPeriphery", function () {
         );
         const receipt = await tx.wait();
         let txDataBefore = {
-          "Mark price": (await markPriceOracle.getCumulativePrice("3600", 0)).toString(),
+          "Mark price": (await markPriceOracle.getLastTwap("3600", 0)).toString(),
           "Alice position": (
             await accountBalance1.getPositionSize(alice.address, volmexBaseToken.address)
           ).toString(),
@@ -352,7 +355,7 @@ describe("VolmexPerpPeriphery", function () {
           );
           const receipt = await tx.wait();
           txDataBefore = {
-            "Mark price": (await markPriceOracle.getCumulativePrice("3600", 0)).toString(),
+            "Mark price": (await markPriceOracle.getLastTwap("3600", 0)).toString(),
             "Alice position": (
               await accountBalance1.getPositionSize(alice.address, volmexBaseToken.address)
             ).toString(),
@@ -489,6 +492,11 @@ describe("VolmexPerpPeriphery", function () {
   });
 
   describe("onlyWhitelisted", async () => {
+    it("shoyld set Trader white lister", async () => {
+      await volmexPerpPeriphery.grantRole(traderWhiteListerRole, account1.address);
+      const role = await volmexPerpPeriphery.hasRole(traderWhiteListerRole, account1.address);
+      expect(role).to.equal(true);
+    });
     it("should set onlyWhitelisted", async () => {
       volmexPerpPeriphery.toggleTraderWhitelistEnabled();
     });

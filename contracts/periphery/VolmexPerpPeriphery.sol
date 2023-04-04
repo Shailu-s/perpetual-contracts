@@ -17,6 +17,8 @@ contract VolmexPerpPeriphery is AccessControlUpgradeable, IVolmexPerpPeriphery {
     bytes32 public constant VOLMEX_PERP_PERIPHERY = keccak256("VOLMEX_PERP_PERIPHERY");
     // role of relayer to execute open position
     bytes32 public constant RELAYER_MULTISIG = keccak256("RELAYER_MULTISIG");
+    // role for whitelisting traders
+    bytes32 public constant TRADER_WHITELISTER = keccak256("TRADER_WHITELISTER");
 
     // Store the whitelist Vaults
     mapping(address => bool) private _isVaultWhitelist;
@@ -63,7 +65,10 @@ contract VolmexPerpPeriphery is AccessControlUpgradeable, IVolmexPerpPeriphery {
         }
         isTraderWhitelistEnabled = true;
         _grantRole(VOLMEX_PERP_PERIPHERY, _owner);
+        _grantRole(TRADER_WHITELISTER, _owner);
+        _setRoleAdmin(TRADER_WHITELISTER, TRADER_WHITELISTER);
         _grantRole(RELAYER_MULTISIG, _relayer);
+        _setRoleAdmin(RELAYER_MULTISIG, RELAYER_MULTISIG);
     }
 
     function setMarkPriceOracle(IMarkPriceOracle _markPriceOracle) external {
@@ -90,13 +95,13 @@ contract VolmexPerpPeriphery is AccessControlUpgradeable, IVolmexPerpPeriphery {
     }
 
     function whitelistTrader(address _trader, bool _isWhitelist) external {
-        _requireVolmexPerpPeripheryAdmin();
+        _requireTraderWhitelister();
         isTraderWhitelisted[_trader] = _isWhitelist;
         emit TraderWhitelisted(_trader, _isWhitelist);
     }
 
     function depositToVault(
-        uint64 _index,
+        uint256 _index,
         address _token,
         uint256 _amount
     ) external payable {
@@ -109,7 +114,7 @@ contract VolmexPerpPeriphery is AccessControlUpgradeable, IVolmexPerpPeriphery {
     }
 
     function withdrawFromVault(
-        uint64 _index,
+        uint256 _index,
         address _token,
         address payable _to,
         uint256 _amount
@@ -119,7 +124,7 @@ contract VolmexPerpPeriphery is AccessControlUpgradeable, IVolmexPerpPeriphery {
     }
 
     function openPosition(
-        uint64 _index,
+        uint256 _index,
         LibOrder.Order memory _orderLeft,
         bytes memory _signatureLeft,
         LibOrder.Order memory _orderRight,
@@ -135,7 +140,7 @@ contract VolmexPerpPeriphery is AccessControlUpgradeable, IVolmexPerpPeriphery {
     }
 
     function batchOpenPosition(
-        uint64 _index,
+        uint256 _index,
         LibOrder.Order[] memory _ordersLeft,
         bytes[] memory _signaturesLeft,
         LibOrder.Order[] memory _ordersRight,
@@ -174,7 +179,7 @@ contract VolmexPerpPeriphery is AccessControlUpgradeable, IVolmexPerpPeriphery {
      */
 
     function _openPosition(
-        uint64 _index,
+        uint256 _index,
         LibOrder.Order memory _orderLeft,
         bytes memory _signatureLeft,
         LibOrder.Order memory _orderRight,
@@ -197,6 +202,10 @@ contract VolmexPerpPeriphery is AccessControlUpgradeable, IVolmexPerpPeriphery {
 
     function _requireWhitelistedTrader(address trader) internal view {
         require(isTraderWhitelisted[trader], "Periphery: trader not whitelisted");
+    }
+
+    function _requireTraderWhitelister() internal view {
+        require(hasRole(TRADER_WHITELISTER, _msgSender()), "VolmexPerpPeriphery: Not whitelister");
     }
 
     // Note for V2: Change the logic to round id, if Volmex Oracle implements price by round id functionality
@@ -235,13 +244,13 @@ contract VolmexPerpPeriphery is AccessControlUpgradeable, IVolmexPerpPeriphery {
         address baseToken = IVirtualToken(makeAsset).isBase() ? makeAsset : takeAsset;
 
         // TODO: change to index, mark and mark's latest price
-        uint64 _index = markPriceOracle.indexByBaseToken(baseToken);
+        uint256 _index = markPriceOracle.indexByBaseToken(baseToken);
         if (_order.twapType == LibOrder.MARK_TWAP) {
-            price = markPriceOracle.getCumulativePrice(_twInterval, _index);
+            price = markPriceOracle.getLastTwap(_twInterval, _index);
         } else if (_order.twapType == LibOrder.INDEX_TWAP) {
-            price = indexPriceOracle.getCumulativePrice(_twInterval, _index);
+            price = indexPriceOracle.getLastTwap(_twInterval, _index);
         } else {
-            price = markPriceOracle.getCumulativePrice(60, _index);
+            price = markPriceOracle.getLastTwap(60, _index);
         }
     }
 }

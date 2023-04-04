@@ -28,6 +28,7 @@ import { BlockContext } from "../helpers/BlockContext.sol";
 import { FundingRate } from "../funding-rate/FundingRate.sol";
 import { OwnerPausable } from "../helpers/OwnerPausable.sol";
 import { OrderValidator } from "./OrderValidator.sol";
+import "hardhat/console.sol";
 
 // never inherit any new stateful contract. never change the orders of parent stateful contracts
 contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, OwnerPausable, FundingRate, EIP712Upgradeable, OrderValidator {
@@ -48,7 +49,7 @@ contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, 
         address matchingEngineArg,
         address markPriceArg,
         address indexPriceArg,
-        uint64 underlyingPriceIndex,
+        uint256 underlyingPriceIndex,
         address[2] calldata liquidators
     ) external initializer {
         // P_VANC: Vault address is not contract
@@ -160,6 +161,7 @@ contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, 
         bytes memory liquidator
     ) external override whenNotPaused nonReentrant {
         _validateFull(orderLeft, signatureLeft);
+        console.log("validated 1st");
         _validateFull(orderRight, signatureRight);
 
         // short = selling base token
@@ -351,11 +353,7 @@ contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, 
             emit FundingPaymentSettled(trader, baseToken, fundingPayment);
         }
 
-        IAccountBalance(_accountBalance).updateTwPremiumGrowthGlobal(
-            trader,
-            baseToken,
-            globalTwPremiumGrowth
-        );
+        IAccountBalance(_accountBalance).updateTwPremiumGrowthGlobal(trader, baseToken, globalTwPremiumGrowth);
     }
 
     /// @dev Add given amount to PnL of the address provided
@@ -389,11 +387,12 @@ contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, 
             internalData.rightExchangedPositionNotional = newFill.leftValue.toInt256();
         }
 
-        OrderFees memory orderFees = _calculateFees(
-            true, // left order is maker
-            internalData.leftExchangedPositionNotional,
-            internalData.rightExchangedPositionNotional
-        );
+        OrderFees memory orderFees =
+            _calculateFees(
+                true, // left order is maker
+                internalData.leftExchangedPositionNotional,
+                internalData.rightExchangedPositionNotional
+            );
 
         int256[2] memory realizedPnL;
         realizedPnL[0] = _realizePnLChecks(orderLeft, baseToken, internalData.leftExchangedPositionSize, internalData.leftExchangedPositionNotional);
@@ -618,6 +617,8 @@ contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, 
 
     /// @dev This function checks if account of trader is eligible for liquidation
     function _isAccountLiquidatable(address trader) internal view returns (bool) {
+        console.logInt(_getAccountValue(trader));
+        console.logInt(IAccountBalance(_accountBalance).getMarginRequirementForLiquidation(trader));
         return _getAccountValue(trader) < IAccountBalance(_accountBalance).getMarginRequirementForLiquidation(trader);
     }
 

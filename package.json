@@ -58,7 +58,7 @@
     "@nomiclabs/hardhat-web3": "^2.0.0",
     "@openzeppelin/contracts": "^4.6.0",
     "@openzeppelin/contracts-upgradeable": "^4.6.0",
-    "@openzeppelin/hardhat-upgrades": "1.10.0",
+    "@openzeppelin/hardhat-upgrades": "1.15.0",
     "@perp/perp-oracle-contract": "0.3.0",
     "@typechain/ethers-v5": "7.0.0",
     "@typechain/hardhat": "2.0.1",

@@ -46,7 +46,7 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
         _grantRole(CAN_SETTLE_REALIZED_PNL, account);
     }
 
-    function setUnderlyingPriceIndex(uint64 underlyingIndex) external {
+    function setUnderlyingPriceIndex(uint256 underlyingIndex) external {
         _requireAccountBalanceAdmin();
         _underlyingPriceIndex = underlyingIndex;
         emit UnderlyingPriceIndexSet(underlyingIndex);

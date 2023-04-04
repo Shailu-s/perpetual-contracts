@@ -226,6 +226,11 @@ describe("Priodic Funding payment", function () {
       owner.address,
       owner.address, // replace with replayer address
     ]);
+    await (await markPriceOracle.setPositioning(positioning.address)).wait();
+    await (await markPriceOracle.setIndexOracle(indexPriceOracle.address)).wait();
+    await (await markPriceOracle.setMarkTwInterval(300)).wait();
+    await (await markPriceOracle.setIndexTwInterval(3600)).wait();
+
     await volmexPerpPeriphery.deployed();
     await USDC.transfer(account1.address, "1000000000000000000000000");
     await USDC.transfer(account2.address, "1000000000000000000000000");

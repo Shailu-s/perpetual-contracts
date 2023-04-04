@@ -2,11 +2,40 @@ import { expect, util } from "chai";
 import { ethers, upgrades } from "hardhat";
 import { FakeContract, smock } from "@defi-wonderland/smock";
 import { BigNumber } from "ethers";
+import { getCurrentTimestamp } from "../../coverage/temp/isolated-pools/scenario/src/Utils";
 const { Order, Asset, sign, encodeAddress } = require("../order");
 import { utils } from "ethers";
 const { expectRevert, time } = require("@openzeppelin/test-helpers");
+interface Observation {
+  timestamp: number;
+  price: number;
+}
+const getCustomUnderlyingTwap = (
+  observations: Array<Observation>,
+  startTime: number,
+  endTime: number,
+) => {
+  let priceCumulative = 0;
+  let index = observations.length;
+  let startIndex = 0;
+  let endIndex = 0;
+  for (; index != 0 && index >= startIndex; index--) {
+    if (observations[index - 1].timestamp >= endTime) {
+      endIndex = index - 1;
+    } else if (observations[index - 1].timestamp >= startTime) {
+      startIndex = index - 1;
+    }
+  }
+  index = 0; // re-used to get total observation count
+  for (; startIndex <= endIndex; startIndex++) {
+    priceCumulative += observations[startIndex].price;
+    index++;
+  }
+  priceCumulative = priceCumulative / index;
+  return priceCumulative;
+};
 
-describe("MarkPriceOracle", function () {
+describe("Custom Cumulative Price", function () {
   let MatchingEngine;
   let matchingEngine;
   let VirtualToken;
@@ -41,10 +70,15 @@ describe("MarkPriceOracle", function () {
   let USDC;
   let owner, account1, account2, account3, alice, bob;
   let liquidator;
+  let index;
+  const observations = [];
   const deadline = 87654321987654;
+  const interval = 28800;
   const one = ethers.constants.WeiPerEther; // 1e18
   const two = ethers.constants.WeiPerEther.mul(BigNumber.from("2")); // 2e18
-
+  let firstTimestamp;
+  let secondTimestamp;
+  let thirdTimestamp;
   const ORDER = "0xf555eb98";
   const STOP_LOSS_LIMIT_ORDER = "0xeeaed735";
   const TAKE_PROFIT_LIMIT_ORDER = "0xe0fc7f94";
@@ -96,7 +130,7 @@ describe("MarkPriceOracle", function () {
 
     indexPriceOracle = await upgrades.deployProxy(
       IndexPriceOracle,
-      [owner.address, [65000000], [volmexBaseToken.address], [proofHash], [capRatio]],
+      [owner.address, [75000000], [volmexBaseToken.address], [proofHash], [capRatio]],
       {
         initializer: "initialize",
       },
@@ -119,7 +153,7 @@ describe("MarkPriceOracle", function () {
     positioningConfig = await upgrades.deployProxy(PositioningConfig, []);
     markPriceOracle = await upgrades.deployProxy(
       MarkPriceOracle,
-      [[60000000], [volmexBaseToken.address], [proofHash], [capRatio], owner.address],
+      [[70000000], [volmexBaseToken.address], [proofHash], [capRatio], owner.address],
       {
         initializer: "initialize",
       },
@@ -212,7 +246,7 @@ describe("MarkPriceOracle", function () {
     await markPriceOracle.setPositioning(positioning.address);
     await markPriceOracle.setIndexOracle(indexPriceOracle.address);
     await markPriceOracle.setMarkTwInterval(300);
-    await markPriceOracle.setIndexTwInterval(36000);
+    await markPriceOracle.setIndexTwInterval(3600);
 
     volmexPerpPeriphery = await upgrades.deployProxy(VolmexPerpPeriphery, [
       perpView.address,
@@ -225,7 +259,7 @@ describe("MarkPriceOracle", function () {
     await volmexPerpPeriphery.deployed();
     const depositAmount = BigNumber.from("1000000000000000000000");
     let baseAmount = "1000000000000000000"; //500
-    let quoteAmount = "60000000000000000000"; //100
+    let quoteAmount = "70000000000000000000"; //100
 
     // transfer balances
     await (await USDC.connect(owner).transfer(alice.address, depositAmount)).wait();
@@ -235,21 +269,17 @@ describe("MarkPriceOracle", function () {
     await (await USDC.connect(owner).approve(volmexPerpPeriphery.address, depositAmount)).wait();
     await (await USDC.connect(alice).approve(volmexPerpPeriphery.address, depositAmount)).wait();
     await (await USDC.connect(bob).approve(volmexPerpPeriphery.address, depositAmount)).wait();
-    await (await USDC.connect(alice).approve(vaultController.address, depositAmount)).wait();
-    await (
-      await vaultController
-        .connect(alice)
-        .deposit(volmexPerpPeriphery.address, USDC.address, alice.address, depositAmount)
-    ).wait();
+
     // deposit to vault
-    await (await volmexPerpPeriphery.depositToVault(0, USDC.address, depositAmount)).wait();
-    // await (
-    //   await volmexPerpPeriphery.connect(alice).depositToVault(0, USDC.address, depositAmount)
-    // ).wait();
+    await (
+      await volmexPerpPeriphery.connect(owner).depositToVault(0, USDC.address, depositAmount)
+    ).wait();
+    await (
+      await volmexPerpPeriphery.connect(alice).depositToVault(0, USDC.address, depositAmount)
+    ).wait();
     await (
       await volmexPerpPeriphery.connect(bob).depositToVault(0, USDC.address, depositAmount)
     ).wait();
-
     await expect(volmexPerpPeriphery.whitelistTrader(alice.address, true)).to.emit(
       volmexPerpPeriphery,
       "TraderWhitelisted",
@@ -258,7 +288,6 @@ describe("MarkPriceOracle", function () {
       volmexPerpPeriphery,
       "TraderWhitelisted",
     );
-    console.log((await vaultController.getBalance(alice.address)).toString());
     await markPriceOracle.setObservationAdder(matchingEngine.address);
 
     let salt = 2;
@@ -298,197 +327,71 @@ describe("MarkPriceOracle", function () {
       liquidator,
     );
     await markPriceOracle.setObservationAdder(owner.address);
-    for (let i = 0; i < 9; i++) {
-      await markPriceOracle.addObservation(60000000, 0, proofHash);
-    }
   });
+  describe("Custom window ", async () => {
+    this.beforeEach(async () => {
+      firstTimestamp = getCurrentTimestamp();
+      secondTimestamp = firstTimestamp + interval;
+      thirdTimestamp = secondTimestamp + interval;
+      for (index = 0; index < 96; index++) {
+        // add obeservation in every 5 minutes
+        await time.increase(300);
+        const tx = await markPriceOracle.addObservation(70000000, 0, proofHash);
+        const { events } = await tx.wait();
 
-  describe("Deployment", function () {
-    it("Should deploy successfully", async () => {
-      let receipt = await upgrades.deployProxy(
-        MarkPriceOracle,
-        [[10000000], [volmexBaseToken.address], [proofHash], [capRatio], owner.address],
-        {
-          initializer: "initialize",
-        },
-      );
-      expect(receipt.confirmations).not.equal(0);
-    });
-    it("Should fail to initialize again", async () => {
-      let receipt = await upgrades.deployProxy(
-        MarkPriceOracle,
-        [[10000000], [volmexBaseToken.address], [proofHash], [capRatio], owner.address],
-        {
-          initializer: "initialize",
-        },
-      );
-      expect(receipt.confirmations).not.equal(0);
-      await expect(
-        receipt.initialize(
-          [10000000],
-          [volmexBaseToken.address],
-          [proofHash],
-          [capRatio],
-          owner.address,
-        ),
-      ).to.be.revertedWith("Initializable: contract is already initialized");
-    });
-
-    it("Should fail to deploy if length of arrays is unequal", async () => {
-      await expect(
-        upgrades.deployProxy(
-          MarkPriceOracle,
-          [
-            [10000000, 100000000],
-            [volmexBaseToken.address],
-            [proofHash],
-            [capRatio],
-            owner.address,
-          ],
-          {
-            initializer: "initialize",
-          },
-        ),
-      ).to.be.revertedWith("MarkPriceOracle: Unequal length of prices & assets");
-    });
-
-    it("Should fail to deploy when asset address is 0", async () => {
-      await expect(
-        upgrades.deployProxy(
-          MarkPriceOracle,
-          [
-            [10000000],
-            ["0x0000000000000000000000000000000000000000"],
-            [proofHash],
-            [capRatio],
-            owner.address,
-          ],
-          {
-            initializer: "initialize",
-          },
-        ),
-      ).to.be.revertedWith("MarkPriceOracle: Asset address can't be 0");
-    });
-  });
-
-  describe("Add Observation", async () => {
-    it("Should add observation", async () => {
-      for (let i = 0; i < 9; i++) {
-        await markPriceOracle.addObservation(60000000, 0, proofHash);
+        let data;
+        events.forEach((log: any) => {
+          if (log["event"] == "ObservationAdded") {
+            data = log["data"];
+          }
+        });
+        const logData = ethers.utils.defaultAbiCoder.decode(
+          ["uint256", "uint256", "uint256"],
+          data,
+        );
+        const observation: Observation = {
+          timestamp: parseInt(logData[2]),
+          price: parseInt(logData[0]),
+        };
+        observations.push(observation);
       }
-
-      const txn = await markPriceOracle.getLastTwap(100000, 0);
-      expect(Number(txn)).equal(60000000);
+      for (index = 0; index < 96; index++) {
+        // add obeservation in every 5 minutes
+        await time.increase(300);
+        const tx = await markPriceOracle.addObservation(75000000, 0, proofHash);
+        const { events } = await tx.wait();
+        let data;
+        events.forEach((log: any) => {
+          if (log["event"] == "ObservationAdded") {
+            data = log["data"];
+          }
+        });
+        const logData = ethers.utils.defaultAbiCoder.decode(
+          ["uint256", "uint256", "uint256"],
+          data,
+        );
+        const observation: Observation = {
+          timestamp: parseInt(logData[2]),
+          price: parseInt(logData[0]),
+        };
+        observations.push(observation);
+      }
     });
-
-    it("should fail to add observation when cumulative price is zero ", async () => {
-      await expect(markPriceOracle.addObservation(0, 0, proofHash)).to.be.revertedWith(
-        "MarkPriceOracle: Not zero",
+    it("should return cumulative price between first time stamp and second and third", async () => {
+      const cumulativePrice1 = await markPriceOracle.getCustomUnderlyingTwap(
+        0,
+        firstTimestamp + 300,
+        secondTimestamp,
       );
-    });
-    it("Should fail to add observation when caller is not exchange", async () => {
-      await expect(
-        markPriceOracle.connect(account1).addObservation(1000000, 0, proofHash),
-      ).to.be.revertedWith("MarkPriceOracle: not observation adder");
-    });
-
-    it("Should get cumulative price", async () => {
-      await markPriceOracle.addObservation(60000000, 0, proofHash);
-
-      const txn = await markPriceOracle.getLastTwap(10000000, 0);
-      expect(Number(txn)).equal(60000000);
-    });
-    it("Should get last price ", async () => {
-      await markPriceOracle.addObservation(1000000, 0, proofHash);
-
-      const txn = await markPriceOracle.getLastPrice(0);
-      expect(Number(txn)).equal(1000000);
-    });
-
-    it("Should get cumulative price with time delay", async () => {
-      for (let i = 0; i < 9; i++) {
-        await markPriceOracle.addObservation(60000000, 0, proofHash);
-        await time.increase(1000);
-      }
-      const txns = await Promise.all([
-        markPriceOracle.getLastTwap(1000, 0),
-        markPriceOracle.getLastTwap(2000, 0),
-        markPriceOracle.getLastTwap(3000, 0),
-        markPriceOracle.getLastTwap(4000, 0),
-        markPriceOracle.getLastTwap(5000, 0),
-        markPriceOracle.getLastTwap(6000, 0),
-        markPriceOracle.getLastTwap(7000, 0),
-        markPriceOracle.getLastTwap(8000, 0),
-        markPriceOracle.getLastTwap(9000, 0),
-        markPriceOracle.getLastTwap(10000, 0),
-        markPriceOracle.getLastTwap(20000, 0),
-      ]);
-      txns.forEach(txn => {
-        expect(Number(txn)).equal(60000000);
-      });
-    });
-
-    it("Should not error when there are no recent datapoints added for cumulative price", async () => {
-      const txn1 = await markPriceOracle.getLastTwap(20000, 0);
-      expect(Number(txn1)).equal(60000000);
-      for (let i = 0; i < 9; i++) {
-        await markPriceOracle.addObservation(60000000, 0, proofHash);
-        await time.increase(1000);
-      }
-      // this covers the case of zero recent datapoints
-      await time.increase(100000);
-      const txn2 = await markPriceOracle.getLastTwap(100000, 0);
-      expect(Number(txn2)).equal(60000000);
-      const txn3 = await markPriceOracle.getLastTwap(20000000, 0);
-      expect(Number(txn3)).equal(60000000);
-    });
-
-    it("Should not error when there are no recent datapoints then more datapoints are added for cumulative price", async () => {
-      await time.increase(200001);
-      const txn1 = await markPriceOracle.getLastTwap(20000, 0);
-      expect(Number(txn1)).equal(60000000);
-
-      for (let i = 0; i < 10; i++) {
-        await markPriceOracle.addObservation(20000000, 0, proofHash);
-        await time.increase(1000);
-      }
-      const txn2 = await markPriceOracle.getLastTwap(10000, 0);
-      expect(Number(txn2)).equal(20000000);
-    });
-
-    it("Should fail to  add multiple observations because uneuqal length of inputs", async () => {
-      await expect(
-        markPriceOracle.addAssets(
-          [10000000, 20000000],
-          [volmexBaseToken.address],
-          [proofHash],
-          [capRatio],
-        ),
-      ).to.be.revertedWith("MarkPriceOracle: Unequal length of prices & assets");
-    });
-
-    it("Should fail to  add multiple observations because 0 address of a token", async () => {
-      await expect(
-        markPriceOracle.addAssets(
-          [10000000, 20000000],
-          [volmexBaseToken.address, ZERO_ADDR],
-          [proofHash, proofHash],
-          [capRatio, capRatio],
-        ),
-      ).to.be.revertedWith("MarkPriceOracle: Asset address can't be 0");
-    });
-    it("should fail to set Matching engine as admin assecc is not provided", async () => {
-      const [owner, account1] = await ethers.getSigners();
-      await expect(
-        markPriceOracle.connect(account1).setObservationAdder(matchingEngine.address),
-      ).to.be.revertedWith("MarkPriceOracle: not admin");
-    });
-
-    it("should fail to set Matching engine as admin assecc is not provided", async () => {
-      const [owner, account1] = await ethers.getSigners();
-      await expect(markPriceOracle.setObservationAdder(ZERO_ADDR)).to.be.revertedWith(
-        "MarkPriceOracle: zero address",
+      const price = getCustomUnderlyingTwap(observations, firstTimestamp, secondTimestamp);
+      expect(parseInt(cumulativePrice1)).to.equal(price);
+      const cumulativePrice2 = await markPriceOracle.getCustomUnderlyingTwap(
+        0,
+        secondTimestamp + 300,
+        thirdTimestamp,
       );
+      const price1 = getCustomUnderlyingTwap(observations, secondTimestamp + 300, thirdTimestamp);
+      expect(parseInt(cumulativePrice2)).to.equal(price1);
     });
   });
   async function getSignature(orderObj, signer) {
