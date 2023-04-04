@@ -36,7 +36,7 @@ contract FundingRate is IFundingRate, BlockContext, PositioningCallee, FundingRa
         uint256 lastSettledTimestamp = _lastSettledTimestampMap[baseToken];
         // update states before further actions in this funding epoch; once per epoch
         if (timestamp - lastSettledTimestamp > _fundingPeriod) {
-            uint256 fundingLatestTimestamp = lastSettledTimestamp + ((timestamp - lastSettledTimestamp) / _fundingPeriod) * _fundingPeriod;
+             uint256 fundingLatestTimestamp = lastSettledTimestamp == 0 ? timestamp : lastSettledTimestamp + ((timestamp - lastSettledTimestamp) / _fundingPeriod) * _fundingPeriod;
             // update fundingGrowthGlobal and _lastSettledTimestamp
             (_lastSettledTimestampMap[baseToken], _globalFundingGrowthMap[baseToken]) = (fundingLatestTimestamp, globalTwPremiumGrowth);
             _lastFundingIndexPrice[baseToken] = indexTwap;
@@ -93,16 +93,7 @@ contract FundingRate is IFundingRate, BlockContext, PositioningCallee, FundingRa
     /// @return globalTwPremium only for settleFunding()
     /// @return markTwap only for settleFunding()
     /// @return indexTwap only for settleFunding()
-    function _getFundingGlobalPremiumAndTwaps(address baseToken)
-        internal
-        view
-        virtual
-        returns (
-            int256 globalTwPremium,
-            uint256 markTwap,
-            uint256 indexTwap
-        )
-    {
+    function _getFundingGlobalPremiumAndTwaps(address baseToken) internal view virtual returns (int256 globalTwPremium, uint256 markTwap, uint256 indexTwap) {
         uint256 twapInterval = IPositioningConfig(_positioningConfig).getTwapInterval();
         uint256 timestamp = _blockTimestamp();
         // shorten twapInterval if prior observations are not enough
