@@ -1,16 +1,16 @@
 // SPDX-License-Identifier: BUSL - 1.1
 pragma solidity =0.8.18;
 
-import {AccessControlUpgradeable} from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
+import { AccessControlUpgradeable } from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 
-import {LibOrder} from "../libs/LibOrder.sol";
-import {IMarkPriceOracle} from "../interfaces/IMarkPriceOracle.sol";
-import {IIndexPriceOracle} from "../interfaces/IIndexPriceOracle.sol";
-import {IPositioning} from "../interfaces/IPositioning.sol";
-import {IVaultController} from "../interfaces/IVaultController.sol";
-import {IVolmexPerpPeriphery, IERC20Upgradeable, IVirtualToken} from "../interfaces/IVolmexPerpPeriphery.sol";
-import {IVolmexPerpView} from "../interfaces/IVolmexPerpView.sol";
-import {IPositioningConfig} from "../interfaces/IPositioningConfig.sol";
+import { LibOrder } from "../libs/LibOrder.sol";
+import { IMarkPriceOracle } from "../interfaces/IMarkPriceOracle.sol";
+import { IIndexPriceOracle } from "../interfaces/IIndexPriceOracle.sol";
+import { IPositioning } from "../interfaces/IPositioning.sol";
+import { IVaultController } from "../interfaces/IVaultController.sol";
+import { IVolmexPerpPeriphery, IERC20Upgradeable, IVirtualToken } from "../interfaces/IVolmexPerpPeriphery.sol";
+import { IVolmexPerpView } from "../interfaces/IVolmexPerpView.sol";
+import { IPositioningConfig } from "../interfaces/IPositioningConfig.sol";
 
 contract VolmexPerpPeriphery is AccessControlUpgradeable, IVolmexPerpPeriphery {
     // perp periphery role
@@ -22,7 +22,7 @@ contract VolmexPerpPeriphery is AccessControlUpgradeable, IVolmexPerpPeriphery {
 
     // Store the whitelist Vaults
     mapping(address => bool) private _isVaultWhitelist;
-    
+
     // Store the whitelist traders
     mapping(address => bool) public isTraderWhitelisted;
 
@@ -246,11 +246,11 @@ contract VolmexPerpPeriphery is AccessControlUpgradeable, IVolmexPerpPeriphery {
         // TODO: change to index, mark and mark's latest price
         uint256 _index = markPriceOracle.indexByBaseToken(baseToken);
         if (_order.twapType == LibOrder.MARK_TWAP) {
-            price = markPriceOracle.getLastTwap(_twInterval, _index);
+            price = markPriceOracle.getMarkTwap(_twInterval, _index);
         } else if (_order.twapType == LibOrder.INDEX_TWAP) {
             price = indexPriceOracle.getLastTwap(_twInterval, _index);
         } else {
-            price = markPriceOracle.getLastTwap(60, _index);
+            price = markPriceOracle.getMarkTwap(60, _index);
         }
     }
 }

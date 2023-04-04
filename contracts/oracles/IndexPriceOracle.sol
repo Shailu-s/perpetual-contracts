@@ -12,7 +12,7 @@ import "../interfaces/IIndexPriceOracle.sol";
  * @author volmex.finance [security@volmexlabs.com]
  */
 contract IndexPriceOracle is AccessControlUpgradeable, ERC165StorageUpgradeable {
-    struct Observation {
+    struct IndexObservation {
         uint256 timestamp;
         uint256 underlyingPrice;
         bytes32 proofHash;
@@ -31,7 +31,7 @@ contract IndexPriceOracle is AccessControlUpgradeable, ERC165StorageUpgradeable 
     // mapping to store index by base token address
     mapping(address => uint256) public indexByBaseToken;
     // mapping to store baseToken to Observations
-    mapping(uint256 => Observation[]) public observationsByIndex;
+    mapping(uint256 => IndexObservation[]) public observationsByIndex;
     // Store the volatilitycapratio by index
     mapping(uint256 => uint256) public volatilityCapRatioByIndex;
 
@@ -170,7 +170,7 @@ contract IndexPriceOracle is AccessControlUpgradeable, ERC165StorageUpgradeable 
      * @param _index Index of the observation, the index base token mapping
      */
     function getLastPrice(uint256 _index) public view returns (uint256 underlyingLastPrice) {
-        Observation[] memory observations = observationsByIndex[_index];
+        IndexObservation[] memory observations = observationsByIndex[_index];
         uint256 index = observations.length - 1;
         underlyingLastPrice = observations[index].underlyingPrice;
     }
@@ -183,7 +183,7 @@ contract IndexPriceOracle is AccessControlUpgradeable, ERC165StorageUpgradeable 
     }
 
     function getLastUpdatedTimestamp(uint256 _index) external view returns (uint256 lastUpdatedTimestamp) {
-        Observation[] memory observations = observationsByIndex[_index];
+        IndexObservation[] memory observations = observationsByIndex[_index];
         lastUpdatedTimestamp = observations[observations.length - 1].timestamp;
     }
 
@@ -200,15 +200,15 @@ contract IndexPriceOracle is AccessControlUpgradeable, ERC165StorageUpgradeable 
             require(_assets[index] != address(0), "IndexPriceOracle: Asset address can't be 0");
         }
 
-        Observation memory observation;
+        IndexObservation memory observation;
         uint256 indexCount = _indexCount;
         uint256 currentTimestamp = block.timestamp;
         for (uint256 index; index < underlyingPriceLength; index++) {
-            observation = Observation({ timestamp: currentTimestamp, underlyingPrice: _underlyingPrices[index], proofHash: _proofHash[index] });
+            observation = IndexObservation({ timestamp: currentTimestamp, underlyingPrice: _underlyingPrices[index], proofHash: _proofHash[index] });
             baseTokenByIndex[indexCount] = _assets[index];
             indexByBaseToken[_assets[index]] = indexCount;
             volatilityCapRatioByIndex[indexCount] = _capRatio[index];
-            Observation[] storage observations = observationsByIndex[indexCount];
+            IndexObservation[] storage observations = observationsByIndex[indexCount];
             observations.push(observation);
             indexCount++;
         }
@@ -222,8 +222,8 @@ contract IndexPriceOracle is AccessControlUpgradeable, ERC165StorageUpgradeable 
         uint256 _underlyingPrice,
         bytes32 _proofHash
     ) internal {
-        Observation memory observation = Observation({ timestamp: block.timestamp, underlyingPrice: _underlyingPrice, proofHash: _proofHash });
-        Observation[] storage observations = observationsByIndex[_index];
+        IndexObservation memory observation = IndexObservation({ timestamp: block.timestamp, underlyingPrice: _underlyingPrice, proofHash: _proofHash });
+        IndexObservation[] storage observations = observationsByIndex[_index];
         observations.push(observation);
     }
 
@@ -232,7 +232,7 @@ contract IndexPriceOracle is AccessControlUpgradeable, ERC165StorageUpgradeable 
         uint256 _startTimestamp,
         uint256 _endTimestamp
     ) internal view returns (uint256 priceCumulative, uint256 lastUpdatedTimestamp) {
-        Observation[] memory observations = observationsByIndex[_index];
+        IndexObservation[] memory observations = observationsByIndex[_index];
         uint256 index = observations.length;
         lastUpdatedTimestamp = observations[index - 1].timestamp;
         uint256 startIndex;

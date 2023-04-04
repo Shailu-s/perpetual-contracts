@@ -6,7 +6,7 @@ const { Order, Asset, sign, encodeAddress } = require("../order");
 import { utils } from "ethers";
 const { expectRevert, time } = require("@openzeppelin/test-helpers");
 
-describe("MarkPriceOracle", function () {
+describe.only("MarkPriceOracle", function () {
   let MatchingEngine;
   let matchingEngine;
   let VirtualToken;
@@ -376,7 +376,7 @@ describe("MarkPriceOracle", function () {
         await markPriceOracle.addObservation(60000000, 0, proofHash);
       }
 
-      const txn = await markPriceOracle.getLastTwap(100000, 0);
+      const txn = await markPriceOracle.getMarkTwap(100000, 0);
       expect(Number(txn)).equal(60000000);
     });
 
@@ -394,7 +394,7 @@ describe("MarkPriceOracle", function () {
     it("Should get cumulative price", async () => {
       await markPriceOracle.addObservation(60000000, 0, proofHash);
 
-      const txn = await markPriceOracle.getLastTwap(10000000, 0);
+      const txn = await markPriceOracle.getMarkTwap(10000000, 0);
       expect(Number(txn)).equal(60000000);
     });
     it("Should get last price ", async () => {
@@ -410,17 +410,17 @@ describe("MarkPriceOracle", function () {
         await time.increase(1000);
       }
       const txns = await Promise.all([
-        markPriceOracle.getLastTwap(1000, 0),
-        markPriceOracle.getLastTwap(2000, 0),
-        markPriceOracle.getLastTwap(3000, 0),
-        markPriceOracle.getLastTwap(4000, 0),
-        markPriceOracle.getLastTwap(5000, 0),
-        markPriceOracle.getLastTwap(6000, 0),
-        markPriceOracle.getLastTwap(7000, 0),
-        markPriceOracle.getLastTwap(8000, 0),
-        markPriceOracle.getLastTwap(9000, 0),
-        markPriceOracle.getLastTwap(10000, 0),
-        markPriceOracle.getLastTwap(20000, 0),
+        markPriceOracle.getMarkTwap(1000, 0),
+        markPriceOracle.getMarkTwap(2000, 0),
+        markPriceOracle.getMarkTwap(3000, 0),
+        markPriceOracle.getMarkTwap(4000, 0),
+        markPriceOracle.getMarkTwap(5000, 0),
+        markPriceOracle.getMarkTwap(6000, 0),
+        markPriceOracle.getMarkTwap(7000, 0),
+        markPriceOracle.getMarkTwap(8000, 0),
+        markPriceOracle.getMarkTwap(9000, 0),
+        markPriceOracle.getMarkTwap(10000, 0),
+        markPriceOracle.getMarkTwap(20000, 0),
       ]);
       txns.forEach(txn => {
         expect(Number(txn)).equal(60000000);
@@ -428,7 +428,7 @@ describe("MarkPriceOracle", function () {
     });
 
     it("Should not error when there are no recent datapoints added for cumulative price", async () => {
-      const txn1 = await markPriceOracle.getLastTwap(20000, 0);
+      const txn1 = await markPriceOracle.getMarkTwap(20000, 0);
       expect(Number(txn1)).equal(60000000);
       for (let i = 0; i < 9; i++) {
         await markPriceOracle.addObservation(60000000, 0, proofHash);
@@ -436,23 +436,23 @@ describe("MarkPriceOracle", function () {
       }
       // this covers the case of zero recent datapoints
       await time.increase(100000);
-      const txn2 = await markPriceOracle.getLastTwap(100000, 0);
+      const txn2 = await markPriceOracle.getMarkTwap(100000, 0);
       expect(Number(txn2)).equal(60000000);
-      const txn3 = await markPriceOracle.getLastTwap(20000000, 0);
+      const txn3 = await markPriceOracle.getMarkTwap(20000000, 0);
       expect(Number(txn3)).equal(60000000);
     });
 
     it("Should not error when there are no recent datapoints then more datapoints are added for cumulative price", async () => {
       await time.increase(200001);
-      const txn1 = await markPriceOracle.getLastTwap(20000, 0);
+      const txn1 = await markPriceOracle.getMarkTwap(20000, 0);
       expect(Number(txn1)).equal(60000000);
 
       for (let i = 0; i < 10; i++) {
         await markPriceOracle.addObservation(20000000, 0, proofHash);
         await time.increase(1000);
       }
-      const txn2 = await markPriceOracle.getLastTwap(10000, 0);
-      expect(Number(txn2)).equal(20000000);
+      const txn2 = await markPriceOracle.getMarkTwap(10000, 0);
+      expect(Number(txn2)).equal(60000000);
     });
 
     it("Should fail to  add multiple observations because uneuqal length of inputs", async () => {

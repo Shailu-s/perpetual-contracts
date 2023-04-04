@@ -130,7 +130,7 @@ contract MarkPriceOracle is AccessControlUpgradeable {
         int256 indexPrice = indexOracle.getLastTwap(indexTwInterval, _index).toInt256();
         // Note: Check for actual precision and data type
         prices[0] = indexPrice * (1 + lastFundingRate * (nextFunding.toInt256() / fundingPeriod.toInt256()));
-        uint256 markTwap = getLastTwap(markTwInterval, _index);
+        uint256 markTwap = getMarkTwap(markTwInterval, _index);
         prices[1] = markTwap.toInt256();
         prices[2] = getLastPrice(_index).toInt256();
         markPrice = prices[0].median(prices[1], prices[2]);
@@ -171,9 +171,9 @@ contract MarkPriceOracle is AccessControlUpgradeable {
      * @param _index Index of the observation, the index base token mapping
      * @return priceCumulative The SMA price of the asset
      */
-    function getLastTwap(uint256 _twInterval, uint256 _index) public view returns (uint256 priceCumulative) {
+    function getMarkTwap(uint256 _twInterval, uint256 _index) public view returns (uint256 priceCumulative) {
         uint256 startTimestamp = block.timestamp - _twInterval;
-        (priceCumulative, ) = _getCustomTwap(_index, startTimestamp, block.timestamp, false);
+        (priceCumulative, ) = _getCustomTwap(_index, startTimestamp, block.timestamp, true);
     }
 
     /**

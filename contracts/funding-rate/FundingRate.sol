@@ -115,7 +115,7 @@ contract FundingRate is IFundingRate, BlockContext, PositioningCallee, FundingRa
         uint256 lastSettledTimestamp = _lastSettledTimestampMap[baseToken];
         int256 lastTwPremium = _globalFundingGrowthMap[baseToken];
         if (lastSettledTimestamp == 0) {
-            markTwap = IMarkPriceOracle(_markPriceOracleArg).getLastTwap(twapInterval, _underlyingPriceIndex);
+            markTwap = IMarkPriceOracle(_markPriceOracleArg).getMarkTwap(twapInterval, _underlyingPriceIndex);
             indexTwap = IIndexPriceOracle(_indexPriceOracleArg).getLastTwap(twapInterval, _underlyingPriceIndex);
             globalTwPremium = lastTwPremium;
         } else if (timestamp - lastSettledTimestamp < _fundingPeriod) {
