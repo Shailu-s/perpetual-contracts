@@ -254,7 +254,7 @@ contract IndexPriceOracle is AccessControlUpgradeable, ERC165StorageUpgradeable 
             priceCumulative += observations[startIndex].underlyingPrice;
             index++;
         }
-        unchecked { priceCumulative = priceCumulative / index; }
+        priceCumulative = priceCumulative / index;
     }
 
     function _requireOracleAdmin() internal view {
