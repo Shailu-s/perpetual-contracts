@@ -6,7 +6,6 @@ import "@openzeppelin/contracts-upgradeable/utils/introspection/ERC165StorageUpg
 import { AccessControlUpgradeable } from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 
 import "../interfaces/IIndexPriceOracle.sol";
-import "hardhat/console.sol";
 
 /**
  * @title Volmex Oracle contract
@@ -71,7 +70,7 @@ contract IndexPriceOracle is AccessControlUpgradeable, ERC165StorageUpgradeable 
     ) external virtual {
         _requireCanAddObservation();
         require(_underlyingPrice != 0, "IndexPriceOracle: Not zero");
-        _pushOrderPrice(_index, _underlyingPrice, 0, _proofHash);
+        _pushOrderPrice(_index, _underlyingPrice, _proofHash);
         emit ObservationAdded(_index, _underlyingPrice, block.timestamp);
     }
 
@@ -221,12 +220,10 @@ contract IndexPriceOracle is AccessControlUpgradeable, ERC165StorageUpgradeable 
     function _pushOrderPrice(
         uint256 _index,
         uint256 _underlyingPrice,
-        uint256 _markPrice,
         bytes32 _proofHash
     ) internal {
         Observation memory observation = Observation({ timestamp: block.timestamp, underlyingPrice: _underlyingPrice, proofHash: _proofHash });
         Observation[] storage observations = observationsByIndex[_index];
-        console.log(observation.underlyingPrice, observation.timestamp, "time smatmpp");
         observations.push(observation);
     }
 
@@ -256,8 +253,6 @@ contract IndexPriceOracle is AccessControlUpgradeable, ERC165StorageUpgradeable 
         for (; startIndex <= endIndex; startIndex++) {
             priceCumulative += observations[startIndex].underlyingPrice;
             index++;
-            console.log(startIndex, "start index");
-            console.log(index, "normal");
         }
         unchecked { priceCumulative = priceCumulative / index; }
     }
