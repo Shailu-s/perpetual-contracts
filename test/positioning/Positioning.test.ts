@@ -2542,12 +2542,12 @@ describe("Liquidation test in Positioning", function () {
         await expect(positionSize1.toString()).to.be.equal("20000000000000000000");
 
         const proofHash = "0x6c00000000000000000000000000000000000000000000000000000000000000";
-        await time.increase(28000);
+        await time.increase(28800);
         for (let index = 0; index < 10; index++) {
           await (await indexPriceOracle.addObservation(180000000, 0, proofHash)).wait();
           await (await indexPriceOracle.addObservation(180000000, 1, proofHash)).wait();
         }
-
+        // liquidating the position
         await expect(
           positioning
             .connect(account2)
@@ -2595,7 +2595,7 @@ describe("Liquidation test in Positioning", function () {
         await expect(positionSize1.toString()).to.be.equal("20000000000000000000");
 
         const proofHash = "0x6c00000000000000000000000000000000000000000000000000000000000000";
-        await time.increase(28000);
+        await time.increase(28800);
         for (let index = 0; index < 10; index++) {
           await (await indexPriceOracle.addObservation(200000000, 0, proofHash)).wait();
           await (await indexPriceOracle.addObservation(200000000, 1, proofHash)).wait();
@@ -2672,7 +2672,7 @@ describe("Liquidation test in Positioning", function () {
         await expect(positionSize1.toString()).to.be.equal("20000000000000000000");
 
         const proofHash = "0x6c00000000000000000000000000000000000000000000000000000000000000";
-        await time.increase(28009);
+        await time.increase(28800);
         for (let index = 0; index < 10; index++) {
           await (await indexPriceOracle.addObservation(200000000, 0, proofHash)).wait();
           await (await indexPriceOracle.addObservation(200000000, 1, proofHash)).wait();
@@ -2746,7 +2746,7 @@ describe("Liquidation test in Positioning", function () {
         await expect(positionSize1.toString()).to.be.equal("20000000000000000000");
 
         const proofHash = "0x6c00000000000000000000000000000000000000000000000000000000000000";
-        await time.increase(28009);
+        await time.increase(28800);
         for (let index = 0; index < 10; index++) {
           await (await indexPriceOracle.addObservation(200000000, 0, proofHash)).wait();
           await (await indexPriceOracle.addObservation(200000000, 1, proofHash)).wait();
@@ -2845,7 +2845,7 @@ describe("Liquidation test in Positioning", function () {
         await expect(positionSize1.toString()).to.be.equal("20000000000000000000");
 
         const proofHash = "0x6c00000000000000000000000000000000000000000000000000000000000000";
-        await time.increase(28009);
+        await time.increase(28800);
         for (let index = 0; index < 10; index++) {
           await (await indexPriceOracle.addObservation(200000000, 0, proofHash)).wait();
           await (await indexPriceOracle.addObservation(200000000, 1, proofHash)).wait();
@@ -2877,6 +2877,7 @@ describe("Liquidation test in Positioning", function () {
           orderLeft.makeAsset.virtualToken,
         );
         const positionsizeAbs = await accountBalance1.getTotalAbsPositionValue(account1.address);
+
         const positionSize = await accountBalance1.getPositionSize(
           account1.address,
           orderLeft.makeAsset.virtualToken,
