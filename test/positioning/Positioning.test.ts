@@ -4,6 +4,7 @@ const { Order, Asset, sign, encodeAddress } = require("../order");
 import { FakeContract, smock } from "@defi-wonderland/smock";
 import { FundingRate, IndexPriceOracle, MarkPriceOracle } from "../../typechain";
 import { BigNumber } from "ethers";
+const { expectRevert, time } = require("@openzeppelin/test-helpers");
 
 describe("Positioning", function () {
   let MatchingEngine;
@@ -707,7 +708,6 @@ describe("Positioning", function () {
               liquidator,
             ),
         ).to.emit(positioning, "PositionChanged");
-        console.log("herehjjji");
         const positionSize = await accountBalance1.getPositionSize(
           account1.address,
           orderLeft.takeAsset.virtualToken,
@@ -2518,8 +2518,7 @@ describe("Liquidation test in Positioning", function () {
       it("should liquidate trader", async () => {
         let signatureLeft = await getSignature(orderLeft, account1.address);
         let signatureRight = await getSignature(orderRight, account2.address);
-        console.log((await indexPriceOracle.getLastPrice(0)).toString());
-        console.log((await markPriceOracle.getLastPrice(0)).toString());
+
         await expect(
           positioning.openPosition(
             orderLeft,
@@ -2548,9 +2547,7 @@ describe("Liquidation test in Positioning", function () {
           await (await indexPriceOracle.addObservation(180000000, 0, proofHash)).wait();
           await (await indexPriceOracle.addObservation(180000000, 1, proofHash)).wait();
         }
-        console.log((await indexPriceOracle.getLastPrice(0)).toString());
-        console.log((await markPriceOracle.getLastPrice(0)).toString());
-        // liquidating the position
+
         await expect(
           positioning
             .connect(account2)
@@ -2880,8 +2877,6 @@ describe("Liquidation test in Positioning", function () {
           orderLeft.makeAsset.virtualToken,
         );
         const positionsizeAbs = await accountBalance1.getTotalAbsPositionValue(account1.address);
-        console.log(positionsize.toString(), "position size");
-        console.log(positionsizeAbs.toString(), "position sizeabs ");
         const positionSize = await accountBalance1.getPositionSize(
           account1.address,
           orderLeft.makeAsset.virtualToken,

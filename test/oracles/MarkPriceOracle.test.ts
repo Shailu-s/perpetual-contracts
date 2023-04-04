@@ -258,7 +258,6 @@ describe("MarkPriceOracle", function () {
       volmexPerpPeriphery,
       "TraderWhitelisted",
     );
-    console.log((await vaultController.getBalance(alice.address)).toString());
     await markPriceOracle.setObservationAdder(matchingEngine.address);
 
     let salt = 2;

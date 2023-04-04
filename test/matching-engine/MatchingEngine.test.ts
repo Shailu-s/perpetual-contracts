@@ -102,7 +102,7 @@ describe("MatchingEngine", function () {
         initializer: "initialize",
       },
     );
-    console.log("here");
+
     markPriceOracle = await upgrades.deployProxy(
       MarkPriceOracle,
       [[1000000], [volmexBaseToken.address], [proofHash], [capRatio], owner.address],
@@ -163,7 +163,7 @@ describe("MatchingEngine", function () {
         initializer: "initialize",
       },
     );
-    console.log("heheheheh");
+
     vault = await upgrades.deployProxy(Vault, [
       positioningConfig.address,
       accountBalance.address,
@@ -171,12 +171,10 @@ describe("MatchingEngine", function () {
       accountBalance.address,
       false,
     ]);
-    console.log("hre");
     await (await virtualToken.setMintBurnRole(owner.address)).wait();
     await virtualToken.mint(account1.address, ten.toString());
     await virtualToken.mint(account2.address, ten.toString());
     await (await volmexBaseToken.setMintBurnRole(positioning.address)).wait();
-    console.log("asdfghjkjhgfds");
     await (await virtualToken.connect(owner).setMintBurnRole(positioning.address)).wait();
     marketRegistry = await upgrades.deployProxy(MarketRegistry, [virtualToken.address]);
     perpViewFake = await smock.fake("VolmexPerpView");
@@ -330,7 +328,6 @@ describe("MatchingEngine", function () {
         twapType,
       );
       await matchingEngine.setMakerMinSalt("100");
-      console.log("here");
       await expect(matchingEngine.cancelOrder(order1)).to.be.revertedWith(
         "V_PERP_M: order salt lower",
       );
@@ -537,7 +534,6 @@ describe("MatchingEngine", function () {
         await expect(matchingEngine.matchOrders(orderLeft, orderRight)).to.be.revertedWith(
           "V_PERP_M: order verification failed",
         );
-        console.log("Here at failing order due to same traders");
       });
       it("Should Not match orders since executer in not authorised", async () => {
         const [owner, account1, account2] = await ethers.getSigners();
