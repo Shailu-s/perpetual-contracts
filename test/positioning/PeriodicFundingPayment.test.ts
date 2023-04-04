@@ -214,7 +214,9 @@ describe("Priodic Funding payment", function () {
 
     await (await markPriceOracle.setObservationAdder(owner.address)).wait();
     await (await matchingEngine.grantMatchOrders(positioning.address)).wait();
-
+    for (let i = 0; i < 9; i++) {
+      await markPriceOracle.addObservation(70000000, 0, proofHash);
+    }
     await (await markPriceOracle.setObservationAdder(matchingEngine.address)).wait();
     volmexPerpPeriphery = await upgrades.deployProxy(VolmexPerpPeriphery, [
       perpView.address,
