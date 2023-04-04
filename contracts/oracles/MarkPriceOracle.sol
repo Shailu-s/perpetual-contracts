@@ -299,7 +299,7 @@ contract MarkPriceOracle is AccessControlUpgradeable {
         }
         index = 0; // re-used to get total observation count
         for (; startIndex <= endIndex; startIndex++) {
-            priceCumulative += _isMarkTwapRequired ? observations[startIndex].underlyingPrice : observations[startIndex].underlyingPrice;
+            priceCumulative += _isMarkTwapRequired ? observations[startIndex].markPrice : observations[startIndex].underlyingPrice;
             index++;
         }
         priceCumulative = priceCumulative / index;
