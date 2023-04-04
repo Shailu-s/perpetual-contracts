@@ -2194,14 +2194,7 @@ describe("Positioning", function () {
   }
 });
 
-import { expect } from "chai";
-import { ethers, upgrades } from "hardhat";
-const { Order, Asset, sign, encodeAddress } = require("../order");
-import { FakeContract, smock } from "@defi-wonderland/smock";
-import { FundingRate, IndexPriceOracle, MarkPriceOracle } from "../../typechain";
-import { BigNumber } from "ethers";
-const { expectRevert, time } = require("@openzeppelin/test-helpers");
-describe.only("Liquidation test in Positioning", function () {
+describe("Liquidation test in Positioning", function () {
   let MatchingEngine;
   let matchingEngine;
   let VirtualToken;

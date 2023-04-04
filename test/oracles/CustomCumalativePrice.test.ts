@@ -10,7 +10,11 @@ interface Observation {
   timestamp: number;
   price: number;
 }
-const getCustomTwap = (observations: Array<Observation>, startTime: number, endTime: number) => {
+const getCustomUnderlyingTwap = (
+  observations: Array<Observation>,
+  startTime: number,
+  endTime: number,
+) => {
   let priceCumulative = 0;
   let index = observations.length;
   let startIndex = 0;
@@ -374,19 +378,19 @@ describe("Custom Cumulative Price", function () {
       }
     });
     it("should return cumulative price between first time stamp and second and third", async () => {
-      const cumulativePrice1 = await markPriceOracle.getCustomTwap(
+      const cumulativePrice1 = await markPriceOracle.getCustomUnderlyingTwap(
         0,
         firstTimestamp + 300,
         secondTimestamp,
       );
-      const price = getCustomTwap(observations, firstTimestamp, secondTimestamp);
+      const price = getCustomUnderlyingTwap(observations, firstTimestamp, secondTimestamp);
       expect(parseInt(cumulativePrice1)).to.equal(price);
-      const cumulativePrice2 = await markPriceOracle.getCustomTwap(
+      const cumulativePrice2 = await markPriceOracle.getCustomUnderlyingTwap(
         0,
         secondTimestamp + 300,
         thirdTimestamp,
       );
-      const price1 = getCustomTwap(observations, secondTimestamp + 300, thirdTimestamp);
+      const price1 = getCustomUnderlyingTwap(observations, secondTimestamp + 300, thirdTimestamp);
       expect(parseInt(cumulativePrice2)).to.equal(price1);
     });
   });

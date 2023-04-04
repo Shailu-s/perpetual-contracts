@@ -143,7 +143,7 @@ contract MarkPriceOracle is AccessControlUpgradeable {
      */
     function setObservationAdder(address _adder) external {
         _requireOracleAdmin();
-        require(_adder != address(0), "BaseOracle: zero address");
+        require(_adder != address(0), "MarkPriceOracle: zero address");
         _grantRole(ADD_OBSERVATION_ROLE, _adder);
         emit ObservationAdderSet(_adder);
     }
@@ -198,7 +198,7 @@ contract MarkPriceOracle is AccessControlUpgradeable {
      * @param _startTimestamp timestamp of start of window
      * @param _endTimestamp timestamp of last of window
      */
-    function getMarkCustomTwap(
+    function getCustomMarkTwap(
         uint256 _index,
         uint256 _startTimestamp,
         uint256 _endTimestamp
@@ -236,10 +236,10 @@ contract MarkPriceOracle is AccessControlUpgradeable {
         uint256[] calldata _capRatio
     ) internal {
         uint256 underlyingPriceLength = _underlyingPrices.length;
-        require(underlyingPriceLength == _assets.length, "BaseOracle: Unequal length of prices & assets");
+        require(underlyingPriceLength == _assets.length, "MarkPriceOracle: Unequal length of prices & assets");
 
         for (uint256 index; index < underlyingPriceLength; index++) {
-            require(_assets[index] != address(0), "BaseOracle: Asset address can't be 0");
+            require(_assets[index] != address(0), "MarkPriceOracle: Asset address can't be 0");
         }
 
         MarkPriceObservation memory observation;

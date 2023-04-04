@@ -21,13 +21,6 @@ interface IMarkPriceOracle {
 
     function baseTokenByIndex(uint256 _index) external view returns (address baseToken);
 
-    function getCustomTwap(
-        uint256 _index,
-        uint256 _startTimestamp,
-        uint256 _endTimestamp,
-        bool _isMarkRequired
-    ) external view returns (uint256 priceCumulative);
-
     function getCustomMarkTwap(
         uint256 _index,
         uint256 _startTimestamp,
@@ -38,6 +31,13 @@ interface IMarkPriceOracle {
         uint256 _index,
         uint256 _startTimestamp,
         uint256 _endTimestamp
+    ) external view returns (uint256 priceCumulative);
+
+    function getCustomTwap(
+        uint256 _index,
+        uint256 _startTimestamp,
+        uint256 _endTimestamp,
+        bool _isMarkRequired
     ) external view returns (uint256 priceCumulative);
 
     function getIndexCount() external view returns (uint256);

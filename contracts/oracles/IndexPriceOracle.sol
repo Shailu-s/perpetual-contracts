@@ -6,6 +6,7 @@ import "@openzeppelin/contracts-upgradeable/utils/introspection/ERC165StorageUpg
 import { AccessControlUpgradeable } from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 
 import "../interfaces/IIndexPriceOracle.sol";
+import "hardhat/console.sol";
 
 /**
  * @title Volmex Oracle contract
@@ -36,7 +37,7 @@ contract IndexPriceOracle is AccessControlUpgradeable, ERC165StorageUpgradeable 
     mapping(uint256 => uint256) public volatilityCapRatioByIndex;
 
     event ObservationAdderSet(address indexed matchingEngine);
-    event ObservationAdded(uint256 indexed index, uint256 underlyingPrice, uint256 markPrice, uint256 timestamp);
+    event ObservationAdded(uint256 indexed index, uint256 underlyingPrice, uint256 timestamp);
     event AssetsAdded(uint256 indexed lastIndex, address[] assets, uint256[] underlyingPrices);
 
     /**
@@ -70,8 +71,8 @@ contract IndexPriceOracle is AccessControlUpgradeable, ERC165StorageUpgradeable 
     ) external virtual {
         _requireCanAddObservation();
         require(_underlyingPrice != 0, "IndexPriceOracle: Not zero");
-        _pushOrderPrice(_underlyingPrice, _index, 0, _proofHash);
-        emit ObservationAdded(_index, _underlyingPrice, 0, block.timestamp);
+        _pushOrderPrice(_index, _underlyingPrice, 0, _proofHash);
+        emit ObservationAdded(_index, _underlyingPrice, block.timestamp);
     }
 
     /**
@@ -116,7 +117,7 @@ contract IndexPriceOracle is AccessControlUpgradeable, ERC165StorageUpgradeable 
      */
     function setObservationAdder(address _adder) external {
         _requireOracleAdmin();
-        require(_adder != address(0), "BaseOracle: zero address");
+        require(_adder != address(0), "IndexPriceOracle: zero address");
         _grantRole(ADD_OBSERVATION_ROLE, _adder);
         emit ObservationAdderSet(_adder);
     }
@@ -194,10 +195,10 @@ contract IndexPriceOracle is AccessControlUpgradeable, ERC165StorageUpgradeable 
         uint256[] calldata _capRatio
     ) internal {
         uint256 underlyingPriceLength = _underlyingPrices.length;
-        require(underlyingPriceLength == _assets.length, "BaseOracle: Unequal length of prices & assets");
+        require(underlyingPriceLength == _assets.length, "IndexPriceOracle: Unequal length of prices & assets");
 
         for (uint256 index; index < underlyingPriceLength; index++) {
-            require(_assets[index] != address(0), "BaseOracle: Asset address can't be 0");
+            require(_assets[index] != address(0), "IndexPriceOracle: Asset address can't be 0");
         }
 
         Observation memory observation;
@@ -225,6 +226,7 @@ contract IndexPriceOracle is AccessControlUpgradeable, ERC165StorageUpgradeable 
     ) internal {
         Observation memory observation = Observation({ timestamp: block.timestamp, underlyingPrice: _underlyingPrice, proofHash: _proofHash });
         Observation[] storage observations = observationsByIndex[_index];
+        console.log(observation.underlyingPrice, observation.timestamp, "time smatmpp");
         observations.push(observation);
     }
 
@@ -238,6 +240,7 @@ contract IndexPriceOracle is AccessControlUpgradeable, ERC165StorageUpgradeable 
         lastUpdatedTimestamp = observations[index - 1].timestamp;
         uint256 startIndex;
         uint256 endIndex;
+
         if (observations[index - 1].timestamp < _endTimestamp) {
             _endTimestamp = observations[index - 1].timestamp;
         }
@@ -248,12 +251,15 @@ contract IndexPriceOracle is AccessControlUpgradeable, ERC165StorageUpgradeable 
                 startIndex = index - 1;
             }
         }
+
         index = 0; // re-used to get total observation count
         for (; startIndex <= endIndex; startIndex++) {
             priceCumulative += observations[startIndex].underlyingPrice;
             index++;
+            console.log(startIndex, "start index");
+            console.log(index, "normal");
         }
-        priceCumulative = priceCumulative / index;
+        unchecked { priceCumulative = priceCumulative / index; }
     }
 
     function _requireOracleAdmin() internal view {

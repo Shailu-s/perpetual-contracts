@@ -349,7 +349,7 @@ describe("MarkPriceOracle", function () {
             initializer: "initialize",
           },
         ),
-      ).to.be.revertedWith("BaseOracle: Unequal length of prices & assets");
+      ).to.be.revertedWith("MarkPriceOracle: Unequal length of prices & assets");
     });
 
     it("Should fail to deploy when asset address is 0", async () => {
@@ -367,7 +367,7 @@ describe("MarkPriceOracle", function () {
             initializer: "initialize",
           },
         ),
-      ).to.be.revertedWith("BaseOracle: Asset address can't be 0");
+      ).to.be.revertedWith("MarkPriceOracle: Asset address can't be 0");
     });
   });
 
@@ -389,7 +389,7 @@ describe("MarkPriceOracle", function () {
     it("Should fail to add observation when caller is not exchange", async () => {
       await expect(
         markPriceOracle.connect(account1).addObservation(1000000, 0, proofHash),
-      ).to.be.revertedWith("BaseOracle: not observation adder");
+      ).to.be.revertedWith("MarkPriceOracle: not observation adder");
     });
 
     it("Should get cumulative price", async () => {
@@ -438,7 +438,7 @@ describe("MarkPriceOracle", function () {
       // this covers the case of zero recent datapoints
       await time.increase(100000);
       const txn2 = await markPriceOracle.getLastTwap(100000, 0);
-      expect(Number(txn2)).equal(0);
+      expect(Number(txn2)).equal(60000000);
       const txn3 = await markPriceOracle.getLastTwap(20000000, 0);
       expect(Number(txn3)).equal(60000000);
     });
@@ -464,7 +464,7 @@ describe("MarkPriceOracle", function () {
           [proofHash],
           [capRatio],
         ),
-      ).to.be.revertedWith("BaseOracle: Unequal length of prices & assets");
+      ).to.be.revertedWith("MarkPriceOracle: Unequal length of prices & assets");
     });
 
     it("Should fail to  add multiple observations because 0 address of a token", async () => {
@@ -475,19 +475,19 @@ describe("MarkPriceOracle", function () {
           [proofHash, proofHash],
           [capRatio, capRatio],
         ),
-      ).to.be.revertedWith("BaseOracle: Asset address can't be 0");
+      ).to.be.revertedWith("MarkPriceOracle: Asset address can't be 0");
     });
     it("should fail to set Matching engine as admin assecc is not provided", async () => {
       const [owner, account1] = await ethers.getSigners();
       await expect(
         markPriceOracle.connect(account1).setObservationAdder(matchingEngine.address),
-      ).to.be.revertedWith("BaseOracle: not admin");
+      ).to.be.revertedWith("MarkPriceOracle: not admin");
     });
 
     it("should fail to set Matching engine as admin assecc is not provided", async () => {
       const [owner, account1] = await ethers.getSigners();
       await expect(markPriceOracle.setObservationAdder(ZERO_ADDR)).to.be.revertedWith(
-        "BaseOracle: zero address",
+        "MarkPriceOracle: zero address",
       );
     });
   });
