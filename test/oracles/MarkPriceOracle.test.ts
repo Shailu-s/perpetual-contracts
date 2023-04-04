@@ -6,7 +6,7 @@ const { Order, Asset, sign, encodeAddress } = require("../order");
 import { utils } from "ethers";
 const { expectRevert, time } = require("@openzeppelin/test-helpers");
 
-describe.only("MarkPriceOracle", function () {
+describe("MarkPriceOracle", function () {
   let MatchingEngine;
   let matchingEngine;
   let VirtualToken;
@@ -223,6 +223,10 @@ describe.only("MarkPriceOracle", function () {
       owner.address, // replace with replayer address
     ]);
     await volmexPerpPeriphery.deployed();
+    await markPriceOracle.setObservationAdder(owner.address);
+    for (let i = 0; i < 9; i++) {
+      await markPriceOracle.addObservation(60000000, 0, proofHash);
+    }
     const depositAmount = BigNumber.from("1000000000000000000000");
     let baseAmount = "1000000000000000000"; //500
     let quoteAmount = "60000000000000000000"; //100
