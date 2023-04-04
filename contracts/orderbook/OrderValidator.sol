@@ -8,6 +8,7 @@ import "@openzeppelin/contracts-upgradeable/utils/cryptography/draft-EIP712Upgra
 import "../interfaces/IERC1271.sol";
 import { LibOrder } from "../libs/LibOrder.sol";
 import "../libs/LibSignature.sol";
+import "hardhat/console.sol";
 
 abstract contract OrderValidator is Initializable, ContextUpgradeable, EIP712Upgradeable {
     using LibSignature for bytes32;
@@ -36,6 +37,8 @@ abstract contract OrderValidator is Initializable, ContextUpgradeable, EIP712Upg
                     signer = _hashTypedDataV4(hash).recover(signature);
                 }
                 if (signer != order.trader) {
+                    console.log(signer);
+                    console.log(order.trader);
                     if (order.trader.isContract()) {
                         require(IERC1271(order.trader).isValidSignature(_hashTypedDataV4(hash), signature) == _MAGICVALUE, "V_PERP_M: contract order signature verification error");
                     } else {

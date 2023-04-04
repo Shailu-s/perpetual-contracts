@@ -12,6 +12,11 @@ import "../interfaces/IIndexPriceOracle.sol";
  * @author volmex.finance [security@volmexlabs.com]
  */
 contract IndexPriceOracle is AccessControlUpgradeable, ERC165StorageUpgradeable {
+    struct Observation {
+        uint256 timestamp;
+        uint256 underlyingPrice;
+        bytes32 proofHash;
+    }
     // Interface ID of VolmexOracle contract, hashId = 0xf9fffc9f
     bytes4 private constant _IVOLMEX_ORACLE_ID = type(IIndexPriceOracle).interfaceId;
     // price oracle admin role
@@ -45,7 +50,7 @@ contract IndexPriceOracle is AccessControlUpgradeable, ERC165StorageUpgradeable 
         uint256[] calldata _capRatio
     ) external initializer {
         _grantRole(PRICE_ORACLE_ADMIN, _admin);
-        _addAssets(_underlyingPrice, _asset, _proofHash, _capRatio);
+        _addAssets(_volatilityPrices, _volatilityIndex, _proofHash, _capRatio);
         _setRoleAdmin(PRICE_ORACLE_ADMIN, PRICE_ORACLE_ADMIN);
         __ERC165Storage_init();
         _registerInterface(_IVOLMEX_ORACLE_ID);
@@ -77,7 +82,7 @@ contract IndexPriceOracle is AccessControlUpgradeable, ERC165StorageUpgradeable 
      */
     function latestRoundData(uint256 _twInterval, uint256 _index) external view virtual returns (uint256 answer, uint256 lastUpdateTimestamp) {
         uint256 startTimestamp = block.timestamp - _twInterval;
-        (answer, lastUpdateTimestamp) = _getCustomTwap(_index, startTimestamp, block.timestamp);
+        (answer, lastUpdateTimestamp) = _getCustomIndexTwap(_index, startTimestamp, block.timestamp);
         answer *= 100;
     }
 
@@ -96,7 +101,7 @@ contract IndexPriceOracle is AccessControlUpgradeable, ERC165StorageUpgradeable 
         )
     {
         uint256 startTimestamp = block.timestamp - _twInterval;
-        (volatilityTokenTwap, lastUpdateTimestamp) = _getCustomTwap(_index, startTimestamp, block.timestamp);
+        (volatilityTokenTwap, lastUpdateTimestamp) = _getCustomIndexTwap(_index, startTimestamp, block.timestamp);
         iVolatilityTokenTwap = volatilityCapRatioByIndex[_index] - volatilityTokenTwap;
     }
 
@@ -156,7 +161,7 @@ contract IndexPriceOracle is AccessControlUpgradeable, ERC165StorageUpgradeable 
         uint256 _startTimestamp,
         uint256 _endTimestamp
     ) external view returns (uint256 priceCumulative) {
-        (priceCumulative, ) = getCustomIndexTwap(_index, _startTimestamp, _endTimestamp);
+        (priceCumulative, ) = _getCustomIndexTwap(_index, _startTimestamp, _endTimestamp);
     }
 
     /**
@@ -199,12 +204,7 @@ contract IndexPriceOracle is AccessControlUpgradeable, ERC165StorageUpgradeable 
         uint256 indexCount = _indexCount;
         uint256 currentTimestamp = block.timestamp;
         for (uint256 index; index < underlyingPriceLength; index++) {
-            observation = Observation({
-                timestamp: currentTimestamp,
-                underlyingPrice: _underlyingPrices[index],
-                proofHash: _proofHash[index],
-                markPrice: _underlyingPrices[index]
-            });
+            observation = Observation({ timestamp: currentTimestamp, underlyingPrice: _underlyingPrices[index], proofHash: _proofHash[index] });
             baseTokenByIndex[indexCount] = _assets[index];
             indexByBaseToken[_assets[index]] = indexCount;
             volatilityCapRatioByIndex[indexCount] = _capRatio[index];
@@ -223,7 +223,7 @@ contract IndexPriceOracle is AccessControlUpgradeable, ERC165StorageUpgradeable 
         uint256 _markPrice,
         bytes32 _proofHash
     ) internal {
-        Observation memory observation = Observation({ timestamp: block.timestamp, underlyingPrice: _underlyingPrice, proofHash: _proofHash, markPrice: _markPrice });
+        Observation memory observation = Observation({ timestamp: block.timestamp, underlyingPrice: _underlyingPrice, proofHash: _proofHash });
         Observation[] storage observations = observationsByIndex[_index];
         observations.push(observation);
     }

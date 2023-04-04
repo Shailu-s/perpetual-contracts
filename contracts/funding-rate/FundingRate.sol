@@ -121,15 +121,15 @@ contract FundingRate is IFundingRate, BlockContext, PositioningCallee, FundingRa
         } else if (timestamp - lastSettledTimestamp < _fundingPeriod) {
             //when funding period is not over
             uint256 fundingStartTime = lastSettledTimestamp - _fundingPeriod;
-            markTwap = IMarkPriceOracle(_markPriceOracleArg).getCustomTwap(_underlyingPriceIndex, fundingStartTime, lastSettledTimestamp);
-            indexTwap = IIndexPriceOracle(_indexPriceOracleArg).getCustomTwap(_underlyingPriceIndex, fundingStartTime, lastSettledTimestamp);
+            markTwap = IMarkPriceOracle(_markPriceOracleArg).getCustomUnderlyingTwap(_underlyingPriceIndex, fundingStartTime, lastSettledTimestamp);
+            indexTwap = IIndexPriceOracle(_indexPriceOracleArg).getCustomIndexTwap(_underlyingPriceIndex, fundingStartTime, lastSettledTimestamp);
             // if this is the latest updated timestamp, values in _globalFundingGrowthX96Map are up-to-date already
             globalTwPremium = lastTwPremium;
         } else {
             //when funding period is over
             uint256 fundingLatestTimestamp = lastSettledTimestamp + ((timestamp - lastSettledTimestamp) / _fundingPeriod) * _fundingPeriod;
-            markTwap = IMarkPriceOracle(_markPriceOracleArg).getCustomTwap(_underlyingPriceIndex, lastSettledTimestamp, fundingLatestTimestamp);
-            indexTwap = IIndexPriceOracle(_indexPriceOracleArg).getCustomTwap(_underlyingPriceIndex, lastSettledTimestamp, fundingLatestTimestamp);
+            markTwap = IMarkPriceOracle(_markPriceOracleArg).getCustomUnderlyingTwap(_underlyingPriceIndex, lastSettledTimestamp, fundingLatestTimestamp);
+            indexTwap = IIndexPriceOracle(_indexPriceOracleArg).getCustomIndexTwap(_underlyingPriceIndex, lastSettledTimestamp, fundingLatestTimestamp);
             // deltaTwPremium = (markTwap - indexTwap) * (now - lastSettledTimestamp)
             int256 deltaTwPremiumX96 = _getDeltaTwap(markTwap, indexTwap) * (fundingLatestTimestamp - lastSettledTimestamp).toInt256();
             globalTwPremium = lastTwPremium + deltaTwPremiumX96;

@@ -84,7 +84,7 @@ contract BaseOracle is AccessControlUpgradeable {
      */
     function getLastTwap(uint256 _twInterval, uint256 _index) public view returns (uint256 priceCumulative) {
         uint256 startTimestamp = block.timestamp - _twInterval;
-        (priceCumulative,) = _getCustomTwap(_index, startTimestamp, block.timestamp);
+        (priceCumulative, ) = _getCustomTwap(_index, startTimestamp, block.timestamp);
     }
 
     /**
@@ -94,8 +94,12 @@ contract BaseOracle is AccessControlUpgradeable {
      * @param _startTimestamp timestamp of start of window
      * @param _endTimestamp timestamp of last of window
      */
-    function getCustomTwap(uint256 _index, uint256 _startTimestamp, uint256 _endTimestamp) external view returns (uint256 priceCumulative) {
-        (priceCumulative,) = _getCustomTwap(_index, _startTimestamp, _endTimestamp);
+    function getCustomTwap(
+        uint256 _index,
+        uint256 _startTimestamp,
+        uint256 _endTimestamp
+    ) external view returns (uint256 priceCumulative) {
+        (priceCumulative, ) = _getCustomTwap(_index, _startTimestamp, _endTimestamp);
     }
 
     /**
@@ -138,7 +142,12 @@ contract BaseOracle is AccessControlUpgradeable {
         uint256 indexCount = _indexCount;
         uint256 currentTimestamp = block.timestamp;
         for (uint256 index; index < underlyingPriceLength; index++) {
-            observation = Observation({ timestamp: currentTimestamp, underlyingPrice: _underlyingPrices[index], proofHash: _proofHash[index], markPrice: _underlyingPrices[index] });
+            observation = Observation({
+                timestamp: currentTimestamp,
+                underlyingPrice: _underlyingPrices[index],
+                proofHash: _proofHash[index],
+                markPrice: _underlyingPrices[index]
+            });
             baseTokenByIndex[indexCount] = _assets[index];
             indexByBaseToken[_assets[index]] = indexCount;
             volatilityCapRatioByIndex[indexCount] = _capRatio[index];
@@ -162,7 +171,11 @@ contract BaseOracle is AccessControlUpgradeable {
         observations.push(observation);
     }
 
-    function _getCustomTwap(uint256 _index, uint256 _startTimestamp, uint256 _endTimestamp) internal view returns (uint256 priceCumulative, uint256 lastUpdatedTimestamp) {
+    function _getCustomTwap(
+        uint256 _index,
+        uint256 _startTimestamp,
+        uint256 _endTimestamp
+    ) internal view returns (uint256 priceCumulative, uint256 lastUpdatedTimestamp) {
         Observation[] memory observations = observationsByIndex[_index];
         uint256 index = observations.length;
         lastUpdatedTimestamp = observations[index - 1].timestamp;
