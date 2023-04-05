@@ -285,27 +285,27 @@ contract MarkPriceOracle is AccessControlUpgradeable {
         MarkPriceObservation[] memory observations = observationsByIndex[_index];
         uint256 index = observations.length;
         lastUpdatedTimestamp = observations[index - 1].timestamp;
-        uint256 startIndex;
-        uint256 endIndex;
-
         _endTimestamp = lastUpdatedTimestamp < _endTimestamp ? lastUpdatedTimestamp : _endTimestamp;
         if (lastUpdatedTimestamp < _startTimestamp){
             _startTimestamp = ((lastUpdatedTimestamp - observations[0].timestamp) / markTwInterval) * markTwInterval;
         }
-        
-        for (; index != 0 && index >= startIndex; index--) {
-            if (observations[index - 1].timestamp >= _endTimestamp) {
-                endIndex = index - 1;
-            } else if (observations[index - 1].timestamp >= _startTimestamp) {
-                startIndex = index - 1;
+        uint256 priceCount;
+        if (_isMarkTwapRequired) {
+            for (; index != 0 && observations[index - 1].timestamp >= _startTimestamp; index--) {
+                if (observations[index - 1].timestamp <= _endTimestamp) {
+                    priceCumulative += observations[index - 1].markPrice;
+                    priceCount++;
+                }
+            }
+        } else {
+            for (; index != 0 && observations[index - 1].timestamp >= _startTimestamp; index--) {
+                if (observations[index - 1].timestamp <= _endTimestamp) {
+                    priceCumulative += observations[index - 1].underlyingPrice;
+                    priceCount++;
+                }
             }
         }
-        index = 0; // re-used to get total observation count
-        for (; startIndex <= endIndex; startIndex++) {
-            priceCumulative += _isMarkTwapRequired ? observations[startIndex].markPrice : observations[startIndex].underlyingPrice;
-            index++;
-        }
-        priceCumulative = priceCumulative / index;
+        priceCumulative = priceCumulative / priceCount;
     }
 
     function _requireOracleAdmin() internal view {
