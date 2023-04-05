@@ -224,9 +224,7 @@ describe("MarkPriceOracle", function () {
     ]);
     await volmexPerpPeriphery.deployed();
     await markPriceOracle.setObservationAdder(owner.address);
-    for (let i = 0; i < 9; i++) {
-      await markPriceOracle.addObservation(60000000, 0, proofHash);
-    }
+
     const depositAmount = BigNumber.from("1000000000000000000000");
     let baseAmount = "1000000000000000000"; //500
     let quoteAmount = "60000000000000000000"; //100
@@ -301,9 +299,6 @@ describe("MarkPriceOracle", function () {
       liquidator,
     );
     await markPriceOracle.setObservationAdder(owner.address);
-    for (let i = 0; i < 9; i++) {
-      await markPriceOracle.addObservation(60000000, 0, proofHash);
-    }
   });
 
   describe("Deployment", function () {
@@ -492,6 +487,22 @@ describe("MarkPriceOracle", function () {
       await expect(markPriceOracle.setObservationAdder(ZERO_ADDR)).to.be.revertedWith(
         "MarkPriceOracle: zero address",
       );
+    });
+    it.only("Should return values from last epoch ", async () => {
+      await markPriceOracle.setMarkTwInterval(28800);
+      for (let i = 0; i <= 20; i++) {
+        await markPriceOracle.addObservation(70000000, 0, proofHash);
+      }
+
+      await time.increase(42000);
+      const firstTimestamp = await time.latest();
+      const cumulativePrice1 = await markPriceOracle.getCustomUnderlyingTwap(
+        0,
+        Number(firstTimestamp),
+        Number(firstTimestamp) + 28800,
+      );
+
+      expect(parseInt(cumulativePrice1)).to.equal(70000000);
     });
   });
   async function getSignature(orderObj, signer) {
