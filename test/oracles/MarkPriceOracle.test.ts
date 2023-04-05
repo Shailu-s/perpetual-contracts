@@ -488,7 +488,7 @@ describe("MarkPriceOracle", function () {
         "MarkPriceOracle: zero address",
       );
     });
-    it.only("Should return values from last epoch ", async () => {
+    it("Should return values from last epoch ", async () => {
       await markPriceOracle.setMarkTwInterval(28800);
       for (let i = 0; i <= 20; i++) {
         await markPriceOracle.addObservation(70000000, 0, proofHash);
