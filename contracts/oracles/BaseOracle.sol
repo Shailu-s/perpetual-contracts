@@ -8,26 +8,27 @@ contract BaseOracle is AccessControlUpgradeable {
         uint256 timestamp;
         uint256 underlyingPrice;
         bytes32 proofHash;
+        uint256 markPrice; // not required in IndexPriceOracle
     }
 
     // price oracle admin role
     bytes32 public constant PRICE_ORACLE_ADMIN = keccak256("PRICE_ORACLE_ADMIN");
     // role of observation collection
-    bytes32 public constant CAN_ADD_OBSERVATION = keccak256("CAN_ADD_OBSERVATION");
+    bytes32 public constant ADD_OBSERVATION_ROLE = keccak256("ADD_OBSERVATION_ROLE");
 
     // indices of volatility index {0: ETHV, 1: BTCV}
-    uint64 internal _indexCount;
+    uint256 internal _indexCount;
     // mapping to store index to the address of the baseToken
-    mapping(uint64 => address) public baseTokenByIndex;
+    mapping(uint256 => address) public baseTokenByIndex;
     // mapping to store index by base token address
-    mapping(address => uint64) public indexByBaseToken;
+    mapping(address => uint256) public indexByBaseToken;
     // mapping to store baseToken to Observations
-    mapping(uint64 => Observation[]) public observationsByIndex;
+    mapping(uint256 => Observation[]) public observationsByIndex;
     // Store the volatilitycapratio by index
     mapping(uint256 => uint256) public volatilityCapRatioByIndex;
 
     event ObservationAdderSet(address indexed matchingEngine);
-    event ObservationAdded(uint64 index, uint256 underlyingPrice, uint256 timestamp);
+    event ObservationAdded(uint256 indexed index, uint256 underlyingPrice, uint256 markPrice, uint256 timestamp);
     event AssetsAdded(uint256 indexed lastIndex, address[] assets, uint256[] underlyingPrices);
 
     /**
@@ -54,7 +55,7 @@ contract BaseOracle is AccessControlUpgradeable {
     function setObservationAdder(address _adder) external {
         _requireOracleAdmin();
         require(_adder != address(0), "BaseOracle: zero address");
-        _grantRole(CAN_ADD_OBSERVATION, _adder);
+        _grantRole(ADD_OBSERVATION_ROLE, _adder);
         emit ObservationAdderSet(_adder);
     }
 
@@ -75,32 +76,15 @@ contract BaseOracle is AccessControlUpgradeable {
     }
 
     /**
-     * @notice Used to add price cumulative of an asset at a given timestamp
-     *
-     * @param _underlyingPrice Price of the asset
-     */
-    function addObservation(
-        uint256 _underlyingPrice,
-        uint64 _index,
-        bytes32 _proofHash
-    ) external {
-        _requireCanAddObservation();
-        require(_underlyingPrice != 0, "BaseOracle: Not zero");
-        Observation memory observation = Observation({ timestamp: block.timestamp, underlyingPrice: _underlyingPrice, proofHash: _proofHash });
-        Observation[] storage observations = observationsByIndex[_index];
-        observations.push(observation);
-        emit ObservationAdded(_index, _underlyingPrice, block.timestamp);
-    }
-
-    /**
      * @notice Get the single moving average price of the asset
      *
      * @param _twInterval Time in seconds of the range
      * @param _index Index of the observation, the index base token mapping
      * @return priceCumulative The SMA price of the asset
      */
-    function getCumulativePrice(uint256 _twInterval, uint64 _index) external view returns (uint256 priceCumulative) {
-        (priceCumulative, ) = _getCumulativePrice(_twInterval, _index);
+    function getLastTwap(uint256 _twInterval, uint256 _index) public view returns (uint256 priceCumulative) {
+        uint256 startTimestamp = block.timestamp - _twInterval;
+        (priceCumulative, ) = _getCustomTwap(_index, startTimestamp, block.timestamp);
     }
 
     /**
@@ -110,8 +94,12 @@ contract BaseOracle is AccessControlUpgradeable {
      * @param _startTimestamp timestamp of start of window
      * @param _endTimestamp timestamp of last of window
      */
-    function getCustomCumulativePrice(uint64 _index, uint256 _startTimestamp, uint256 _endTimestamp) external view returns (uint256 priceCumulative) {
-        priceCumulative = _getCustomCumulativePrice(_index, _startTimestamp, _endTimestamp);
+    function getCustomTwap(
+        uint256 _index,
+        uint256 _startTimestamp,
+        uint256 _endTimestamp
+    ) external view returns (uint256 priceCumulative) {
+        (priceCumulative, ) = _getCustomTwap(_index, _startTimestamp, _endTimestamp);
     }
 
     /**
@@ -119,7 +107,7 @@ contract BaseOracle is AccessControlUpgradeable {
      *
      * @param _index Index of the observation, the index base token mapping
      */
-    function getLatestPrice(uint64 _index) external view returns (uint256 underlyingLastPrice) {
+    function getLastPrice(uint256 _index) public view returns (uint256 underlyingLastPrice) {
         Observation[] memory observations = observationsByIndex[_index];
         uint256 index = observations.length - 1;
         underlyingLastPrice = observations[index].underlyingPrice;
@@ -128,11 +116,11 @@ contract BaseOracle is AccessControlUpgradeable {
     /**
      * @notice Get index count of assets
      */
-    function getIndexCount() external view returns (uint64) {
+    function getIndexCount() external view returns (uint256) {
         return _indexCount;
     }
 
-    function getLastUpdatedTimestamp(uint64 _index) external view returns (uint256 lastUpdatedTimestamp) {
+    function getLastUpdatedTimestamp(uint256 _index) external view returns (uint256 lastUpdatedTimestamp) {
         Observation[] memory observations = observationsByIndex[_index];
         lastUpdatedTimestamp = observations[observations.length - 1].timestamp;
     }
@@ -151,10 +139,15 @@ contract BaseOracle is AccessControlUpgradeable {
         }
 
         Observation memory observation;
-        uint64 indexCount = _indexCount;
+        uint256 indexCount = _indexCount;
         uint256 currentTimestamp = block.timestamp;
         for (uint256 index; index < underlyingPriceLength; index++) {
-            observation = Observation({ timestamp: currentTimestamp, underlyingPrice: _underlyingPrices[index], proofHash: _proofHash[index] });
+            observation = Observation({
+                timestamp: currentTimestamp,
+                underlyingPrice: _underlyingPrices[index],
+                proofHash: _proofHash[index],
+                markPrice: _underlyingPrices[index]
+            });
             baseTokenByIndex[indexCount] = _assets[index];
             indexByBaseToken[_assets[index]] = indexCount;
             volatilityCapRatioByIndex[indexCount] = _capRatio[index];
@@ -167,22 +160,30 @@ contract BaseOracle is AccessControlUpgradeable {
         emit AssetsAdded(_indexCount, _assets, _underlyingPrices);
     }
 
-    function _getCumulativePrice(uint256 _twInterval, uint64 _index) internal view returns (uint256 priceCumulative, uint256 lastUpdatedTimestamp) {
+    function _pushOrderPrice(
+        uint256 _index,
+        uint256 _underlyingPrice,
+        uint256 _markPrice,
+        bytes32 _proofHash
+    ) internal {
+        Observation memory observation = Observation({ timestamp: block.timestamp, underlyingPrice: _underlyingPrice, proofHash: _proofHash, markPrice: _markPrice });
+        Observation[] storage observations = observationsByIndex[_index];
+        observations.push(observation);
+    }
+
+    function _getCustomTwap(
+        uint256 _index,
+        uint256 _startTimestamp,
+        uint256 _endTimestamp
+    ) internal view returns (uint256 priceCumulative, uint256 lastUpdatedTimestamp) {
         Observation[] memory observations = observationsByIndex[_index];
         uint256 index = observations.length;
         lastUpdatedTimestamp = observations[index - 1].timestamp;
-        uint256 initialTimestamp = block.timestamp - _twInterval;
-        for (; index != 0 && observations[index - 1].timestamp >= initialTimestamp; index--) {
-            priceCumulative += observations[index - 1].underlyingPrice;
-        }
-        priceCumulative = observations.length != index ? priceCumulative / (observations.length - index) : priceCumulative;
-    }
-
-    function _getCustomCumulativePrice(uint64 _index, uint256 _startTimestamp, uint256 _endTimestamp) internal view returns (uint256 priceCumulative) {
-        Observation[] memory observations = observationsByIndex[_index];
-        uint256 index = observations.length;
         uint256 startIndex;
         uint256 endIndex;
+        if (observations[index - 1].timestamp < _endTimestamp) {
+            _endTimestamp = observations[index - 1].timestamp;
+        }
         for (; index != 0 && index >= startIndex; index--) {
             if (observations[index - 1].timestamp >= _endTimestamp) {
                 endIndex = index - 1;
@@ -203,6 +204,6 @@ contract BaseOracle is AccessControlUpgradeable {
     }
 
     function _requireCanAddObservation() internal view {
-        require(hasRole(CAN_ADD_OBSERVATION, _msgSender()), "BaseOracle: not observation adder");
+        require(hasRole(ADD_OBSERVATION_ROLE, _msgSender()), "BaseOracle: not observation adder");
     }
 }

@@ -7376,7 +7376,7 @@
             "label": "_roles",
             "offset": 0,
             "slot": "101",
-            "type": "t_mapping(t_bytes32,t_struct(RoleData)34_storage)",
+            "type": "t_mapping(t_bytes32,t_struct(RoleData)179_storage)",
             "contract": "AccessControlUpgradeable",
             "src": "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol:61"
           },
@@ -7416,7 +7416,7 @@
             "label": "markPriceOracle",
             "offset": 1,
             "slot": "153",
-            "type": "t_contract(IMarkPriceOracle)5490",
+            "type": "t_contract(IMarkPriceOracle)7661",
             "contract": "VolmexPerpPeriphery",
             "src": "contracts/periphery/VolmexPerpPeriphery.sol:30"
           },
@@ -7424,7 +7424,7 @@
             "label": "perpView",
             "offset": 0,
             "slot": "154",
-            "type": "t_contract(IVolmexPerpView)6447",
+            "type": "t_contract(IVolmexPerpView)8665",
             "contract": "VolmexPerpPeriphery",
             "src": "contracts/periphery/VolmexPerpPeriphery.sol:32"
           }
@@ -7450,11 +7450,11 @@
             "label": "bytes32",
             "numberOfBytes": "32"
           },
-          "t_contract(IMarkPriceOracle)5490": {
+          "t_contract(IMarkPriceOracle)7661": {
             "label": "contract IMarkPriceOracle",
             "numberOfBytes": "20"
           },
-          "t_contract(IVolmexPerpView)6447": {
+          "t_contract(IVolmexPerpView)8665": {
             "label": "contract IVolmexPerpView",
             "numberOfBytes": "20"
           },
@@ -7462,11 +7462,11 @@
             "label": "mapping(address => bool)",
             "numberOfBytes": "32"
           },
-          "t_mapping(t_bytes32,t_struct(RoleData)34_storage)": {
+          "t_mapping(t_bytes32,t_struct(RoleData)179_storage)": {
             "label": "mapping(bytes32 => struct AccessControlUpgradeable.RoleData)",
             "numberOfBytes": "32"
           },
-          "t_struct(RoleData)34_storage": {
+          "t_struct(RoleData)179_storage": {
             "label": "struct AccessControlUpgradeable.RoleData",
             "members": [
               {
@@ -7636,6 +7636,167 @@
             "numberOfBytes": "32"
           },
           "t_contract(IVolmexPerpView)6447": {
+            "label": "contract IVolmexPerpView",
+            "numberOfBytes": "20"
+          },
+          "t_mapping(t_address,t_bool)": {
+            "label": "mapping(address => bool)",
+            "numberOfBytes": "32"
+          },
+          "t_mapping(t_bytes32,t_struct(RoleData)34_storage)": {
+            "label": "mapping(bytes32 => struct AccessControlUpgradeable.RoleData)",
+            "numberOfBytes": "32"
+          },
+          "t_struct(RoleData)34_storage": {
+            "label": "struct AccessControlUpgradeable.RoleData",
+            "members": [
+              {
+                "label": "members",
+                "type": "t_mapping(t_address,t_bool)",
+                "offset": 0,
+                "slot": "0"
+              },
+              {
+                "label": "adminRole",
+                "type": "t_bytes32",
+                "offset": 0,
+                "slot": "1"
+              }
+            ],
+            "numberOfBytes": "64"
+          },
+          "t_uint256": {
+            "label": "uint256",
+            "numberOfBytes": "32"
+          },
+          "t_uint8": {
+            "label": "uint8",
+            "numberOfBytes": "1"
+          }
+        }
+      }
+    },
+    "9d0c4f7179c6968ee418dc91ef1810cdbf51e1aa8399bc6085d3ae7d6cc933fa": {
+      "address": "0x25aC7f72636cEc5B2E20D09D55Ece97d71179577",
+      "txHash": "0x2940e7403209b712bfd6be88d3fb0ef449dfbd1cc3ba69c9bf602a718dbe470f",
+      "layout": {
+        "storage": [
+          {
+            "label": "_initialized",
+            "offset": 0,
+            "slot": "0",
+            "type": "t_uint8",
+            "contract": "Initializable",
+            "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:62",
+            "retypedFrom": "bool"
+          },
+          {
+            "label": "_initializing",
+            "offset": 1,
+            "slot": "0",
+            "type": "t_bool",
+            "contract": "Initializable",
+            "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:67"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "1",
+            "type": "t_array(t_uint256)50_storage",
+            "contract": "ContextUpgradeable",
+            "src": "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol:36"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "51",
+            "type": "t_array(t_uint256)50_storage",
+            "contract": "ERC165Upgradeable",
+            "src": "@openzeppelin/contracts-upgradeable/utils/introspection/ERC165Upgradeable.sol:41"
+          },
+          {
+            "label": "_roles",
+            "offset": 0,
+            "slot": "101",
+            "type": "t_mapping(t_bytes32,t_struct(RoleData)34_storage)",
+            "contract": "AccessControlUpgradeable",
+            "src": "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol:61"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "102",
+            "type": "t_array(t_uint256)49_storage",
+            "contract": "AccessControlUpgradeable",
+            "src": "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol:259"
+          },
+          {
+            "label": "_isVaultWhitelist",
+            "offset": 0,
+            "slot": "151",
+            "type": "t_mapping(t_address,t_bool)",
+            "contract": "VolmexPerpPeriphery",
+            "src": "contracts/periphery/VolmexPerpPeriphery.sol:21"
+          },
+          {
+            "label": "isTraderWhitelisted",
+            "offset": 0,
+            "slot": "152",
+            "type": "t_mapping(t_address,t_bool)",
+            "contract": "VolmexPerpPeriphery",
+            "src": "contracts/periphery/VolmexPerpPeriphery.sol:24"
+          },
+          {
+            "label": "isTraderWhitelistEnabled",
+            "offset": 0,
+            "slot": "153",
+            "type": "t_bool",
+            "contract": "VolmexPerpPeriphery",
+            "src": "contracts/periphery/VolmexPerpPeriphery.sol:27"
+          },
+          {
+            "label": "markPriceOracle",
+            "offset": 1,
+            "slot": "153",
+            "type": "t_contract(IMarkPriceOracle)2302",
+            "contract": "VolmexPerpPeriphery",
+            "src": "contracts/periphery/VolmexPerpPeriphery.sol:30"
+          },
+          {
+            "label": "perpView",
+            "offset": 0,
+            "slot": "154",
+            "type": "t_contract(IVolmexPerpView)3030",
+            "contract": "VolmexPerpPeriphery",
+            "src": "contracts/periphery/VolmexPerpPeriphery.sol:32"
+          }
+        ],
+        "types": {
+          "t_address": {
+            "label": "address",
+            "numberOfBytes": "20"
+          },
+          "t_array(t_uint256)49_storage": {
+            "label": "uint256[49]",
+            "numberOfBytes": "1568"
+          },
+          "t_array(t_uint256)50_storage": {
+            "label": "uint256[50]",
+            "numberOfBytes": "1600"
+          },
+          "t_bool": {
+            "label": "bool",
+            "numberOfBytes": "1"
+          },
+          "t_bytes32": {
+            "label": "bytes32",
+            "numberOfBytes": "32"
+          },
+          "t_contract(IMarkPriceOracle)2302": {
+            "label": "contract IMarkPriceOracle",
+            "numberOfBytes": "20"
+          },
+          "t_contract(IVolmexPerpView)3030": {
             "label": "contract IVolmexPerpView",
             "numberOfBytes": "20"
           },

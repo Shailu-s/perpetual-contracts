@@ -2,7 +2,6 @@ const { expect } = require("chai");
 const { ethers, upgrades } = require("hardhat");
 const assert = require("assert");
 import { Signer, ContractReceipt, ContractTransaction } from "ethers";
-import { VolmexOracle } from "../../typechain/VolmexOracle";
 const { expectRevert, time } = require("@openzeppelin/test-helpers");
 
 describe("IndexPriceOracle", function () {
@@ -22,7 +21,7 @@ describe("IndexPriceOracle", function () {
   let inverseVolatility: any;
   let zeroAddress: any;
   const proofHash = "0x6c00000000000000000000000000000000000000000000000000000000000000";
-  const capRatio = "250";
+  const capRatio = "400000000";
   const ZERO_ADDR = "0x0000000000000000000000000000000000000000";
   this.beforeAll(async function () {
     accounts = await ethers.getSigners();
@@ -59,7 +58,7 @@ describe("IndexPriceOracle", function () {
     await protocol.deployed();
     volmexOracle = await upgrades.deployProxy(volmexOracleFactory, [
       owner,
-      [1000000],
+      [10000000],
       [volatility.address],
       [proofHash],
       [capRatio],
@@ -67,6 +66,10 @@ describe("IndexPriceOracle", function () {
 
     await volmexOracle.deployed();
     await volmexOracle.setObservationAdder(owner);
+    for (let i = 0; i < 10; i++) {
+      await volmexOracle.addObservation(10000000, 0, proofHash);
+      await time.increase(1000);
+    }
   });
   describe("Deployment", function () {
     it("Should deploy volmex oracle", async () => {
@@ -82,7 +85,7 @@ describe("IndexPriceOracle", function () {
             initializer: "initialize",
           },
         ),
-      ).to.be.revertedWith("BaseOracle: Unequal length of prices & assets");
+      ).to.be.revertedWith("IndexPriceOracle: Unequal length of prices & assets");
     });
 
     it("Should fail to deploy when asset address is 0", async () => {
@@ -100,7 +103,7 @@ describe("IndexPriceOracle", function () {
             initializer: "initialize",
           },
         ),
-      ).to.be.revertedWith("BaseOracle: Asset address can't be 0");
+      ).to.be.revertedWith("IndexPriceOracle: Asset address can't be 0");
     });
 
     it("Should fail to initialize again ", async () => {
@@ -112,91 +115,90 @@ describe("IndexPriceOracle", function () {
   });
   describe("Add Observation", async () => {
     it("Should add observation", async () => {
-      for (let i = 0; i < 9; i++) {
+      for (let i = 0; i < 10; i++) {
         await volmexOracle.addObservation(10000000, 0, proofHash);
       }
 
-      const txn = await volmexOracle.getCumulativePrice(10000000, 0);
-      expect(Number(txn)).equal(9100000);
+      const txn = await volmexOracle.getIndexTwap(10000, 0);
+      expect(Number(txn.volatilityTokenTwap)).equal(10000000);
     });
 
     it("should fail to add observation when cumulative price is zero ", async () => {
       await expect(volmexOracle.addObservation(0, 0, proofHash)).to.be.revertedWith(
-        "BaseOracle: Not zero",
+        "IndexPriceOracle: Not zero",
       );
     });
     it("Should fail to add observation when caller is not observation adder", async () => {
       const [owner, account1] = await ethers.getSigners();
       await expect(
         volmexOracle.connect(account1).addObservation(1000000, 0, proofHash),
-      ).to.be.revertedWith("BaseOracle: not observation adder");
+      ).to.be.revertedWith("IndexPriceOracle: not observation adder");
     });
 
     it("Should get cumulative price", async () => {
-      console.log((await volmexOracle.getCumulativePrice(2, 0)).toString());
+      await volmexOracle.addObservation(10000000, 0, proofHash);
 
-      await volmexOracle.addObservation(1000000, 0, proofHash);
-
-      const txn = await volmexOracle.getCumulativePrice(10000000, 0);
-      expect(Number(txn)).equal(1000000);
+      const txn = await volmexOracle.getIndexTwap(10000000, 0);
+      expect(Number(txn.volatilityTokenTwap)).equal(10000000);
     });
 
     it("Should latest round data", async () => {
-      await volmexOracle.addObservation(1000000, 0, proofHash);
+      await volmexOracle.addObservation(10000000, 0, proofHash);
+      await time.increase(10000);
 
       const txn = await volmexOracle.latestRoundData(10000, 0);
-      expect(Number(txn.answer)).equal(100000000);
+      expect(Number(txn.answer)).equal(1000000000);
     });
 
     it("Should get cumulative price with time delay", async () => {
       for (let i = 0; i < 9; i++) {
-        await volmexOracle.addObservation(1000000, 0, proofHash);
+        await volmexOracle.addObservation(10000000, 0, proofHash);
         await time.increase(1000);
       }
       const txns = await Promise.all([
-        volmexOracle.getCumulativePrice(1000, 0),
-        volmexOracle.getCumulativePrice(2000, 0),
-        volmexOracle.getCumulativePrice(3000, 0),
-        volmexOracle.getCumulativePrice(4000, 0),
-        volmexOracle.getCumulativePrice(5000, 0),
-        volmexOracle.getCumulativePrice(6000, 0),
-        volmexOracle.getCumulativePrice(7000, 0),
-        volmexOracle.getCumulativePrice(8000, 0),
-        volmexOracle.getCumulativePrice(9000, 0),
-        volmexOracle.getCumulativePrice(10000, 0),
-        volmexOracle.getCumulativePrice(20000, 0),
+        volmexOracle.getIndexTwap(1000, 0),
+        volmexOracle.getIndexTwap(2000, 0),
+        volmexOracle.getIndexTwap(3000, 0),
+        volmexOracle.getIndexTwap(4000, 0),
+        volmexOracle.getIndexTwap(5000, 0),
+        volmexOracle.getIndexTwap(6000, 0),
+        volmexOracle.getIndexTwap(7000, 0),
+        volmexOracle.getIndexTwap(8000, 0),
+        volmexOracle.getIndexTwap(9000, 0),
+        volmexOracle.getIndexTwap(10000, 0),
+        volmexOracle.getIndexTwap(20000, 0),
       ]);
       txns.forEach(txn => {
-        expect(Number(txn)).equal(1000000);
+        expect(Number(txn.volatilityTokenTwap)).equal(10000000);
       });
     });
 
     it("Should not error when there are no recent datapoints added for cumulative price", async () => {
-      const txn1 = await volmexOracle.getCumulativePrice(20000, 0);
-      expect(Number(txn1)).equal(1000000);
+      const txn1 = await volmexOracle.getIndexTwap(20000, 0);
+      expect(Number(txn1.volatilityTokenTwap)).equal(10000000);
       for (let i = 0; i < 9; i++) {
-        await volmexOracle.addObservation(1000000, 0, proofHash);
+        await volmexOracle.addObservation(10000000, 0, proofHash);
         await time.increase(1000);
       }
       // this covers the case of zero recent datapoints
       await time.increase(100000);
-      const txn2 = await volmexOracle.getCumulativePrice(200, 0);
-      expect(Number(txn2)).equal(0);
-      const txn3 = await volmexOracle.getCumulativePrice(20000000, 0);
-      expect(Number(txn3)).equal(1000000);
+      const txn2 = await volmexOracle.getIndexTwap(200, 0);
+      expect(Number(txn2.volatilityTokenTwap)).equal(10000000);
+      const txn3 = await volmexOracle.getIndexTwap(200000, 0);
+      expect(Number(txn3.volatilityTokenTwap)).equal(10000000);
     });
 
     it("Should not error when there are no recent datapoints then more datapoints are added for cumulative price", async () => {
       await time.increase(200001);
-      const txn1 = await volmexOracle.getCumulativePrice(20, 0);
-      expect(Number(txn1)).equal(0);
+      const txn1 = await volmexOracle.getIndexTwap(20, 0);
+      expect(Number(txn1.volatilityTokenTwap)).equal(10000000);
 
       for (let i = 0; i < 10; i++) {
         await volmexOracle.addObservation(20000000, 0, proofHash);
         await time.increase(1000);
       }
-      const txn2 = await volmexOracle.getCumulativePrice(10000, 0);
-      expect(Number(txn2)).equal(20000000);
+      const txn2 = await volmexOracle.getIndexTwap(9000, 0);
+      expect(Number(txn2.volatilityTokenTwap)).equal(20000000);
     });
 
     it("Should fail to  add multiple observations because uneuqal length of inputs", async () => {
@@ -207,7 +209,7 @@ describe("IndexPriceOracle", function () {
           [proofHash],
           [capRatio],
         ),
-      ).to.be.revertedWith("BaseOracle: Unequal length of prices & assets");
+      ).to.be.revertedWith("IndexPriceOracle: Unequal length of prices & assets");
     });
 
     it("Should fail to  add multiple observations because 0 address of a token", async () => {
@@ -218,18 +220,18 @@ describe("IndexPriceOracle", function () {
           [proofHash, proofHash],
           [capRatio, capRatio],
         ),
-      ).to.be.revertedWith("BaseOracle: Asset address can't be 0");
+      ).to.be.revertedWith("IndexPriceOracle: Asset address can't be 0");
     });
     it("should fail to set Matching engine as admin assecc is not provided", async () => {
       const [owner, account1] = await ethers.getSigners();
       await expect(
         volmexOracle.connect(account1).setObservationAdder(account1.address),
-      ).to.be.revertedWith("BaseOracle: not admin");
+      ).to.be.revertedWith("IndexPriceOracle: not admin");
     });
     it("should fail to set Matching engine as admin assecc is not provided", async () => {
       const [owner, account1] = await ethers.getSigners();
       await expect(volmexOracle.setObservationAdder(ZERO_ADDR)).to.be.revertedWith(
-        "BaseOracle: zero address",
+        "IndexPriceOracle: zero address",
       );
     });
   });

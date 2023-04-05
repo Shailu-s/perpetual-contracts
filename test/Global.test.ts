@@ -106,6 +106,10 @@ describe("Global", function () {
     );
     await indexPriceOracle.deployed();
     await indexPriceOracle.setObservationAdder(owner.address);
+    for (let index = 0; index < 10; index++) {
+      await (await indexPriceOracle.addObservation(100000000, 0, proofHash)).wait();
+      await (await indexPriceOracle.addObservation(100000000, 1, proofHash)).wait();
+    }
     await volmexBaseToken.setPriceFeed(indexPriceOracle.address);
     await (await perpView.setBaseToken(volmexBaseToken.address)).wait();
 
@@ -125,13 +129,7 @@ describe("Global", function () {
 
     markPriceOracle = await upgrades.deployProxy(
       MarkPriceOracle,
-      [
-        [10000000, 10000000],
-        [volmexBaseToken.address, volmexBaseToken.address],
-        [proofHash, proofHash],
-        [capRatio, capRatio],
-        owner.address,
-      ],
+      [[10000000], [volmexBaseToken.address], [proofHash], [capRatio], owner.address],
       {
         initializer: "initialize",
       },
@@ -206,6 +204,10 @@ describe("Global", function () {
     await (await vaultController.setPositioning(positioning.address)).wait();
     await (await vaultController.registerVault(vault.address, usdc.address)).wait();
     await (await accountBalance.setPositioning(positioning.address)).wait();
+    await (await markPriceOracle.setPositioning(positioning.address)).wait();
+    await (await markPriceOracle.setIndexOracle(indexPriceOracle.address)).wait();
+    await (await markPriceOracle.setMarkTwInterval(300)).wait();
+    await (await markPriceOracle.setIndexTwInterval(3600)).wait();
 
     periphery = await upgrades.deployProxy(VolmexPerpPeriphery, [
       perpView.address,
@@ -238,7 +240,7 @@ describe("Global", function () {
   });
 
   it("should match orders and open position", async () => {
-    const txn = await markPriceOracle.getCumulativePrice(10000000, 0);
+    const txn = await markPriceOracle.getLastTwap(10000000, 0);
 
     await matchingEngine.grantMatchOrders(positioning.address);
 
@@ -284,7 +286,7 @@ describe("Global", function () {
         .connect(account1)
         .openPosition(orderLeft, signatureLeft, orderRight, signatureRight, liquidator),
     ).to.emit(positioning, "PositionChanged");
-
+    console.log("here");
     let positionSize = await accountBalance.getPositionSize(
       account1.address,
       orderLeft.takeAsset.virtualToken,
@@ -448,7 +450,7 @@ describe("Global", function () {
 
   it("should match orders and open position", async () => {
     const index = await markPriceOracle.indexByBaseToken(volmexBaseToken.address);
-    let observations = await markPriceOracle.getCumulativePrice(3600, index);
+    let observations = await markPriceOracle.getLastTwap(3600, index);
     console.log("observations", observations.toString());
 
     await matchingEngine.grantMatchOrders(positioning.address);
@@ -522,7 +524,7 @@ describe("Global", function () {
       ],
     ]);
 
-    observations = await markPriceOracle.getCumulativePrice(3600, index);
+    observations = await markPriceOracle.getLastTwap(3600, index);
     console.log("observations", observations.toString());
     console.log("Another call \n");
 
@@ -596,7 +598,7 @@ describe("Global", function () {
       ],
     ]);
 
-    observations = await markPriceOracle.getCumulativePrice(3600, index);
+    observations = await markPriceOracle.getLastTwap(3600, index);
     console.log("observations", observations.toString());
 
     console.log("Another call \n");
@@ -661,7 +663,7 @@ describe("Global", function () {
       ],
     ]);
 
-    observations = await markPriceOracle.getCumulativePrice(3600, index);
+    observations = await markPriceOracle.getLastTwap(3600, index);
     console.log("observations", observations.toString());
   });
 
