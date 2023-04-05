@@ -30,6 +30,8 @@ contract MarkPriceOracle is AccessControlUpgradeable {
     bytes32 public constant PRICE_ORACLE_ADMIN = keccak256("PRICE_ORACLE_ADMIN");
     // role of observation collection
     bytes32 public constant ADD_OBSERVATION_ROLE = keccak256("ADD_OBSERVATION_ROLE");
+    // role of observation collection
+    bytes32 public constant TWAP_INTERVAL_ROLE = keccak256("TWAP_INTERVAL_ROLE");
 
     // indices of volatility index {0: ETHV, 1: BTCV}
     uint256 internal _indexCount;
@@ -76,6 +78,15 @@ contract MarkPriceOracle is AccessControlUpgradeable {
     }
 
     /**
+     * @notice grant Twap interval role to positioning config contract
+     * @param _positioningConfig Address of positioning contract typed
+     */
+    function grantTwapIntervalRole(address _positioningConfig) external virtual {
+        _requireOracleAdmin();
+        _grantRole(TWAP_INTERVAL_ROLE, _positioningConfig);
+    }
+
+    /**
      * @notice Set positioning contract
      * @param _indexOracle Address of positioning contract typed in interface
      */
@@ -89,7 +100,7 @@ contract MarkPriceOracle is AccessControlUpgradeable {
      * @param _markTwInterval Address of positioning contract typed in interface
      */
     function setMarkTwInterval(uint256 _markTwInterval) external virtual {
-        _requireOracleAdmin();
+        _requireTwapIntervalRole();
         markTwInterval = _markTwInterval;
     }
 
@@ -98,7 +109,7 @@ contract MarkPriceOracle is AccessControlUpgradeable {
      * @param _indexTwInterval Address of positioning contract typed in interface
      */
     function setIndexTwInterval(uint256 _indexTwInterval) external virtual {
-        _requireOracleAdmin();
+        _requireTwapIntervalRole();
         indexTwInterval = _indexTwInterval;
     }
 
@@ -286,7 +297,7 @@ contract MarkPriceOracle is AccessControlUpgradeable {
         uint256 index = observations.length;
         lastUpdatedTimestamp = observations[index - 1].timestamp;
         _endTimestamp = lastUpdatedTimestamp < _endTimestamp ? lastUpdatedTimestamp : _endTimestamp;
-        if (lastUpdatedTimestamp < _startTimestamp){
+        if (lastUpdatedTimestamp < _startTimestamp) {
             _startTimestamp = ((lastUpdatedTimestamp - observations[0].timestamp) / markTwInterval) * markTwInterval;
         }
         uint256 priceCount;
@@ -310,6 +321,10 @@ contract MarkPriceOracle is AccessControlUpgradeable {
 
     function _requireOracleAdmin() internal view {
         require(hasRole(PRICE_ORACLE_ADMIN, _msgSender()), "MarkPriceOracle: not admin");
+    }
+
+    function _requireTwapIntervalRole() internal view {
+        require(hasRole(TWAP_INTERVAL_ROLE, _msgSender()), "MarkPriceOracle: not twap interval role");
     }
 
     function _requireCanAddObservation() internal view {
