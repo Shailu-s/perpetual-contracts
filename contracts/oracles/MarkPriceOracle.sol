@@ -7,6 +7,7 @@ import { IPositioning } from "../interfaces/IPositioning.sol";
 import { IIndexPriceOracle } from "../interfaces/IIndexPriceOracle.sol";
 import { LibSafeCastUint } from "../libs/LibSafeCastUint.sol";
 import { LibPerpMath } from "../libs/LibPerpMath.sol";
+import "hardhat/console.sol";
 
 /**
  * @title Volmex Oracle Mark SMA
@@ -30,6 +31,8 @@ contract MarkPriceOracle is AccessControlUpgradeable {
     bytes32 public constant PRICE_ORACLE_ADMIN = keccak256("PRICE_ORACLE_ADMIN");
     // role of observation collection
     bytes32 public constant ADD_OBSERVATION_ROLE = keccak256("ADD_OBSERVATION_ROLE");
+    // role of observation collection
+    bytes32 public constant POSITIIONING_CONFIG_ROLE = keccak256("POSITIIONING_CONFIG_ROLE");
 
     // indices of volatility index {0: ETHV, 1: BTCV}
     uint256 internal _indexCount;
@@ -57,11 +60,13 @@ contract MarkPriceOracle is AccessControlUpgradeable {
         address[] calldata _asset,
         bytes32[] calldata _proofHash,
         uint256[] calldata _capRatio,
-        address _admin
+        address _admin,
+        address _positioningConfig
     ) external initializer {
         _addAssets(_priceCumulative, _asset, _proofHash, _capRatio);
         _setRoleAdmin(PRICE_ORACLE_ADMIN, PRICE_ORACLE_ADMIN);
         _grantRole(PRICE_ORACLE_ADMIN, _admin);
+        _grantRole(POSITIIONING_CONFIG_ROLE, _positioningConfig);
         markTwInterval = 300; // 5 minutes
         indexTwInterval = 3600; // 1 hour
     }
@@ -89,7 +94,7 @@ contract MarkPriceOracle is AccessControlUpgradeable {
      * @param _markTwInterval Address of positioning contract typed in interface
      */
     function setMarkTwInterval(uint256 _markTwInterval) external virtual {
-        _requireOracleAdmin();
+        _requirePositioningConfigRole();
         markTwInterval = _markTwInterval;
     }
 
@@ -98,7 +103,7 @@ contract MarkPriceOracle is AccessControlUpgradeable {
      * @param _indexTwInterval Address of positioning contract typed in interface
      */
     function setIndexTwInterval(uint256 _indexTwInterval) external virtual {
-        _requireOracleAdmin();
+        _requirePositioningConfigRole();
         indexTwInterval = _indexTwInterval;
     }
 
@@ -116,6 +121,7 @@ contract MarkPriceOracle is AccessControlUpgradeable {
     ) external virtual {
         _requireCanAddObservation();
         require(_underlyingPrice != 0, "MarkPriceOracle: Not zero");
+        console.log(_underlyingPrice, "under lying aaddind");
         uint256 markPrice = _getMarkPrice(baseTokenByIndex[_index], _index).abs();
         _pushOrderPrice(_index, _underlyingPrice, markPrice, _proofHash);
         emit ObservationAdded(_index, _underlyingPrice, markPrice, block.timestamp);
@@ -270,6 +276,7 @@ contract MarkPriceOracle is AccessControlUpgradeable {
         uint256 _markPrice,
         bytes32 _proofHash
     ) internal {
+        console.log(_underlyingPrice, "under lying pushing");
         MarkPriceObservation memory observation =
             MarkPriceObservation({ timestamp: block.timestamp, underlyingPrice: _underlyingPrice, proofHash: _proofHash, markPrice: _markPrice });
         MarkPriceObservation[] storage observations = observationsByIndex[_index];
@@ -285,29 +292,48 @@ contract MarkPriceOracle is AccessControlUpgradeable {
         MarkPriceObservation[] memory observations = observationsByIndex[_index];
         uint256 index = observations.length;
         lastUpdatedTimestamp = observations[index - 1].timestamp;
+        console.log(index, "observatioons");
         uint256 startIndex;
         uint256 endIndex;
+        console.log(_startTimestamp, "before condition");
+        console.log(_endTimestamp, "before condition");
+        console.log(observations[index - 1].timestamp, " last observation time");
         if (observations[index - 1].timestamp < _endTimestamp) {
             _endTimestamp = _endTimestamp - (((_endTimestamp - lastUpdatedTimestamp) / markTwInterval) * markTwInterval);
             _startTimestamp = _endTimestamp - markTwInterval;
         }
+
+        console.log(lastUpdatedTimestamp, " last updated");
+        console.log(_startTimestamp, "after condition");
+        console.log(_endTimestamp, "after condition");
         for (; index != 0 && index >= startIndex; index--) {
             if (observations[index - 1].timestamp >= _endTimestamp) {
                 endIndex = index - 1;
             } else if (observations[index - 1].timestamp >= _startTimestamp) {
                 startIndex = index - 1;
+                console.log(observations[startIndex].underlyingPrice, "in loop price");
+                console.log(startIndex, " inthe loop");
             }
         }
+        console.log(startIndex, "start index");
+        console.log(endIndex, "end index");
         index = 0; // re-used to get total observation count
         for (; startIndex <= endIndex; startIndex++) {
             priceCumulative += _isMarkTwapRequired ? observations[startIndex].markPrice : observations[startIndex].underlyingPrice;
+            console.log(observations[startIndex].markPrice, " mark price");
+            console.log(observations[startIndex].underlyingPrice, " unserLying price");
             index++;
+            console.log(index);
         }
         priceCumulative = priceCumulative / index;
     }
 
     function _requireOracleAdmin() internal view {
         require(hasRole(PRICE_ORACLE_ADMIN, _msgSender()), "MarkPriceOracle: not admin");
+    }
+
+    function _requirePositioningConfigRole() internal view {
+        require(hasRole(POSITIIONING_CONFIG_ROLE, _msgSender()), "MarkPriceOracle: not PositioningConfig");
     }
 
     function _requireCanAddObservation() internal view {

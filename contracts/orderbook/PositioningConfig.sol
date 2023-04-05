@@ -4,6 +4,8 @@ pragma solidity =0.8.18;
 import "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 import { IPositioningConfig } from "../interfaces/IPositioningConfig.sol";
 import { PositioningConfigStorageV1 } from "../storage/PositioningConfigStorage.sol";
+import "../interfaces/IIndexPriceOracle.sol";
+import "../interfaces/IMarkPriceOracle.sol";
 
 // never inherit any new stateful contract. never change the orders of parent stateful contracts
 contract PositioningConfig is IPositioningConfig, PositioningConfigStorageV1, AccessControlUpgradeable {
@@ -51,11 +53,12 @@ contract PositioningConfig is IPositioningConfig, PositioningConfigStorageV1, Ac
         emit PartialCloseRatioChanged(partialCloseRatioArg);
     }
 
-    function setTwapInterval(uint32 twapIntervalArg) external {
+    function setTwapInterval(uint32 twapIntervalArg, address _markPriceOracle) external {
         _requirePositioningConfigAdmin();
         // PC_ITI: invalid twapInterval
         require(twapIntervalArg != 0, "PC_ITI");
-
+        IMarkPriceOracle(_markPriceOracle).setMarkTwInterval(twapIntervalArg);
+        IMarkPriceOracle(_markPriceOracle).setIndexTwInterval(twapIntervalArg);
         _twapInterval = twapIntervalArg;
         emit TwapIntervalChanged(twapIntervalArg);
     }
