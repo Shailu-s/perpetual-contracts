@@ -53,8 +53,7 @@ describe("Global", function () {
   const nine = ethers.constants.WeiPerEther.mul(BigNumber.from("9")); // 2e18
   const deadline = 87654321987654;
   const proofHash = "0x6c00000000000000000000000000000000000000000000000000000000000000";
-  const capRatio = "250";
-  const twapType = "0x1444f8cf";
+  const capRatio = "4000000000";
 
   this.beforeAll(async () => {
     [owner, account1, account2] = await ethers.getSigners();
@@ -148,7 +147,7 @@ describe("Global", function () {
     await matchingEngine.deployed();
     await (await markPriceOracle.setObservationAdder(matchingEngine.address)).wait();
 
-    positioningConfig = await upgrades.deployProxy(PositioningConfig, []);
+    positioningConfig = await upgrades.deployProxy(PositioningConfig, [markPriceOracle.address]);
     await positioningConfig.deployed();
     await positioningConfig.setMaxMarketsPerAccount(5);
     await positioningConfig.setSettlementTokenBalanceCap("10000000000000000000000000");
@@ -206,8 +205,8 @@ describe("Global", function () {
     await (await accountBalance.setPositioning(positioning.address)).wait();
     await (await markPriceOracle.setPositioning(positioning.address)).wait();
     await (await markPriceOracle.setIndexOracle(indexPriceOracle.address)).wait();
-    await (await markPriceOracle.setMarkTwInterval(300)).wait();
-    await (await markPriceOracle.setIndexTwInterval(3600)).wait();
+    await markPriceOracle.grantTwapIntervalRole(positioningConfig.address);
+    await positioningConfig.setTwapInterval(28800);
 
     periphery = await upgrades.deployProxy(VolmexPerpPeriphery, [
       perpView.address,
@@ -261,7 +260,6 @@ describe("Global", function () {
       5,
       0,
       false,
-      twapType,
     );
 
     orderRight = Order(
@@ -273,7 +271,6 @@ describe("Global", function () {
       6,
       0,
       true,
-      twapType,
     );
 
     let signatureLeft = await getSignature(orderLeft, account1.address);
@@ -333,7 +330,6 @@ describe("Global", function () {
       1,
       0,
       true,
-      twapType,
     );
 
     orderRight = Order(
@@ -345,7 +341,6 @@ describe("Global", function () {
       2,
       0,
       false,
-      twapType,
     );
 
     signatureLeft = await getSignature(orderLeft, account1.address);
@@ -395,7 +390,6 @@ describe("Global", function () {
       3,
       0,
       true,
-      twapType,
     );
 
     orderRight = Order(
@@ -407,7 +401,6 @@ describe("Global", function () {
       4,
       0,
       false,
-      twapType,
     );
 
     signatureLeft = await getSignature(orderLeft, account1.address);
@@ -474,7 +467,6 @@ describe("Global", function () {
       1,
       0,
       false,
-      twapType,
     );
 
     orderRight = Order(
@@ -486,7 +478,6 @@ describe("Global", function () {
       1,
       0,
       true,
-      twapType,
     );
 
     let signatureLeft = await getSignature(orderLeft, account1.address);
@@ -548,7 +539,6 @@ describe("Global", function () {
       1,
       0,
       true,
-      twapType,
     );
 
     orderRight = Order(
@@ -560,7 +550,6 @@ describe("Global", function () {
       2,
       0,
       false,
-      twapType,
     );
 
     signatureLeft = await getSignature(orderLeft, account1.address);
@@ -613,7 +602,6 @@ describe("Global", function () {
       1,
       0,
       true,
-      twapType,
     );
 
     orderRight = Order(
@@ -625,7 +613,6 @@ describe("Global", function () {
       2,
       0,
       false,
-      twapType,
     );
 
     signatureLeft = await getSignature(orderLeft, account1.address);
