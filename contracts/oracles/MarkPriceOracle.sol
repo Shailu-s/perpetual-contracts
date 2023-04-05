@@ -7,7 +7,6 @@ import { IPositioning } from "../interfaces/IPositioning.sol";
 import { IIndexPriceOracle } from "../interfaces/IIndexPriceOracle.sol";
 import { LibSafeCastUint } from "../libs/LibSafeCastUint.sol";
 import { LibPerpMath } from "../libs/LibPerpMath.sol";
-import "hardhat/console.sol";
 
 /**
  * @title Volmex Oracle Mark SMA
@@ -292,38 +291,26 @@ contract MarkPriceOracle is AccessControlUpgradeable {
         MarkPriceObservation[] memory observations = observationsByIndex[_index];
         uint256 index = observations.length;
         lastUpdatedTimestamp = observations[index - 1].timestamp;
-        console.log(index, "observatioons");
         uint256 startIndex;
         uint256 endIndex;
-        console.log(_startTimestamp, "before condition");
-        console.log(_endTimestamp, "before condition");
-        console.log(observations[index - 1].timestamp, " last observation time");
-        if (observations[index - 1].timestamp < _endTimestamp) {
-            _endTimestamp = _endTimestamp - (((_endTimestamp - lastUpdatedTimestamp) / markTwInterval) * markTwInterval);
-            _startTimestamp = _endTimestamp - markTwInterval;
+
+        _endTimestamp = lastUpdatedTimestamp < _endTimestamp ? lastUpdatedTimestamp : _endTimestamp;
+        if (lastUpdatedTimestamp < _startTimestamp) {
+            _startTimestamp = ((lastUpdatedTimestamp - observations[0].timestamp) / markTwInterval) * markTwInterval;
         }
 
-        console.log(lastUpdatedTimestamp, " last updated");
-        console.log(_startTimestamp, "after condition");
-        console.log(_endTimestamp, "after condition");
         for (; index != 0 && index >= startIndex; index--) {
             if (observations[index - 1].timestamp >= _endTimestamp) {
                 endIndex = index - 1;
             } else if (observations[index - 1].timestamp >= _startTimestamp) {
                 startIndex = index - 1;
-                console.log(observations[startIndex].underlyingPrice, "in loop price");
-                console.log(startIndex, " inthe loop");
             }
         }
-        console.log(startIndex, "start index");
-        console.log(endIndex, "end index");
         index = 0; // re-used to get total observation count
         for (; startIndex <= endIndex; startIndex++) {
             priceCumulative += _isMarkTwapRequired ? observations[startIndex].markPrice : observations[startIndex].underlyingPrice;
-            console.log(observations[startIndex].markPrice, " mark price");
-            console.log(observations[startIndex].underlyingPrice, " unserLying price");
+
             index++;
-            console.log(index);
         }
         priceCumulative = priceCumulative / index;
     }

@@ -28,8 +28,4 @@ interface IPositioningConfig {
 
     /// @return partial liquidation ratio
     function getPartialLiquidationRatio() external view returns (uint24);
-
-    /// @return markPriceInterval  mark price interval
-    /// @return indexPriceInterval  Index price interval
-    function setTwInterval() external returns (uint24 markPriceInterval, uint24 indexPriceInterval);
 }
