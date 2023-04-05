@@ -46,8 +46,7 @@ describe("Priodic Funding payment", function () {
   const STOP_LOSS_LIMIT_ORDER = "0xeeaed735";
   const TAKE_PROFIT_LIMIT_ORDER = "0xe0fc7f94";
   const ZERO_ADDR = "0x0000000000000000000000000000000000000000";
-  const capRatio = "250";
-  const twapType = "0x1444f8cf";
+  const capRatio = "400000000";
   async function getSignature(orderObj, signer) {
     return sign(orderObj, signer, positioning.address);
   }
@@ -127,8 +126,8 @@ describe("Priodic Funding payment", function () {
       },
     );
     await markPriceOracle.deployed();
-    positioningConfig = await upgrades.deployProxy(PositioningConfig, []);
-
+    positioningConfig = await upgrades.deployProxy(PositioningConfig, [markPriceOracle.address]);
+    await markPriceOracle.grantTwapIntervalRole(positioningConfig.address);
     USDC = await TestERC20.deploy();
     await USDC.__TestERC20_init("TestUSDC", "USDC", 6);
     await USDC.deployed();
@@ -225,8 +224,8 @@ describe("Priodic Funding payment", function () {
     ]);
     await (await markPriceOracle.setPositioning(positioning.address)).wait();
     await (await markPriceOracle.setIndexOracle(indexPriceOracle.address)).wait();
-    await (await markPriceOracle.setMarkTwInterval(300)).wait();
-    await (await markPriceOracle.setIndexTwInterval(3600)).wait();
+    await positioningConfig.setTwapInterval(28800);
+
     await volmexPerpPeriphery.deployed();
     await USDC.transfer(account1.address, "1000000000000000000000000");
     await USDC.transfer(account2.address, "1000000000000000000000000");
@@ -279,7 +278,6 @@ describe("Priodic Funding payment", function () {
         1,
         0,
         true,
-        twapType,
       );
 
       const orderRight = Order(
@@ -291,7 +289,6 @@ describe("Priodic Funding payment", function () {
         2,
         0,
         false,
-        twapType,
       );
 
       const signatureLeft = await getSignature(orderLeft, account1.address);
@@ -321,7 +318,6 @@ describe("Priodic Funding payment", function () {
           i,
           (1e6).toString(),
           true,
-          twapType,
         );
 
         const orderRight = Order(
@@ -333,7 +329,6 @@ describe("Priodic Funding payment", function () {
           i + 1,
           (1e6).toString(),
           false,
-          twapType,
         );
 
         const signatureLeft = await getSignature(orderLeft, alice.address);
@@ -390,7 +385,6 @@ describe("Priodic Funding payment", function () {
         1,
         (1e6).toString(),
         true,
-        twapType,
       );
       const orderRight = Order(
         ORDER,
@@ -401,7 +395,6 @@ describe("Priodic Funding payment", function () {
         2,
         (1e6).toString(),
         false,
-        twapType,
       );
 
       const signatureLeft = await getSignature(orderLeft, account1.address);
@@ -425,7 +418,6 @@ describe("Priodic Funding payment", function () {
           i,
           (1e6).toString(),
           true,
-          twapType,
         );
 
         const orderRight = Order(
@@ -437,7 +429,6 @@ describe("Priodic Funding payment", function () {
           i + 1,
           (1e6).toString(),
           false,
-          twapType,
         );
 
         const signatureLeft = await getSignature(orderLeft, alice.address);
@@ -477,7 +468,6 @@ describe("Priodic Funding payment", function () {
           i,
           (1e6).toString(),
           true,
-          twapType,
         );
 
         const orderRight = Order(
@@ -489,7 +479,6 @@ describe("Priodic Funding payment", function () {
           i + 1,
           (1e6).toString(),
           false,
-          twapType,
         );
 
         const signatureLeft = await getSignature(orderLeft, alice.address);
@@ -535,7 +524,6 @@ describe("Priodic Funding payment", function () {
         5,
         (1e6).toString(),
         true,
-        twapType,
       );
       const orderRight = Order(
         ORDER,
@@ -546,7 +534,6 @@ describe("Priodic Funding payment", function () {
         6,
         (1e6).toString(),
         false,
-        twapType,
       );
 
       const signatureLeft = await getSignature(orderLeft, account1.address);
@@ -581,7 +568,6 @@ describe("Priodic Funding payment", function () {
           i,
           (1e6).toString(),
           true,
-          twapType,
         );
 
         const orderRight = Order(
@@ -593,7 +579,6 @@ describe("Priodic Funding payment", function () {
           i + 1,
           (1e6).toString(),
           false,
-          twapType,
         );
 
         const signatureLeft = await getSignature(orderLeft, alice.address);
@@ -625,7 +610,6 @@ describe("Priodic Funding payment", function () {
         10,
         (1e6).toString(),
         true,
-        twapType,
       );
       const orderRight1 = Order(
         ORDER,
@@ -636,7 +620,6 @@ describe("Priodic Funding payment", function () {
         20,
         (1e6).toString(),
         false,
-        twapType,
       );
 
       const signatureLeft1 = await getSignature(orderLeft1, account2.address);
@@ -666,7 +649,6 @@ describe("Priodic Funding payment", function () {
           i,
           (1e6).toString(),
           true,
-          twapType,
         );
 
         const orderRight = Order(
@@ -678,7 +660,6 @@ describe("Priodic Funding payment", function () {
           i + 1,
           (1e6).toString(),
           false,
-          twapType,
         );
 
         const signatureLeft = await getSignature(orderLeft, alice.address);
@@ -759,7 +740,6 @@ describe("Priodic Funding payment", function () {
         5,
         (1e6).toString(),
         true,
-        twapType,
       );
       const orderRight = Order(
         ORDER,
@@ -770,7 +750,6 @@ describe("Priodic Funding payment", function () {
         6,
         (1e6).toString(),
         false,
-        twapType,
       );
 
       const signatureLeft = await getSignature(orderLeft, account2.address);
@@ -793,7 +772,6 @@ describe("Priodic Funding payment", function () {
         456,
         (1e6).toString(),
         true,
-        twapType,
       );
       const orderRight1 = Order(
         ORDER,
@@ -804,7 +782,6 @@ describe("Priodic Funding payment", function () {
         134,
         (1e6).toString(),
         false,
-        twapType,
       );
 
       const signatureLeft1 = await getSignature(orderLeft1, alice.address);
@@ -828,7 +805,6 @@ describe("Priodic Funding payment", function () {
           i,
           (1e6).toString(),
           true,
-          twapType,
         );
         const orderRight = Order(
           ORDER,
@@ -839,7 +815,6 @@ describe("Priodic Funding payment", function () {
           i + 1,
           (1e6).toString(),
           false,
-          twapType,
         );
 
         const signatureLeft = await getSignature(orderLeft, alice.address);
@@ -925,7 +900,6 @@ describe("Priodic Funding payment", function () {
         5,
         (1e6).toString(),
         true,
-        twapType,
       );
       const orderRight = Order(
         ORDER,
@@ -936,7 +910,6 @@ describe("Priodic Funding payment", function () {
         6,
         (1e6).toString(),
         false,
-        twapType,
       );
 
       const signatureLeft = await getSignature(orderLeft, account2.address);
@@ -959,7 +932,6 @@ describe("Priodic Funding payment", function () {
         456,
         (1e6).toString(),
         true,
-        twapType,
       );
       const orderRight1 = Order(
         ORDER,
@@ -970,7 +942,6 @@ describe("Priodic Funding payment", function () {
         134,
         (1e6).toString(),
         false,
-        twapType,
       );
 
       const signatureLeft1 = await getSignature(orderLeft1, alice.address);
@@ -993,7 +964,6 @@ describe("Priodic Funding payment", function () {
           i,
           (1e6).toString(),
           true,
-          twapType,
         );
         const orderRight = Order(
           ORDER,
@@ -1004,7 +974,6 @@ describe("Priodic Funding payment", function () {
           i + 1,
           (1e6).toString(),
           false,
-          twapType,
         );
 
         const signatureLeft = await getSignature(orderLeft, alice.address);
@@ -1051,7 +1020,6 @@ describe("Priodic Funding payment", function () {
           i,
           (1e6).toString(),
           true,
-          twapType,
         );
         const orderRight = Order(
           ORDER,
@@ -1062,7 +1030,6 @@ describe("Priodic Funding payment", function () {
           i + 1,
           (1e6).toString(),
           false,
-          twapType,
         );
 
         const signatureLeft = await getSignature(orderLeft, alice.address);
@@ -1119,7 +1086,6 @@ describe("Priodic Funding payment", function () {
         5,
         (1e6).toString(),
         true,
-        twapType,
       );
       const orderRight = Order(
         ORDER,
@@ -1130,7 +1096,6 @@ describe("Priodic Funding payment", function () {
         6,
         (1e6).toString(),
         false,
-        twapType,
       );
 
       const signatureLeft = await getSignature(orderLeft, account2.address);
@@ -1154,7 +1119,6 @@ describe("Priodic Funding payment", function () {
         50,
         (1e6).toString(),
         true,
-        twapType,
       );
       const orderRight2 = Order(
         ORDER,
@@ -1165,7 +1129,6 @@ describe("Priodic Funding payment", function () {
         60,
         (1e6).toString(),
         false,
-        twapType,
       );
 
       const signatureLeft2 = await getSignature(orderLeft2, account2.address);
@@ -1202,7 +1165,6 @@ describe("Priodic Funding payment", function () {
           i,
           (1e6).toString(),
           true,
-          twapType,
         );
         const orderRight = Order(
           ORDER,
@@ -1213,7 +1175,6 @@ describe("Priodic Funding payment", function () {
           i + 1,
           (1e6).toString(),
           false,
-          twapType,
         );
 
         const signatureLeft = await getSignature(orderLeft, alice.address);
@@ -1236,7 +1197,6 @@ describe("Priodic Funding payment", function () {
         456,
         (1e6).toString(),
         true,
-        twapType,
       );
       const orderRight1 = Order(
         ORDER,
@@ -1247,7 +1207,6 @@ describe("Priodic Funding payment", function () {
         134,
         (1e6).toString(),
         false,
-        twapType,
       );
 
       const signatureLeft1 = await getSignature(orderLeft1, alice.address);

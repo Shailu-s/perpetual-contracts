@@ -45,7 +45,6 @@ describe("MatchingEngine", function () {
   let transferManagerTest;
   const deadline = 87654321987654;
   const VirtualTokenAdmin = "0xf24678cc6ef041b5bac447b5fa553504d5f318f8003914a05215b2ac7d7314e2";
-  const twapType = "0x1444f8cf";
   let orderLeft, orderRight;
   let owner, account1, account2, account3, account4;
   const ten = ethers.constants.WeiPerEther.mul(BigNumber.from("10000000")); // 10e18
@@ -112,7 +111,9 @@ describe("MatchingEngine", function () {
     );
     await markPriceOracle.deployed();
     await volmexBaseToken.setPriceFeed(indexPriceOracle.address);
-    positioningConfig = await upgrades.deployProxy(PositioningConfig, []);
+    positioningConfig = await upgrades.deployProxy(PositioningConfig, [markPriceOracle.address]);
+    await positioningConfig.deployed();
+    await markPriceOracle.grantTwapIntervalRole(positioningConfig.address);
     accountBalance = await upgrades.deployProxy(AccountBalance, [positioningConfig.address]);
     await accountBalance.deployed();
     vaultController = await upgrades.deployProxy(VaultController, [
@@ -210,8 +211,7 @@ describe("MatchingEngine", function () {
     await positioning.connect(owner).setPositioning(positioning.address);
     await (await markPriceOracle.setPositioning(positioning.address)).wait();
     await (await markPriceOracle.setIndexOracle(indexPriceOracle.address)).wait();
-    await (await markPriceOracle.setMarkTwInterval(300)).wait();
-    await (await markPriceOracle.setIndexTwInterval(3600)).wait();
+    await positioningConfig.setTwapInterval(28800);
 
     asset = Asset(virtualToken.address, "10");
 
@@ -246,7 +246,6 @@ describe("MatchingEngine", function () {
       45,
       0,
       true,
-      twapType,
     );
 
     const orderRight2 = Order(
@@ -258,7 +257,6 @@ describe("MatchingEngine", function () {
       67,
       0,
       false,
-      twapType,
     );
     orderLeft = Order(
       ORDER,
@@ -269,7 +267,6 @@ describe("MatchingEngine", function () {
       1,
       0,
       true,
-      twapType,
     );
 
     orderRight = Order(
@@ -281,7 +278,6 @@ describe("MatchingEngine", function () {
       2,
       0,
       false,
-      twapType,
     );
     let signatureLeft = await getSignature(orderLeft2, account1.address);
     let signatureRight = await getSignature(orderRight2, account2.address);
@@ -310,7 +306,6 @@ describe("MatchingEngine", function () {
         1,
         0,
         true,
-        twapType,
       );
       await expect(matchingEngine.cancelOrder(order1)).to.emit(matchingEngine, "Canceled");
     });
@@ -325,7 +320,6 @@ describe("MatchingEngine", function () {
         "1",
         "0",
         true,
-        twapType,
       );
       await matchingEngine.setMakerMinSalt("100");
       await expect(matchingEngine.cancelOrder(order1)).to.be.revertedWith(
@@ -349,7 +343,6 @@ describe("MatchingEngine", function () {
         0,
         0,
         true,
-        twapType,
       );
       await expect(matchingEngine.cancelOrder(order1)).to.be.revertedWith(
         "V_PERP_M: 0 salt can't be used",
@@ -367,7 +360,6 @@ describe("MatchingEngine", function () {
         2,
         0,
         true,
-        twapType,
       );
 
       let ordersList = [];
@@ -391,7 +383,6 @@ describe("MatchingEngine", function () {
         1,
         0,
         true,
-        twapType,
       );
       const order2 = Order(
         ORDER,
@@ -402,7 +393,6 @@ describe("MatchingEngine", function () {
         2,
         0,
         true,
-        twapType,
       );
 
       var ordersList: any[] = [order1, order2];
@@ -440,7 +430,6 @@ describe("MatchingEngine", function () {
           1,
           0,
           true,
-          twapType,
         );
 
         const orderRight = Order(
@@ -452,7 +441,6 @@ describe("MatchingEngine", function () {
           1,
           0,
           false,
-          twapType,
         );
 
         let signatureLeft = await getSignature(orderLeft, account1.address);
@@ -477,7 +465,6 @@ describe("MatchingEngine", function () {
           1,
           0,
           true,
-          twapType,
         );
 
         const orderRight = Order(
@@ -489,7 +476,6 @@ describe("MatchingEngine", function () {
           1,
           0,
           false,
-          twapType,
         );
 
         let signatureLeft = await getSignature(orderLeft, account1.address);
@@ -514,7 +500,6 @@ describe("MatchingEngine", function () {
           1,
           0,
           true,
-          twapType,
         );
 
         const orderRight = Order(
@@ -526,7 +511,6 @@ describe("MatchingEngine", function () {
           1,
           0,
           false,
-          twapType,
         );
 
         let signatureLeft = await getSignature(orderLeft, account1.address);
@@ -550,7 +534,6 @@ describe("MatchingEngine", function () {
           1,
           0,
           true,
-          twapType,
         );
 
         const orderRight = Order(
@@ -562,7 +545,6 @@ describe("MatchingEngine", function () {
           1,
           0,
           false,
-          twapType,
         );
 
         let signatureLeft = await getSignature(orderLeft, account1.address);
@@ -589,7 +571,6 @@ describe("MatchingEngine", function () {
           1,
           0,
           true,
-          twapType,
         );
 
         const orderRight = Order(
@@ -601,7 +582,6 @@ describe("MatchingEngine", function () {
           1,
           0,
           false,
-          twapType,
         );
 
         let signatureLeft = await getSignature(orderLeft, account1.address);
@@ -651,7 +631,6 @@ describe("MatchingEngine", function () {
           1,
           0,
           false,
-          twapType,
         );
 
         const orderRight = Order(
@@ -663,7 +642,6 @@ describe("MatchingEngine", function () {
           2,
           0,
           true,
-          twapType,
         );
         await expect(matchingEngine.matchOrders(orderLeft, orderRight))
           .to.emit(matchingEngine, "Matched")
@@ -680,7 +658,6 @@ describe("MatchingEngine", function () {
           1,
           0,
           false,
-          twapType,
         );
 
         const orderRight = Order(
@@ -692,7 +669,6 @@ describe("MatchingEngine", function () {
           2,
           0,
           true,
-          twapType,
         );
         await expect(matchingEngine.matchOrders(orderLeft, orderRight))
           .to.emit(matchingEngine, "Matched")
@@ -760,7 +736,6 @@ describe("MatchingEngine", function () {
             salt,
             0,
             true,
-            twapType,
           ),
         );
         salt++;
@@ -775,7 +750,6 @@ describe("MatchingEngine", function () {
             salt,
             0,
             true,
-            twapType,
           ),
         );
         salt++;
@@ -801,7 +775,6 @@ describe("MatchingEngine", function () {
         1,
         0,
         true,
-        twapType,
       );
 
       let ordersList = [];
@@ -849,7 +822,6 @@ describe("MatchingEngine", function () {
             salt,
             0,
             true,
-            twapType,
           ),
         );
         salt++;
@@ -864,7 +836,6 @@ describe("MatchingEngine", function () {
             salt,
             0,
             true,
-            twapType,
           ),
         );
         salt++;

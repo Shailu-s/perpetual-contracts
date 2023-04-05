@@ -83,7 +83,9 @@ describe("Vault Controller tests for withdrawal", function () {
     await DAI.__TestERC20_init("TestDai", "DAI", 10);
 
     const positioningConfigFactory = await ethers.getContractFactory("PositioningConfig");
-    positioningConfig = await upgrades.deployProxy(positioningConfigFactory, []);
+    positioningConfig = await upgrades.deployProxy(positioningConfigFactory, [
+      markPriceOracle.address,
+    ]);
 
     const accountBalanceFactory = await ethers.getContractFactory("AccountBalance");
     accountBalance = await upgrades.deployProxy(accountBalanceFactory, [

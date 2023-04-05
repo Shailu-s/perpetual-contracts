@@ -47,12 +47,15 @@ describe("VolmexPerpPeriphery", function () {
   const ORDER = "0xf555eb98";
   const traderWhiteListerRole =
     "0x2fb89cb8e2c481f376f65f284214892b25912128a308376bc38815249326e026";
-  const STOP_LOSS_LIMIT_ORDER = "0xeeaed735";
-  const TAKE_PROFIT_LIMIT_ORDER = "0xe0fc7f94";
+  const STOP_LOSS_INDEX_PRICE = "0x835d5c1e";
+  const STOP_LOSS_LAST_PRICE = "0xd9ed8042";
+  const STOP_LOSS_MARK_PRICE = "0xe144c7ec";
+  const TAKE_PROFIT_INDEX_PRICE = "0x67393efa";
+  const TAKE_PROFIT_LAST_PRICE = "0xc7dc86f6";
+  const TAKE_PROFIT_MARK_PRICE = "0xb6d64e04";
   const ZERO_ADDR = "0x0000000000000000000000000000000000000000";
   const proofHash = "0x6c00000000000000000000000000000000000000000000000000000000000000";
   const capRatio = "250";
-  const twapType = "0x1444f8cf";
   this.beforeAll(async () => {
     VolmexPerpPeriphery = await ethers.getContractFactory("VolmexPerpPeriphery");
     MarkPriceOracle = await ethers.getContractFactory("MarkPriceOracle");
@@ -96,7 +99,7 @@ describe("VolmexPerpPeriphery", function () {
 
     indexPriceOracle = await upgrades.deployProxy(
       IndexPriceOracle,
-      [owner.address, [1000000], [volmexBaseToken.address], [proofHash], [capRatio]],
+      [owner.address, [70000000], [volmexBaseToken.address], [proofHash], [capRatio]],
       {
         initializer: "initialize",
       },
@@ -118,14 +121,14 @@ describe("VolmexPerpPeriphery", function () {
 
     markPriceOracle = await upgrades.deployProxy(
       MarkPriceOracle,
-      [[1000000], [volmexBaseToken.address], [proofHash], [capRatio], owner.address],
+      [[60000000], [volmexBaseToken.address], [proofHash], [capRatio], owner.address],
       {
         initializer: "initialize",
       },
     );
     await markPriceOracle.deployed();
 
-    positioningConfig = await upgrades.deployProxy(PositioningConfig, []);
+    positioningConfig = await upgrades.deployProxy(PositioningConfig, [markPriceOracle.address]);
 
     USDC = await TestERC20.deploy();
     await USDC.__TestERC20_init("TestUSDC", "USDC", 6);
@@ -198,7 +201,8 @@ describe("VolmexPerpPeriphery", function () {
     await vault.connect(owner).setVaultController(vaultController.address);
     await vaultController.registerVault(vault.address, USDC.address);
     await vaultController.connect(owner).setPositioning(positioning.address);
-
+    await markPriceOracle.grantTwapIntervalRole(positioningConfig.address);
+    await positioningConfig.connect(owner).setTwapInterval(28800);
     await positioningConfig.connect(owner).setMaxMarketsPerAccount(5);
     await positioningConfig
       .connect(owner)
@@ -211,8 +215,6 @@ describe("VolmexPerpPeriphery", function () {
     await (await matchingEngine.grantMatchOrders(positioning.address)).wait();
     await (await markPriceOracle.setPositioning(positioning.address)).wait();
     await (await markPriceOracle.setIndexOracle(indexPriceOracle.address)).wait();
-    await (await markPriceOracle.setMarkTwInterval(300)).wait();
-    await (await markPriceOracle.setIndexTwInterval(3600)).wait();
 
     await markPriceOracle.setObservationAdder(matchingEngine.address);
 
@@ -275,7 +277,6 @@ describe("VolmexPerpPeriphery", function () {
           salt,
           0,
           true,
-          twapType,
         );
 
         let orderRight = Order(
@@ -287,7 +288,6 @@ describe("VolmexPerpPeriphery", function () {
           salt++,
           0,
           false,
-          twapType,
         );
 
         const signatureLeft = await getSignature(orderLeft, alice.address);
@@ -327,7 +327,6 @@ describe("VolmexPerpPeriphery", function () {
             salt++,
             0,
             false,
-            twapType,
           );
 
           let orderRight = Order(
@@ -339,7 +338,6 @@ describe("VolmexPerpPeriphery", function () {
             salt++,
             0,
             true,
-            twapType,
           );
 
           const signatureLeft = await getSignature(orderLeft, alice.address);
@@ -355,7 +353,7 @@ describe("VolmexPerpPeriphery", function () {
           );
           const receipt = await tx.wait();
           txDataBefore = {
-            "Mark price": (await markPriceOracle.getLastTwap("3600", 0)).toString(),
+            "Mark price": (await markPriceOracle.getMarkTwap("3600", 0)).toString(),
             "Alice position": (
               await accountBalance1.getPositionSize(alice.address, volmexBaseToken.address)
             ).toString(),
@@ -388,7 +386,6 @@ describe("VolmexPerpPeriphery", function () {
           salt,
           0,
           true,
-          twapType,
         );
 
         let orderRight = Order(
@@ -400,7 +397,6 @@ describe("VolmexPerpPeriphery", function () {
           salt++,
           0,
           false,
-          twapType,
         );
 
         const signatureLeft = await getSignature(orderLeft, alice.address);
@@ -538,20 +534,20 @@ describe("VolmexPerpPeriphery", function () {
 
   describe("Fill Limit order", async () => {
     it("should fill LimitOrder", async () => {
-      await await USDC.transfer(account1.address, "1000000000");
-      await await USDC.transfer(account2.address, "1000000000");
-      await USDC.connect(account1).approve(volmexPerpPeriphery.address, "1000000000");
-      await USDC.connect(account2).approve(volmexPerpPeriphery.address, "1000000000");
+      await await USDC.transfer(account1.address, "100000000000");
+      await await USDC.transfer(account2.address, "100000000000");
+      await USDC.connect(account1).approve(volmexPerpPeriphery.address, "100000000000");
+      await USDC.connect(account2).approve(volmexPerpPeriphery.address, "100000000000");
       (
-        await volmexPerpPeriphery.connect(account1).depositToVault(0, USDC.address, "1000000000")
+        await volmexPerpPeriphery.connect(account1).depositToVault(0, USDC.address, "100000000000")
       ).wait();
       (
-        await volmexPerpPeriphery.connect(account2).depositToVault(0, USDC.address, "1000000000")
+        await volmexPerpPeriphery.connect(account2).depositToVault(0, USDC.address, "100000000000")
       ).wait();
       await volmexPerpPeriphery.whitelistTrader(account1.address, true);
       await volmexPerpPeriphery.whitelistTrader(account2.address, true);
       const orderLeft = Order(
-        STOP_LOSS_LIMIT_ORDER,
+        STOP_LOSS_MARK_PRICE,
         deadline,
         account1.address,
         Asset(volmexBaseToken.address, one.toString()),
@@ -559,11 +555,10 @@ describe("VolmexPerpPeriphery", function () {
         1,
         (1e8).toString(),
         true,
-        twapType,
       );
 
       const orderRight = Order(
-        STOP_LOSS_LIMIT_ORDER,
+        STOP_LOSS_MARK_PRICE,
         deadline,
         account2.address,
         Asset(virtualToken.address, two.toString()),
@@ -571,7 +566,6 @@ describe("VolmexPerpPeriphery", function () {
         1,
         (1e5).toString(),
         false,
-        twapType,
       );
 
       const signatureLeftLimitOrder = await getSignature(orderLeft, account1.address);
@@ -592,7 +586,7 @@ describe("VolmexPerpPeriphery", function () {
 
     it("should fail to add order", async () => {
       const orderLeft = Order(
-        STOP_LOSS_LIMIT_ORDER,
+        STOP_LOSS_MARK_PRICE,
         deadline,
         account1.address,
         Asset(volmexBaseToken.address, two.toString()),
@@ -600,11 +594,10 @@ describe("VolmexPerpPeriphery", function () {
         1,
         (1e8).toString(),
         true,
-        twapType,
       );
 
       const orderRight = Order(
-        STOP_LOSS_LIMIT_ORDER,
+        STOP_LOSS_MARK_PRICE,
         deadline,
         account2.address,
         Asset(virtualToken.address, two.toString()),
@@ -612,7 +605,6 @@ describe("VolmexPerpPeriphery", function () {
         1,
         (1e6).toString(),
         false,
-        twapType,
       );
 
       const signatureLeftLimitOrder = await getSignature(orderLeft, account1.address);
@@ -635,7 +627,7 @@ describe("VolmexPerpPeriphery", function () {
     });
     it("should fail to fill LimitOrder: Sell Stop Limit Order Trigger Price Not Matched", async () => {
       const orderLeft = Order(
-        STOP_LOSS_LIMIT_ORDER,
+        STOP_LOSS_MARK_PRICE,
         deadline,
         account1.address,
         Asset(volmexBaseToken.address, two.toString()),
@@ -643,11 +635,10 @@ describe("VolmexPerpPeriphery", function () {
         1,
         (1e4).toString(),
         true,
-        twapType,
       );
 
       const orderRight = Order(
-        STOP_LOSS_LIMIT_ORDER,
+        STOP_LOSS_MARK_PRICE,
         deadline,
         account2.address,
         Asset(virtualToken.address, two.toString()),
@@ -655,7 +646,6 @@ describe("VolmexPerpPeriphery", function () {
         1,
         (1e5).toString(),
         false,
-        twapType,
       );
 
       const signatureLeftLimitOrder = await getSignature(orderLeft, account1.address);
@@ -678,7 +668,7 @@ describe("VolmexPerpPeriphery", function () {
 
     it("should fail to fill LimitOrder: Buy Stop Limit Order Trigger Price Not Matched", async () => {
       const orderLeft = Order(
-        STOP_LOSS_LIMIT_ORDER,
+        STOP_LOSS_MARK_PRICE,
         deadline,
         account1.address,
         Asset(volmexBaseToken.address, two.toString()),
@@ -686,11 +676,10 @@ describe("VolmexPerpPeriphery", function () {
         1,
         (1e8).toString(),
         true,
-        twapType,
       );
 
       const orderRight = Order(
-        STOP_LOSS_LIMIT_ORDER,
+        STOP_LOSS_MARK_PRICE,
         deadline,
         account2.address,
         Asset(virtualToken.address, two.toString()),
@@ -698,7 +687,6 @@ describe("VolmexPerpPeriphery", function () {
         1,
         (11e7).toString(),
         false,
-        twapType,
       );
 
       const signatureLeftLimitOrder = await getSignature(orderLeft, account1.address);
@@ -721,7 +709,7 @@ describe("VolmexPerpPeriphery", function () {
 
     it("should fail to fill LimitOrder: Sell Take-profit Limit Order Trigger Price Not Matched", async () => {
       const orderLeft = Order(
-        TAKE_PROFIT_LIMIT_ORDER,
+        TAKE_PROFIT_MARK_PRICE,
         deadline,
         account1.address,
         Asset(volmexBaseToken.address, two.toString()),
@@ -729,11 +717,10 @@ describe("VolmexPerpPeriphery", function () {
         1,
         (1e8).toString(),
         true,
-        twapType,
       );
 
       const orderRight = Order(
-        TAKE_PROFIT_LIMIT_ORDER,
+        TAKE_PROFIT_MARK_PRICE,
         deadline,
         account2.address,
         Asset(virtualToken.address, two.toString()),
@@ -741,7 +728,6 @@ describe("VolmexPerpPeriphery", function () {
         1,
         (1e6).toString(),
         false,
-        twapType,
       );
 
       const signatureLeftLimitOrder = await getSignature(orderLeft, account1.address);
@@ -764,7 +750,7 @@ describe("VolmexPerpPeriphery", function () {
 
     it("should fail to fill LimitOrder: Buy Take-profit Limit Order Trigger Price Not Matched", async () => {
       const orderLeft = Order(
-        TAKE_PROFIT_LIMIT_ORDER,
+        TAKE_PROFIT_MARK_PRICE,
         deadline,
         account1.address,
         Asset(volmexBaseToken.address, one.toString()),
@@ -772,11 +758,10 @@ describe("VolmexPerpPeriphery", function () {
         1,
         (1e5).toString(),
         true,
-        twapType,
       );
 
       const orderRight = Order(
-        TAKE_PROFIT_LIMIT_ORDER,
+        TAKE_PROFIT_MARK_PRICE,
         deadline,
         account2.address,
         Asset(virtualToken.address, two.toString()),
@@ -784,7 +769,6 @@ describe("VolmexPerpPeriphery", function () {
         1,
         (1e4).toString(),
         false,
-        twapType,
       );
 
       const signatureLeftLimitOrder = await getSignature(orderLeft, account1.address);
@@ -868,7 +852,6 @@ describe("VolmexPerpPeriphery", function () {
         1,
         (1e6).toString(),
         true,
-        twapType,
       );
 
       orderRight = Order(
@@ -880,7 +863,6 @@ describe("VolmexPerpPeriphery", function () {
         2,
         (1e6).toString(),
         false,
-        twapType,
       );
     });
 
@@ -963,7 +945,6 @@ describe("VolmexPerpPeriphery", function () {
           1,
           (1e6).toString(),
           true,
-          twapType,
         );
         ordersLeft.push(orderLeft);
         const orderRight = Order(
@@ -975,7 +956,6 @@ describe("VolmexPerpPeriphery", function () {
           2,
           (1e6).toString(),
           false,
-          twapType,
         );
         ordersRight.push(orderRight);
         const signatureLeft = await getSignature(orderLeft, account1.address);
@@ -1014,7 +994,7 @@ describe("VolmexPerpPeriphery", function () {
             .depositToVault(index, USDC.address, "1000000000")
         ).wait();
         const orderLeft = Order(
-          STOP_LOSS_LIMIT_ORDER,
+          STOP_LOSS_MARK_PRICE,
           deadline,
           account1.address,
           Asset(volmexBaseToken.address, two.toString()),
@@ -1022,11 +1002,10 @@ describe("VolmexPerpPeriphery", function () {
           1,
           (1e8).toString(),
           true,
-          twapType,
         );
 
         const orderRight = Order(
-          STOP_LOSS_LIMIT_ORDER,
+          STOP_LOSS_MARK_PRICE,
           deadline,
           account2.address,
           Asset(virtualToken.address, two.toString()),
@@ -1034,7 +1013,6 @@ describe("VolmexPerpPeriphery", function () {
           1,
           (1e5).toString(),
           false,
-          twapType,
         );
         limitOrdersLeft.push(orderLeft);
         limitOrdersRight.push(orderRight);
@@ -1072,7 +1050,7 @@ describe("VolmexPerpPeriphery", function () {
             .depositToVault(index, USDC.address, "1000000000")
         ).wait();
         const orderLeft = Order(
-          STOP_LOSS_LIMIT_ORDER,
+          STOP_LOSS_MARK_PRICE,
           deadline,
           account1.address,
           Asset(volmexBaseToken.address, two.toString()),
@@ -1080,10 +1058,9 @@ describe("VolmexPerpPeriphery", function () {
           1,
           (1e8).toString(),
           true,
-          twapType,
         );
         const orderRight = Order(
-          STOP_LOSS_LIMIT_ORDER,
+          STOP_LOSS_MARK_PRICE,
           deadline,
           account2.address,
           Asset(virtualToken.address, two.toString()),
@@ -1091,7 +1068,6 @@ describe("VolmexPerpPeriphery", function () {
           1,
           (1e6).toString(),
           false,
-          twapType,
         );
         limitOrdersLeft.push(orderLeft);
         limitOrdersRight.push(orderRight);
@@ -1143,7 +1119,6 @@ describe("VolmexPerpPeriphery", function () {
           1,
           (1e6).toString(),
           true,
-          twapType,
         );
         ordersLeft.push(orderLeft);
         const orderRight = Order(
@@ -1155,7 +1130,6 @@ describe("VolmexPerpPeriphery", function () {
           2,
           (1e6).toString(),
           false,
-          twapType,
         );
         ordersRight.push(orderRight);
         ordersRight.push(orderRight);

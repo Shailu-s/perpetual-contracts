@@ -41,7 +41,9 @@ describe("Vault Controller Mock tests for account value", function () {
     await DAI.__TestERC20_init("TestDai", "DAI", 18);
 
     const positioningConfigFactory = await ethers.getContractFactory("PositioningConfig");
-    positioningConfig = await upgrades.deployProxy(positioningConfigFactory, []);
+    positioningConfig = await upgrades.deployProxy(positioningConfigFactory, [
+      markPriceFake.address,
+    ]);
 
     const accountBalanceFactory = await ethers.getContractFactory("AccountBalance");
     accountBalance = await upgrades.deployProxy(accountBalanceFactory, [

@@ -116,7 +116,6 @@ describe("MarkPriceOracle", function () {
     await volmexQuoteToken.deployed();
     await (await perpView.setQuoteToken(volmexQuoteToken.address)).wait();
 
-    positioningConfig = await upgrades.deployProxy(PositioningConfig, []);
     markPriceOracle = await upgrades.deployProxy(
       MarkPriceOracle,
       [[60000000], [volmexBaseToken.address], [proofHash], [capRatio], owner.address],
@@ -124,6 +123,7 @@ describe("MarkPriceOracle", function () {
         initializer: "initialize",
       },
     );
+    positioningConfig = await upgrades.deployProxy(PositioningConfig, [markPriceOracle.address]);
     matchingEngine = await upgrades.deployProxy(MatchingEngine, [
       owner.address,
       markPriceOracle.address,
@@ -209,10 +209,10 @@ describe("MarkPriceOracle", function () {
     await positioning.connect(owner).setPositioning(positioning.address);
 
     await (await matchingEngine.grantMatchOrders(positioning.address)).wait();
+    await markPriceOracle.grantTwapIntervalRole(positioningConfig.address);
     await markPriceOracle.setPositioning(positioning.address);
     await markPriceOracle.setIndexOracle(indexPriceOracle.address);
-    await markPriceOracle.setMarkTwInterval(300);
-    await markPriceOracle.setIndexTwInterval(36000);
+    await positioningConfig.setTwapInterval(28800);
 
     volmexPerpPeriphery = await upgrades.deployProxy(VolmexPerpPeriphery, [
       perpView.address,
@@ -272,7 +272,6 @@ describe("MarkPriceOracle", function () {
       salt++,
       0,
       false,
-      twapType,
     );
 
     let orderRight = Order(
@@ -284,7 +283,6 @@ describe("MarkPriceOracle", function () {
       salt++,
       0,
       true,
-      twapType,
     );
 
     const signatureLeft = await getSignature(orderLeft, alice.address);
@@ -489,7 +487,6 @@ describe("MarkPriceOracle", function () {
       );
     });
     it("Should return values from last epoch ", async () => {
-      await markPriceOracle.setMarkTwInterval(28800);
       await time.increase(28800);
       const firstTimestamp = await time.latest();
       for (let i = 0; i <= 20; i++) {
