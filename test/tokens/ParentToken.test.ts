@@ -10,7 +10,6 @@ describe("ParentToken", function () {
   let owner, account1, account2;
   const proofHash = "0x6c00000000000000000000000000000000000000000000000000000000000000";
   const capRatio = "250";
-  const twapType = "0x1444f8cf";
   this.beforeAll(async () => {
     VolmexBaseToken = await ethers.getContractFactory("VolmexBaseToken");
     IndexPriceOracle = await ethers.getContractFactory("IndexPriceOracle");
