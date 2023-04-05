@@ -4,7 +4,7 @@ pragma solidity =0.8.18;
 import "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 import { IPositioningConfig } from "../interfaces/IPositioningConfig.sol";
 import { PositioningConfigStorageV1 } from "../storage/PositioningConfigStorage.sol";
-import "../interfaces/IMarkPriceOracle.sol";
+import { IMarkPriceOracle } from "../interfaces/IMarkPriceOracle.sol";
 
 // never inherit any new stateful contract. never change the orders of parent stateful contracts
 contract PositioningConfig is IPositioningConfig, PositioningConfigStorageV1, AccessControlUpgradeable {
@@ -24,7 +24,7 @@ contract PositioningConfig is IPositioningConfig, PositioningConfigStorageV1, Ac
         _;
     }
 
-    function initialize(address _markPriceOracleArg) external initializer {
+    function initialize(IMarkPriceOracle markPriceOracleArg) external initializer {
         _maxMarketsPerAccount = type(uint8).max;
         _imRatio = 0.2e6; // initial-margin ratio, 40% in decimal 6
         _mmRatio = 0.2e6; // minimum-margin ratio, 20% in decimal 6
@@ -34,7 +34,7 @@ contract PositioningConfig is IPositioningConfig, PositioningConfigStorageV1, Ac
         _maxFundingRate = 0.08e6; // max funding rate, 10% in decimal 6
         _twapInterval = 28800;
         _settlementTokenBalanceCap = 0;
-        _markPriceOracle = _markPriceOracleArg;
+        _markPriceOracle = markPriceOracleArg;
         _grantRole(POSITIONING_CONFIG_ADMIN, _msgSender());
     }
 
@@ -57,8 +57,8 @@ contract PositioningConfig is IPositioningConfig, PositioningConfigStorageV1, Ac
         _requirePositioningConfigAdmin();
         // PC_ITI: invalid twapInterval
         require(twapIntervalArg != 0, "PC_ITI");
-        IMarkPriceOracle(_markPriceOracle).setMarkTwInterval(twapIntervalArg);
-        IMarkPriceOracle(_markPriceOracle).setIndexTwInterval(twapIntervalArg);
+        _markPriceOracle.setMarkTwInterval(twapIntervalArg);
+        _markPriceOracle.setIndexTwInterval(twapIntervalArg);
         _twapInterval = twapIntervalArg;
         emit TwapIntervalChanged(twapIntervalArg);
     }

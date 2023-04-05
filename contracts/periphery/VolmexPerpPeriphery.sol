@@ -217,7 +217,7 @@ contract VolmexPerpPeriphery is AccessControlUpgradeable, IVolmexPerpPeriphery {
 
         uint256 triggeredPrice = _getBaseTokenPrice(_limitOrder, twInterval);
 
-        if (_limitOrder.orderType == LibOrder.STOP_LOSS_LIMIT_ORDER) {
+        if (_checkLimitOrderType(_limitOrder.orderType, true)) {
             if (_limitOrder.isShort) {
                 // Sell Stop Limit Order Trigger Price Not Matched
                 return triggeredPrice <= _limitOrder.limitOrderTriggerPrice;
@@ -225,7 +225,7 @@ contract VolmexPerpPeriphery is AccessControlUpgradeable, IVolmexPerpPeriphery {
                 // Buy Stop Limit Order Trigger Price Not Matched
                 return triggeredPrice >= _limitOrder.limitOrderTriggerPrice;
             }
-        } else if (_limitOrder.orderType == LibOrder.TAKE_PROFIT_LIMIT_ORDER) {
+        } else if (_checkLimitOrderType(_limitOrder.orderType, false)) {
             if (_limitOrder.isShort) {
                 // Sell Take-profit Limit Order Trigger Price Not Matched
                 return triggeredPrice >= _limitOrder.limitOrderTriggerPrice;
@@ -245,12 +245,20 @@ contract VolmexPerpPeriphery is AccessControlUpgradeable, IVolmexPerpPeriphery {
 
         // TODO: change to index, mark and mark's latest price
         uint256 _index = markPriceOracle.indexByBaseToken(baseToken);
-        if (_order.twapType == LibOrder.MARK_TWAP) {
+        if (_order.orderType == LibOrder.STOP_LOSS_MARK_PRICE || _order.orderType == LibOrder.TAKE_PROFIT_MARK_PRICE) {
             price = markPriceOracle.getMarkTwap(_twInterval, _index);
-        } else if (_order.twapType == LibOrder.INDEX_TWAP) {
+        } else if (_order.orderType == LibOrder.STOP_LOSS_INDEX_PRICE || _order.orderType == LibOrder.TAKE_PROFIT_INDEX_PRICE) {
             price = indexPriceOracle.getLastTwap(_twInterval, _index);
         } else {
-            price = markPriceOracle.getMarkTwap(60, _index);
+            price = markPriceOracle.getLastPrice(_index);
+        }
+    }
+
+    function _checkLimitOrderType(bytes4 orderType, bool isStopLoss) private pure returns (bool) {
+        if (isStopLoss) {
+            return orderType == LibOrder.STOP_LOSS_INDEX_PRICE || orderType == LibOrder.STOP_LOSS_LAST_PRICE || orderType == LibOrder.STOP_LOSS_MARK_PRICE;
+        } else {
+            return orderType == LibOrder.TAKE_PROFIT_INDEX_PRICE || orderType == LibOrder.TAKE_PROFIT_LAST_PRICE || orderType == LibOrder.TAKE_PROFIT_MARK_PRICE;
         }
     }
 }
