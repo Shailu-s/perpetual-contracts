@@ -287,10 +287,12 @@ contract MarkPriceOracle is AccessControlUpgradeable {
         lastUpdatedTimestamp = observations[index - 1].timestamp;
         uint256 startIndex;
         uint256 endIndex;
-        if (observations[index - 1].timestamp < _endTimestamp) {
-            _endTimestamp = _endTimestamp - (((_endTimestamp - lastUpdatedTimestamp) / markTwInterval) * markTwInterval);
-            _startTimestamp = _endTimestamp - markTwInterval;
+
+        _endTimestamp = lastUpdatedTimestamp < _endTimestamp ? lastUpdatedTimestamp : _endTimestamp;
+        if (lastUpdatedTimestamp < _startTimestamp){
+            _startTimestamp = ((lastUpdatedTimestamp - observations[0].timestamp) / markTwInterval) * markTwInterval;
         }
+        
         for (; index != 0 && index >= startIndex; index--) {
             if (observations[index - 1].timestamp >= _endTimestamp) {
                 endIndex = index - 1;
