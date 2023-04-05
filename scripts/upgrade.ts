@@ -6,7 +6,9 @@ const upgrade = async () => {
   const contractFactory = await ethers.getContractFactory(process.env.CONTRACT_NAME);
 
   console.log("Upgrading contract ...");
+  // await upgrades.forceImport(proxyAddress, contractFactory);
   const instance = await upgrades.upgradeProxy(proxyAddress, contractFactory);
+  await instance.deployed();
   const proxyAdmin = await upgrades.admin.getInstance();
   console.log("Upgraded!");
 

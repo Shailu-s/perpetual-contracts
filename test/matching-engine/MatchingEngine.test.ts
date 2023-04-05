@@ -1,6 +1,7 @@
 import { expect } from "chai";
 import { ethers, upgrades } from "hardhat";
-const { Order, Asset, sign } = require("../order");
+const { Order, Asset, sign, encodeAddress } = require("../order");
+import { FakeContract, smock } from "@defi-wonderland/smock";
 const libDeal = require("../libDeal");
 import { BigNumber } from "ethers";
 
@@ -17,47 +18,82 @@ describe("MatchingEngine", function () {
   let erc1271Test;
   let asset;
   let MarkPriceOracle;
+  let PositioningConfig;
+  let positioningConfig;
+  let Positioning;
+  let positioning;
+  let AccountBalance;
+  let accountBalance;
+  let Vault;
+  let vault;
+  let VaultController;
+  let vaultController;
   let markPriceOracle;
   let VolmexBaseToken;
   let volmexBaseToken;
   let IndexPriceOracle;
+  let MarketRegistry;
+  let marketRegistry;
   let indexPriceOracle;
+  let volmexPerpPeriphery;
+  let VolmexPerpPeriphery;
+  let perpViewFake;
   let TestERC20;
   let USDC;
   const proofHash = "0x6c00000000000000000000000000000000000000000000000000000000000000";
   const capRatio = "250";
   let transferManagerTest;
   const deadline = 87654321987654;
+  const VirtualTokenAdmin = "0xf24678cc6ef041b5bac447b5fa553504d5f318f8003914a05215b2ac7d7314e2";
   const twapType = "0x1444f8cf";
   let orderLeft, orderRight;
   let owner, account1, account2, account3, account4;
+  const ten = ethers.constants.WeiPerEther.mul(BigNumber.from("10000000")); // 10e18
+
   const one = ethers.constants.WeiPerEther; // 1e18
   const two = ethers.constants.WeiPerEther.mul(BigNumber.from("2")); // 2e18
 
   const ORDER = "0xf555eb98";
   const STOP_LOSS_LIMIT_ORDER = "0xeeaed735";
   const TAKE_PROFIT_LIMIT_ORDER = "0xe0fc7f94";
-  async function getSignature(orderObj, signer) {
-    return sign(orderObj, signer, matchingEngine.address);
-  }
+
   this.beforeAll(async () => {
+    VolmexPerpPeriphery = await ethers.getContractFactory("VolmexPerpPeriphery");
+    MarketRegistry = await ethers.getContractFactory("MarketRegistry");
     MatchingEngine = await ethers.getContractFactory("MatchingEngineTest");
     MarkPriceOracle = await ethers.getContractFactory("MarkPriceOracle");
     VolmexBaseToken = await ethers.getContractFactory("VolmexBaseToken");
     IndexPriceOracle = await ethers.getContractFactory("IndexPriceOracle");
+    Positioning = await ethers.getContractFactory("PositioningTest");
+    Vault = await ethers.getContractFactory("Vault");
+    VaultController = await ethers.getContractFactory("VaultController");
     VirtualToken = await ethers.getContractFactory("VirtualTokenTest");
+    PositioningConfig = await ethers.getContractFactory("PositioningConfig");
+    AccountBalance = await ethers.getContractFactory("AccountBalance");
     ERC20TransferProxyTest = await ethers.getContractFactory("ERC20TransferProxyTest");
     TransferManagerTest = await ethers.getContractFactory("TransferManagerTest");
     ERC1271Test = await ethers.getContractFactory("ERC1271Test");
     TestERC20 = await ethers.getContractFactory("TestERC20");
-    [owner, account1, account2, account3, account4] = await ethers.getSigners();
   });
 
   beforeEach(async () => {
+    [owner, account1, account2, account3, account4] = await ethers.getSigners();
+    const liquidator = encodeAddress(owner.address);
     erc20TransferProxy = await ERC20TransferProxyTest.deploy();
     community = account4.address;
 
-    volmexBaseToken = await VolmexBaseToken.deploy();
+    volmexBaseToken = await upgrades.deployProxy(
+      VolmexBaseToken,
+      [
+        "VolmexBaseToken", // nameArg
+        "VBT", // symbolArg,
+        account1.address, // priceFeedArg
+        true, // isBase
+      ],
+      {
+        initializer: "initialize",
+      },
+    );
     await volmexBaseToken.deployed();
     indexPriceOracle = await upgrades.deployProxy(
       IndexPriceOracle,
@@ -66,6 +102,7 @@ describe("MatchingEngine", function () {
         initializer: "initialize",
       },
     );
+
     markPriceOracle = await upgrades.deployProxy(
       MarkPriceOracle,
       [[1000000], [volmexBaseToken.address], [proofHash], [capRatio], owner.address],
@@ -74,7 +111,16 @@ describe("MatchingEngine", function () {
       },
     );
     await markPriceOracle.deployed();
+    await volmexBaseToken.setPriceFeed(indexPriceOracle.address);
+    positioningConfig = await upgrades.deployProxy(PositioningConfig, []);
+    accountBalance = await upgrades.deployProxy(AccountBalance, [positioningConfig.address]);
+    await accountBalance.deployed();
+    vaultController = await upgrades.deployProxy(VaultController, [
+      positioningConfig.address,
+      accountBalance.address,
+    ]);
 
+    await positioningConfig.deployed();
     USDC = await TestERC20.deploy();
     await USDC.__TestERC20_init("TestUSDC", "USDC", 6);
     await USDC.deployed();
@@ -86,6 +132,7 @@ describe("MatchingEngine", function () {
         initializer: "__MatchingEngineTest_init",
       },
     );
+
     await markPriceOracle.setObservationAdder(matchingEngine.address);
 
     transferManagerTest = await upgrades.deployProxy(
@@ -96,20 +143,129 @@ describe("MatchingEngine", function () {
       },
     );
 
-    virtualToken = await upgrades.deployProxy(VirtualToken, ["VirtualToken", "VTK", true], {
+    virtualToken = await upgrades.deployProxy(VirtualToken, ["VirtualToken", "VTK", false], {
       initializer: "initialize",
     });
     await virtualToken.deployed();
-    await virtualToken.setMintBurnRole(owner.address);
+    positioning = await upgrades.deployProxy(
+      Positioning,
+      [
+        positioningConfig.address,
+        vaultController.address,
+        accountBalance.address,
+        matchingEngine.address,
+        markPriceOracle.address,
+        indexPriceOracle.address,
+        0,
+        [owner.address, account2.address],
+      ],
+      {
+        initializer: "initialize",
+      },
+    );
+
+    vault = await upgrades.deployProxy(Vault, [
+      positioningConfig.address,
+      accountBalance.address,
+      virtualToken.address,
+      accountBalance.address,
+      false,
+    ]);
+    await (await virtualToken.setMintBurnRole(owner.address)).wait();
+    await virtualToken.mint(account1.address, ten.toString());
+    await virtualToken.mint(account2.address, ten.toString());
+    await (await volmexBaseToken.setMintBurnRole(positioning.address)).wait();
+    await (await virtualToken.connect(owner).setMintBurnRole(positioning.address)).wait();
+    marketRegistry = await upgrades.deployProxy(MarketRegistry, [virtualToken.address]);
+    perpViewFake = await smock.fake("VolmexPerpView");
+    volmexPerpPeriphery = await upgrades.deployProxy(VolmexPerpPeriphery, [
+      perpViewFake.address,
+      markPriceOracle.address,
+      indexPriceOracle.address,
+      [vault.address, vault.address],
+      owner.address,
+      account4.address,
+    ]);
+    await indexPriceOracle.setObservationAdder(owner.address);
+    await marketRegistry.connect(owner).addBaseToken(volmexBaseToken.address);
+
+    await marketRegistry.connect(owner).setMakerFeeRatio(0.0004e6);
+    await marketRegistry.connect(owner).setTakerFeeRatio(0.0009e6);
+    await matchingEngine.grantMatchOrders(positioning.address);
+
+    await accountBalance.connect(owner).setPositioning(positioning.address);
+
+    await vault.connect(owner).setPositioning(positioning.address);
+    await vault.connect(owner).setVaultController(vaultController.address);
+    await vaultController.registerVault(vault.address, virtualToken.address);
+    await vaultController.connect(owner).setPositioning(positioning.address);
+
+    await positioningConfig.connect(owner).setMaxMarketsPerAccount(5);
+    await positioningConfig
+      .connect(owner)
+      .setSettlementTokenBalanceCap("100000000000000000000000000000000000");
+
+    await positioning.connect(owner).setMarketRegistry(marketRegistry.address);
+    await positioning.connect(owner).setDefaultFeeReceiver(owner.address);
+    await positioning.connect(owner).setPositioning(positioning.address);
+    await (await markPriceOracle.setPositioning(positioning.address)).wait();
+    await (await markPriceOracle.setIndexOracle(indexPriceOracle.address)).wait();
+    await (await markPriceOracle.setMarkTwInterval(300)).wait();
+    await (await markPriceOracle.setIndexTwInterval(3600)).wait();
 
     asset = Asset(virtualToken.address, "10");
 
+    await virtualToken.connect(account1).approve(vault.address, ten.toString());
+    await virtualToken.connect(account2).approve(vault.address, ten.toString());
+    await virtualToken.connect(account1).approve(volmexPerpPeriphery.address, ten.toString());
+    await virtualToken.connect(account2).approve(volmexPerpPeriphery.address, ten.toString());
+
+    // volmexPerpPeriphery.address, USDC.address, alice.address, amount
+    await vaultController
+      .connect(account1)
+      .deposit(
+        volmexPerpPeriphery.address,
+        virtualToken.address,
+        account1.address,
+        ten.toString(),
+      );
+    await vaultController
+      .connect(account2)
+      .deposit(
+        volmexPerpPeriphery.address,
+        virtualToken.address,
+        account2.address,
+        ten.toString(),
+      );
+    const orderLeft2 = Order(
+      ORDER,
+      deadline,
+      account1.address,
+      Asset(volmexBaseToken.address, two.toString()),
+      Asset(virtualToken.address, two.toString()),
+      45,
+      0,
+      true,
+      twapType,
+    );
+
+    const orderRight2 = Order(
+      ORDER,
+      deadline,
+      account2.address,
+      Asset(virtualToken.address, one.toString()),
+      Asset(volmexBaseToken.address, one.toString()),
+      67,
+      0,
+      false,
+      twapType,
+    );
     orderLeft = Order(
       ORDER,
       deadline,
       account1.address,
-      Asset(virtualToken.address, two.toString()),
       Asset(volmexBaseToken.address, two.toString()),
+      Asset(virtualToken.address, two.toString()),
       1,
       0,
       true,
@@ -120,13 +276,20 @@ describe("MatchingEngine", function () {
       ORDER,
       deadline,
       account2.address,
-      Asset(volmexBaseToken.address, one.toString()),
       Asset(virtualToken.address, one.toString()),
+      Asset(volmexBaseToken.address, one.toString()),
       2,
       0,
       false,
       twapType,
     );
+    let signatureLeft = await getSignature(orderLeft2, account1.address);
+    let signatureRight = await getSignature(orderRight2, account2.address);
+    await expect(
+      positioning
+        .connect(account1)
+        .openPosition(orderLeft2, signatureLeft, orderRight2, signatureRight, liquidator),
+    ).to.emit(positioning, "PositionChanged");
   });
 
   describe("Deployment", function () {
@@ -165,7 +328,6 @@ describe("MatchingEngine", function () {
         twapType,
       );
       await matchingEngine.setMakerMinSalt("100");
-      console.log("here");
       await expect(matchingEngine.cancelOrder(order1)).to.be.revertedWith(
         "V_PERP_M: order salt lower",
       );
@@ -372,7 +534,6 @@ describe("MatchingEngine", function () {
         await expect(matchingEngine.matchOrders(orderLeft, orderRight)).to.be.revertedWith(
           "V_PERP_M: order verification failed",
         );
-        console.log("Here at failing order due to same traders");
       });
       it("Should Not match orders since executer in not authorised", async () => {
         const [owner, account1, account2] = await ethers.getSigners();
@@ -713,4 +874,7 @@ describe("MatchingEngine", function () {
       );
     });
   });
+  async function getSignature(orderObj, signer) {
+    return sign(orderObj, signer, positioning.address);
+  }
 });

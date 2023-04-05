@@ -1,26 +1,28 @@
 // SPDX-License-Identifier: BUSL - 1.1
 pragma solidity =0.8.18;
 
-import {AccessControlUpgradeable} from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
+import { AccessControlUpgradeable } from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 
-import {LibOrder} from "../libs/LibOrder.sol";
-import {IMarkPriceOracle} from "../interfaces/IMarkPriceOracle.sol";
-import {IIndexPriceOracle} from "../interfaces/IIndexPriceOracle.sol";
-import {IPositioning} from "../interfaces/IPositioning.sol";
-import {IVaultController} from "../interfaces/IVaultController.sol";
-import {IVolmexPerpPeriphery, IERC20Upgradeable, IVirtualToken} from "../interfaces/IVolmexPerpPeriphery.sol";
-import {IVolmexPerpView} from "../interfaces/IVolmexPerpView.sol";
-import {IPositioningConfig} from "../interfaces/IPositioningConfig.sol";
+import { LibOrder } from "../libs/LibOrder.sol";
+import { IMarkPriceOracle } from "../interfaces/IMarkPriceOracle.sol";
+import { IIndexPriceOracle } from "../interfaces/IIndexPriceOracle.sol";
+import { IPositioning } from "../interfaces/IPositioning.sol";
+import { IVaultController } from "../interfaces/IVaultController.sol";
+import { IVolmexPerpPeriphery, IERC20Upgradeable, IVirtualToken } from "../interfaces/IVolmexPerpPeriphery.sol";
+import { IVolmexPerpView } from "../interfaces/IVolmexPerpView.sol";
+import { IPositioningConfig } from "../interfaces/IPositioningConfig.sol";
 
 contract VolmexPerpPeriphery is AccessControlUpgradeable, IVolmexPerpPeriphery {
     // perp periphery role
     bytes32 public constant VOLMEX_PERP_PERIPHERY = keccak256("VOLMEX_PERP_PERIPHERY");
     // role of relayer to execute open position
     bytes32 public constant RELAYER_MULTISIG = keccak256("RELAYER_MULTISIG");
+    // role for whitelisting traders
+    bytes32 public constant TRADER_WHITELISTER = keccak256("TRADER_WHITELISTER");
 
     // Store the whitelist Vaults
     mapping(address => bool) private _isVaultWhitelist;
-    
+
     // Store the whitelist traders
     mapping(address => bool) public isTraderWhitelisted;
 
@@ -63,7 +65,10 @@ contract VolmexPerpPeriphery is AccessControlUpgradeable, IVolmexPerpPeriphery {
         }
         isTraderWhitelistEnabled = true;
         _grantRole(VOLMEX_PERP_PERIPHERY, _owner);
+        _grantRole(TRADER_WHITELISTER, _owner);
+        _setRoleAdmin(TRADER_WHITELISTER, TRADER_WHITELISTER);
         _grantRole(RELAYER_MULTISIG, _relayer);
+        _setRoleAdmin(RELAYER_MULTISIG, RELAYER_MULTISIG);
     }
 
     function setMarkPriceOracle(IMarkPriceOracle _markPriceOracle) external {
@@ -90,7 +95,7 @@ contract VolmexPerpPeriphery is AccessControlUpgradeable, IVolmexPerpPeriphery {
     }
 
     function whitelistTrader(address _trader, bool _isWhitelist) external {
-        _requireVolmexPerpPeripheryAdmin();
+        _requireTraderWhitelister();
         isTraderWhitelisted[_trader] = _isWhitelist;
         emit TraderWhitelisted(_trader, _isWhitelist);
     }
@@ -199,6 +204,10 @@ contract VolmexPerpPeriphery is AccessControlUpgradeable, IVolmexPerpPeriphery {
         require(isTraderWhitelisted[trader], "Periphery: trader not whitelisted");
     }
 
+    function _requireTraderWhitelister() internal view {
+        require(hasRole(TRADER_WHITELISTER, _msgSender()), "VolmexPerpPeriphery: Not whitelister");
+    }
+
     // Note for V2: Change the logic to round id, if Volmex Oracle implements price by round id functionality
     function _verifyTriggerPrice(LibOrder.Order memory _limitOrder, IPositioning _positioning) private view returns (bool) {
         // Note for V2: Add check for round id, when Volmex Oracle updates functionality
@@ -237,11 +246,11 @@ contract VolmexPerpPeriphery is AccessControlUpgradeable, IVolmexPerpPeriphery {
         // TODO: change to index, mark and mark's latest price
         uint256 _index = markPriceOracle.indexByBaseToken(baseToken);
         if (_order.twapType == LibOrder.MARK_TWAP) {
-            price = markPriceOracle.getLastTwap(_twInterval, _index);
+            price = markPriceOracle.getMarkTwap(_twInterval, _index);
         } else if (_order.twapType == LibOrder.INDEX_TWAP) {
             price = indexPriceOracle.getLastTwap(_twInterval, _index);
         } else {
-            price = markPriceOracle.getLastTwap(60, _index);
+            price = markPriceOracle.getMarkTwap(60, _index);
         }
     }
 }
