@@ -41,8 +41,6 @@ contract MarkPriceOracle is AccessControlUpgradeable {
     mapping(address => uint256) public indexByBaseToken;
     // mapping to store baseToken to Observations
     mapping(uint256 => MarkPriceObservation[]) public observationsByIndex;
-    // Store the volatilitycapratio by index
-    mapping(uint256 => uint256) public volatilityCapRatioByIndex;
 
     event ObservationAdderSet(address indexed matchingEngine);
     event ObservationAdded(uint256 indexed index, uint256 underlyingPrice, uint256 markPrice, uint256 timestamp);
@@ -58,10 +56,9 @@ contract MarkPriceOracle is AccessControlUpgradeable {
         uint256[] calldata _priceCumulative,
         address[] calldata _asset,
         bytes32[] calldata _proofHash,
-        uint256[] calldata _capRatio,
         address _admin
     ) external initializer {
-        _addAssets(_priceCumulative, _asset, _proofHash, _capRatio);
+        _addAssets(_priceCumulative, _asset, _proofHash);
         _setRoleAdmin(PRICE_ORACLE_ADMIN, PRICE_ORACLE_ADMIN);
         _grantRole(PRICE_ORACLE_ADMIN, _admin);
         markTwInterval = 300; // 5 minutes
@@ -168,11 +165,10 @@ contract MarkPriceOracle is AccessControlUpgradeable {
     function addAssets(
         uint256[] calldata _underlyingPrice,
         address[] calldata _asset,
-        bytes32[] calldata _proofHash,
-        uint256[] calldata _capRatio
+        bytes32[] calldata _proofHash
     ) external {
         _requireOracleAdmin();
-        _addAssets(_underlyingPrice, _asset, _proofHash, _capRatio);
+        _addAssets(_underlyingPrice, _asset, _proofHash);
     }
 
     /**
@@ -243,8 +239,7 @@ contract MarkPriceOracle is AccessControlUpgradeable {
     function _addAssets(
         uint256[] calldata _underlyingPrices,
         address[] calldata _assets,
-        bytes32[] calldata _proofHash,
-        uint256[] calldata _capRatio
+        bytes32[] calldata _proofHash
     ) internal {
         uint256 underlyingPriceLength = _underlyingPrices.length;
         require(underlyingPriceLength == _assets.length, "MarkPriceOracle: Unequal length of prices & assets");
@@ -265,7 +260,6 @@ contract MarkPriceOracle is AccessControlUpgradeable {
             });
             baseTokenByIndex[indexCount] = _assets[index];
             indexByBaseToken[_assets[index]] = indexCount;
-            volatilityCapRatioByIndex[indexCount] = _capRatio[index];
             MarkPriceObservation[] storage observations = observationsByIndex[indexCount];
             observations.push(observation);
             indexCount++;
