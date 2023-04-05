@@ -56,10 +56,26 @@ describe("Vault", function () {
     const eth = await tokenFactory3.deploy();
     ETH = await eth.deployed();
     await eth.__TestERC20_init("TestETH", "ETH", 18);
+    indexPriceOracle = await upgrades.deployProxy(
+      IndexPriceOracle,
+      [owner.address, [100000], [alice.address], [proofHash], [capRatio]],
+      {
+        initializer: "initialize",
+      },
+    );
+    await indexPriceOracle.deployed();
 
+    markPriceOracle = await upgrades.deployProxy(
+      MarkPriceOracle,
+      [[100000], [alice.address], [proofHash], [capRatio], owner.address],
+      {
+        initializer: "initialize",
+      },
+    );
     const positioningConfigFactory = await ethers.getContractFactory("PositioningConfig");
-    positioningConfig = await upgrades.deployProxy(positioningConfigFactory, []);
-
+    positioningConfig = await upgrades.deployProxy(positioningConfigFactory, [
+      markPriceOracle.address,
+    ]);
     const accountBalanceFactory = await ethers.getContractFactory("AccountBalance");
     accountBalance = await upgrades.deployProxy(accountBalanceFactory, [
       positioningConfig.address,
@@ -93,22 +109,7 @@ describe("Vault", function () {
       vaultController.address,
       true,
     ]);
-    indexPriceOracle = await upgrades.deployProxy(
-      IndexPriceOracle,
-      [owner.address, [100000], [alice.address], [proofHash], [capRatio]],
-      {
-        initializer: "initialize",
-      },
-    );
-    await indexPriceOracle.deployed();
 
-    markPriceOracle = await upgrades.deployProxy(
-      MarkPriceOracle,
-      [[100000], [alice.address], [proofHash], [capRatio], owner.address],
-      {
-        initializer: "initialize",
-      },
-    );
     await markPriceOracle.deployed();
     matchingEngine = await upgrades.deployProxy(
       MatchingEngine,
