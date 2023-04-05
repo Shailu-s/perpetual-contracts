@@ -48,7 +48,7 @@ contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, 
         address matchingEngineArg,
         address markPriceArg,
         address indexPriceArg,
-        uint64 underlyingPriceIndex,
+        uint256 underlyingPriceIndex,
         address[2] calldata liquidators
     ) external initializer {
         // P_VANC: Vault address is not contract
@@ -121,7 +121,7 @@ contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, 
     }
 
     /// @inheritdoc IPositioning
-    function setFundingPeriod(int256 period) external {
+    function setFundingPeriod(uint256 period) external {
         _requirePositioningAdmin();
         _fundingPeriod = period;
 
@@ -351,11 +351,7 @@ contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, 
             emit FundingPaymentSettled(trader, baseToken, fundingPayment);
         }
 
-        IAccountBalance(_accountBalance).updateTwPremiumGrowthGlobal(
-            trader,
-            baseToken,
-            globalTwPremiumGrowth
-        );
+        IAccountBalance(_accountBalance).updateTwPremiumGrowthGlobal(trader, baseToken, globalTwPremiumGrowth);
     }
 
     /// @dev Add given amount to PnL of the address provided
@@ -389,11 +385,12 @@ contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, 
             internalData.rightExchangedPositionNotional = newFill.leftValue.toInt256();
         }
 
-        OrderFees memory orderFees = _calculateFees(
-            true, // left order is maker
-            internalData.leftExchangedPositionNotional,
-            internalData.rightExchangedPositionNotional
-        );
+        OrderFees memory orderFees =
+            _calculateFees(
+                true, // left order is maker
+                internalData.leftExchangedPositionNotional,
+                internalData.rightExchangedPositionNotional
+            );
 
         int256[2] memory realizedPnL;
         realizedPnL[0] = _realizePnLChecks(orderLeft, baseToken, internalData.leftExchangedPositionSize, internalData.leftExchangedPositionNotional);

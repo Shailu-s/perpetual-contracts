@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: BUSL - 1.1
 pragma solidity =0.8.18;
+import { IMarkPriceOracle } from "../interfaces/IMarkPriceOracle.sol";
 
 /// @notice For future upgrades, do not change PositioningConfigStorageV1. Create a new
 /// contract which implements PositioningConfigStorageV1 and following the naming convention
@@ -15,4 +16,5 @@ abstract contract PositioningConfigStorageV1 {
     uint24 internal _maxFundingRate;
     uint32 internal _twapInterval;
     uint256 internal _settlementTokenBalanceCap;
+    IMarkPriceOracle public markPriceOracle;
 }

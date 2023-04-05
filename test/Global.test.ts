@@ -52,6 +52,8 @@ describe("Global", function () {
   const seven = ethers.constants.WeiPerEther.mul(BigNumber.from("7")); // 2e18
   const nine = ethers.constants.WeiPerEther.mul(BigNumber.from("9")); // 2e18
   const deadline = 87654321987654;
+  const proofHash = "0x6c00000000000000000000000000000000000000000000000000000000000000";
+  const capRatio = "4000000000";
 
   this.beforeAll(async () => {
     [owner, account1, account2] = await ethers.getSigners();
@@ -77,11 +79,6 @@ describe("Global", function () {
   });
 
   this.beforeEach(async () => {
-    indexPriceOracle = await upgrades.deployProxy(IndexPriceOracle, [owner.address], {
-      initializer: "initialize",
-    });
-    await indexPriceOracle.deployed();
-
     perpView = await upgrades.deployProxy(VolmexPerpView, [owner.address]);
     await perpView.deployed();
     await (await perpView.grantViewStatesRole(owner.address)).wait();
@@ -91,7 +88,7 @@ describe("Global", function () {
       [
         "VolmexBaseToken", // nameArg
         "VBT", // symbolArg,
-        indexPriceOracle.address, // priceFeedArg
+        account1.address, // priceFeedArg
         true, // isBase
       ],
       {
@@ -99,6 +96,20 @@ describe("Global", function () {
       },
     );
     await volmexBaseToken.deployed();
+    indexPriceOracle = await upgrades.deployProxy(
+      IndexPriceOracle,
+      [owner.address, [100000000], [volmexBaseToken.address], [proofHash], [capRatio]],
+      {
+        initializer: "initialize",
+      },
+    );
+    await indexPriceOracle.deployed();
+    await indexPriceOracle.setObservationAdder(owner.address);
+    for (let index = 0; index < 10; index++) {
+      await (await indexPriceOracle.addObservation(100000000, 0, proofHash)).wait();
+      await (await indexPriceOracle.addObservation(100000000, 1, proofHash)).wait();
+    }
+    await volmexBaseToken.setPriceFeed(indexPriceOracle.address);
     await (await perpView.setBaseToken(volmexBaseToken.address)).wait();
 
     volmexQuoteToken = await upgrades.deployProxy(
@@ -117,7 +128,7 @@ describe("Global", function () {
 
     markPriceOracle = await upgrades.deployProxy(
       MarkPriceOracle,
-      [[1000000], [volmexBaseToken.address]],
+      [[10000000], [volmexBaseToken.address], [proofHash], owner.address],
       {
         initializer: "initialize",
       },
@@ -134,12 +145,12 @@ describe("Global", function () {
       markPriceOracle.address,
     ]);
     await matchingEngine.deployed();
-    await (await markPriceOracle.setMatchingEngine(matchingEngine.address)).wait();
+    await (await markPriceOracle.setObservationAdder(matchingEngine.address)).wait();
 
-    positioningConfig = await upgrades.deployProxy(PositioningConfig, []);
+    positioningConfig = await upgrades.deployProxy(PositioningConfig, [markPriceOracle.address]);
     await positioningConfig.deployed();
     await positioningConfig.setMaxMarketsPerAccount(5);
-    await positioningConfig.setSettlementTokenBalanceCap("1000000000000000000");
+    await positioningConfig.setSettlementTokenBalanceCap("10000000000000000000000000");
 
     accountBalance = await upgrades.deployProxy(AccountBalance, [positioningConfig.address]);
     await accountBalance.deployed();
@@ -192,10 +203,15 @@ describe("Global", function () {
     await (await vaultController.setPositioning(positioning.address)).wait();
     await (await vaultController.registerVault(vault.address, usdc.address)).wait();
     await (await accountBalance.setPositioning(positioning.address)).wait();
+    await (await markPriceOracle.setPositioning(positioning.address)).wait();
+    await (await markPriceOracle.setIndexOracle(indexPriceOracle.address)).wait();
+    await markPriceOracle.grantTwapIntervalRole(positioningConfig.address);
+    await positioningConfig.setTwapInterval(28800);
 
     periphery = await upgrades.deployProxy(VolmexPerpPeriphery, [
       perpView.address,
       markPriceOracle.address,
+      indexPriceOracle.address,
       [vault.address, vault.address],
       owner.address,
       owner.address, // replace with relayer
@@ -223,24 +239,24 @@ describe("Global", function () {
   });
 
   it("should match orders and open position", async () => {
-    const txn = await markPriceOracle.getCumulativePrice(10000000, 0);
+    const txn = await markPriceOracle.getMarkTwap(10000000, 0);
 
     await matchingEngine.grantMatchOrders(positioning.address);
 
-    await usdc.connect(owner).mint(account1.address, "1000000000000000");
-    await usdc.connect(owner).mint(account2.address, "1000000000000000");
+    await usdc.connect(owner).mint(account1.address, "10000000000000000000");
+    await usdc.connect(owner).mint(account2.address, "10000000000000000000");
 
-    await usdc.connect(account1).approve(periphery.address, "1000000000000000");
-    await usdc.connect(account2).approve(periphery.address, "1000000000000000");
-    await periphery.connect(account1).depositToVault(0, usdc.address, "10000000000");
-    await periphery.connect(account2).depositToVault(0, usdc.address, "10000000000");
+    await usdc.connect(account1).approve(periphery.address, "10000000000000000000");
+    await usdc.connect(account2).approve(periphery.address, "10000000000000000000");
+    await periphery.connect(account1).depositToVault(0, usdc.address, "10000000000000000000");
+    await periphery.connect(account2).depositToVault(0, usdc.address, "10000000000000000000");
 
     orderLeft = Order(
       ORDER,
       deadline,
       account1.address,
       Asset(volmexQuoteToken.address, one.toString()),
-      Asset(volmexBaseToken.address, two.toString()),
+      Asset(volmexBaseToken.address, one.toString()),
       5,
       0,
       false,
@@ -250,7 +266,7 @@ describe("Global", function () {
       ORDER,
       deadline,
       account2.address,
-      Asset(volmexBaseToken.address, two.toString()),
+      Asset(volmexBaseToken.address, one.toString()),
       Asset(volmexQuoteToken.address, one.toString()),
       6,
       0,
@@ -267,7 +283,7 @@ describe("Global", function () {
         .connect(account1)
         .openPosition(orderLeft, signatureLeft, orderRight, signatureRight, liquidator),
     ).to.emit(positioning, "PositionChanged");
-
+    console.log("here");
     let positionSize = await accountBalance.getPositionSize(
       account1.address,
       orderLeft.takeAsset.virtualToken,
@@ -281,10 +297,7 @@ describe("Global", function () {
       [
         "open notional",
         (
-          await accountBalance.getOpenNotional(
-            account1.address,
-            orderLeft.takeAsset.virtualToken,
-          )
+          await accountBalance.getOpenNotional(account1.address, orderLeft.takeAsset.virtualToken)
         ).toString(),
       ],
       ["", ""],
@@ -292,35 +305,27 @@ describe("Global", function () {
       [
         "open notional 1",
         (
-          await accountBalance.getOpenNotional(
-            account2.address,
-            orderLeft.takeAsset.virtualToken,
-          )
+          await accountBalance.getOpenNotional(account2.address, orderLeft.takeAsset.virtualToken)
         ).toString(),
       ],
     ]);
     console.log("Another call \n");
 
-    expect(positionSize).to.be.equal("2000000000000000000");
-    expect(positionSize1).to.be.equal("-2000000000000000000");
+    expect(positionSize).to.be.equal("1000000000000000000");
+    expect(positionSize1).to.be.equal("-1000000000000000000");
 
     const proofHash = "0x6c00000000000000000000000000000000000000000000000000000000000000";
 
     for (let index = 0; index < 10; index++) {
-      await (
-        await indexPriceOracle.updateBatchVolatilityTokenPrice(
-          [0, 1],
-          [200000000, 200000000],
-          [proofHash, proofHash],
-        )
-      ).wait();
+      await (await indexPriceOracle.addObservation(100000000, 0, proofHash)).wait();
+      await (await indexPriceOracle.addObservation(100000000, 1, proofHash)).wait();
     }
 
     orderLeft = Order(
       ORDER,
       deadline,
       account1.address,
-      Asset(volmexBaseToken.address, three.toString()),
+      Asset(volmexBaseToken.address, one.toString()),
       Asset(volmexQuoteToken.address, one.toString()),
       1,
       0,
@@ -332,7 +337,7 @@ describe("Global", function () {
       deadline,
       account2.address,
       Asset(volmexQuoteToken.address, one.toString()),
-      Asset(volmexBaseToken.address, three.toString()),
+      Asset(volmexBaseToken.address, one.toString()),
       2,
       0,
       false,
@@ -362,10 +367,7 @@ describe("Global", function () {
       [
         "open notional",
         (
-          await accountBalance.getOpenNotional(
-            account1.address,
-            orderLeft.makeAsset.virtualToken,
-          )
+          await accountBalance.getOpenNotional(account1.address, orderLeft.makeAsset.virtualToken)
         ).toString(),
       ],
       ["", ""],
@@ -373,10 +375,7 @@ describe("Global", function () {
       [
         "open notional 1",
         (
-          await accountBalance.getOpenNotional(
-            account2.address,
-            orderLeft.makeAsset.virtualToken,
-          )
+          await accountBalance.getOpenNotional(account2.address, orderLeft.makeAsset.virtualToken)
         ).toString(),
       ],
     ]);
@@ -386,8 +385,8 @@ describe("Global", function () {
       ORDER,
       deadline,
       account1.address,
-      Asset(volmexBaseToken.address, three.toString()),
-      Asset(volmexQuoteToken.address, two.toString()),
+      Asset(volmexBaseToken.address, one.toString()),
+      Asset(volmexQuoteToken.address, one.toString()),
       3,
       0,
       true,
@@ -397,8 +396,8 @@ describe("Global", function () {
       ORDER,
       deadline,
       account2.address,
-      Asset(volmexQuoteToken.address, two.toString()),
-      Asset(volmexBaseToken.address, three.toString()),
+      Asset(volmexQuoteToken.address, one.toString()),
+      Asset(volmexBaseToken.address, one.toString()),
       4,
       0,
       false,
@@ -428,10 +427,7 @@ describe("Global", function () {
       [
         "open notional",
         (
-          await accountBalance.getOpenNotional(
-            account1.address,
-            orderLeft.makeAsset.virtualToken,
-          )
+          await accountBalance.getOpenNotional(account1.address, orderLeft.makeAsset.virtualToken)
         ).toString(),
       ],
       ["", ""],
@@ -439,10 +435,7 @@ describe("Global", function () {
       [
         "open notional 1",
         (
-          await accountBalance.getOpenNotional(
-            account2.address,
-            orderLeft.makeAsset.virtualToken,
-          )
+          await accountBalance.getOpenNotional(account2.address, orderLeft.makeAsset.virtualToken)
         ).toString(),
       ],
     ]);
@@ -450,27 +443,27 @@ describe("Global", function () {
 
   it("should match orders and open position", async () => {
     const index = await markPriceOracle.indexByBaseToken(volmexBaseToken.address);
-    let observations = await markPriceOracle.getCumulativePrice(3600, index);
+    let observations = await markPriceOracle.getMarkTwap(3600, index);
     console.log("observations", observations.toString());
 
     await matchingEngine.grantMatchOrders(positioning.address);
 
-    await usdc.connect(owner).mint(account1.address, "1000000000000000");
-    await usdc.connect(owner).mint(account2.address, "1000000000000000");
+    await usdc.connect(owner).mint(account1.address, "10000000000000000000");
+    await usdc.connect(owner).mint(account2.address, "10000000000000000000");
 
-    await usdc.connect(account1).approve(periphery.address, "1000000000000000");
-    await usdc.connect(account2).approve(periphery.address, "1000000000000000");
+    await usdc.connect(account1).approve(periphery.address, "10000000000000000000");
+    await usdc.connect(account2).approve(periphery.address, "10000000000000000000");
 
-    await periphery.connect(account1).depositToVault(0, usdc.address, "10000000000");
-    await periphery.connect(account2).depositToVault(0, usdc.address, "10000000000");
+    await periphery.connect(account1).depositToVault(0, usdc.address, "10000000000000000000");
+    await periphery.connect(account2).depositToVault(0, usdc.address, "10000000000000000000");
 
     // Both partial filled {5, 2} {3, 1}
     orderLeft = Order(
       ORDER,
       deadline,
       account1.address,
-      Asset(volmexQuoteToken.address, five.toString()),
-      Asset(volmexBaseToken.address, two.toString()),
+      Asset(volmexQuoteToken.address, three.toString()),
+      Asset(volmexBaseToken.address, one.toString()),
       1,
       0,
       false,
@@ -480,7 +473,7 @@ describe("Global", function () {
       ORDER,
       deadline,
       account2.address,
-      Asset(volmexBaseToken.address, three.toString()),
+      Asset(volmexBaseToken.address, two.toString()),
       Asset(volmexQuoteToken.address, one.toString()),
       1,
       0,
@@ -509,10 +502,7 @@ describe("Global", function () {
       [
         "open notional",
         (
-          await accountBalance.getOpenNotional(
-            account1.address,
-            orderLeft.takeAsset.virtualToken,
-          )
+          await accountBalance.getOpenNotional(account1.address, orderLeft.takeAsset.virtualToken)
         ).toString(),
       ],
       ["", ""],
@@ -520,31 +510,23 @@ describe("Global", function () {
       [
         "open notional 1",
         (
-          await accountBalance.getOpenNotional(
-            account2.address,
-            orderLeft.takeAsset.virtualToken,
-          )
+          await accountBalance.getOpenNotional(account2.address, orderLeft.takeAsset.virtualToken)
         ).toString(),
       ],
     ]);
 
-    observations = await markPriceOracle.getCumulativePrice(3600, index);
+    observations = await markPriceOracle.getMarkTwap(3600, index);
     console.log("observations", observations.toString());
     console.log("Another call \n");
 
-    expect(positionSize).to.be.equal("400000000000000000");
-    expect(positionSize1).to.be.equal("-400000000000000000");
+    expect(positionSize).to.be.equal("333333333333333333");
+    expect(positionSize1).to.be.equal("-333333333333333333");
 
     const proofHash = "0x6c00000000000000000000000000000000000000000000000000000000000000";
 
     for (let index = 0; index < 10; index++) {
-      await (
-        await indexPriceOracle.updateBatchVolatilityTokenPrice(
-          [0, 1],
-          [200000000, 200000000],
-          [proofHash, proofHash],
-        )
-      ).wait();
+      await (await indexPriceOracle.addObservation(100000000, 0, proofHash)).wait();
+      await (await indexPriceOracle.addObservation(100000000, 1, proofHash)).wait();
     }
 
     // both partially filled {2, 3} {2, 1}
@@ -552,8 +534,8 @@ describe("Global", function () {
       ORDER,
       deadline,
       account1.address,
-      Asset(volmexBaseToken.address, two.toString()),
-      Asset(volmexQuoteToken.address, three.toString()),
+      Asset(volmexBaseToken.address, one.toString()),
+      Asset(volmexQuoteToken.address, two.toString()),
       1,
       0,
       true,
@@ -592,10 +574,7 @@ describe("Global", function () {
       [
         "open notional",
         (
-          await accountBalance.getOpenNotional(
-            account1.address,
-            orderLeft.makeAsset.virtualToken,
-          )
+          await accountBalance.getOpenNotional(account1.address, orderLeft.makeAsset.virtualToken)
         ).toString(),
       ],
       ["", ""],
@@ -603,16 +582,14 @@ describe("Global", function () {
       [
         "open notional 1",
         (
-          await accountBalance.getOpenNotional(
-            account2.address,
-            orderLeft.makeAsset.virtualToken,
-          )
+          await accountBalance.getOpenNotional(account2.address, orderLeft.makeAsset.virtualToken)
         ).toString(),
       ],
     ]);
 
-    observations = await markPriceOracle.getCumulativePrice(3600, index);
+    observations = await markPriceOracle.getMarkTwap(3600, index);
     console.log("observations", observations.toString());
+
     console.log("Another call \n");
 
     // right partially filled {2, 1} {2, 3}
@@ -660,10 +637,7 @@ describe("Global", function () {
       [
         "open notional",
         (
-          await accountBalance.getOpenNotional(
-            account1.address,
-            orderLeft.makeAsset.virtualToken,
-          )
+          await accountBalance.getOpenNotional(account1.address, orderLeft.makeAsset.virtualToken)
         ).toString(),
       ],
       ["", ""],
@@ -671,15 +645,12 @@ describe("Global", function () {
       [
         "open notional 1",
         (
-          await accountBalance.getOpenNotional(
-            account2.address,
-            orderLeft.makeAsset.virtualToken,
-          )
+          await accountBalance.getOpenNotional(account2.address, orderLeft.makeAsset.virtualToken)
         ).toString(),
       ],
     ]);
 
-    observations = await markPriceOracle.getCumulativePrice(3600, index);
+    observations = await markPriceOracle.getMarkTwap(3600, index);
     console.log("observations", observations.toString());
   });
 

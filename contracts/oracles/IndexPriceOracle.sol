@@ -3,224 +3,95 @@
 pragma solidity =0.8.18;
 
 import "@openzeppelin/contracts-upgradeable/utils/introspection/ERC165StorageUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
+import { AccessControlUpgradeable } from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 
-import "../interfaces/IVolmexProtocol.sol";
 import "../interfaces/IIndexPriceOracle.sol";
-import "./IndexTWAP.sol";
 
 /**
  * @title Volmex Oracle contract
  * @author volmex.finance [security@volmexlabs.com]
  */
-contract IndexPriceOracle is ERC165StorageUpgradeable, IndexTWAP, IIndexPriceOracle, AccessControlUpgradeable {
-    // price precision constant upto 6 decimal places
-    uint256 private constant _VOLATILITY_PRICE_PRECISION = 1000000;
-    // maximum allowed number of index volatility datapoints for calculating twap
-    uint256 private constant _MAX_ALLOWED_TWAP_DATAPOINTS = 6;
+contract IndexPriceOracle is AccessControlUpgradeable, ERC165StorageUpgradeable {
+    struct IndexObservation {
+        uint256 timestamp;
+        uint256 underlyingPrice;
+        bytes32 proofHash;
+    }
     // Interface ID of VolmexOracle contract, hashId = 0xf9fffc9f
     bytes4 private constant _IVOLMEX_ORACLE_ID = type(IIndexPriceOracle).interfaceId;
-    // index price admin role
-    bytes32 public constant INDEX_PRICE_ORACLE_ADMIN = keccak256("INDEX_PRICE_ORACLE_ADMIN");
+    // price oracle admin role
+    bytes32 public constant PRICE_ORACLE_ADMIN = keccak256("PRICE_ORACLE_ADMIN");
+    // role of observation collection
+    bytes32 public constant ADD_OBSERVATION_ROLE = keccak256("ADD_OBSERVATION_ROLE");
 
-    // Store the price of volatility by indexes { 0 - ETHV, 1 = BTCV }
-    mapping(uint256 => uint256) private _volatilityTokenPriceByIndex;
-
+    // indices of volatility index {0: ETHV, 1: BTCV}
+    uint256 internal _indexCount;
+    // mapping to store index to the address of the baseToken
+    mapping(uint256 => address) public baseTokenByIndex;
+    // mapping to store index by base token address
+    mapping(address => uint256) public indexByBaseToken;
+    // mapping to store baseToken to Observations
+    mapping(uint256 => IndexObservation[]) public observationsByIndex;
     // Store the volatilitycapratio by index
     mapping(uint256 => uint256) public volatilityCapRatioByIndex;
-    // Store the proof of hash of the current volatility token price
-    mapping(uint256 => bytes32) public volatilityTokenPriceProofHash;
-    // Store the index of volatility by symbol
-    mapping(string => uint256) public volatilityIndexBySymbol;
-    // Store the leverage on volatility by index
-    mapping(uint256 => uint256) public volatilityLeverageByIndex;
-    // Store the base volatility index by leverage volatility index
-    mapping(uint256 => uint256) public baseVolatilityIndex;
-    // Store the timestamp of volatility price update by index
-    mapping(uint256 => uint256) public volatilityLastUpdateTimestamp;
-    // Store the number of indexes
-    uint256 public indexCount;
+
+    event ObservationAdderSet(address indexed matchingEngine);
+    event ObservationAdded(uint256 indexed index, uint256 underlyingPrice, uint256 timestamp);
+    event AssetsAdded(uint256 indexed lastIndex, address[] assets, uint256[] underlyingPrices);
 
     /**
      * @notice Initializes the contract setting the deployer as the initial owner.
      */
-    function initialize(address _owner) external initializer {
-        _updateTwapMaxDatapoints(_MAX_ALLOWED_TWAP_DATAPOINTS);
-
-        _updateVolatilityMeta(indexCount, 100000000, "");
-        volatilityIndexBySymbol["ETHV"] = indexCount;
-        volatilityCapRatioByIndex[indexCount] = 400000000;
-
-        indexCount++;
-
-        _updateVolatilityMeta(indexCount, 100000000, "");
-        volatilityIndexBySymbol["BTCV"] = indexCount;
-        volatilityCapRatioByIndex[indexCount] = 400000000;
-
+    function initialize(
+        address _admin,
+        uint256[] calldata _volatilityPrices,
+        address[] calldata _volatilityIndex,
+        bytes32[] calldata _proofHash,
+        uint256[] calldata _capRatio
+    ) external initializer {
+        _grantRole(PRICE_ORACLE_ADMIN, _admin);
+        _addAssets(_volatilityPrices, _volatilityIndex, _proofHash, _capRatio);
+        _setRoleAdmin(PRICE_ORACLE_ADMIN, PRICE_ORACLE_ADMIN);
         __ERC165Storage_init();
         _registerInterface(_IVOLMEX_ORACLE_ID);
-        _grantRole(INDEX_PRICE_ORACLE_ADMIN, _owner);
     }
 
     /**
-     * @notice Update the volatility token index by symbol
-     * @param _index Number value of the index. { eg. 0 }
-     * @param _tokenSymbol Symbol of the adding volatility token
+     * @notice Used to add price cumulative of an asset at a given timestamp
+     *
+     * @param _underlyingPrice Price of the asset
+     * @param _index position of the asset
+     * @param _underlyingPrice hash of price collection
      */
-    function updateIndexBySymbol(string calldata _tokenSymbol, uint256 _index) external {
-        _requireIndexPriceOracleAdmin();
-        volatilityIndexBySymbol[_tokenSymbol] = _index;
-
-        emit SymbolIndexUpdated(_index);
-    }
-
-    /**
-     * @notice Update the baseVolatilityIndex of leverage token
-     * @param _leverageVolatilityIndex Index of the leverage volatility token
-     * @param _newBaseVolatilityIndex Index of the base volatility token
-     */
-    function updateBaseVolatilityIndex(uint256 _leverageVolatilityIndex, uint256 _newBaseVolatilityIndex) external {
-        _requireIndexPriceOracleAdmin();
-        baseVolatilityIndex[_leverageVolatilityIndex] = _newBaseVolatilityIndex;
-
-        emit BaseVolatilityIndexUpdated(_newBaseVolatilityIndex);
-    }
-
-    /**
-     * @notice Add volatility token price by index
-     * @param _volatilityTokenPrice Price of the adding volatility token
-     * @param _protocol Address of the VolmexProtocol of which the price is added
-     * @param _volatilityTokenSymbol Symbol of the adding volatility token
-     * @param _leverage Value of leverage on token {2X: 2, 5X: 5}
-     * @param _baseVolatilityIndex Index of the base volatility {0: ETHV, 1: BTCV}
-     * @param _proofHash Bytes32 value of token price proof of hash
-     */
-    function addVolatilityIndex(
-        uint256 _volatilityTokenPrice,
-        IVolmexProtocol _protocol,
-        string calldata _volatilityTokenSymbol,
-        uint256 _leverage,
-        uint256 _baseVolatilityIndex,
+    function addObservation(
+        uint256 _underlyingPrice,
+        uint256 _index,
         bytes32 _proofHash
-    ) external {
-        _requireIndexPriceOracleAdmin();
-        require(address(_protocol) != address(0), "VolmexOracle: protocol address can't be zero");
-        uint256 _volatilityCapRatio = _protocol.volatilityCapRatio() * _VOLATILITY_PRICE_PRECISION;
-        require(_volatilityCapRatio >= 1000000, "VolmexOracle: volatility cap ratio should be greater than 1000000");
-        uint256 _index = ++indexCount;
-        volatilityCapRatioByIndex[_index] = _volatilityCapRatio;
-        volatilityIndexBySymbol[_volatilityTokenSymbol] = _index;
-
-        if (_leverage > 1) {
-            // This will also check the base volatilities are present
-            require(volatilityCapRatioByIndex[_baseVolatilityIndex] / _leverage == _volatilityCapRatio, "VolmexOracle: Invalid _baseVolatilityIndex provided");
-            volatilityLeverageByIndex[_index] = _leverage;
-            baseVolatilityIndex[_index] = _baseVolatilityIndex;
-            _addIndexDataPoint(_index, _volatilityTokenPriceByIndex[_baseVolatilityIndex] / _leverage);
-
-            emit LeveragedVolatilityIndexAdded(_index, _volatilityCapRatio, _volatilityTokenSymbol, _leverage, _baseVolatilityIndex);
-        } else {
-            require(_volatilityTokenPrice <= _volatilityCapRatio, "VolmexOracle: _volatilityTokenPrice should be smaller than VolatilityCapRatio");
-            _updateVolatilityMeta(_index, _volatilityTokenPrice, _proofHash);
-
-            emit VolatilityIndexAdded(_index, _volatilityCapRatio, _volatilityTokenSymbol, _volatilityTokenPrice);
-        }
+    ) external virtual {
+        _requireCanAddObservation();
+        require(_underlyingPrice != 0, "IndexPriceOracle: Not zero");
+        _pushOrderPrice(_index, _underlyingPrice, _proofHash);
+        emit ObservationAdded(_index, _underlyingPrice, block.timestamp);
     }
 
     /**
-     * @notice Updates the volatility token price by index
-     *
-     * @dev Check if volatility token price is greater than zero (0)
-     * @dev Update the volatility token price corresponding to the volatility token symbol
-     * @dev Store the volatility token price corresponding to the block number
-     * @dev Update the proof of hash for the volatility token price
-     *
-     * @param _volatilityIndexes Number array of values of the volatility index. { eg. 0 }
-     * @param _volatilityTokenPrices array of prices of volatility token, between {0, 250000000}
-     * @param _proofHashes arrau of Bytes32 values of token prices proof of hash
-     *
-     * NOTE: Make sure the volatility token price are with 6 decimals, eg. 125000000
-     */
-    function updateBatchVolatilityTokenPrice(
-        uint256[] memory _volatilityIndexes,
-        uint256[] memory _volatilityTokenPrices,
-        bytes32[] memory _proofHashes
-    ) external {
-        _requireIndexPriceOracleAdmin();
-        require(
-            _volatilityIndexes.length == _volatilityTokenPrices.length && _volatilityIndexes.length == _proofHashes.length,
-            "VolmexOracle: length of input arrays are not equal"
-        );
-        for (uint256 i = 0; i < _volatilityIndexes.length; i++) {
-            require(_volatilityTokenPrices[i] <= volatilityCapRatioByIndex[_volatilityIndexes[i]], "VolmexOracle: _volatilityTokenPrice should be smaller than VolatilityCapRatio");
-
-            _updateVolatilityMeta(_volatilityIndexes[i], _volatilityTokenPrices[i], _proofHashes[i]);
-        }
-
-        emit BatchVolatilityTokenPriceUpdated(_volatilityIndexes, _volatilityTokenPrices, _proofHashes);
-    }
-
-    /**
-     * @notice Adds a new datapoint to the datapoints storage array
-     *
+     * @notice Emulate the Chainlink Oracle interface for retrieving Volmex TWAP volatility index
      * @param _index Datapoints volatility index id {0}
-     * @param _value Datapoint value to add {250000000}
+     * @param _twInterval time for averaging observations
+     * @return answer is the answer for the given round
      */
-    function addIndexDataPoint(uint256 _index, uint256 _value) external {
-        _requireIndexPriceOracleAdmin();
-        _addIndexDataPoint(_index, _value);
+    function latestRoundData(uint256 _twInterval, uint256 _index) external view virtual returns (uint256 answer, uint256 lastUpdateTimestamp) {
+        uint256 startTimestamp = block.timestamp - _twInterval;
+        (answer, lastUpdateTimestamp) = _getCustomIndexTwap(_index, startTimestamp, block.timestamp);
+        answer *= 100;
     }
 
     /**
-     * @notice Update maximum amount of volatility index datapoints for calculating the TWAP
-     *
-     * @param _value Max datapoints value {180}
+     * @notice Get volatility indices price of normal and inverse with last timestamp
+     * @param _twInterval time interval for twap
+     * @param _index Position of the observation
      */
-    function updateTwapMaxDatapoints(uint256 _value) external {
-        _requireIndexPriceOracleAdmin();
-        _updateTwapMaxDatapoints(_value);
-    }
-
-    /**
-     * @notice Get the volatility token price by symbol
-     * @param _volatilityTokenSymbol Symbol of the volatility token
-     */
-    function getVolatilityPriceBySymbol(string calldata _volatilityTokenSymbol)
-        external
-        view
-        returns (
-            uint256 volatilityTokenPrice,
-            uint256 iVolatilityTokenPrice,
-            uint256 lastUpdateTimestamp
-        )
-    {
-        uint256 volatilityIndex = volatilityIndexBySymbol[_volatilityTokenSymbol];
-        (volatilityTokenPrice, iVolatilityTokenPrice, lastUpdateTimestamp) = _getVolatilityTokenPrice(volatilityIndex);
-    }
-
-    /**
-     * @notice Get the volatility token price by index
-     * @param _index index of the volatility token
-     */
-    function getVolatilityTokenPriceByIndex(uint256 _index)
-        external
-        view
-        returns (
-            uint256 volatilityTokenPrice,
-            uint256 iVolatilityTokenPrice,
-            uint256 lastUpdateTimestamp
-        )
-    {
-        (volatilityTokenPrice, iVolatilityTokenPrice, lastUpdateTimestamp) = _getVolatilityTokenPrice(_index);
-    }
-
-    /**
-     * @notice Get the TWAP value from current available datapoints
-     * @param _index Datapoints volatility index id {0}
-     *
-     * @dev This method is a replica of `getVolatilityTokenPriceByIndex(_index)`
-     */
-    function getIndexTwap(uint256 _index)
+    function getIndexTwap(uint256 _twInterval, uint256 _index)
         external
         view
         returns (
@@ -229,63 +100,168 @@ contract IndexPriceOracle is ERC165StorageUpgradeable, IndexTWAP, IIndexPriceOra
             uint256 lastUpdateTimestamp
         )
     {
-        (volatilityTokenTwap, iVolatilityTokenTwap, lastUpdateTimestamp) = _getVolatilityTokenPrice(_index);
-    }
-
-    /**
-     * @notice Get all datapoints available for a specific volatility index
-     * @param _index Datapoints volatility index id {0}
-     */
-    function getIndexDataPoints(uint256 _index) external view returns (uint256[] memory dp) {
-        dp = _getIndexDataPoints(_index);
-    }
-
-    /**
-     * @notice Emulate the Chainlink Oracle interface for retrieving Volmex TWAP volatility index
-     * @param _index Datapoints volatility index id {0}
-     * @return answer is the answer for the given round
-     */
-    function latestRoundData(uint256 _index) external view virtual returns (uint256 answer, uint256 lastUpdateTimestamp) {
-        answer = _getIndexTwap(_index) * 100;
-        lastUpdateTimestamp = volatilityLeverageByIndex[_index] > 0 ? volatilityLastUpdateTimestamp[baseVolatilityIndex[_index]] : volatilityLastUpdateTimestamp[_index];
+        uint256 startTimestamp = block.timestamp - _twInterval;
+        (volatilityTokenTwap, lastUpdateTimestamp) = _getCustomIndexTwap(_index, startTimestamp, block.timestamp);
+        iVolatilityTokenTwap = volatilityCapRatioByIndex[_index] - volatilityTokenTwap;
     }
 
     function supportsInterface(bytes4 interfaceId) public view virtual override(AccessControlUpgradeable, ERC165StorageUpgradeable) returns (bool) {
         return super.supportsInterface(interfaceId);
     }
 
-    function _requireIndexPriceOracleAdmin() internal view {
-        require(hasRole(INDEX_PRICE_ORACLE_ADMIN, _msgSender()), "IndexPriceOracle: Not admin");
+    /**
+     * @notice Set price observation collector
+     *
+     * @param _adder Address of price collector
+     */
+    function setObservationAdder(address _adder) external {
+        _requireOracleAdmin();
+        require(_adder != address(0), "IndexPriceOracle: zero address");
+        _grantRole(ADD_OBSERVATION_ROLE, _adder);
+        emit ObservationAdderSet(_adder);
     }
 
-    function _updateVolatilityMeta(
+    /**
+     * @notice Add new observation corresponding to the asset
+     *
+     * @param _underlyingPrice Array of current prices
+     * @param _asset Array of assets {base token addresses}
+     */
+    function addAssets(
+        uint256[] calldata _underlyingPrice,
+        address[] calldata _asset,
+        bytes32[] calldata _proofHash,
+        uint256[] calldata _capRatio
+    ) external {
+        _requireOracleAdmin();
+        _addAssets(_underlyingPrice, _asset, _proofHash, _capRatio);
+    }
+
+    /**
+     * @notice Get the single moving average price of the asset
+     *
+     * @param _twInterval Time in seconds of the range
+     * @param _index Index of the observation, the index base token mapping
+     * @return priceCumulative The SMA price of the asset
+     */
+    function getLastTwap(uint256 _twInterval, uint256 _index) public view returns (uint256 priceCumulative) {
+        uint256 startTimestamp = block.timestamp - _twInterval;
+        (priceCumulative, ) = _getCustomIndexTwap(_index, startTimestamp, block.timestamp);
+    }
+
+    /**
+     * @notice Get price cumulative of custom window of the observations
+     *
+     * @param _index Position of the asset in Observations
+     * @param _startTimestamp timestamp of start of window
+     * @param _endTimestamp timestamp of last of window
+     */
+    function getCustomIndexTwap(
         uint256 _index,
-        uint256 _volatilityTokenPrice,
-        bytes32 _proofHash
-    ) private {
-        _addIndexDataPoint(_index, _volatilityTokenPrice);
-        _volatilityTokenPriceByIndex[_index] = _getIndexTwap(_index);
-        volatilityLastUpdateTimestamp[_index] = block.timestamp;
-        volatilityTokenPriceProofHash[_index] = _proofHash;
+        uint256 _startTimestamp,
+        uint256 _endTimestamp
+    ) external view returns (uint256 priceCumulative) {
+        (priceCumulative, ) = _getCustomIndexTwap(_index, _startTimestamp, _endTimestamp);
     }
 
-    function _getVolatilityTokenPrice(uint256 _index)
-        private
-        view
-        returns (
-            uint256 volatilityTokenTwap,
-            uint256 iVolatilityTokenTwap,
-            uint256 lastUpdateTimestamp
-        )
-    {
-        if (volatilityLeverageByIndex[_index] > 0) {
-            uint256 baseIndex = baseVolatilityIndex[_index];
-            volatilityTokenTwap = (_getIndexTwap(baseIndex)) / volatilityLeverageByIndex[_index];
-            lastUpdateTimestamp = volatilityLastUpdateTimestamp[baseIndex];
-        } else {
-            volatilityTokenTwap = _getIndexTwap(_index);
-            lastUpdateTimestamp = volatilityLastUpdateTimestamp[_index];
+    /**
+     * @notice Get latest price of asset
+     *
+     * @param _index Index of the observation, the index base token mapping
+     */
+    function getLastPrice(uint256 _index) public view returns (uint256 underlyingLastPrice) {
+        IndexObservation[] memory observations = observationsByIndex[_index];
+        uint256 index = observations.length - 1;
+        underlyingLastPrice = observations[index].underlyingPrice;
+    }
+
+    /**
+     * @notice Get index count of assets
+     */
+    function getIndexCount() external view returns (uint256) {
+        return _indexCount;
+    }
+
+    function getLastUpdatedTimestamp(uint256 _index) external view returns (uint256 lastUpdatedTimestamp) {
+        IndexObservation[] memory observations = observationsByIndex[_index];
+        lastUpdatedTimestamp = observations[observations.length - 1].timestamp;
+    }
+
+    function _addAssets(
+        uint256[] calldata _underlyingPrices,
+        address[] calldata _assets,
+        bytes32[] calldata _proofHash,
+        uint256[] calldata _capRatio
+    ) internal {
+        uint256 underlyingPriceLength = _underlyingPrices.length;
+        require(underlyingPriceLength == _assets.length, "IndexPriceOracle: Unequal length of prices & assets");
+
+        for (uint256 index; index < underlyingPriceLength; index++) {
+            require(_assets[index] != address(0), "IndexPriceOracle: Asset address can't be 0");
         }
-        iVolatilityTokenTwap = volatilityCapRatioByIndex[_index] - volatilityTokenTwap;
+
+        IndexObservation memory observation;
+        uint256 indexCount = _indexCount;
+        uint256 currentTimestamp = block.timestamp;
+        for (uint256 index; index < underlyingPriceLength; index++) {
+            observation = IndexObservation({ timestamp: currentTimestamp, underlyingPrice: _underlyingPrices[index], proofHash: _proofHash[index] });
+            baseTokenByIndex[indexCount] = _assets[index];
+            indexByBaseToken[_assets[index]] = indexCount;
+            volatilityCapRatioByIndex[indexCount] = _capRatio[index];
+            IndexObservation[] storage observations = observationsByIndex[indexCount];
+            observations.push(observation);
+            indexCount++;
+        }
+        _indexCount = indexCount;
+
+        emit AssetsAdded(_indexCount, _assets, _underlyingPrices);
+    }
+
+    function _pushOrderPrice(
+        uint256 _index,
+        uint256 _underlyingPrice,
+        bytes32 _proofHash
+    ) internal {
+        IndexObservation memory observation = IndexObservation({ timestamp: block.timestamp, underlyingPrice: _underlyingPrice, proofHash: _proofHash });
+        IndexObservation[] storage observations = observationsByIndex[_index];
+        observations.push(observation);
+    }
+
+    function _getCustomIndexTwap(
+        uint256 _index,
+        uint256 _startTimestamp,
+        uint256 _endTimestamp
+    ) internal view returns (uint256 priceCumulative, uint256 lastUpdatedTimestamp) {
+        IndexObservation[] memory observations = observationsByIndex[_index];
+        uint256 index = observations.length;
+        lastUpdatedTimestamp = observations[index - 1].timestamp;
+        uint256 startIndex;
+        uint256 endIndex;
+
+        if (observations[index - 1].timestamp < _endTimestamp) {
+            _endTimestamp = observations[index - 1].timestamp;
+        }
+        for (; index != 0 && index >= startIndex; index--) {
+            if (observations[index - 1].timestamp >= _endTimestamp) {
+                endIndex = index - 1;
+            } else if (observations[index - 1].timestamp >= _startTimestamp) {
+                startIndex = index - 1;
+            }
+        }
+
+        index = 0; // re-used to get total observation count
+        for (; startIndex <= endIndex; startIndex++) {
+            priceCumulative += observations[startIndex].underlyingPrice;
+            index++;
+        }
+        priceCumulative = priceCumulative / index;
+    }
+
+    function _requireOracleAdmin() internal view {
+        require(hasRole(PRICE_ORACLE_ADMIN, _msgSender()), "IndexPriceOracle: not admin");
+    }
+
+    function _requireCanAddObservation() internal view {
+        require(hasRole(ADD_OBSERVATION_ROLE, _msgSender()), "IndexPriceOracle: not observation adder");
     }
 }
