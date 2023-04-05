@@ -6,7 +6,7 @@ const { Order, Asset, sign, encodeAddress } = require("../order");
 import { utils } from "ethers";
 const { expectRevert, time } = require("@openzeppelin/test-helpers");
 
-describe.only("MarkPriceOracle", function () {
+describe("MarkPriceOracle", function () {
   let MatchingEngine;
   let matchingEngine;
   let VirtualToken;
@@ -209,6 +209,7 @@ describe.only("MarkPriceOracle", function () {
     await positioning.connect(owner).setPositioning(positioning.address);
 
     await (await matchingEngine.grantMatchOrders(positioning.address)).wait();
+    await markPriceOracle.grantTwapIntervalRole(positioningConfig.address);
     await markPriceOracle.setPositioning(positioning.address);
     await markPriceOracle.setIndexOracle(indexPriceOracle.address);
     await positioningConfig.setTwapInterval(28800);
@@ -486,7 +487,6 @@ describe.only("MarkPriceOracle", function () {
       );
     });
     it("Should return values from last epoch ", async () => {
-      await markPriceOracle.setMarkTwInterval(28800);
       await time.increase(28800);
       const firstTimestamp = await time.latest();
       for (let i = 0; i <= 20; i++) {

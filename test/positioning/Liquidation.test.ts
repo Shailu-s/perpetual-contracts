@@ -152,7 +152,7 @@ describe("Liquidation test in Positioning", function () {
 
     erc1271Test = await ERC1271Test.deploy();
 
-    positioningConfig = await upgrades.deployProxy(PositioningConfig, []);
+    positioningConfig = await upgrades.deployProxy(PositioningConfig, [markPriceOracle.address]);
     await positioningConfig.deployed();
 
     accountBalance = await upgrades.deployProxy(AccountBalance, [positioningConfig.address]);
@@ -278,7 +278,6 @@ describe("Liquidation test in Positioning", function () {
       1,
       0,
       true,
-      twapType,
     );
 
     orderRight = Order(
@@ -290,7 +289,6 @@ describe("Liquidation test in Positioning", function () {
       1,
       0,
       false,
-      twapType,
     );
     orderLeft1 = Order(
       ORDER,
@@ -301,7 +299,6 @@ describe("Liquidation test in Positioning", function () {
       10,
       0,
       true,
-      twapType,
     );
 
     orderRight1 = Order(
@@ -313,12 +310,11 @@ describe("Liquidation test in Positioning", function () {
       100,
       0,
       false,
-      twapType,
     );
     await (await markPriceOracle.setPositioning(positioning.address)).wait();
     await (await markPriceOracle.setIndexOracle(indexPriceOracle.address)).wait();
-    await (await markPriceOracle.setMarkTwInterval(300)).wait();
-    await (await markPriceOracle.setIndexTwInterval(3600)).wait();
+    await (await markPriceOracle.grantTwapIntervalRole(positioningConfig.address)).wait();
+    await positioningConfig.setTwapInterval(28800);
     // for (let i = 0; i < 9; i++) {
     //   await matchingEngine.addObservation(1000000, 0);
     // }
