@@ -493,6 +493,23 @@ describe("MarkPriceOracle", function () {
         "MarkPriceOracle: zero address",
       );
     });
+    it("Should return values from last epoch ", async () => {
+      await markPriceOracle.setMarkTwInterval(28800);
+      await time.increase(28800);
+      const firstTimestamp = await time.latest();
+      for (let i = 0; i <= 20; i++) {
+        await markPriceOracle.addObservation(70000000, 0, proofHash);
+      }
+      await time.increase(28800);
+      const secondTimestamp = await time.latest();
+      const cumulativePrice1 = await markPriceOracle.getCustomUnderlyingTwap(
+        0,
+        Number(firstTimestamp),
+        Number(secondTimestamp),
+      );
+
+      expect(parseInt(cumulativePrice1)).to.equal(70000000);
+    });
   });
   async function getSignature(orderObj, signer) {
     return sign(orderObj, signer, positioning.address);
