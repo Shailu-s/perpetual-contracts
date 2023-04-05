@@ -6,7 +6,7 @@ const { Order, Asset, sign, encodeAddress } = require("../order");
 import { utils } from "ethers";
 const { expectRevert, time } = require("@openzeppelin/test-helpers");
 
-describe("MarkPriceOracle", function () {
+describe.only("MarkPriceOracle", function () {
   let MatchingEngine;
   let matchingEngine;
   let VirtualToken;
@@ -116,7 +116,6 @@ describe("MarkPriceOracle", function () {
     await volmexQuoteToken.deployed();
     await (await perpView.setQuoteToken(volmexQuoteToken.address)).wait();
 
-    positioningConfig = await upgrades.deployProxy(PositioningConfig, []);
     markPriceOracle = await upgrades.deployProxy(
       MarkPriceOracle,
       [[60000000], [volmexBaseToken.address], [proofHash], [capRatio], owner.address],
@@ -124,6 +123,7 @@ describe("MarkPriceOracle", function () {
         initializer: "initialize",
       },
     );
+    positioningConfig = await upgrades.deployProxy(PositioningConfig, [markPriceOracle.address]);
     matchingEngine = await upgrades.deployProxy(MatchingEngine, [
       owner.address,
       markPriceOracle.address,
@@ -211,8 +211,7 @@ describe("MarkPriceOracle", function () {
     await (await matchingEngine.grantMatchOrders(positioning.address)).wait();
     await markPriceOracle.setPositioning(positioning.address);
     await markPriceOracle.setIndexOracle(indexPriceOracle.address);
-    await markPriceOracle.setMarkTwInterval(300);
-    await markPriceOracle.setIndexTwInterval(36000);
+    await positioningConfig.setTwapInterval(28800);
 
     volmexPerpPeriphery = await upgrades.deployProxy(VolmexPerpPeriphery, [
       perpView.address,
@@ -274,7 +273,6 @@ describe("MarkPriceOracle", function () {
       salt++,
       0,
       false,
-      twapType,
     );
 
     let orderRight = Order(
@@ -286,7 +284,6 @@ describe("MarkPriceOracle", function () {
       salt++,
       0,
       true,
-      twapType,
     );
 
     const signatureLeft = await getSignature(orderLeft, alice.address);
