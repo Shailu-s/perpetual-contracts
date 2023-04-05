@@ -223,9 +223,7 @@ describe.only("MarkPriceOracle", function () {
     ]);
     await volmexPerpPeriphery.deployed();
     await markPriceOracle.setObservationAdder(owner.address);
-    for (let i = 0; i < 9; i++) {
-      await markPriceOracle.addObservation(60000000, 0, proofHash);
-    }
+
     const depositAmount = BigNumber.from("1000000000000000000000");
     let baseAmount = "1000000000000000000"; //500
     let quoteAmount = "60000000000000000000"; //100
@@ -298,9 +296,6 @@ describe.only("MarkPriceOracle", function () {
       liquidator,
     );
     await markPriceOracle.setObservationAdder(owner.address);
-    for (let i = 0; i < 9; i++) {
-      await markPriceOracle.addObservation(60000000, 0, proofHash);
-    }
   });
 
   describe("Deployment", function () {
