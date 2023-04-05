@@ -31,7 +31,7 @@ contract MarkPriceOracle is AccessControlUpgradeable {
     // role of observation collection
     bytes32 public constant ADD_OBSERVATION_ROLE = keccak256("ADD_OBSERVATION_ROLE");
     // role of observation collection
-    bytes32 public constant POSITIIONING_CONFIG = keccak256("POSITIIONING_CONFIG");
+    bytes32 public constant TWAP_INTERVAL_ROLE = keccak256("TWAP_INTERVAL_ROLE");
 
     // indices of volatility index {0: ETHV, 1: BTCV}
     uint256 internal _indexCount;
@@ -78,12 +78,12 @@ contract MarkPriceOracle is AccessControlUpgradeable {
     }
 
     /**
-     * @notice Set positioning config contract
-     * @param _positioningConfig Address of positioning contract typed in interface
+     * @notice grant Twap interval role to positioning config contract
+     * @param _positioningConfig Address of positioning contract typed
      */
-    function setPositioningConfig(address _positioningConfig) external virtual {
+    function grantTwapIntervalRole(address _positioningConfig) external virtual {
         _requireOracleAdmin();
-        _grantRole(POSITIIONING_CONFIG, _positioningConfig);
+        _grantRole(TWAP_INTERVAL_ROLE, _positioningConfig);
     }
 
     /**
@@ -100,7 +100,7 @@ contract MarkPriceOracle is AccessControlUpgradeable {
      * @param _markTwInterval Address of positioning contract typed in interface
      */
     function setMarkTwInterval(uint256 _markTwInterval) external virtual {
-        _requirePositioningConfigRole();
+        _requireTwapIntervalRole();
         markTwInterval = _markTwInterval;
     }
 
@@ -109,7 +109,7 @@ contract MarkPriceOracle is AccessControlUpgradeable {
      * @param _indexTwInterval Address of positioning contract typed in interface
      */
     function setIndexTwInterval(uint256 _indexTwInterval) external virtual {
-        _requirePositioningConfigRole();
+        _requireTwapIntervalRole();
         indexTwInterval = _indexTwInterval;
     }
 
@@ -323,8 +323,8 @@ contract MarkPriceOracle is AccessControlUpgradeable {
         require(hasRole(PRICE_ORACLE_ADMIN, _msgSender()), "MarkPriceOracle: not admin");
     }
 
-    function _requirePositioningConfigRole() internal view {
-        require(hasRole(POSITIIONING_CONFIG, _msgSender()), "MarkPriceOracle: not positioning Config");
+    function _requireTwapIntervalRole() internal view {
+        require(hasRole(TWAP_INTERVAL_ROLE, _msgSender()), "MarkPriceOracle: not twap interval role");
     }
 
     function _requireCanAddObservation() internal view {
