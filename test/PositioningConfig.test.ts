@@ -4,18 +4,31 @@ import { ethers, upgrades } from "hardhat";
 describe("PositioningConfig", function () {
   let PositioningConfig;
   let positioningConfig;
+  let MarkPriceOracle;
+  let markPriceOracle;
   let owner, account1;
-
+  const proofHash = "0x6c00000000000000000000000000000000000000000000000000000000000000";
+  const capRatio = "40000000";
   this.beforeAll(async () => {
     PositioningConfig = await ethers.getContractFactory("PositioningConfig");
+    MarkPriceOracle = await ethers.getContractFactory("MarkPriceOracle");
     [owner, account1] = await ethers.getSigners();
   });
 
   this.beforeEach(async () => {
-    positioningConfig = await upgrades.deployProxy(PositioningConfig, [], {
+    markPriceOracle = await upgrades.deployProxy(
+      MarkPriceOracle,
+      [[100000], [account1.address], [proofHash], [capRatio], owner.address],
+      {
+        initializer: "initialize",
+      },
+    );
+
+    positioningConfig = await upgrades.deployProxy(PositioningConfig, [markPriceOracle.address], {
       initializer: "initialize",
     });
     await positioningConfig.deployed();
+    await markPriceOracle.grantTwapIntervalRole(positioningConfig.address);
   });
 
   describe("Deployment", () => {
@@ -41,13 +54,10 @@ describe("PositioningConfig", function () {
       await expect(liquidationPenaltyRatio).to.be.equal(50000);
     });
 
-    it("should setLiquidationPenaltyRatio for ratio = 0", async () => {
-      await expect(positioningConfig.setLiquidationPenaltyRatio(0))
-        .to.emit(positioningConfig, "LiquidationPenaltyRatioChanged")
-        .withArgs(0);
-
-      const liquidationPenaltyRatio = await positioningConfig.getLiquidationPenaltyRatio();
-      await expect(liquidationPenaltyRatio).to.be.equal(0);
+    it("should set mark Price oracle mark twap interval to 500", async () => {
+      await positioningConfig.setTwapInterval(500);
+      const twap = await markPriceOracle.markTwInterval();
+      expect(parseInt(twap)).to.be.equal(500);
     });
 
     it("should setLiquidationPenaltyRatio for ratio = 1e6", async () => {
