@@ -58,7 +58,7 @@ describe("Positioning", function () {
   const TAKE_PROFIT_LIMIT_ORDER = "0xe0fc7f94";
   const ZERO_ADDR = "0x0000000000000000000000000000000000000000";
   const proofHash = "0x6c00000000000000000000000000000000000000000000000000000000000000";
-  const capRatio = "250";
+  const capRatio = "400000000";
 
   this.beforeAll(async () => {
     VolmexPerpPeriphery = await ethers.getContractFactory("VolmexPerpPeriphery");
@@ -110,7 +110,7 @@ describe("Positioning", function () {
     await volmexBaseToken.setPriceFeed(indexPriceOracle.address);
     markPriceOracle = await upgrades.deployProxy(
       MarkPriceOracle,
-      [[100000000], [volmexBaseToken.address], [proofHash], [capRatio], owner.address],
+      [[100000000], [volmexBaseToken.address], [proofHash], owner.address],
       {
         initializer: "initialize",
       },
@@ -2285,7 +2285,6 @@ describe("Liquidation test in Positioning", function () {
         [100000000, 100000000],
         [volmexBaseToken.address, volmexBaseToken1.address],
         [proofHash, proofHash],
-        [capRatio, capRatio],
         owner.address,
       ],
       {

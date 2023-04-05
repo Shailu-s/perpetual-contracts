@@ -118,7 +118,7 @@ describe("MarkPriceOracle", function () {
 
     markPriceOracle = await upgrades.deployProxy(
       MarkPriceOracle,
-      [[60000000], [volmexBaseToken.address], [proofHash], [capRatio], owner.address],
+      [[60000000], [volmexBaseToken.address], [proofHash], owner.address],
       {
         initializer: "initialize",
       },
@@ -303,7 +303,7 @@ describe("MarkPriceOracle", function () {
     it("Should deploy successfully", async () => {
       let receipt = await upgrades.deployProxy(
         MarkPriceOracle,
-        [[10000000], [volmexBaseToken.address], [proofHash], [capRatio], owner.address],
+        [[10000000], [volmexBaseToken.address], [proofHash], owner.address],
         {
           initializer: "initialize",
         },
@@ -313,20 +313,14 @@ describe("MarkPriceOracle", function () {
     it("Should fail to initialize again", async () => {
       let receipt = await upgrades.deployProxy(
         MarkPriceOracle,
-        [[10000000], [volmexBaseToken.address], [proofHash], [capRatio], owner.address],
+        [[10000000], [volmexBaseToken.address], [proofHash], owner.address],
         {
           initializer: "initialize",
         },
       );
       expect(receipt.confirmations).not.equal(0);
       await expect(
-        receipt.initialize(
-          [10000000],
-          [volmexBaseToken.address],
-          [proofHash],
-          [capRatio],
-          owner.address,
-        ),
+        receipt.initialize([10000000], [volmexBaseToken.address], [proofHash], owner.address),
       ).to.be.revertedWith("Initializable: contract is already initialized");
     });
 
@@ -334,13 +328,7 @@ describe("MarkPriceOracle", function () {
       await expect(
         upgrades.deployProxy(
           MarkPriceOracle,
-          [
-            [10000000, 100000000],
-            [volmexBaseToken.address],
-            [proofHash],
-            [capRatio],
-            owner.address,
-          ],
+          [[10000000, 100000000], [volmexBaseToken.address], [proofHash], owner.address],
           {
             initializer: "initialize",
           },
@@ -352,13 +340,7 @@ describe("MarkPriceOracle", function () {
       await expect(
         upgrades.deployProxy(
           MarkPriceOracle,
-          [
-            [10000000],
-            ["0x0000000000000000000000000000000000000000"],
-            [proofHash],
-            [capRatio],
-            owner.address,
-          ],
+          [[10000000], ["0x0000000000000000000000000000000000000000"], [proofHash], owner.address],
           {
             initializer: "initialize",
           },
@@ -454,12 +436,7 @@ describe("MarkPriceOracle", function () {
 
     it("Should fail to  add multiple observations because uneuqal length of inputs", async () => {
       await expect(
-        markPriceOracle.addAssets(
-          [10000000, 20000000],
-          [volmexBaseToken.address],
-          [proofHash],
-          [capRatio],
-        ),
+        markPriceOracle.addAssets([10000000, 20000000], [volmexBaseToken.address], [proofHash]),
       ).to.be.revertedWith("MarkPriceOracle: Unequal length of prices & assets");
     });
 
@@ -469,7 +446,6 @@ describe("MarkPriceOracle", function () {
           [10000000, 20000000],
           [volmexBaseToken.address, ZERO_ADDR],
           [proofHash, proofHash],
-          [capRatio, capRatio],
         ),
       ).to.be.revertedWith("MarkPriceOracle: Asset address can't be 0");
     });

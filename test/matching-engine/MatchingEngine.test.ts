@@ -41,7 +41,7 @@ describe("MatchingEngine", function () {
   let TestERC20;
   let USDC;
   const proofHash = "0x6c00000000000000000000000000000000000000000000000000000000000000";
-  const capRatio = "250";
+  const capRatio = "400000000";
   let transferManagerTest;
   const deadline = 87654321987654;
   const VirtualTokenAdmin = "0xf24678cc6ef041b5bac447b5fa553504d5f318f8003914a05215b2ac7d7314e2";
@@ -104,7 +104,7 @@ describe("MatchingEngine", function () {
 
     markPriceOracle = await upgrades.deployProxy(
       MarkPriceOracle,
-      [[1000000], [volmexBaseToken.address], [proofHash], [capRatio], owner.address],
+      [[1000000], [volmexBaseToken.address], [proofHash], owner.address],
       {
         initializer: "initialize",
       },
