@@ -31,7 +31,7 @@ contract MarkPriceOracle is AccessControlUpgradeable {
     // role of observation collection
     bytes32 public constant ADD_OBSERVATION_ROLE = keccak256("ADD_OBSERVATION_ROLE");
     // role of observation collection
-    bytes32 public constant POSITIIONING_CONFIG_ROLE = keccak256("POSITIIONING_CONFIG_ROLE");
+    bytes32 public constant POSITIIONING_CONFIG = keccak256("POSITIIONING_CONFIG");
 
     // indices of volatility index {0: ETHV, 1: BTCV}
     uint256 internal _indexCount;
@@ -59,13 +59,11 @@ contract MarkPriceOracle is AccessControlUpgradeable {
         address[] calldata _asset,
         bytes32[] calldata _proofHash,
         uint256[] calldata _capRatio,
-        address _admin,
-        address _positioningConfig
+        address _admin
     ) external initializer {
         _addAssets(_priceCumulative, _asset, _proofHash, _capRatio);
         _setRoleAdmin(PRICE_ORACLE_ADMIN, PRICE_ORACLE_ADMIN);
         _grantRole(PRICE_ORACLE_ADMIN, _admin);
-        _grantRole(POSITIIONING_CONFIG_ROLE, _positioningConfig);
         markTwInterval = 300; // 5 minutes
         indexTwInterval = 3600; // 1 hour
     }
@@ -77,6 +75,15 @@ contract MarkPriceOracle is AccessControlUpgradeable {
     function setPositioning(IPositioning _positioning) external virtual {
         _requireOracleAdmin();
         positioning = _positioning;
+    }
+
+    /**
+     * @notice Set positioning config contract
+     * @param _positioningConfig Address of positioning contract typed in interface
+     */
+    function setPositioningConfig(address _positioningConfig) external virtual {
+        _requireOracleAdmin();
+        _grantRole(POSITIIONING_CONFIG, _positioningConfig);
     }
 
     /**
@@ -120,7 +127,6 @@ contract MarkPriceOracle is AccessControlUpgradeable {
     ) external virtual {
         _requireCanAddObservation();
         require(_underlyingPrice != 0, "MarkPriceOracle: Not zero");
-        console.log(_underlyingPrice, "under lying aaddind");
         uint256 markPrice = _getMarkPrice(baseTokenByIndex[_index], _index).abs();
         _pushOrderPrice(_index, _underlyingPrice, markPrice, _proofHash);
         emit ObservationAdded(_index, _underlyingPrice, markPrice, block.timestamp);
@@ -275,7 +281,6 @@ contract MarkPriceOracle is AccessControlUpgradeable {
         uint256 _markPrice,
         bytes32 _proofHash
     ) internal {
-        console.log(_underlyingPrice, "under lying pushing");
         MarkPriceObservation memory observation =
             MarkPriceObservation({ timestamp: block.timestamp, underlyingPrice: _underlyingPrice, proofHash: _proofHash, markPrice: _markPrice });
         MarkPriceObservation[] storage observations = observationsByIndex[_index];
@@ -320,7 +325,7 @@ contract MarkPriceOracle is AccessControlUpgradeable {
     }
 
     function _requirePositioningConfigRole() internal view {
-        require(hasRole(POSITIIONING_CONFIG_ROLE, _msgSender()), "MarkPriceOracle: not PositioningConfig");
+        require(hasRole(POSITIIONING_CONFIG, _msgSender()), "MarkPriceOracle: not positioning Config");
     }
 
     function _requireCanAddObservation() internal view {
