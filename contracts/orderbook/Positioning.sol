@@ -28,7 +28,6 @@ import { BlockContext } from "../helpers/BlockContext.sol";
 import { FundingRate } from "../funding-rate/FundingRate.sol";
 import { OwnerPausable } from "../helpers/OwnerPausable.sol";
 import { OrderValidator } from "./OrderValidator.sol";
-import "hardhat/console.sol";
 
 // never inherit any new stateful contract. never change the orders of parent stateful contracts
 contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, OwnerPausable, FundingRate, EIP712Upgradeable, OrderValidator {
@@ -161,7 +160,6 @@ contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, 
         bytes memory liquidator
     ) external override whenNotPaused nonReentrant {
         _validateFull(orderLeft, signatureLeft);
-        console.log("validated 1st");
         _validateFull(orderRight, signatureRight);
 
         // short = selling base token
@@ -617,8 +615,6 @@ contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, 
 
     /// @dev This function checks if account of trader is eligible for liquidation
     function _isAccountLiquidatable(address trader) internal view returns (bool) {
-        console.logInt(_getAccountValue(trader));
-        console.logInt(IAccountBalance(_accountBalance).getMarginRequirementForLiquidation(trader));
         return _getAccountValue(trader) < IAccountBalance(_accountBalance).getMarginRequirementForLiquidation(trader);
     }
 

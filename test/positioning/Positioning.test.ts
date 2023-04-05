@@ -4,6 +4,7 @@ const { Order, Asset, sign, encodeAddress } = require("../order");
 import { FakeContract, smock } from "@defi-wonderland/smock";
 import { FundingRate, IndexPriceOracle, MarkPriceOracle } from "../../typechain";
 import { BigNumber } from "ethers";
+const { expectRevert, time } = require("@openzeppelin/test-helpers");
 
 describe("Positioning", function () {
   let MatchingEngine;
@@ -57,8 +58,7 @@ describe("Positioning", function () {
   const TAKE_PROFIT_LIMIT_ORDER = "0xe0fc7f94";
   const ZERO_ADDR = "0x0000000000000000000000000000000000000000";
   const proofHash = "0x6c00000000000000000000000000000000000000000000000000000000000000";
-  const capRatio = "250";
-  const twapType = "0x1444f8cf";
+  const capRatio = "400000000";
 
   this.beforeAll(async () => {
     VolmexPerpPeriphery = await ethers.getContractFactory("VolmexPerpPeriphery");
@@ -110,7 +110,7 @@ describe("Positioning", function () {
     await volmexBaseToken.setPriceFeed(indexPriceOracle.address);
     markPriceOracle = await upgrades.deployProxy(
       MarkPriceOracle,
-      [[100000000], [volmexBaseToken.address], [proofHash], [capRatio], owner.address],
+      [[100000000], [volmexBaseToken.address], [proofHash], owner.address],
       {
         initializer: "initialize",
       },
@@ -138,9 +138,9 @@ describe("Positioning", function () {
 
     erc1271Test = await ERC1271Test.deploy();
 
-    positioningConfig = await upgrades.deployProxy(PositioningConfig, []);
+    positioningConfig = await upgrades.deployProxy(PositioningConfig, [markPriceOracle.address]);
     await positioningConfig.deployed();
-
+    await markPriceOracle.grantTwapIntervalRole(positioningConfig.address);
     accountBalance = await upgrades.deployProxy(AccountBalance, [positioningConfig.address]);
     await accountBalance.deployed();
 
@@ -248,7 +248,6 @@ describe("Positioning", function () {
       1,
       0,
       false,
-      twapType,
     );
 
     orderRight = Order(
@@ -260,12 +259,10 @@ describe("Positioning", function () {
       2,
       0,
       true,
-      twapType,
     );
     await (await markPriceOracle.setPositioning(positioning.address)).wait();
     await (await markPriceOracle.setIndexOracle(indexPriceOracle.address)).wait();
-    await (await markPriceOracle.setMarkTwInterval(300)).wait();
-    await (await markPriceOracle.setIndexTwInterval(3600)).wait();
+    await positioningConfig.setTwapInterval(28800);
     // for (let i = 0; i < 9; i++) {
     //   await matchingEngine.addObservation(10000000, 0);
     // }
@@ -506,7 +503,6 @@ describe("Positioning", function () {
           2,
           0,
           false,
-          twapType,
         );
 
         const orderRightLeverage = Order(
@@ -518,7 +514,6 @@ describe("Positioning", function () {
           1,
           0,
           true,
-          twapType,
         );
 
         let signatureLeft = await getSignature(orderLeftLeverage, account1.address);
@@ -588,7 +583,6 @@ describe("Positioning", function () {
           1,
           0,
           false,
-          twapType,
         );
 
         const orderRightLeverage = Order(
@@ -600,7 +594,6 @@ describe("Positioning", function () {
           1,
           0,
           true,
-          twapType,
         );
 
         let signatureLeft = await getSignature(orderLeftLeverage, account1.address);
@@ -678,7 +671,6 @@ describe("Positioning", function () {
           1,
           0,
           true,
-          twapType,
         );
 
         const orderRightLeverage = Order(
@@ -690,7 +682,6 @@ describe("Positioning", function () {
           1,
           0,
           false,
-          twapType,
         );
 
         let signatureLeft = await getSignature(orderLeftLeverage, account1.address);
@@ -757,7 +748,6 @@ describe("Positioning", function () {
           3,
           0,
           true,
-          twapType,
         );
 
         const orderRightLeverage1 = Order(
@@ -769,7 +759,6 @@ describe("Positioning", function () {
           4,
           0,
           false,
-          twapType,
         );
         let signatureLeft1 = await getSignature(orderLeftLeverage1, account2.address);
         let signatureRight1 = await getSignature(orderRightLeverage1, account1.address);
@@ -848,7 +837,6 @@ describe("Positioning", function () {
           1,
           0,
           true,
-          twapType,
         );
 
         const orderRightLeverage = Order(
@@ -860,7 +848,6 @@ describe("Positioning", function () {
           1,
           0,
           false,
-          twapType,
         );
 
         let signatureLeft = await getSignature(orderLeftLeverage, account1.address);
@@ -925,7 +912,6 @@ describe("Positioning", function () {
           3,
           0,
           true,
-          twapType,
         );
 
         const orderRightLeverage1 = Order(
@@ -937,7 +923,6 @@ describe("Positioning", function () {
           4,
           0,
           false,
-          twapType,
         );
         let signatureLeft1 = await getSignature(orderLeftLeverage1, account1.address);
         let signatureRight1 = await getSignature(orderRightLeverage1, account2.address);
@@ -1021,7 +1006,6 @@ describe("Positioning", function () {
           1,
           0,
           true,
-          twapType,
         );
 
         const orderRightLeverage = Order(
@@ -1033,7 +1017,6 @@ describe("Positioning", function () {
           1,
           0,
           false,
-          twapType,
         );
 
         let signatureLeft = await getSignature(orderLeftLeverage, account1.address);
@@ -1072,7 +1055,6 @@ describe("Positioning", function () {
           3,
           0,
           true,
-          twapType,
         );
 
         const orderRightLeverage1 = Order(
@@ -1084,7 +1066,6 @@ describe("Positioning", function () {
           4,
           0,
           false,
-          twapType,
         );
         let signatureLeft1 = await getSignature(orderLeftLeverage1, account1.address);
         let signatureRight1 = await getSignature(orderRightLeverage1, account2.address);
@@ -1180,7 +1161,6 @@ describe("Positioning", function () {
           0,
           0,
           false,
-          twapType,
         );
 
         const orderRightLeverage = Order(
@@ -1192,7 +1172,6 @@ describe("Positioning", function () {
           1,
           0,
           true,
-          twapType,
         );
 
         let signatureLeft = await getSignature(orderLeftLeverage, account1.address);
@@ -1268,7 +1247,6 @@ describe("Positioning", function () {
           1,
           0,
           true,
-          twapType,
         );
 
         const orderRight1 = Order(
@@ -1280,7 +1258,6 @@ describe("Positioning", function () {
           1,
           0,
           false,
-          twapType,
         );
 
         let signatureLeft = await getSignature(orderLeft, account1.address);
@@ -1388,7 +1365,6 @@ describe("Positioning", function () {
           1,
           0,
           false,
-          twapType,
         );
 
         const orderRight = Order(
@@ -1400,7 +1376,6 @@ describe("Positioning", function () {
           2,
           0,
           true,
-          twapType,
         );
 
         let signatureLeft = await getSignature(orderLeft, account1.address);
@@ -1460,7 +1435,6 @@ describe("Positioning", function () {
           2,
           0,
           false,
-          twapType,
         );
 
         const orderLeft1 = Order(
@@ -1472,7 +1446,6 @@ describe("Positioning", function () {
           3,
           0,
           true,
-          twapType,
         );
 
         let signatureLeft1 = await getSignature(orderLeft1, account1.address);
@@ -1614,7 +1587,6 @@ describe("Positioning", function () {
           1,
           0,
           false,
-          twapType,
         );
 
         await expect(
@@ -1659,7 +1631,6 @@ describe("Positioning", function () {
           1,
           0,
           false,
-          twapType,
         );
 
         const orderRightLeverage = Order(
@@ -1671,7 +1642,6 @@ describe("Positioning", function () {
           1,
           0,
           true,
-          twapType,
         );
 
         let signatureLeft = await getSignature(orderLeftLeverage, account1.address);
@@ -1725,7 +1695,6 @@ describe("Positioning", function () {
           1,
           0,
           false,
-          twapType,
         );
 
         orderRight = Order(
@@ -1737,7 +1706,6 @@ describe("Positioning", function () {
           2,
           0,
           true,
-          twapType,
         );
 
         let signatureLeft = await getSignature(orderLeft, account1.address);
@@ -1770,7 +1738,6 @@ describe("Positioning", function () {
           1,
           0,
           false,
-          twapType,
         );
 
         orderRight = Order(
@@ -1782,7 +1749,6 @@ describe("Positioning", function () {
           2,
           0,
           true,
-          twapType,
         );
 
         let signatureLeft = await getSignature(orderLeft, account1.address);
@@ -1864,7 +1830,6 @@ describe("Positioning", function () {
           0,
           0,
           false,
-          twapType,
         );
 
         const orderRightLeverage = Order(
@@ -1876,7 +1841,6 @@ describe("Positioning", function () {
           1,
           0,
           true,
-          twapType,
         );
 
         let signatureLeft = await getSignature(orderLeftLeverage, account1.address);
@@ -1972,7 +1936,6 @@ describe("Positioning", function () {
           1,
           0,
           true,
-          twapType,
         );
 
         const orderRight = Order(
@@ -1984,7 +1947,6 @@ describe("Positioning", function () {
           1,
           0,
           false,
-          twapType,
         );
 
         let signatureLeft = await getSignature(orderLeft, owner.address);
@@ -2013,7 +1975,6 @@ describe("Positioning", function () {
           1,
           0,
           true,
-          twapType,
         );
 
         const orderRight = Order(
@@ -2025,7 +1986,6 @@ describe("Positioning", function () {
           1,
           0,
           false,
-          twapType,
         );
 
         let signatureLeft = await getSignature(orderLeft, account1.address);
@@ -2087,7 +2047,6 @@ describe("Positioning", function () {
           1,
           0,
           true,
-          twapType,
         );
 
         const orderRight1 = Order(
@@ -2099,7 +2058,6 @@ describe("Positioning", function () {
           1,
           0,
           false,
-          twapType,
         );
 
         let signatureLeft = await getSignature(orderLeft1, account1.address);
@@ -2150,7 +2108,6 @@ describe("Positioning", function () {
           1,
           0,
           true,
-          twapType,
         );
 
         const orderRight1 = Order(
@@ -2162,7 +2119,6 @@ describe("Positioning", function () {
           1,
           0,
           false,
-          twapType,
         );
 
         let signatureLeft = await getSignature(orderLeft1, account1.address);
@@ -2250,7 +2206,6 @@ describe("Liquidation test in Positioning", function () {
   const TAKE_PROFIT_LIMIT_ORDER = "0xe0fc7f94";
   const proofHash = "0x6c00000000000000000000000000000000000000000000000000000000000000";
   const capRatio = "250";
-  const twapType = "0x1444f8cf";
 
   this.beforeAll(async () => {
     VolmexPerpPeriphery = await ethers.getContractFactory("VolmexPerpPeriphery");
@@ -2330,7 +2285,6 @@ describe("Liquidation test in Positioning", function () {
         [100000000, 100000000],
         [volmexBaseToken.address, volmexBaseToken1.address],
         [proofHash, proofHash],
-        [capRatio, capRatio],
         owner.address,
       ],
       {
@@ -2341,7 +2295,7 @@ describe("Liquidation test in Positioning", function () {
 
     erc1271Test = await ERC1271Test.deploy();
 
-    positioningConfig = await upgrades.deployProxy(PositioningConfig, []);
+    positioningConfig = await upgrades.deployProxy(PositioningConfig, [markPriceOracle.address]);
     await positioningConfig.deployed();
 
     accountBalance = await upgrades.deployProxy(AccountBalance, [positioningConfig.address]);
@@ -2467,7 +2421,6 @@ describe("Liquidation test in Positioning", function () {
       1,
       0,
       true,
-      twapType,
     );
 
     orderRight = Order(
@@ -2479,7 +2432,6 @@ describe("Liquidation test in Positioning", function () {
       1,
       0,
       false,
-      twapType,
     );
     orderLeft1 = Order(
       ORDER,
@@ -2490,7 +2442,6 @@ describe("Liquidation test in Positioning", function () {
       10,
       0,
       true,
-      twapType,
     );
 
     orderRight1 = Order(
@@ -2502,12 +2453,11 @@ describe("Liquidation test in Positioning", function () {
       100,
       0,
       false,
-      twapType,
     );
     await (await markPriceOracle.setPositioning(positioning.address)).wait();
     await (await markPriceOracle.setIndexOracle(indexPriceOracle.address)).wait();
-    await (await markPriceOracle.setMarkTwInterval(300)).wait();
-    await (await markPriceOracle.setIndexTwInterval(3600)).wait();
+    await (await markPriceOracle.grantTwapIntervalRole(positioningConfig.address)).wait();
+    await positioningConfig.setTwapInterval(28800);
     // for (let i = 0; i < 9; i++) {
     //   await matchingEngine.addObservation(1000000, 0);
     // }
@@ -2518,8 +2468,7 @@ describe("Liquidation test in Positioning", function () {
       it("should liquidate trader", async () => {
         let signatureLeft = await getSignature(orderLeft, account1.address);
         let signatureRight = await getSignature(orderRight, account2.address);
-        console.log((await indexPriceOracle.getLastPrice(0)).toString());
-        console.log((await markPriceOracle.getLastPrice(0)).toString());
+
         await expect(
           positioning.openPosition(
             orderLeft,
@@ -2543,13 +2492,11 @@ describe("Liquidation test in Positioning", function () {
         await expect(positionSize1.toString()).to.be.equal("20000000000000000000");
 
         const proofHash = "0x6c00000000000000000000000000000000000000000000000000000000000000";
-        await time.increase(28000);
+        await time.increase(28800);
         for (let index = 0; index < 10; index++) {
           await (await indexPriceOracle.addObservation(180000000, 0, proofHash)).wait();
           await (await indexPriceOracle.addObservation(180000000, 1, proofHash)).wait();
         }
-        console.log((await indexPriceOracle.getLastPrice(0)).toString());
-        console.log((await markPriceOracle.getLastPrice(0)).toString());
         // liquidating the position
         await expect(
           positioning
@@ -2598,7 +2545,7 @@ describe("Liquidation test in Positioning", function () {
         await expect(positionSize1.toString()).to.be.equal("20000000000000000000");
 
         const proofHash = "0x6c00000000000000000000000000000000000000000000000000000000000000";
-        await time.increase(28000);
+        await time.increase(28800);
         for (let index = 0; index < 10; index++) {
           await (await indexPriceOracle.addObservation(200000000, 0, proofHash)).wait();
           await (await indexPriceOracle.addObservation(200000000, 1, proofHash)).wait();
@@ -2675,7 +2622,7 @@ describe("Liquidation test in Positioning", function () {
         await expect(positionSize1.toString()).to.be.equal("20000000000000000000");
 
         const proofHash = "0x6c00000000000000000000000000000000000000000000000000000000000000";
-        await time.increase(28009);
+        await time.increase(28800);
         for (let index = 0; index < 10; index++) {
           await (await indexPriceOracle.addObservation(200000000, 0, proofHash)).wait();
           await (await indexPriceOracle.addObservation(200000000, 1, proofHash)).wait();
@@ -2749,7 +2696,7 @@ describe("Liquidation test in Positioning", function () {
         await expect(positionSize1.toString()).to.be.equal("20000000000000000000");
 
         const proofHash = "0x6c00000000000000000000000000000000000000000000000000000000000000";
-        await time.increase(28009);
+        await time.increase(28800);
         for (let index = 0; index < 10; index++) {
           await (await indexPriceOracle.addObservation(200000000, 0, proofHash)).wait();
           await (await indexPriceOracle.addObservation(200000000, 1, proofHash)).wait();
@@ -2848,7 +2795,7 @@ describe("Liquidation test in Positioning", function () {
         await expect(positionSize1.toString()).to.be.equal("20000000000000000000");
 
         const proofHash = "0x6c00000000000000000000000000000000000000000000000000000000000000";
-        await time.increase(28009);
+        await time.increase(28800);
         for (let index = 0; index < 10; index++) {
           await (await indexPriceOracle.addObservation(200000000, 0, proofHash)).wait();
           await (await indexPriceOracle.addObservation(200000000, 1, proofHash)).wait();
@@ -2880,8 +2827,7 @@ describe("Liquidation test in Positioning", function () {
           orderLeft.makeAsset.virtualToken,
         );
         const positionsizeAbs = await accountBalance1.getTotalAbsPositionValue(account1.address);
-        console.log(positionsize.toString(), "position size");
-        console.log(positionsizeAbs.toString(), "position sizeabs ");
+
         const positionSize = await accountBalance1.getPositionSize(
           account1.address,
           orderLeft.makeAsset.virtualToken,

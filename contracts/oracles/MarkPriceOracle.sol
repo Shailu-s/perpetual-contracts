@@ -30,6 +30,8 @@ contract MarkPriceOracle is AccessControlUpgradeable {
     bytes32 public constant PRICE_ORACLE_ADMIN = keccak256("PRICE_ORACLE_ADMIN");
     // role of observation collection
     bytes32 public constant ADD_OBSERVATION_ROLE = keccak256("ADD_OBSERVATION_ROLE");
+    // role of observation collection
+    bytes32 public constant TWAP_INTERVAL_ROLE = keccak256("TWAP_INTERVAL_ROLE");
 
     // indices of volatility index {0: ETHV, 1: BTCV}
     uint256 internal _indexCount;
@@ -39,8 +41,6 @@ contract MarkPriceOracle is AccessControlUpgradeable {
     mapping(address => uint256) public indexByBaseToken;
     // mapping to store baseToken to Observations
     mapping(uint256 => MarkPriceObservation[]) public observationsByIndex;
-    // Store the volatilitycapratio by index
-    mapping(uint256 => uint256) public volatilityCapRatioByIndex;
 
     event ObservationAdderSet(address indexed matchingEngine);
     event ObservationAdded(uint256 indexed index, uint256 underlyingPrice, uint256 markPrice, uint256 timestamp);
@@ -56,10 +56,9 @@ contract MarkPriceOracle is AccessControlUpgradeable {
         uint256[] calldata _priceCumulative,
         address[] calldata _asset,
         bytes32[] calldata _proofHash,
-        uint256[] calldata _capRatio,
         address _admin
     ) external initializer {
-        _addAssets(_priceCumulative, _asset, _proofHash, _capRatio);
+        _addAssets(_priceCumulative, _asset, _proofHash);
         _setRoleAdmin(PRICE_ORACLE_ADMIN, PRICE_ORACLE_ADMIN);
         _grantRole(PRICE_ORACLE_ADMIN, _admin);
         markTwInterval = 300; // 5 minutes
@@ -76,6 +75,15 @@ contract MarkPriceOracle is AccessControlUpgradeable {
     }
 
     /**
+     * @notice grant Twap interval role to positioning config contract
+     * @param _positioningConfig Address of positioning contract typed
+     */
+    function grantTwapIntervalRole(address _positioningConfig) external virtual {
+        _requireOracleAdmin();
+        _grantRole(TWAP_INTERVAL_ROLE, _positioningConfig);
+    }
+
+    /**
      * @notice Set positioning contract
      * @param _indexOracle Address of positioning contract typed in interface
      */
@@ -89,7 +97,7 @@ contract MarkPriceOracle is AccessControlUpgradeable {
      * @param _markTwInterval Address of positioning contract typed in interface
      */
     function setMarkTwInterval(uint256 _markTwInterval) external virtual {
-        _requireOracleAdmin();
+        _requireTwapIntervalRole();
         markTwInterval = _markTwInterval;
     }
 
@@ -98,7 +106,7 @@ contract MarkPriceOracle is AccessControlUpgradeable {
      * @param _indexTwInterval Address of positioning contract typed in interface
      */
     function setIndexTwInterval(uint256 _indexTwInterval) external virtual {
-        _requireOracleAdmin();
+        _requireTwapIntervalRole();
         indexTwInterval = _indexTwInterval;
     }
 
@@ -130,7 +138,7 @@ contract MarkPriceOracle is AccessControlUpgradeable {
         int256 indexPrice = indexOracle.getLastTwap(indexTwInterval, _index).toInt256();
         // Note: Check for actual precision and data type
         prices[0] = indexPrice * (1 + lastFundingRate * (nextFunding.toInt256() / fundingPeriod.toInt256()));
-        uint256 markTwap = getLastTwap(markTwInterval, _index);
+        uint256 markTwap = getMarkTwap(markTwInterval, _index);
         prices[1] = markTwap.toInt256();
         prices[2] = getLastPrice(_index).toInt256();
         markPrice = prices[0].median(prices[1], prices[2]);
@@ -157,11 +165,10 @@ contract MarkPriceOracle is AccessControlUpgradeable {
     function addAssets(
         uint256[] calldata _underlyingPrice,
         address[] calldata _asset,
-        bytes32[] calldata _proofHash,
-        uint256[] calldata _capRatio
+        bytes32[] calldata _proofHash
     ) external {
         _requireOracleAdmin();
-        _addAssets(_underlyingPrice, _asset, _proofHash, _capRatio);
+        _addAssets(_underlyingPrice, _asset, _proofHash);
     }
 
     /**
@@ -171,9 +178,9 @@ contract MarkPriceOracle is AccessControlUpgradeable {
      * @param _index Index of the observation, the index base token mapping
      * @return priceCumulative The SMA price of the asset
      */
-    function getLastTwap(uint256 _twInterval, uint256 _index) public view returns (uint256 priceCumulative) {
+    function getMarkTwap(uint256 _twInterval, uint256 _index) public view returns (uint256 priceCumulative) {
         uint256 startTimestamp = block.timestamp - _twInterval;
-        (priceCumulative, ) = _getCustomTwap(_index, startTimestamp, block.timestamp, false);
+        (priceCumulative, ) = _getCustomTwap(_index, startTimestamp, block.timestamp, true);
     }
 
     /**
@@ -232,8 +239,7 @@ contract MarkPriceOracle is AccessControlUpgradeable {
     function _addAssets(
         uint256[] calldata _underlyingPrices,
         address[] calldata _assets,
-        bytes32[] calldata _proofHash,
-        uint256[] calldata _capRatio
+        bytes32[] calldata _proofHash
     ) internal {
         uint256 underlyingPriceLength = _underlyingPrices.length;
         require(underlyingPriceLength == _assets.length, "MarkPriceOracle: Unequal length of prices & assets");
@@ -254,7 +260,6 @@ contract MarkPriceOracle is AccessControlUpgradeable {
             });
             baseTokenByIndex[indexCount] = _assets[index];
             indexByBaseToken[_assets[index]] = indexCount;
-            volatilityCapRatioByIndex[indexCount] = _capRatio[index];
             MarkPriceObservation[] storage observations = observationsByIndex[indexCount];
             observations.push(observation);
             indexCount++;
@@ -285,28 +290,35 @@ contract MarkPriceOracle is AccessControlUpgradeable {
         MarkPriceObservation[] memory observations = observationsByIndex[_index];
         uint256 index = observations.length;
         lastUpdatedTimestamp = observations[index - 1].timestamp;
-        uint256 startIndex;
-        uint256 endIndex;
-        if (observations[index - 1].timestamp < _endTimestamp) {
-            _endTimestamp = observations[index - 1].timestamp;
+        _endTimestamp = lastUpdatedTimestamp < _endTimestamp ? lastUpdatedTimestamp : _endTimestamp;
+        if (lastUpdatedTimestamp < _startTimestamp) {
+            _startTimestamp = ((lastUpdatedTimestamp - observations[0].timestamp) / markTwInterval) * markTwInterval;
         }
-        for (; index != 0 && index >= startIndex; index--) {
-            if (observations[index - 1].timestamp >= _endTimestamp) {
-                endIndex = index - 1;
-            } else if (observations[index - 1].timestamp >= _startTimestamp) {
-                startIndex = index - 1;
+        uint256 priceCount;
+        if (_isMarkTwapRequired) {
+            for (; index != 0 && observations[index - 1].timestamp >= _startTimestamp; index--) {
+                if (observations[index - 1].timestamp <= _endTimestamp) {
+                    priceCumulative += observations[index - 1].markPrice;
+                    priceCount++;
+                }
+            }
+        } else {
+            for (; index != 0 && observations[index - 1].timestamp >= _startTimestamp; index--) {
+                if (observations[index - 1].timestamp <= _endTimestamp) {
+                    priceCumulative += observations[index - 1].underlyingPrice;
+                    priceCount++;
+                }
             }
         }
-        index = 0; // re-used to get total observation count
-        for (; startIndex <= endIndex; startIndex++) {
-            priceCumulative += _isMarkTwapRequired ? observations[startIndex].underlyingPrice : observations[startIndex].underlyingPrice;
-            index++;
-        }
-        priceCumulative = priceCumulative / index;
+        priceCumulative = priceCumulative / priceCount;
     }
 
     function _requireOracleAdmin() internal view {
         require(hasRole(PRICE_ORACLE_ADMIN, _msgSender()), "MarkPriceOracle: not admin");
+    }
+
+    function _requireTwapIntervalRole() internal view {
+        require(hasRole(TWAP_INTERVAL_ROLE, _msgSender()), "MarkPriceOracle: not twap interval role");
     }
 
     function _requireCanAddObservation() internal view {

@@ -116,14 +116,14 @@ describe("MarkPriceOracle", function () {
     await volmexQuoteToken.deployed();
     await (await perpView.setQuoteToken(volmexQuoteToken.address)).wait();
 
-    positioningConfig = await upgrades.deployProxy(PositioningConfig, []);
     markPriceOracle = await upgrades.deployProxy(
       MarkPriceOracle,
-      [[60000000], [volmexBaseToken.address], [proofHash], [capRatio], owner.address],
+      [[60000000], [volmexBaseToken.address], [proofHash], owner.address],
       {
         initializer: "initialize",
       },
     );
+    positioningConfig = await upgrades.deployProxy(PositioningConfig, [markPriceOracle.address]);
     matchingEngine = await upgrades.deployProxy(MatchingEngine, [
       owner.address,
       markPriceOracle.address,
@@ -209,10 +209,10 @@ describe("MarkPriceOracle", function () {
     await positioning.connect(owner).setPositioning(positioning.address);
 
     await (await matchingEngine.grantMatchOrders(positioning.address)).wait();
+    await markPriceOracle.grantTwapIntervalRole(positioningConfig.address);
     await markPriceOracle.setPositioning(positioning.address);
     await markPriceOracle.setIndexOracle(indexPriceOracle.address);
-    await markPriceOracle.setMarkTwInterval(300);
-    await markPriceOracle.setIndexTwInterval(36000);
+    await positioningConfig.setTwapInterval(28800);
 
     volmexPerpPeriphery = await upgrades.deployProxy(VolmexPerpPeriphery, [
       perpView.address,
@@ -223,6 +223,8 @@ describe("MarkPriceOracle", function () {
       owner.address, // replace with replayer address
     ]);
     await volmexPerpPeriphery.deployed();
+    await markPriceOracle.setObservationAdder(owner.address);
+
     const depositAmount = BigNumber.from("1000000000000000000000");
     let baseAmount = "1000000000000000000"; //500
     let quoteAmount = "60000000000000000000"; //100
@@ -258,7 +260,6 @@ describe("MarkPriceOracle", function () {
       volmexPerpPeriphery,
       "TraderWhitelisted",
     );
-    console.log((await vaultController.getBalance(alice.address)).toString());
     await markPriceOracle.setObservationAdder(matchingEngine.address);
 
     let salt = 2;
@@ -271,7 +272,6 @@ describe("MarkPriceOracle", function () {
       salt++,
       0,
       false,
-      twapType,
     );
 
     let orderRight = Order(
@@ -283,7 +283,6 @@ describe("MarkPriceOracle", function () {
       salt++,
       0,
       true,
-      twapType,
     );
 
     const signatureLeft = await getSignature(orderLeft, alice.address);
@@ -298,16 +297,13 @@ describe("MarkPriceOracle", function () {
       liquidator,
     );
     await markPriceOracle.setObservationAdder(owner.address);
-    for (let i = 0; i < 9; i++) {
-      await markPriceOracle.addObservation(60000000, 0, proofHash);
-    }
   });
 
   describe("Deployment", function () {
     it("Should deploy successfully", async () => {
       let receipt = await upgrades.deployProxy(
         MarkPriceOracle,
-        [[10000000], [volmexBaseToken.address], [proofHash], [capRatio], owner.address],
+        [[10000000], [volmexBaseToken.address], [proofHash], owner.address],
         {
           initializer: "initialize",
         },
@@ -317,20 +313,14 @@ describe("MarkPriceOracle", function () {
     it("Should fail to initialize again", async () => {
       let receipt = await upgrades.deployProxy(
         MarkPriceOracle,
-        [[10000000], [volmexBaseToken.address], [proofHash], [capRatio], owner.address],
+        [[10000000], [volmexBaseToken.address], [proofHash], owner.address],
         {
           initializer: "initialize",
         },
       );
       expect(receipt.confirmations).not.equal(0);
       await expect(
-        receipt.initialize(
-          [10000000],
-          [volmexBaseToken.address],
-          [proofHash],
-          [capRatio],
-          owner.address,
-        ),
+        receipt.initialize([10000000], [volmexBaseToken.address], [proofHash], owner.address),
       ).to.be.revertedWith("Initializable: contract is already initialized");
     });
 
@@ -338,13 +328,7 @@ describe("MarkPriceOracle", function () {
       await expect(
         upgrades.deployProxy(
           MarkPriceOracle,
-          [
-            [10000000, 100000000],
-            [volmexBaseToken.address],
-            [proofHash],
-            [capRatio],
-            owner.address,
-          ],
+          [[10000000, 100000000], [volmexBaseToken.address], [proofHash], owner.address],
           {
             initializer: "initialize",
           },
@@ -356,13 +340,7 @@ describe("MarkPriceOracle", function () {
       await expect(
         upgrades.deployProxy(
           MarkPriceOracle,
-          [
-            [10000000],
-            ["0x0000000000000000000000000000000000000000"],
-            [proofHash],
-            [capRatio],
-            owner.address,
-          ],
+          [[10000000], ["0x0000000000000000000000000000000000000000"], [proofHash], owner.address],
           {
             initializer: "initialize",
           },
@@ -377,7 +355,7 @@ describe("MarkPriceOracle", function () {
         await markPriceOracle.addObservation(60000000, 0, proofHash);
       }
 
-      const txn = await markPriceOracle.getLastTwap(100000, 0);
+      const txn = await markPriceOracle.getMarkTwap(100000, 0);
       expect(Number(txn)).equal(60000000);
     });
 
@@ -395,7 +373,7 @@ describe("MarkPriceOracle", function () {
     it("Should get cumulative price", async () => {
       await markPriceOracle.addObservation(60000000, 0, proofHash);
 
-      const txn = await markPriceOracle.getLastTwap(10000000, 0);
+      const txn = await markPriceOracle.getMarkTwap(10000000, 0);
       expect(Number(txn)).equal(60000000);
     });
     it("Should get last price ", async () => {
@@ -411,17 +389,17 @@ describe("MarkPriceOracle", function () {
         await time.increase(1000);
       }
       const txns = await Promise.all([
-        markPriceOracle.getLastTwap(1000, 0),
-        markPriceOracle.getLastTwap(2000, 0),
-        markPriceOracle.getLastTwap(3000, 0),
-        markPriceOracle.getLastTwap(4000, 0),
-        markPriceOracle.getLastTwap(5000, 0),
-        markPriceOracle.getLastTwap(6000, 0),
-        markPriceOracle.getLastTwap(7000, 0),
-        markPriceOracle.getLastTwap(8000, 0),
-        markPriceOracle.getLastTwap(9000, 0),
-        markPriceOracle.getLastTwap(10000, 0),
-        markPriceOracle.getLastTwap(20000, 0),
+        markPriceOracle.getMarkTwap(1000, 0),
+        markPriceOracle.getMarkTwap(2000, 0),
+        markPriceOracle.getMarkTwap(3000, 0),
+        markPriceOracle.getMarkTwap(4000, 0),
+        markPriceOracle.getMarkTwap(5000, 0),
+        markPriceOracle.getMarkTwap(6000, 0),
+        markPriceOracle.getMarkTwap(7000, 0),
+        markPriceOracle.getMarkTwap(8000, 0),
+        markPriceOracle.getMarkTwap(9000, 0),
+        markPriceOracle.getMarkTwap(10000, 0),
+        markPriceOracle.getMarkTwap(20000, 0),
       ]);
       txns.forEach(txn => {
         expect(Number(txn)).equal(60000000);
@@ -429,7 +407,7 @@ describe("MarkPriceOracle", function () {
     });
 
     it("Should not error when there are no recent datapoints added for cumulative price", async () => {
-      const txn1 = await markPriceOracle.getLastTwap(20000, 0);
+      const txn1 = await markPriceOracle.getMarkTwap(20000, 0);
       expect(Number(txn1)).equal(60000000);
       for (let i = 0; i < 9; i++) {
         await markPriceOracle.addObservation(60000000, 0, proofHash);
@@ -437,33 +415,28 @@ describe("MarkPriceOracle", function () {
       }
       // this covers the case of zero recent datapoints
       await time.increase(100000);
-      const txn2 = await markPriceOracle.getLastTwap(100000, 0);
+      const txn2 = await markPriceOracle.getMarkTwap(100000, 0);
       expect(Number(txn2)).equal(60000000);
-      const txn3 = await markPriceOracle.getLastTwap(20000000, 0);
+      const txn3 = await markPriceOracle.getMarkTwap(20000000, 0);
       expect(Number(txn3)).equal(60000000);
     });
 
     it("Should not error when there are no recent datapoints then more datapoints are added for cumulative price", async () => {
       await time.increase(200001);
-      const txn1 = await markPriceOracle.getLastTwap(20000, 0);
+      const txn1 = await markPriceOracle.getMarkTwap(20000, 0);
       expect(Number(txn1)).equal(60000000);
 
       for (let i = 0; i < 10; i++) {
         await markPriceOracle.addObservation(20000000, 0, proofHash);
         await time.increase(1000);
       }
-      const txn2 = await markPriceOracle.getLastTwap(10000, 0);
-      expect(Number(txn2)).equal(20000000);
+      const txn2 = await markPriceOracle.getMarkTwap(10000, 0);
+      expect(Number(txn2)).equal(60000000);
     });
 
     it("Should fail to  add multiple observations because uneuqal length of inputs", async () => {
       await expect(
-        markPriceOracle.addAssets(
-          [10000000, 20000000],
-          [volmexBaseToken.address],
-          [proofHash],
-          [capRatio],
-        ),
+        markPriceOracle.addAssets([10000000, 20000000], [volmexBaseToken.address], [proofHash]),
       ).to.be.revertedWith("MarkPriceOracle: Unequal length of prices & assets");
     });
 
@@ -473,7 +446,6 @@ describe("MarkPriceOracle", function () {
           [10000000, 20000000],
           [volmexBaseToken.address, ZERO_ADDR],
           [proofHash, proofHash],
-          [capRatio, capRatio],
         ),
       ).to.be.revertedWith("MarkPriceOracle: Asset address can't be 0");
     });
@@ -489,6 +461,22 @@ describe("MarkPriceOracle", function () {
       await expect(markPriceOracle.setObservationAdder(ZERO_ADDR)).to.be.revertedWith(
         "MarkPriceOracle: zero address",
       );
+    });
+    it("Should return values from last epoch ", async () => {
+      await time.increase(28800);
+      const firstTimestamp = await time.latest();
+      for (let i = 0; i <= 20; i++) {
+        await markPriceOracle.addObservation(70000000, 0, proofHash);
+      }
+      await time.increase(28800);
+      const secondTimestamp = await time.latest();
+      const cumulativePrice1 = await markPriceOracle.getCustomUnderlyingTwap(
+        0,
+        Number(firstTimestamp),
+        Number(secondTimestamp),
+      );
+
+      expect(parseInt(cumulativePrice1)).to.equal(70000000);
     });
   });
   async function getSignature(orderObj, signer) {

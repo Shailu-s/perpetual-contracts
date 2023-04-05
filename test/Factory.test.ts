@@ -38,7 +38,6 @@ describe("PerpFactory", function () {
   const ZERO_ADDR = "0x0000000000000000000000000000000000000000";
   const proofHash = "0x6c00000000000000000000000000000000000000000000000000000000000000";
   const capRatio = "250";
-  const twapType = "0x1444f8cf";
 
   this.beforeAll(async () => {
     MatchingEngine = await ethers.getContractFactory("MatchingEngine");
@@ -87,7 +86,7 @@ describe("PerpFactory", function () {
     marketRegistry.initialize(USDC.address);
     markPriceOracle = await upgrades.deployProxy(
       MarkPriceOracle,
-      [[100000], [volmexBaseToken.address], [proofHash], [capRatio], owner.address],
+      [[100000], [volmexBaseToken.address], [proofHash], owner.address],
       {
         initializer: "initialize",
       },

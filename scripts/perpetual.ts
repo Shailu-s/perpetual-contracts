@@ -18,7 +18,7 @@ const positioning = async () => {
   const Vault = await ethers.getContractFactory("Vault");
   const MarketRegistry = await ethers.getContractFactory("MarketRegistry");
   const VolmexPerpPeriphery = await ethers.getContractFactory("VolmexPerpPeriphery");
-  const TestERC20 = await ethers.getContractFactory("TestERC20");
+  const TestERC20 = await ethers.getContractFactory("TetherToken");
   const VolmexPerpView = await ethers.getContractFactory("VolmexPerpView");
 
   console.log("Deploying PerView ...");
@@ -78,13 +78,16 @@ const positioning = async () => {
   await markPriceOracle.deployed();
 
   console.log("Deploying USDC ...");
-  let usdcAddress = process.env.USDC;
+  let usdtAddress = process.env.USDT;
   if (!process.env.USDC) {
-    const usdc = await upgrades.deployProxy(TestERC20, ["USD Coin", "USDC", 6], {
-      initializer: "__TestERC20_init",
-    });
-    await usdc.deployed();
-    usdcAddress = usdc.address;
+    const usdt = await TestERC20.deploy(
+      "1000000000000000000",
+      "Tether USD",
+      "USDT",
+      6
+    );
+    await usdt.deployed();
+    usdtAddress = usdt.address;
   }
 
   console.log("Deploying MatchingEngine ...");
@@ -119,7 +122,7 @@ const positioning = async () => {
   const vault = await upgrades.deployProxy(Vault, [
     positioningConfig.address,
     accountBalance.address,
-    usdcAddress,
+    usdtAddress,
     vaultController.address,
     false,
   ]);
@@ -167,7 +170,7 @@ const positioning = async () => {
   console.log("Set positioning ...");
   await (await vaultController.setPositioning(positioning.address)).wait();
   console.log("Register vault ...");
-  await (await vaultController.registerVault(vault.address, usdcAddress)).wait();
+  await (await vaultController.registerVault(vault.address, usdtAddress)).wait();
   console.log("Set maker fee ...");
   await marketRegistry.setMakerFeeRatio("400");
   console.log("Set taker fee ...");
@@ -220,7 +223,7 @@ const positioning = async () => {
     QuoteToken: volmexQuoteToken.address,
     Vault: vault.address,
     VaultController: vaultController.address,
-    USDC: usdcAddress,
+    USDC: usdtAddress,
     Deployer: await owner.getAddress()
   };
   console.log("\n =====Deployment Successful===== \n");
@@ -249,7 +252,13 @@ const positioning = async () => {
   }
   try {
     await run("verify:verify", {
-      address: await proxyAdmin.getProxyImplementation(usdcAddress),
+      address: usdtAddress,
+      constructorArguments: [
+        "1000000000000000000",
+        "Tether USD",
+        "USDT",
+        6
+      ]
     });
   } catch (error) {
     console.log("ERROR - verify - usdc token!");

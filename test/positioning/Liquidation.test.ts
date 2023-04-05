@@ -60,7 +60,7 @@ describe("Liquidation test in Positioning", function () {
   const STOP_LOSS_LIMIT_ORDER = "0xeeaed735";
   const TAKE_PROFIT_LIMIT_ORDER = "0xe0fc7f94";
   const proofHash = "0x6c00000000000000000000000000000000000000000000000000000000000000";
-  const capRatio = "250";
+  const capRatio = "400000000";
   const twapType = "0x1444f8cf";
 
   this.beforeAll(async () => {
@@ -141,7 +141,6 @@ describe("Liquidation test in Positioning", function () {
         [100000000, 100000000],
         [volmexBaseToken.address, volmexBaseToken1.address],
         [proofHash, proofHash],
-        [capRatio, capRatio],
         owner.address,
       ],
       {
@@ -152,7 +151,7 @@ describe("Liquidation test in Positioning", function () {
 
     erc1271Test = await ERC1271Test.deploy();
 
-    positioningConfig = await upgrades.deployProxy(PositioningConfig, []);
+    positioningConfig = await upgrades.deployProxy(PositioningConfig, [markPriceOracle.address]);
     await positioningConfig.deployed();
 
     accountBalance = await upgrades.deployProxy(AccountBalance, [positioningConfig.address]);
@@ -278,7 +277,6 @@ describe("Liquidation test in Positioning", function () {
       1,
       0,
       true,
-      twapType,
     );
 
     orderRight = Order(
@@ -290,7 +288,6 @@ describe("Liquidation test in Positioning", function () {
       1,
       0,
       false,
-      twapType,
     );
     orderLeft1 = Order(
       ORDER,
@@ -301,7 +298,6 @@ describe("Liquidation test in Positioning", function () {
       10,
       0,
       true,
-      twapType,
     );
 
     orderRight1 = Order(
@@ -313,12 +309,11 @@ describe("Liquidation test in Positioning", function () {
       100,
       0,
       false,
-      twapType,
     );
     await (await markPriceOracle.setPositioning(positioning.address)).wait();
     await (await markPriceOracle.setIndexOracle(indexPriceOracle.address)).wait();
-    await (await markPriceOracle.setMarkTwInterval(300)).wait();
-    await (await markPriceOracle.setIndexTwInterval(3600)).wait();
+    await (await markPriceOracle.grantTwapIntervalRole(positioningConfig.address)).wait();
+    await positioningConfig.setTwapInterval(28800);
     // for (let i = 0; i < 9; i++) {
     //   await matchingEngine.addObservation(1000000, 0);
     // }
@@ -329,8 +324,7 @@ describe("Liquidation test in Positioning", function () {
       it("should liquidate trader", async () => {
         let signatureLeft = await getSignature(orderLeft, account1.address);
         let signatureRight = await getSignature(orderRight, account2.address);
-        console.log((await indexPriceOracle.getLastPrice(0)).toString());
-        console.log((await markPriceOracle.getLastPrice(0)).toString());
+
         await expect(
           positioning.openPosition(
             orderLeft,
@@ -354,13 +348,11 @@ describe("Liquidation test in Positioning", function () {
         await expect(positionSize1.toString()).to.be.equal("20000000000000000000");
 
         const proofHash = "0x6c00000000000000000000000000000000000000000000000000000000000000";
-        await time.increase(28000);
+        await time.increase(28800);
         for (let index = 0; index < 10; index++) {
           await (await indexPriceOracle.addObservation(180000000, 0, proofHash)).wait();
           await (await indexPriceOracle.addObservation(180000000, 1, proofHash)).wait();
         }
-        console.log((await indexPriceOracle.getLastPrice(0)).toString());
-        console.log((await markPriceOracle.getLastPrice(0)).toString());
         // liquidating the position
         await expect(
           positioning
@@ -409,7 +401,7 @@ describe("Liquidation test in Positioning", function () {
         await expect(positionSize1.toString()).to.be.equal("20000000000000000000");
 
         const proofHash = "0x6c00000000000000000000000000000000000000000000000000000000000000";
-        await time.increase(28000);
+        await time.increase(28800);
         for (let index = 0; index < 10; index++) {
           await (await indexPriceOracle.addObservation(200000000, 0, proofHash)).wait();
           await (await indexPriceOracle.addObservation(200000000, 1, proofHash)).wait();
@@ -486,7 +478,7 @@ describe("Liquidation test in Positioning", function () {
         await expect(positionSize1.toString()).to.be.equal("20000000000000000000");
 
         const proofHash = "0x6c00000000000000000000000000000000000000000000000000000000000000";
-        await time.increase(28009);
+        await time.increase(28800);
         for (let index = 0; index < 10; index++) {
           await (await indexPriceOracle.addObservation(200000000, 0, proofHash)).wait();
           await (await indexPriceOracle.addObservation(200000000, 1, proofHash)).wait();
@@ -560,7 +552,7 @@ describe("Liquidation test in Positioning", function () {
         await expect(positionSize1.toString()).to.be.equal("20000000000000000000");
 
         const proofHash = "0x6c00000000000000000000000000000000000000000000000000000000000000";
-        await time.increase(28009);
+        await time.increase(28800);
         for (let index = 0; index < 10; index++) {
           await (await indexPriceOracle.addObservation(200000000, 0, proofHash)).wait();
           await (await indexPriceOracle.addObservation(200000000, 1, proofHash)).wait();
@@ -659,7 +651,7 @@ describe("Liquidation test in Positioning", function () {
         await expect(positionSize1.toString()).to.be.equal("20000000000000000000");
 
         const proofHash = "0x6c00000000000000000000000000000000000000000000000000000000000000";
-        await time.increase(28009);
+        await time.increase(28800);
         for (let index = 0; index < 10; index++) {
           await (await indexPriceOracle.addObservation(200000000, 0, proofHash)).wait();
           await (await indexPriceOracle.addObservation(200000000, 1, proofHash)).wait();
@@ -691,8 +683,7 @@ describe("Liquidation test in Positioning", function () {
           orderLeft.makeAsset.virtualToken,
         );
         const positionsizeAbs = await accountBalance1.getTotalAbsPositionValue(account1.address);
-        console.log(positionsize.toString(), "position size");
-        console.log(positionsizeAbs.toString(), "position sizeabs ");
+
         const positionSize = await accountBalance1.getPositionSize(
           account1.address,
           orderLeft.makeAsset.virtualToken,

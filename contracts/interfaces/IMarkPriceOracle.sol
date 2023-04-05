@@ -15,7 +15,7 @@ interface IMarkPriceOracle {
 
     function volatilityCapRatioByIndex(uint256 _index) external view returns (uint256);
 
-    function getLastTwap(uint256 _twInterval, uint256 _index) external view returns (uint256 priceCumulative);
+    function getMarkTwap(uint256 _twInterval, uint256 _index) external view returns (uint256 priceCumulative);
 
     function indexByBaseToken(address _baseToken) external view returns (uint256 index);
 
@@ -31,13 +31,6 @@ interface IMarkPriceOracle {
         uint256 _index,
         uint256 _startTimestamp,
         uint256 _endTimestamp
-    ) external view returns (uint256 priceCumulative);
-
-    function getCustomTwap(
-        uint256 _index,
-        uint256 _startTimestamp,
-        uint256 _endTimestamp,
-        bool _isMarkRequired
     ) external view returns (uint256 priceCumulative);
 
     function getIndexCount() external view returns (uint256);

@@ -150,14 +150,14 @@ describe("Custom Cumulative Price", function () {
     await volmexQuoteToken.deployed();
     await (await perpView.setQuoteToken(volmexQuoteToken.address)).wait();
 
-    positioningConfig = await upgrades.deployProxy(PositioningConfig, []);
     markPriceOracle = await upgrades.deployProxy(
       MarkPriceOracle,
-      [[70000000], [volmexBaseToken.address], [proofHash], [capRatio], owner.address],
+      [[70000000], [volmexBaseToken.address], [proofHash], owner.address],
       {
         initializer: "initialize",
       },
     );
+    positioningConfig = await upgrades.deployProxy(PositioningConfig, [markPriceOracle.address]);
     matchingEngine = await upgrades.deployProxy(MatchingEngine, [
       owner.address,
       markPriceOracle.address,
@@ -232,7 +232,7 @@ describe("Custom Cumulative Price", function () {
     await vault.connect(owner).setVaultController(vaultController.address);
     await vaultController.registerVault(vault.address, USDC.address);
     await vaultController.connect(owner).setPositioning(positioning.address);
-
+    await markPriceOracle.grantTwapIntervalRole(positioningConfig.address);
     await positioningConfig.connect(owner).setMaxMarketsPerAccount(5);
     await positioningConfig
       .connect(owner)
@@ -245,8 +245,7 @@ describe("Custom Cumulative Price", function () {
     await (await matchingEngine.grantMatchOrders(positioning.address)).wait();
     await markPriceOracle.setPositioning(positioning.address);
     await markPriceOracle.setIndexOracle(indexPriceOracle.address);
-    await markPriceOracle.setMarkTwInterval(300);
-    await markPriceOracle.setIndexTwInterval(3600);
+    await positioningConfig.setTwapInterval(28800);
 
     volmexPerpPeriphery = await upgrades.deployProxy(VolmexPerpPeriphery, [
       perpView.address,
@@ -300,7 +299,6 @@ describe("Custom Cumulative Price", function () {
       salt++,
       0,
       false,
-      twapType,
     );
 
     let orderRight = Order(
@@ -312,7 +310,6 @@ describe("Custom Cumulative Price", function () {
       salt++,
       0,
       true,
-      twapType,
     );
 
     const signatureLeft = await getSignature(orderLeft, alice.address);

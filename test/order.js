@@ -4,7 +4,7 @@ function Asset(virtualToken, value) {
     return { virtualToken, value };
 }
 
-function Order(orderType, deadline, trader, makeAsset, takeAsset, salt, limitOrderTriggerPrice, isShort, twapType) {
+function Order(orderType, deadline, trader, makeAsset, takeAsset, salt, limitOrderTriggerPrice, isShort) {
     return {
         orderType,
         deadline,
@@ -14,7 +14,6 @@ function Order(orderType, deadline, trader, makeAsset, takeAsset, salt, limitOrd
         salt,
         limitOrderTriggerPrice,
         isShort,
-        twapType,
     };
 }
 
@@ -32,7 +31,6 @@ const Types = {
         { name: "salt", type: "uint256" },
         { name: "limitOrderTriggerPrice", type: "uint128" },
         { name: "isShort", type: "bool" },
-        { name: "twapType", type: "bytes4" },
     ],
 };
 
