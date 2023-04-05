@@ -60,7 +60,7 @@ describe("Liquidation test in Positioning", function () {
   const STOP_LOSS_LIMIT_ORDER = "0xeeaed735";
   const TAKE_PROFIT_LIMIT_ORDER = "0xe0fc7f94";
   const proofHash = "0x6c00000000000000000000000000000000000000000000000000000000000000";
-  const capRatio = "250";
+  const capRatio = "400000000";
   const twapType = "0x1444f8cf";
 
   this.beforeAll(async () => {
@@ -141,7 +141,6 @@ describe("Liquidation test in Positioning", function () {
         [100000000, 100000000],
         [volmexBaseToken.address, volmexBaseToken1.address],
         [proofHash, proofHash],
-        [capRatio, capRatio],
         owner.address,
       ],
       {

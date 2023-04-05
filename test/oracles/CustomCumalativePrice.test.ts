@@ -152,7 +152,7 @@ describe("Custom Cumulative Price", function () {
 
     markPriceOracle = await upgrades.deployProxy(
       MarkPriceOracle,
-      [[70000000], [volmexBaseToken.address], [proofHash], [capRatio], owner.address],
+      [[70000000], [volmexBaseToken.address], [proofHash], owner.address],
       {
         initializer: "initialize",
       },
