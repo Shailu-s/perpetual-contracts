@@ -17,17 +17,24 @@ dotEnvConfig();
 
 const config: HardhatUserConfig = {
   solidity: {
-    version: "0.8.18",
-    settings: {
-      optimizer: { enabled: true, runs: 100 },
-      evmVersion: "berlin",
-      // for smock to mock contracts
-      outputSelection: {
-        "*": {
-          "*": ["storageLayout"],
+    compilers: [
+      {
+        version: "0.8.18",
+        settings: {
+          optimizer: { enabled: true, runs: 100 },
+          evmVersion: "berlin",
+          // for smock to mock contracts
+          outputSelection: {
+            "*": {
+              "*": ["storageLayout"],
+            },
+          },
         },
       },
-    },
+      {
+        version: "0.5.1"
+      }
+    ]
   },
   networks: {
     hardhat: {
