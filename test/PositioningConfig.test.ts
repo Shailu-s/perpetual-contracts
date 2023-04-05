@@ -8,7 +8,7 @@ describe("PositioningConfig", function () {
   let markPriceOracle;
   let owner, account1;
   const proofHash = "0x6c00000000000000000000000000000000000000000000000000000000000000";
-  const capRatio = "40000000";
+
   this.beforeAll(async () => {
     PositioningConfig = await ethers.getContractFactory("PositioningConfig");
     MarkPriceOracle = await ethers.getContractFactory("MarkPriceOracle");
@@ -18,7 +18,7 @@ describe("PositioningConfig", function () {
   this.beforeEach(async () => {
     markPriceOracle = await upgrades.deployProxy(
       MarkPriceOracle,
-      [[100000], [account1.address], [proofHash], [capRatio], owner.address],
+      [[100000], [account1.address], [proofHash], owner.address],
       {
         initializer: "initialize",
       },
