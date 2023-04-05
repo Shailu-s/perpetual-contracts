@@ -16,5 +16,5 @@ abstract contract PositioningConfigStorageV1 {
     uint24 internal _maxFundingRate;
     uint32 internal _twapInterval;
     uint256 internal _settlementTokenBalanceCap;
-    IMarkPriceOracle public _markPriceOracle;
+    IMarkPriceOracle public markPriceOracle;
 }
