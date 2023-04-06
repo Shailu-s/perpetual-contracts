@@ -79,7 +79,7 @@ contract Ownable {
  * @dev see https://github.com/ethereum/EIPs/issues/20
  */
 contract ERC20Basic {
-    uint public _totalSupply;
+    uint internal _totalSupply;
     function totalSupply() public view returns (uint);
     function balanceOf(address who) public view returns (uint);
     function transfer(address to, uint value) public;
