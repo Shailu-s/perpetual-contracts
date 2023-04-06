@@ -1,5 +1,6 @@
 import { ethers, upgrades, run } from "hardhat";
-
+const proofHash = "0x6c00000000000000000000000000000000000000000000000000000000000000";
+const capRatio = "400000000";
 const positioning = async () => {
   const [owner] = await ethers.getSigners();
   console.log("Deployer: ", await owner.getAddress());
@@ -26,23 +27,13 @@ const positioning = async () => {
   await perpView.deployed();
   await (await perpView.grantViewStatesRole(owner.address)).wait();
 
-  console.log("Deploying Index Price Oracle ...");
-  let indexOracle = process.env.INDEX_PRICE_ORACLE;
-  if (!process.env.INDEX_PRICE_ORACLE) {
-    const indexPriceOracle = await upgrades.deployProxy(IndexPriceOracle, [owner.address], {
-      initializer: "initialize",
-    });
-    await indexPriceOracle.deployed();
-    indexOracle = indexPriceOracle.address;
-  }
-
   console.log("Deploying Base Token ...");
   const volmexBaseToken = await upgrades.deployProxy(
     VolmexBaseToken,
     [
       "Virtual ETH Index Token", // nameArg
       "VEVIV", // symbolArg,
-      indexOracle, // priceFeedArg
+      owner.address, // zero address on init
       true, // isBase
     ],
     {
@@ -51,6 +42,18 @@ const positioning = async () => {
   );
   await volmexBaseToken.deployed();
   await (await perpView.setBaseToken(volmexBaseToken.address)).wait();
+
+  console.log("Deploying Index Price Oracle ...");
+  let indexOracle = process.env.INDEX_PRICE_ORACLE;
+  if (!process.env.INDEX_PRICE_ORACLE) {
+    const indexPriceOracle = await upgrades.deployProxy(IndexPriceOracle, [
+      owner.address, [75000000], [volmexBaseToken.address], [proofHash], [capRatio]
+    ], {
+      initializer: "initialize",
+    });
+    await indexPriceOracle.deployed();
+    indexOracle = indexPriceOracle.address;
+  }
 
   console.log("Deploying Quote Token ...");
   const volmexQuoteToken = await upgrades.deployProxy(
@@ -70,7 +73,7 @@ const positioning = async () => {
   console.log("Deploying Mark Price Oracle ...");
   const markPriceOracle = await upgrades.deployProxy(
     MarkPriceOracle,
-    [[1000000], [volmexBaseToken.address]],
+    [[52000000], [volmexBaseToken.address], [proofHash], owner.address],
     {
       initializer: "initialize",
     },
@@ -99,8 +102,9 @@ const positioning = async () => {
   await (await markPriceOracle.setObservationAdder(matchingEngine.address)).wait();
 
   console.log("Deploying Positioning Config ...");
-  const positioningConfig = await upgrades.deployProxy(PositioningConfig, []);
+  const positioningConfig = await upgrades.deployProxy(PositioningConfig, [markPriceOracle.address]);
   await positioningConfig.deployed();
+  await (await markPriceOracle.grantTwapIntervalRole(positioningConfig.address)).wait();
   await positioningConfig.setMaxMarketsPerAccount(5);
   await positioningConfig.setSettlementTokenBalanceCap("10000000000000");
 
@@ -180,6 +184,7 @@ const positioning = async () => {
   const periphery = await upgrades.deployProxy(VolmexPerpPeriphery, [
     perpView.address,
     markPriceOracle.address,
+    indexOracle,
     [vault.address, vault.address],
     owner.address,
     `${process.env.RELAYER}`, // RELAYER
