@@ -69,7 +69,7 @@ describe("VolmexPerpPeriphery", function () {
     VaultController = await ethers.getContractFactory("VaultController");
     MarketRegistry = await ethers.getContractFactory("MarketRegistry");
     AccountBalance = await ethers.getContractFactory("AccountBalance");
-    TestERC20 = await ethers.getContractFactory("TestERC20");
+    TestERC20 = await ethers.getContractFactory("TetherToken");
     VolmexBaseToken = await ethers.getContractFactory("VolmexBaseToken");
     VolmexQuoteToken = await ethers.getContractFactory("VolmexQuoteToken");
     VolmexPerpView = await ethers.getContractFactory("VolmexPerpView");
@@ -130,8 +130,12 @@ describe("VolmexPerpPeriphery", function () {
 
     positioningConfig = await upgrades.deployProxy(PositioningConfig, [markPriceOracle.address]);
 
-    USDC = await TestERC20.deploy();
-    await USDC.__TestERC20_init("TestUSDC", "USDC", 6);
+    USDC = await TestERC20.deploy(
+      "100000000000000000000000",
+      "Tether USD",
+      "USDT",
+      6
+    );
     await USDC.deployed();
 
     matchingEngine = await upgrades.deployProxy(MatchingEngine, [
