@@ -10,8 +10,8 @@ contract ChainlinkBaseToken is ParentToken {
     using SafeMathUpgradeable for uint256;
     using SafeMathUpgradeable for uint8;
 
-    function getIndexPrice(uint256 interval) external view override returns (uint256) {
-        (, int256 answer, , , ) = IChainlinkIndexPriceOracle(_priceFeed).latestRoundData(interval);
+    function getIndexPrice(uint256 index) external view override returns (uint256) {
+        (, int256 answer, , , ) = IChainlinkIndexPriceOracle(_priceFeed).latestRoundData(index);
         return uint256(answer);
     }
 }

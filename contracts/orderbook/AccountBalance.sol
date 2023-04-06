@@ -46,7 +46,7 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
         _grantRole(CAN_SETTLE_REALIZED_PNL, account);
     }
 
-    function setUnderlyingPriceIndex(uint64 underlyingIndex) external {
+    function setUnderlyingPriceIndex(uint256 underlyingIndex) external {
         _requireAccountBalanceAdmin();
         _underlyingPriceIndex = underlyingIndex;
         emit UnderlyingPriceIndexSet(underlyingIndex);
@@ -60,6 +60,15 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
     ) external override {
         _requireOnlyPositioning();
         _modifyOwedRealizedPnl(trader, amount, baseToken);
+    }
+
+    function updateTwPremiumGrowthGlobal(
+        address trader,
+        address baseToken,
+        int256 lastTwPremiumGrowthGlobal
+    ) external override {
+        _requireOnlyPositioning();
+        _accountMarketMap[trader][baseToken].lastTwPremiumGrowthGlobal = lastTwPremiumGrowthGlobal;
     }
 
     /// @inheritdoc IAccountBalance

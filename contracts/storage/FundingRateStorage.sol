@@ -9,8 +9,9 @@ abstract contract FundingRateStorage {
 
     address internal _markPriceOracleArg;
     address internal _indexPriceOracleArg;
-    uint64 internal _underlyingPriceIndex;
-    int256 internal _fundingRateInterval;
+    uint256 internal _underlyingPriceIndex;
+    uint256 internal _fundingPeriod;
+    mapping(address => uint256) internal _lastFundingIndexPrice;
 
     uint256[50] private __gap;
 }

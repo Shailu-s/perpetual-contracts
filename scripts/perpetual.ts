@@ -18,7 +18,7 @@ const positioning = async () => {
   const Vault = await ethers.getContractFactory("Vault");
   const MarketRegistry = await ethers.getContractFactory("MarketRegistry");
   const VolmexPerpPeriphery = await ethers.getContractFactory("VolmexPerpPeriphery");
-  const TestERC20 = await ethers.getContractFactory("TestERC20");
+  const TestERC20 = await ethers.getContractFactory("TetherToken");
   const VolmexPerpView = await ethers.getContractFactory("VolmexPerpView");
 
   console.log("Deploying PerView ...");
@@ -27,10 +27,14 @@ const positioning = async () => {
   await (await perpView.grantViewStatesRole(owner.address)).wait();
 
   console.log("Deploying Index Price Oracle ...");
-  const indexPriceOracle = await upgrades.deployProxy(IndexPriceOracle, [owner.address], {
-    initializer: "initialize",
-  });
-  await indexPriceOracle.deployed();
+  let indexOracle = process.env.INDEX_PRICE_ORACLE;
+  if (!process.env.INDEX_PRICE_ORACLE) {
+    const indexPriceOracle = await upgrades.deployProxy(IndexPriceOracle, [owner.address], {
+      initializer: "initialize",
+    });
+    await indexPriceOracle.deployed();
+    indexOracle = indexPriceOracle.address;
+  }
 
   console.log("Deploying Base Token ...");
   const volmexBaseToken = await upgrades.deployProxy(
@@ -38,7 +42,7 @@ const positioning = async () => {
     [
       "Virtual ETH Index Token", // nameArg
       "VEVIV", // symbolArg,
-      indexPriceOracle.address, // priceFeedArg
+      indexOracle, // priceFeedArg
       true, // isBase
     ],
     {
@@ -74,13 +78,16 @@ const positioning = async () => {
   await markPriceOracle.deployed();
 
   console.log("Deploying USDC ...");
-  let usdcAddress = process.env.USDC;
+  let usdtAddress = process.env.USDT;
   if (!process.env.USDC) {
-    const usdc = await upgrades.deployProxy(TestERC20, ["USD Coin", "USDC", 6], {
-      initializer: "__TestERC20_init",
-    });
-    await usdc.deployed();
-    usdcAddress = usdc.address;
+    const usdt = await TestERC20.deploy(
+      "1000000000000000000",
+      "Tether USD",
+      "USDT",
+      6
+    );
+    await usdt.deployed();
+    usdtAddress = usdt.address;
   }
 
   console.log("Deploying MatchingEngine ...");
@@ -89,7 +96,7 @@ const positioning = async () => {
     markPriceOracle.address,
   ]);
   await matchingEngine.deployed();
-  await (await markPriceOracle.setMatchingEngine(matchingEngine.address)).wait();
+  await (await markPriceOracle.setObservationAdder(matchingEngine.address)).wait();
 
   console.log("Deploying Positioning Config ...");
   const positioningConfig = await upgrades.deployProxy(PositioningConfig, []);
@@ -115,7 +122,7 @@ const positioning = async () => {
   const vault = await upgrades.deployProxy(Vault, [
     positioningConfig.address,
     accountBalance.address,
-    usdcAddress,
+    usdtAddress,
     vaultController.address,
     false,
   ]);
@@ -131,7 +138,7 @@ const positioning = async () => {
       accountBalance.address,
       matchingEngine.address,
       markPriceOracle.address,
-      indexPriceOracle.address,
+      indexOracle,
       0,
       [owner.address, `${process.env.LIQUIDATOR}`],
     ],
@@ -163,11 +170,11 @@ const positioning = async () => {
   console.log("Set positioning ...");
   await (await vaultController.setPositioning(positioning.address)).wait();
   console.log("Register vault ...");
-  await (await vaultController.registerVault(vault.address, usdcAddress)).wait();
+  await (await vaultController.registerVault(vault.address, usdtAddress)).wait();
   console.log("Set maker fee ...");
-  await marketRegistry.setMakerFeeRatio(0.0004e6);
+  await marketRegistry.setMakerFeeRatio("400");
   console.log("Set taker fee ...");
-  await marketRegistry.setTakerFeeRatio(0.0009e6);
+  await marketRegistry.setTakerFeeRatio("900");
 
   console.log("Deploying Periphery contract ...");
   const periphery = await upgrades.deployProxy(VolmexPerpPeriphery, [
@@ -202,27 +209,29 @@ const positioning = async () => {
   await (await perpView.grantViewStatesRole(factory.address)).wait();
 
   const addresses = {
-    USDC: usdcAddress,
-    IndexPriceOracle: indexPriceOracle.address,
-    MarkPriceOracle: markPriceOracle.address,
-    BaseToken: volmexBaseToken.address,
-    QuoteToken: volmexQuoteToken.address,
-    MatchingEngine: matchingEngine.address,
-    Vault: vault.address,
-    VaultController: vaultController.address,
-    MarketRegistry: marketRegistry.address,
     AccountBalance: accountBalance.address,
-    PositioningConfig: positioningConfig.address,
-    Positioning: positioning.address,
+    BaseToken: volmexBaseToken.address,
+    Factory: factory.address,
+    IndexPriceOracle: indexOracle,
+    MarkPriceOracle: markPriceOracle.address,
+    MarketRegistry: marketRegistry.address,
+    MatchingEngine: matchingEngine.address,
     Periphery: periphery.address,
     PerpView: perpView.address,
+    Positioning: positioning.address,
+    PositioningConfig: positioningConfig.address,
+    QuoteToken: volmexQuoteToken.address,
+    Vault: vault.address,
+    VaultController: vaultController.address,
+    USDC: usdtAddress,
+    Deployer: await owner.getAddress()
   };
   console.log("\n =====Deployment Successful===== \n");
   console.log(addresses);
 
   try {
     await run("verify:verify", {
-      address: await proxyAdmin.getProxyImplementation(indexPriceOracle.address),
+      address: await proxyAdmin.getProxyImplementation(indexOracle),
     });
   } catch (error) {
     console.log("ERROR - verify - Index price oracle", error);
@@ -243,7 +252,13 @@ const positioning = async () => {
   }
   try {
     await run("verify:verify", {
-      address: await proxyAdmin.getProxyImplementation(usdcAddress),
+      address: usdtAddress,
+      constructorArguments: [
+        "1000000000000000000",
+        "Tether USD",
+        "USDT",
+        6
+      ]
     });
   } catch (error) {
     console.log("ERROR - verify - usdc token!");

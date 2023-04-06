@@ -48,7 +48,7 @@ contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, 
         address matchingEngineArg,
         address markPriceArg,
         address indexPriceArg,
-        uint64 underlyingPriceIndex,
+        uint256 underlyingPriceIndex,
         address[2] calldata liquidators
     ) external initializer {
         // P_VANC: Vault address is not contract
@@ -121,11 +121,11 @@ contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, 
     }
 
     /// @inheritdoc IPositioning
-    function setFundingInterval(int256 interval) external {
+    function setFundingPeriod(uint256 period) external {
         _requirePositioningAdmin();
-        _fundingRateInterval = interval;
+        _fundingPeriod = period;
 
-        emit FundingIntervalSet(interval);
+        emit FundingPeriodSet(period);
     }
 
     function toggleLiquidatorWhitelist() external {
@@ -209,11 +209,10 @@ contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, 
         require(order.trader != address(0), "V_PERP_M: order verification failed");
         require(order.salt != 0, "V_PERP_M: 0 salt can't be used");
         require(order.salt >= makerMinSalt[_msgSender()], "V_PERP_M: order salt lower");
-        // require(order.fill >= , "V_PERP_M: order salt lower");
         bytes32 orderHashKey = LibOrder.hashKey(order);
         uint256 fills = IMatchingEngine(_matchingEngine).fills(orderHashKey);
-
-        require(fills < _UINT256_MAX, "V_PERP_M: order is cancelled");
+        // order is cancelled, os there's nothing to fill
+        require(fills < order.makeAsset.value, "V_PERP_M: Nothing to fill");
         LibOrder.validate(order);
 
         uint24 imRatio = IPositioningConfig(_positioningConfig).getImRatio();
@@ -345,13 +344,14 @@ contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, 
 
     /// @dev Settle trader's funding payment to his/her realized pnl.
     function _settleFunding(address trader, address baseToken) internal {
-        int256 fundingPayment;
-        fundingPayment = settleFunding(trader, baseToken);
+        (int256 fundingPayment, int256 globalTwPremiumGrowth) = settleFunding(trader, baseToken);
 
         if (fundingPayment != 0) {
             IAccountBalance(_accountBalance).modifyOwedRealizedPnl(trader, fundingPayment.neg256(), baseToken);
             emit FundingPaymentSettled(trader, baseToken, fundingPayment);
         }
+
+        IAccountBalance(_accountBalance).updateTwPremiumGrowthGlobal(trader, baseToken, globalTwPremiumGrowth);
     }
 
     /// @dev Add given amount to PnL of the address provided
@@ -385,11 +385,12 @@ contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, 
             internalData.rightExchangedPositionNotional = newFill.leftValue.toInt256();
         }
 
-        OrderFees memory orderFees = _calculateFees(
-            true, // left order is maker
-            internalData.leftExchangedPositionNotional,
-            internalData.rightExchangedPositionNotional
-        );
+        OrderFees memory orderFees =
+            _calculateFees(
+                true, // left order is maker
+                internalData.leftExchangedPositionNotional,
+                internalData.rightExchangedPositionNotional
+            );
 
         int256[2] memory realizedPnL;
         realizedPnL[0] = _realizePnLChecks(orderLeft, baseToken, internalData.leftExchangedPositionSize, internalData.leftExchangedPositionNotional);

@@ -14,7 +14,7 @@ function encodeAddress(account) {
 function Asset(virtualToken, value) {
   return { virtualToken, value };
 }
-function Order(orderType, deadline, trader, makeAsset, takeAsset, salt, triggerPrice, isShort) {
+function Order(orderType, deadline, trader, makeAsset, takeAsset, salt, limitOrderTriggerPrice, isShort) {
   return {
     orderType,
     deadline,
@@ -22,7 +22,7 @@ function Order(orderType, deadline, trader, makeAsset, takeAsset, salt, triggerP
     makeAsset,
     takeAsset,
     salt,
-    triggerPrice,
+    limitOrderTriggerPrice,
     isShort,
   };
 }
@@ -38,7 +38,7 @@ const Types = {
     { name: "makeAsset", type: "Asset" },
     { name: "takeAsset", type: "Asset" },
     { name: "salt", type: "uint256" },
-    { name: "triggerPrice", type: "uint128" },
+    { name: "limitOrderTriggerPrice", type: "uint128" },
     { name: "isShort", type: "bool" },
   ],
 };
@@ -57,9 +57,9 @@ async function getSignature() {
     ORDER,
     deadline,
     account1.address,
-    Asset(baseToken, "10000000"),
-    Asset(quoteToken, "1000000000"),
-    "844",
+    Asset(baseToken, "1000"),
+    Asset(quoteToken, "100000"),
+    "541",
     "0",
     true,
   );
@@ -67,9 +67,9 @@ async function getSignature() {
     ORDER,
     deadline,
     account2.address,
-    Asset(quoteToken, "3000000000"),
-    Asset(baseToken, "30000000"),
-    "843",
+    Asset(quoteToken, "3000000"),
+    Asset(baseToken, "30000"),
+    "540",
     "0",
     false,
   );

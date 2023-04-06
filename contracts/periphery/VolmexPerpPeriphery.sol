@@ -1,25 +1,28 @@
 // SPDX-License-Identifier: BUSL - 1.1
 pragma solidity =0.8.18;
 
-import "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
+import { AccessControlUpgradeable } from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 
-import "../libs/LibOrder.sol";
-import "../interfaces/IMarkPriceOracle.sol";
-import "../interfaces/IPositioning.sol";
-import "../interfaces/IVaultController.sol";
-import "../interfaces/IVolmexPerpPeriphery.sol";
-import "../interfaces/IVolmexPerpView.sol";
-import "../interfaces/IPositioningConfig.sol";
+import { LibOrder } from "../libs/LibOrder.sol";
+import { IMarkPriceOracle } from "../interfaces/IMarkPriceOracle.sol";
+import { IIndexPriceOracle } from "../interfaces/IIndexPriceOracle.sol";
+import { IPositioning } from "../interfaces/IPositioning.sol";
+import { IVaultController } from "../interfaces/IVaultController.sol";
+import { IVolmexPerpPeriphery, IERC20Upgradeable, IVirtualToken } from "../interfaces/IVolmexPerpPeriphery.sol";
+import { IVolmexPerpView } from "../interfaces/IVolmexPerpView.sol";
+import { IPositioningConfig } from "../interfaces/IPositioningConfig.sol";
 
 contract VolmexPerpPeriphery is AccessControlUpgradeable, IVolmexPerpPeriphery {
     // perp periphery role
     bytes32 public constant VOLMEX_PERP_PERIPHERY = keccak256("VOLMEX_PERP_PERIPHERY");
     // role of relayer to execute open position
     bytes32 public constant RELAYER_MULTISIG = keccak256("RELAYER_MULTISIG");
+    // role for whitelisting traders
+    bytes32 public constant TRADER_WHITELISTER = keccak256("TRADER_WHITELISTER");
 
     // Store the whitelist Vaults
     mapping(address => bool) private _isVaultWhitelist;
-    
+
     // Store the whitelist traders
     mapping(address => bool) public isTraderWhitelisted;
 
@@ -28,6 +31,8 @@ contract VolmexPerpPeriphery is AccessControlUpgradeable, IVolmexPerpPeriphery {
 
     // Used to fetch base token price according to market
     IMarkPriceOracle public markPriceOracle;
+    // Used to fetch base volatility token index price
+    IIndexPriceOracle public indexPriceOracle;
     // Stores the address of VolmexPerpView contract
     IVolmexPerpView public perpView;
 
@@ -43,6 +48,7 @@ contract VolmexPerpPeriphery is AccessControlUpgradeable, IVolmexPerpPeriphery {
     function initialize(
         IVolmexPerpView _perpView,
         IMarkPriceOracle _markPriceOracle,
+        IIndexPriceOracle _indexPriceOracle,
         address[2] memory _vaults,
         address _owner,
         address _relayer
@@ -51,6 +57,7 @@ contract VolmexPerpPeriphery is AccessControlUpgradeable, IVolmexPerpPeriphery {
         require(_relayer != address(0), "VolmexPerpPeriphery: Relayer can't be address(0)");
         require(address(_perpView) != address(0), "VolmexPerpPeriphery: zero address");
         markPriceOracle = _markPriceOracle;
+        indexPriceOracle = _indexPriceOracle;
         perpView = _perpView;
 
         for (uint256 i = 0; i < 2; i++) {
@@ -58,7 +65,10 @@ contract VolmexPerpPeriphery is AccessControlUpgradeable, IVolmexPerpPeriphery {
         }
         isTraderWhitelistEnabled = true;
         _grantRole(VOLMEX_PERP_PERIPHERY, _owner);
+        _grantRole(TRADER_WHITELISTER, _owner);
+        _setRoleAdmin(TRADER_WHITELISTER, TRADER_WHITELISTER);
         _grantRole(RELAYER_MULTISIG, _relayer);
+        _setRoleAdmin(RELAYER_MULTISIG, RELAYER_MULTISIG);
     }
 
     function setMarkPriceOracle(IMarkPriceOracle _markPriceOracle) external {
@@ -85,13 +95,13 @@ contract VolmexPerpPeriphery is AccessControlUpgradeable, IVolmexPerpPeriphery {
     }
 
     function whitelistTrader(address _trader, bool _isWhitelist) external {
-        _requireVolmexPerpPeripheryAdmin();
+        _requireTraderWhitelister();
         isTraderWhitelisted[_trader] = _isWhitelist;
         emit TraderWhitelisted(_trader, _isWhitelist);
     }
 
     function depositToVault(
-        uint64 _index,
+        uint256 _index,
         address _token,
         uint256 _amount
     ) external payable {
@@ -104,7 +114,7 @@ contract VolmexPerpPeriphery is AccessControlUpgradeable, IVolmexPerpPeriphery {
     }
 
     function withdrawFromVault(
-        uint64 _index,
+        uint256 _index,
         address _token,
         address payable _to,
         uint256 _amount
@@ -114,7 +124,7 @@ contract VolmexPerpPeriphery is AccessControlUpgradeable, IVolmexPerpPeriphery {
     }
 
     function openPosition(
-        uint64 _index,
+        uint256 _index,
         LibOrder.Order memory _orderLeft,
         bytes memory _signatureLeft,
         LibOrder.Order memory _orderRight,
@@ -130,7 +140,7 @@ contract VolmexPerpPeriphery is AccessControlUpgradeable, IVolmexPerpPeriphery {
     }
 
     function batchOpenPosition(
-        uint64 _index,
+        uint256 _index,
         LibOrder.Order[] memory _ordersLeft,
         bytes[] memory _signaturesLeft,
         LibOrder.Order[] memory _ordersRight,
@@ -169,7 +179,7 @@ contract VolmexPerpPeriphery is AccessControlUpgradeable, IVolmexPerpPeriphery {
      */
 
     function _openPosition(
-        uint64 _index,
+        uint256 _index,
         LibOrder.Order memory _orderLeft,
         bytes memory _signatureLeft,
         LibOrder.Order memory _orderRight,
@@ -194,6 +204,10 @@ contract VolmexPerpPeriphery is AccessControlUpgradeable, IVolmexPerpPeriphery {
         require(isTraderWhitelisted[trader], "Periphery: trader not whitelisted");
     }
 
+    function _requireTraderWhitelister() internal view {
+        require(hasRole(TRADER_WHITELISTER, _msgSender()), "VolmexPerpPeriphery: Not whitelister");
+    }
+
     // Note for V2: Change the logic to round id, if Volmex Oracle implements price by round id functionality
     function _verifyTriggerPrice(LibOrder.Order memory _limitOrder, IPositioning _positioning) private view returns (bool) {
         // Note for V2: Add check for round id, when Volmex Oracle updates functionality
@@ -203,21 +217,21 @@ contract VolmexPerpPeriphery is AccessControlUpgradeable, IVolmexPerpPeriphery {
 
         uint256 triggeredPrice = _getBaseTokenPrice(_limitOrder, twInterval);
 
-        if (_limitOrder.orderType == LibOrder.STOP_LOSS_LIMIT_ORDER) {
+        if (_checkLimitOrderType(_limitOrder.orderType, true)) {
             if (_limitOrder.isShort) {
                 // Sell Stop Limit Order Trigger Price Not Matched
-                return triggeredPrice <= _limitOrder.triggerPrice;
+                return triggeredPrice <= _limitOrder.limitOrderTriggerPrice;
             } else {
                 // Buy Stop Limit Order Trigger Price Not Matched
-                return triggeredPrice >= _limitOrder.triggerPrice;
+                return triggeredPrice >= _limitOrder.limitOrderTriggerPrice;
             }
-        } else if (_limitOrder.orderType == LibOrder.TAKE_PROFIT_LIMIT_ORDER) {
+        } else if (_checkLimitOrderType(_limitOrder.orderType, false)) {
             if (_limitOrder.isShort) {
                 // Sell Take-profit Limit Order Trigger Price Not Matched
-                return triggeredPrice >= _limitOrder.triggerPrice;
+                return triggeredPrice >= _limitOrder.limitOrderTriggerPrice;
             } else {
                 // Buy Take-profit Limit Order Trigger Price Not Matched
-                return triggeredPrice <= _limitOrder.triggerPrice;
+                return triggeredPrice <= _limitOrder.limitOrderTriggerPrice;
             }
         }
         return false;
@@ -229,7 +243,22 @@ contract VolmexPerpPeriphery is AccessControlUpgradeable, IVolmexPerpPeriphery {
 
         address baseToken = IVirtualToken(makeAsset).isBase() ? makeAsset : takeAsset;
 
-        uint64 _index = markPriceOracle.indexByBaseToken(baseToken);
-        return markPriceOracle.getCumulativePrice(_twInterval, _index);
+        // TODO: change to index, mark and mark's latest price
+        uint256 _index = markPriceOracle.indexByBaseToken(baseToken);
+        if (_order.orderType == LibOrder.STOP_LOSS_MARK_PRICE || _order.orderType == LibOrder.TAKE_PROFIT_MARK_PRICE) {
+            price = markPriceOracle.getMarkTwap(_twInterval, _index);
+        } else if (_order.orderType == LibOrder.STOP_LOSS_INDEX_PRICE || _order.orderType == LibOrder.TAKE_PROFIT_INDEX_PRICE) {
+            price = indexPriceOracle.getLastTwap(_twInterval, _index);
+        } else {
+            price = markPriceOracle.getLastPrice(_index);
+        }
+    }
+
+    function _checkLimitOrderType(bytes4 orderType, bool isStopLoss) private pure returns (bool) {
+        if (isStopLoss) {
+            return orderType == LibOrder.STOP_LOSS_INDEX_PRICE || orderType == LibOrder.STOP_LOSS_LAST_PRICE || orderType == LibOrder.STOP_LOSS_MARK_PRICE;
+        } else {
+            return orderType == LibOrder.TAKE_PROFIT_INDEX_PRICE || orderType == LibOrder.TAKE_PROFIT_LAST_PRICE || orderType == LibOrder.TAKE_PROFIT_MARK_PRICE;
+        }
     }
 }

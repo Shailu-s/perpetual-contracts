@@ -14,21 +14,22 @@ library LibOrder {
         LibAsset.Asset makeAsset;
         LibAsset.Asset takeAsset;
         uint256 salt;
-        uint128 triggerPrice;
+        uint128 limitOrderTriggerPrice;
         bool isShort;
     }
 
     bytes32 constant ORDER_TYPEHASH =
         keccak256(
-            "Order(bytes4 orderType,uint64 deadline,address trader,Asset makeAsset,Asset takeAsset,uint256 salt,uint128 triggerPrice,bool isShort)Asset(address virtualToken,uint256 value)"
+            "Order(bytes4 orderType,uint64 deadline,address trader,Asset makeAsset,Asset takeAsset,uint256 salt,uint128 limitOrderTriggerPrice,bool isShort)Asset(address virtualToken,uint256 value)"
         );
 
-    // Generated using bytes4(keccack256(abi.encodePacked("Order")))
-    bytes4 public constant ORDER = 0xf555eb98;
-    // Generated using bytes4(keccack256(abi.encodePacked("StopLossLimitOrder")))
-    bytes4 public constant STOP_LOSS_LIMIT_ORDER = 0xeeaed735;
-    // Generated using bytes4(keccack256(abi.encodePacked("TakeProfitLimitOrder")))
-    bytes4 public constant TAKE_PROFIT_LIMIT_ORDER = 0xe0fc7f94;
+    bytes4 public constant ORDER = 0xf555eb98; // bytes4(keccack256(abi.encodePacked("Order")))
+    bytes4 public constant STOP_LOSS_INDEX_PRICE = 0x835d5c1e; // bytes4(keccak256(abi.encodePacked("StopLossIndexPrice")));
+    bytes4 public constant STOP_LOSS_LAST_PRICE = 0xd9ed8042; //bytes4(keccak256(abi.encodePacked("StopLossLastPrice")));
+    bytes4 public constant STOP_LOSS_MARK_PRICE = 0xe144c7ec; //bytes4(keccak256(abi.encodePacked("StopLossMarkPrice")));
+    bytes4 public constant TAKE_PROFIT_INDEX_PRICE = 0x67393efa; //bytes4(keccak256(abi.encodePacked("TakeProfitIndexPrice")));
+    bytes4 public constant TAKE_PROFIT_LAST_PRICE = 0xc7dc86f6; //bytes4(keccak256(abi.encodePacked("TakeProfitLastPrice")));
+    bytes4 public constant TAKE_PROFIT_MARK_PRICE = 0xb6d64e04; //bytes4(keccak256(abi.encodePacked("TakeProfitMarkPrice")));
 
     function validate(LibOrder.Order memory order) internal view {
         require(order.deadline > block.timestamp, "V_PERP_M: Order deadline validation failed");
@@ -36,23 +37,15 @@ library LibOrder {
         bool isMakeAssetBase = IVirtualToken(order.makeAsset.virtualToken).isBase();
         bool isTakeAssetBase = IVirtualToken(order.takeAsset.virtualToken).isBase();
 
-        require(
-            (isMakeAssetBase && !isTakeAssetBase) || (!isMakeAssetBase && isTakeAssetBase),
-            "Both makeAsset & takeAsset can't be baseTokens"
-        );
+        require((isMakeAssetBase && !isTakeAssetBase) || (!isMakeAssetBase && isTakeAssetBase), "Both makeAsset & takeAsset can't be baseTokens");
 
         require(
-            (order.isShort && isMakeAssetBase && !isTakeAssetBase) ||
-                (!order.isShort && !isMakeAssetBase && isTakeAssetBase),
+            (order.isShort && isMakeAssetBase && !isTakeAssetBase) || (!order.isShort && !isMakeAssetBase && isTakeAssetBase),
             "Short order can't have takeAsset as a baseToken/Long order can't have makeAsset as baseToken"
         );
     }
 
-    function calculateRemaining(Order memory order, uint256 fill)
-        internal
-        pure
-        returns (uint256 baseValue, uint256 quoteValue)
-    {
+    function calculateRemaining(Order memory order, uint256 fill) internal pure returns (uint256 baseValue, uint256 quoteValue) {
         baseValue = order.makeAsset.value - fill;
         quoteValue = LibMath.safeGetPartialAmountFloor(order.takeAsset.value, order.makeAsset.value, baseValue);
     }
@@ -67,7 +60,7 @@ library LibOrder {
                     LibAsset.hash(order.makeAsset),
                     LibAsset.hash(order.takeAsset),
                     order.salt,
-                    order.triggerPrice,
+                    order.limitOrderTriggerPrice,
                     order.isShort
                 )
             );
@@ -84,7 +77,7 @@ library LibOrder {
                     LibAsset.hash(order.makeAsset),
                     LibAsset.hash(order.takeAsset),
                     order.salt,
-                    order.triggerPrice,
+                    order.limitOrderTriggerPrice,
                     order.isShort
                 )
             );

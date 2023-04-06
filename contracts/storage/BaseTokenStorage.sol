@@ -6,4 +6,5 @@ pragma solidity =0.8.18;
 /// BaseTokenStorageVX.
 abstract contract BaseTokenStorageV1 {
     address internal _priceFeed;
+    uint256 internal _twInterval;
 }

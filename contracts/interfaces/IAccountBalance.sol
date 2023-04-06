@@ -11,7 +11,7 @@ interface IAccountBalance {
     /// @param amount The amount changed
     event PnlRealized(address indexed trader, address indexed baseToken, int256 amount);
     /// @dev Emit when underlying price index is set
-    event UnderlyingPriceIndexSet(uint64 indexed underlyingIndex);
+    event UnderlyingPriceIndexSet(uint256 indexed underlyingIndex);
 
     function initialize(address positioningConfigArg) external;
     /// @notice Modify trader owedRealizedPnl
@@ -24,6 +24,16 @@ interface IAccountBalance {
     /// @param trader The address of the trader
     /// @return pnl Settled owedRealizedPnl
     function settleOwedRealizedPnl(address trader) external returns (int256 pnl);
+    /// @notice Update trader Twap premium info
+    /// @dev Only used by `ClearingHouse` contract
+    /// @param trader The address of trader
+    /// @param baseToken The address of baseToken
+    /// @param lastTwPremiumGrowthGlobal The last Twap Premium
+    function updateTwPremiumGrowthGlobal(
+        address trader,
+        address baseToken,
+        int256 lastTwPremiumGrowthGlobal
+    ) external;
     /// @notice Settle account balance and deregister base token
     /// @dev Only used by `Positioning` contract
     /// @param trader The address of the trader

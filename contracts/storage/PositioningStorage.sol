@@ -6,6 +6,7 @@ pragma solidity =0.8.18;
 /// PositioningStorageVX.
 abstract contract PositioningStorageV1 {
     uint256 internal constant _ORACLE_BASE = 100000000;
+    uint256 internal constant _ORACLE_BASE_X6 = 1000000;
     uint256 internal constant _FULLY_CLOSED_RATIO = 1e18;
     uint256 internal constant _UINT256_MAX = 2**256 - 1;
     bytes32 public constant POSITIONING_ADMIN = keccak256("POSITIONING_ADMIN");
@@ -18,6 +19,12 @@ abstract contract PositioningStorageV1 {
     address internal _marketRegistry;
 
     address public defaultFeeReceiver;
+
+    // the last timestamp when funding is settled
+    mapping(address => uint256) internal _lastSettledTimestampMap;
+    // base token => twPremium
+    mapping(address => int256) internal _globalFundingGrowthMap;
+
     mapping(address => bool) public isLiquidatorWhitelisted;
     bool public isLiquidatorWhitelistEnabled;
 

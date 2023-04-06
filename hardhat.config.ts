@@ -1,6 +1,7 @@
 import "@nomiclabs/hardhat-ethers";
 import "@nomiclabs/hardhat-waffle";
 import "@nomiclabs/hardhat-web3";
+import "@nomicfoundation/hardhat-network-helpers";
 import "@openzeppelin/hardhat-upgrades";
 import "@typechain/hardhat";
 import "hardhat-contract-sizer";
@@ -16,17 +17,24 @@ dotEnvConfig();
 
 const config: HardhatUserConfig = {
   solidity: {
-    version: "0.8.18",
-    settings: {
-      optimizer: { enabled: true, runs: 100 },
-      evmVersion: "berlin",
-      // for smock to mock contracts
-      outputSelection: {
-        "*": {
-          "*": ["storageLayout"],
+    compilers: [
+      {
+        version: "0.8.18",
+        settings: {
+          optimizer: { enabled: true, runs: 100 },
+          evmVersion: "berlin",
+          // for smock to mock contracts
+          outputSelection: {
+            "*": {
+              "*": ["storageLayout"],
+            },
+          },
         },
       },
-    },
+      {
+        version: "0.5.1"
+      }
+    ]
   },
   networks: {
     hardhat: {
