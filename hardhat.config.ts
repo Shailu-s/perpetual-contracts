@@ -11,7 +11,7 @@ import "@openzeppelin/hardhat-defender";
 import "@nomiclabs/hardhat-etherscan";
 import { HardhatUserConfig } from "hardhat/config";
 import "solidity-coverage";
-import 'hardhat-docgen';
+import "hardhat-docgen";
 import { config as dotEnvConfig } from "dotenv";
 dotEnvConfig();
 
@@ -32,9 +32,9 @@ const config: HardhatUserConfig = {
         },
       },
       {
-        version: "0.5.1"
-      }
-    ]
+        version: "0.5.1",
+      },
+    ],
   },
   networks: {
     hardhat: {
@@ -71,7 +71,7 @@ const config: HardhatUserConfig = {
       loggingEnabled: true,
       gasMultiplier: 1.5,
       // timeout: 36000000,
-    }
+    },
   },
   contractSizer: {
     alphaSort: true,
@@ -92,10 +92,10 @@ const config: HardhatUserConfig = {
     apiSecret: process.env.DEFENDER_TEAM_API_SECRET_KEY,
   },
   docgen: {
-    path: './docs',
+    path: "./docs",
     clear: true,
     runOnCompile: true,
-  }
+  },
 };
 
 export default config;
