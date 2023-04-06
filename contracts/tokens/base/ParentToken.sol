@@ -20,12 +20,18 @@ abstract contract ParentToken is IVolmexBaseToken, IIndexPrice, VirtualToken, Ba
     ) external override initializer {
         __VirtualToken_init(nameArg, symbolArg, isBase);
         _priceFeed = priceFeedArg;
+        _twInterval = 28800;
     }
 
     /// @dev This function is only used for emergency shutdown, to set priceFeed to an emergencyPriceFeed
     function setPriceFeed(address priceFeedArg) external override {
         _priceFeed = priceFeedArg;
         emit PriceFeedChanged(_priceFeed);
+    }
+
+    /// @dev Used to set twap interval from price feed
+    function setTwInterval(uint256 _interval) external {
+        _twInterval = _interval;
     }
 
     /// @inheritdoc IIndexPrice

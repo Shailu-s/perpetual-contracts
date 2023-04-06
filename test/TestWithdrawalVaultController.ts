@@ -26,6 +26,9 @@ describe("Vault Controller tests for withdrawal", function () {
   let volmexPerpPeriphery;
   let perpViewFake;
   let owner, alice, relayer;
+  const proofHash = "0x6c00000000000000000000000000000000000000000000000000000000000000";
+  const capRatio = "250";
+  const twapType = "0x1444f8cf";
 
   this.beforeEach(async function () {
     [owner, alice, relayer] = await ethers.getSigners();
@@ -36,17 +39,12 @@ describe("Vault Controller tests for withdrawal", function () {
     VolmexBaseToken = await ethers.getContractFactory("VolmexBaseToken");
     perpViewFake = await smock.fake("VolmexPerpView");
 
-    indexPriceOracle = await upgrades.deployProxy(IndexPriceOracle, [owner.address], {
-      initializer: "initialize",
-    });
-    await indexPriceOracle.deployed();
-
     volmexBaseToken = await upgrades.deployProxy(
       VolmexBaseToken,
       [
         "VolmexBaseToken", // nameArg
         "VBT", // symbolArg,
-        indexPriceOracle.address, // priceFeedArg
+        alice.address, // priceFeedArg
         true, // isBase
       ],
       {
@@ -54,10 +52,18 @@ describe("Vault Controller tests for withdrawal", function () {
       },
     );
     await volmexBaseToken.deployed();
-
+    indexPriceOracle = await upgrades.deployProxy(
+      IndexPriceOracle,
+      [owner.address, [100000], [volmexBaseToken.address], [proofHash], [capRatio]],
+      {
+        initializer: "initialize",
+      },
+    );
+    await indexPriceOracle.deployed();
+    await volmexBaseToken.setPriceFeed(indexPriceOracle.address);
     markPriceOracle = await upgrades.deployProxy(
       MarkPriceOracle,
-      [[1000000], [volmexBaseToken.address]],
+      [[100000], [volmexBaseToken.address], [proofHash], owner.address],
       {
         initializer: "initialize",
       },
@@ -77,7 +83,9 @@ describe("Vault Controller tests for withdrawal", function () {
     await DAI.__TestERC20_init("TestDai", "DAI", 10);
 
     const positioningConfigFactory = await ethers.getContractFactory("PositioningConfig");
-    positioningConfig = await upgrades.deployProxy(positioningConfigFactory, []);
+    positioningConfig = await upgrades.deployProxy(positioningConfigFactory, [
+      markPriceOracle.address,
+    ]);
 
     const accountBalanceFactory = await ethers.getContractFactory("AccountBalance");
     accountBalance = await upgrades.deployProxy(accountBalanceFactory, [
@@ -145,6 +153,7 @@ describe("Vault Controller tests for withdrawal", function () {
     volmexPerpPeriphery = await upgrades.deployProxy(VolmexPerpPeriphery, [
       perpViewFake.address,
       markPriceOracle.address,
+      indexPriceOracle.address,
       [vault.address, vault.address],
       owner.address,
       relayer.address,

@@ -125,8 +125,8 @@ abstract contract MatchingEngineCore is PausableUpgradeable, AssetMatcher, Acces
         address baseToken
     ) internal {
         uint256 cumulativePrice = ((quoteValue * _ORACLE_BASE) / baseValue);
-        uint64 index = markPriceOracle.indexByBaseToken(baseToken);
-        markPriceOracle.addObservation(cumulativePrice, index);
+        uint256 index = markPriceOracle.indexByBaseToken(baseToken);
+        markPriceOracle.addObservation(cumulativePrice, index, bytes32(0));
     }
 
     /**

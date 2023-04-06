@@ -14,7 +14,7 @@ function encodeAddress(account) {
 function Asset(virtualToken, value) {
   return { virtualToken, value };
 }
-function Order(orderType, deadline, trader, makeAsset, takeAsset, salt, triggerPrice, isShort) {
+function Order(orderType, deadline, trader, makeAsset, takeAsset, salt, limitOrderTriggerPrice, isShort) {
   return {
     orderType,
     deadline,
@@ -22,7 +22,7 @@ function Order(orderType, deadline, trader, makeAsset, takeAsset, salt, triggerP
     makeAsset,
     takeAsset,
     salt,
-    triggerPrice,
+    limitOrderTriggerPrice,
     isShort,
   };
 }
@@ -38,7 +38,7 @@ const Types = {
     { name: "makeAsset", type: "Asset" },
     { name: "takeAsset", type: "Asset" },
     { name: "salt", type: "uint256" },
-    { name: "triggerPrice", type: "uint128" },
+    { name: "limitOrderTriggerPrice", type: "uint128" },
     { name: "isShort", type: "bool" },
   ],
 };
@@ -59,7 +59,7 @@ async function getSignature() {
     `${process.env.INDEX_PRICE_ORACLE}`,
   );
   const indexPrice = (await indexPriceOracle.getIndexTwap(0))[0];
-  const markPrice = await markPriceOracle.getCumulativePrice("14400", 0);
+  const markPrice = await markPriceOracle.getLastTwap("14400", 0);
 
   const time = new Date().getTime();
   const deadline = time + 50000000;
@@ -124,7 +124,7 @@ async function getSignature() {
     );
   const receipt = await tx.wait();
   console.log("Tx Hash: ", receipt.transactionHash);
-  console.log("final", (await markPriceOracle.getCumulativePrice("14400", 0)).toString());
+  console.log("final", (await markPriceOracle.getLastTwap("14400", 0)).toString());
 
   const requiredData = {
     owedUnRealizedPnl: (await accountBalance.getPnlAndPendingFee(account3.address)).toString(),
