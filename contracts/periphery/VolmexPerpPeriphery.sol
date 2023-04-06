@@ -2,6 +2,7 @@
 pragma solidity =0.8.18;
 
 import { AccessControlUpgradeable } from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
+import { SafeERC20Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 
 import { LibOrder } from "../libs/LibOrder.sol";
 import { IMarkPriceOracle } from "../interfaces/IMarkPriceOracle.sol";
@@ -13,6 +14,8 @@ import { IVolmexPerpView } from "../interfaces/IVolmexPerpView.sol";
 import { IPositioningConfig } from "../interfaces/IPositioningConfig.sol";
 
 contract VolmexPerpPeriphery is AccessControlUpgradeable, IVolmexPerpPeriphery {
+    using SafeERC20Upgradeable for IERC20Upgradeable;
+
     // perp periphery role
     bytes32 public constant VOLMEX_PERP_PERIPHERY = keccak256("VOLMEX_PERP_PERIPHERY");
     // role of relayer to execute open position
@@ -171,7 +174,7 @@ contract VolmexPerpPeriphery is AccessControlUpgradeable, IVolmexPerpPeriphery {
     ) external {
         address caller = _msgSender();
         require(_isVaultWhitelist[caller], "Periphery: vault not whitelisted");
-        _token.transferFrom(_from, caller, _amount);
+        _token.safeTransferFrom(_from, caller, _amount);
     }
 
     /**
