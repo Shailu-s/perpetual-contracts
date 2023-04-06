@@ -26,6 +26,7 @@ const positioning = async () => {
   const perpView = await upgrades.deployProxy(VolmexPerpView, [owner.address]);
   await perpView.deployed();
   await (await perpView.grantViewStatesRole(owner.address)).wait();
+  console.log(perpView.address);
 
   console.log("Deploying Base Token ...");
   const volmexBaseToken = await upgrades.deployProxy(
@@ -41,6 +42,7 @@ const positioning = async () => {
     },
   );
   await volmexBaseToken.deployed();
+  console.log(volmexBaseToken.address);
   await (await perpView.setBaseToken(volmexBaseToken.address)).wait();
 
   console.log("Deploying Index Price Oracle ...");
@@ -53,7 +55,9 @@ const positioning = async () => {
     });
     await indexPriceOracle.deployed();
     indexOracle = indexPriceOracle.address;
+    console.log(indexOracle);
   }
+  await (await volmexBaseToken.setPriceFeed(indexOracle)).wait();
 
   console.log("Deploying Quote Token ...");
   const volmexQuoteToken = await upgrades.deployProxy(
@@ -68,6 +72,7 @@ const positioning = async () => {
     },
   );
   await volmexQuoteToken.deployed();
+  console.log(volmexQuoteToken.address);
   await (await perpView.setQuoteToken(volmexQuoteToken.address)).wait();
 
   console.log("Deploying Mark Price Oracle ...");
@@ -79,6 +84,8 @@ const positioning = async () => {
     },
   );
   await markPriceOracle.deployed();
+  console.log(markPriceOracle.address);
+  await (await markPriceOracle.setIndexOracle(indexOracle)).wait();
 
   console.log("Deploying USDC ...");
   let usdtAddress = process.env.USDT;
@@ -91,6 +98,7 @@ const positioning = async () => {
     );
     await usdt.deployed();
     usdtAddress = usdt.address;
+    console.log(usdt.address);
   }
 
   console.log("Deploying MatchingEngine ...");
@@ -99,11 +107,13 @@ const positioning = async () => {
     markPriceOracle.address,
   ]);
   await matchingEngine.deployed();
+  console.log(matchingEngine.address);
   await (await markPriceOracle.setObservationAdder(matchingEngine.address)).wait();
 
   console.log("Deploying Positioning Config ...");
   const positioningConfig = await upgrades.deployProxy(PositioningConfig, [markPriceOracle.address]);
   await positioningConfig.deployed();
+  console.log(positioningConfig.address);
   await (await markPriceOracle.grantTwapIntervalRole(positioningConfig.address)).wait();
   await positioningConfig.setMaxMarketsPerAccount(5);
   await positioningConfig.setSettlementTokenBalanceCap("10000000000000");
@@ -111,6 +121,7 @@ const positioning = async () => {
   console.log("Deploying Account Balance ...");
   const accountBalance = await upgrades.deployProxy(AccountBalance, [positioningConfig.address]);
   await accountBalance.deployed();
+  console.log(accountBalance.address);
   await (await perpView.setAccount(accountBalance.address)).wait();
 
   console.log("Deploying Vault Controller ...");
@@ -119,6 +130,7 @@ const positioning = async () => {
     accountBalance.address,
   ]);
   await vaultController.deployed();
+  console.log(vaultController.address);
   await (await accountBalance.grantSettleRealizedPnlRole(vaultController.address)).wait();
   await (await perpView.setVaultController(vaultController.address)).wait();
 
@@ -131,6 +143,7 @@ const positioning = async () => {
     false,
   ]);
   await vault.deployed();
+  console.log(vault.address);
   await (await perpView.incrementVaultIndex()).wait();
 
   console.log("Deploying Positioning ...");
@@ -151,8 +164,11 @@ const positioning = async () => {
     },
   );
   await positioning.deployed();
-  console.log("Set positioning ...");
+  console.log(positioning.address);
+  console.log("Set positioning - accounts ...");
   await (await accountBalance.setPositioning(positioning.address)).wait();
+  console.log("Set positioning - mark oracle ...");
+  await (await markPriceOracle.setPositioning(positioning.address)).wait();
   console.log("Grant match order ...");
   await (await matchingEngine.grantMatchOrders(positioning.address)).wait();
   console.log("Set at perp view ...");
@@ -165,6 +181,7 @@ const positioning = async () => {
   console.log("Deploying MarketRegistry ...");
   const marketRegistry = await upgrades.deployProxy(MarketRegistry, [volmexQuoteToken.address]);
   await marketRegistry.deployed();
+  console.log(marketRegistry.address);
   console.log("Add base token ...");
   await (await marketRegistry.addBaseToken(volmexBaseToken.address)).wait();
   console.log("Set market ...");
@@ -187,9 +204,10 @@ const positioning = async () => {
     indexOracle,
     [vault.address, vault.address],
     owner.address,
-    `${process.env.RELAYER}`, // RELAYER
+    process.env.RELAYER ? process.env.RELAYER : owner.address
   ]);
   await periphery.deployed();
+  console.log(periphery.address);
 
   const proxyAdmin = await upgrades.admin.getInstance();
 
@@ -211,6 +229,7 @@ const positioning = async () => {
     },
   );
   await factory.deployed();
+  console.log(factory.address);
   await (await perpView.grantViewStatesRole(factory.address)).wait();
 
   const addresses = {
