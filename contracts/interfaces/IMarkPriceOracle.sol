@@ -26,6 +26,7 @@ interface IMarkPriceOracle {
         uint256 _startTimestamp,
         uint256 _endTimestamp
     ) external view returns (uint256 priceCumulative);
+    function getLastMarkPrice(uint256 _index) external view returns (uint256 underlyingLastPrice);
 
     function getCustomUnderlyingTwap(
         uint256 _index,
