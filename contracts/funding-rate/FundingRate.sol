@@ -125,14 +125,14 @@ contract FundingRate is IFundingRate, BlockContext, PositioningCallee, FundingRa
             //when funding period is not over
             uint256 fundingStartTime = lastSettledTimestamp - _fundingPeriod;
             markTwap = IMarkPriceOracle(_markPriceOracleArg).getCustomMarkTwap(_underlyingPriceIndex, fundingStartTime, lastSettledTimestamp);
-            indexTwap = IIndexPriceOracle(_indexPriceOracleArg).getCustomIndexTwap(_underlyingPriceIndex, fundingStartTime, lastSettledTimestamp);
+            (indexTwap,) = IIndexPriceOracle(_indexPriceOracleArg).getLastEpochTwap(_underlyingPriceIndex);
             // if this is the latest updated timestamp, values in _globalFundingGrowthX96Map are up-to-date already
             globalTwPremium = lastTwPremium;
         } else {
             //when funding period is over
             uint256 fundingLatestTimestamp = lastSettledTimestamp + ((timestamp - lastSettledTimestamp) / _fundingPeriod) * _fundingPeriod;
             markTwap = IMarkPriceOracle(_markPriceOracleArg).getCustomMarkTwap(_underlyingPriceIndex, lastSettledTimestamp, fundingLatestTimestamp);
-            indexTwap = IIndexPriceOracle(_indexPriceOracleArg).getCustomIndexTwap(_underlyingPriceIndex, lastSettledTimestamp, fundingLatestTimestamp);
+            (indexTwap,) = IIndexPriceOracle(_indexPriceOracleArg).getLastEpochTwap(_underlyingPriceIndex);
             // deltaTwPremium = (markTwap - indexTwap) * (now - lastSettledTimestamp)
             int256 deltaTwPremiumX96 = _getDeltaTwap(markTwap, indexTwap) * (fundingLatestTimestamp - lastSettledTimestamp).toInt256();
             globalTwPremium = lastTwPremium + deltaTwPremiumX96;
