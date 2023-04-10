@@ -86,9 +86,11 @@ contract FundingRate is IFundingRate, BlockContext, PositioningCallee, FundingRa
         int256 twPremiumGrowthGlobal,
         int256 userLastTwPremiumGrowthGlobal
     ) internal view virtual returns (int256 pendingFundingPayment) {
-        int256 marketFundingRate = (twPremiumGrowthGlobal * _PRECISION_BASE) - (userLastTwPremiumGrowthGlobal * _PRECISION_BASE);
-        int256 positionSize = IAccountBalance(_accountBalance).getPositionSize(trader, baseToken);
-        pendingFundingPayment = (((positionSize * marketFundingRate) * _fundingPeriod.toInt256()) / _PRECISION_BASE) * 86400;
+        if (twPremiumGrowthGlobal != 0 || userLastTwPremiumGrowthGlobal != 0) {
+            int256 marketFundingRate = (twPremiumGrowthGlobal * _PRECISION_BASE) - (userLastTwPremiumGrowthGlobal * _PRECISION_BASE);
+            int256 positionSize = IAccountBalance(_accountBalance).getPositionSize(trader, baseToken);
+            pendingFundingPayment = (((positionSize * marketFundingRate) * _fundingPeriod.toInt256()) / _PRECISION_BASE) * 86400;
+        }
     }
 
     /// @dev this function calculates the up-to-date twaps and pass them out
