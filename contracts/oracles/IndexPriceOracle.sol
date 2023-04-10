@@ -285,11 +285,11 @@ contract IndexPriceOracle is AccessControlUpgradeable, ERC165StorageUpgradeable 
 
         uint256 priceCount;
         for (; index != 0 && observations[index - 1].timestamp >= _startTimestamp; index--) {
-                if (observations[index - 1].timestamp <= _endTimestamp) {
-                    priceCumulative += observations[index - 1].underlyingPrice;
-                    epochTimestamp += observations[index - 1].timestamp;
-                    priceCount++;
-                }
+            if (observations[index - 1].timestamp <= _endTimestamp) {
+                priceCumulative += observations[index - 1].underlyingPrice;
+                epochTimestamp += observations[index - 1].timestamp;
+                priceCount++;
+            }
         }
         priceCumulative = priceCumulative / priceCount;
         epochTimestamp = epochTimestamp / priceCount;
