@@ -89,7 +89,7 @@ contract FundingRate is IFundingRate, BlockContext, PositioningCallee, FundingRa
         if (twPremiumGrowthGlobal != 0 || userLastTwPremiumGrowthGlobal != 0) {
             int256 marketFundingRate = (twPremiumGrowthGlobal * _PRECISION_BASE) - (userLastTwPremiumGrowthGlobal * _PRECISION_BASE);
             int256 positionSize = IAccountBalance(_accountBalance).getPositionSize(trader, baseToken);
-            pendingFundingPayment = (((positionSize * marketFundingRate) * _fundingPeriod.toInt256()) / _PRECISION_BASE) * 86400;
+            pendingFundingPayment = ((((positionSize * marketFundingRate) * _fundingPeriod.toInt256()) / _PRECISION_BASE) * 86400) / _IORACLE_BASE;
         }
     }
 
