@@ -466,12 +466,16 @@ contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, 
         address quoteToken = IMarketRegistry(_marketRegistry).getQuoteToken();
         if (position > 0) {
             uint256 currentBalance = IVirtualToken(baseToken).balanceOf(trader);
-            IVirtualToken(baseToken).burn(trader, currentBalance);
+            if (currentBalance != 0) {
+                IVirtualToken(baseToken).burn(trader, currentBalance);
+            }
             IVirtualToken(baseToken).mint(trader, uint256(position));
         }
         if (notional > 0) {
             uint256 currentBalance = IVirtualToken(quoteToken).balanceOf(trader);
-            IVirtualToken(quoteToken).burn(trader, currentBalance);
+            if (currentBalance != 0) {
+                IVirtualToken(quoteToken).burn(trader, currentBalance);
+            }
             IVirtualToken(quoteToken).mint(trader, uint256(notional));
         }
     }
