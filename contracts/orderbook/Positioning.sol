@@ -431,33 +431,18 @@ contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, 
             _requireEnoughFreeCollateral(orderRight.trader);
         }
 
-        uint256 orderIndexPrice = _getIndexPrice(baseToken);
         _updateTokenAmount(orderLeft.trader, baseToken);
         _updateTokenAmount(orderRight.trader, baseToken);
 
         emit PositionChanged(
-            orderLeft.trader,
+            [orderLeft.trader, orderRight.trader],
             baseToken,
-            internalData.leftExchangedPositionSize,
-            internalData.leftExchangedPositionNotional,
-            orderFees.orderLeftFee,
-            orderIndexPrice,
-            orderLeft.orderType,
-            orderLeft.isShort
+            [internalData.leftExchangedPositionSize, internalData.rightExchangedPositionSize],
+            [internalData.leftExchangedPositionNotional, internalData.rightExchangedPositionNotional],
+            [orderFees.orderLeftFee, orderFees.orderRightFee],
+            [orderLeft.orderType, orderRight.orderType],
+            [orderLeft.isShort, orderRight.isShort]
         );
-
-        emit PositionChanged(
-            orderRight.trader,
-            baseToken,
-            internalData.rightExchangedPositionSize,
-            internalData.rightExchangedPositionNotional,
-            orderFees.orderRightFee,
-            orderIndexPrice,
-            orderRight.orderType,
-            orderRight.isShort
-        );
-
-        return internalData;
     }
 
     function _updateTokenAmount(address trader, address baseToken) internal {
