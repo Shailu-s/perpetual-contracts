@@ -71,6 +71,14 @@ const config: HardhatUserConfig = {
       loggingEnabled: true,
       gasMultiplier: 1.5,
       // timeout: 36000000,
+    },
+    "base-goerli": {
+      url: `https://spring-spring-needle.base-goerli.discover.quiknode.pro/${process.env.BASE_GOERLI_QUICKNODE_API_KEY}/`,
+      accounts: [`0x${process.env.PRIVATE_KEY}`],
+      throwOnTransactionFailures: true,
+      loggingEnabled: true,
+      gasMultiplier: 1,
+      timeout: 36000000,
     }
   },
   contractSizer: {
