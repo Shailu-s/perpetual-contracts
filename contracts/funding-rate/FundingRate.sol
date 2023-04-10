@@ -118,26 +118,18 @@ contract FundingRate is IFundingRate, BlockContext, PositioningCallee, FundingRa
         }
 
         uint256 lastSettledTimestamp = _lastSettledTimestampMap[baseToken];
-        int256 lastTwPremium = _globalFundingGrowthMap[baseToken];
+        globalTwPremium = _globalFundingGrowthMap[baseToken];
         if (lastSettledTimestamp == 0) {
             markTwap = IMarkPriceOracle(_markPriceOracleArg).getMarkTwap(twapInterval, _underlyingPriceIndex);
             indexTwap = IIndexPriceOracle(_indexPriceOracleArg).getLastTwap(twapInterval, _underlyingPriceIndex);
-            globalTwPremium = lastTwPremium;
-        } else if (timestamp - lastSettledTimestamp < _fundingPeriod) {
-            //when funding period is not over
-            uint256 fundingStartTime = lastSettledTimestamp - _fundingPeriod;
-            (indexTwap,) = IIndexPriceOracle(_indexPriceOracleArg).getLastEpochTwap(_underlyingPriceIndex);
-            markTwap = IMarkPriceOracle(_markPriceOracleArg).getLastMarkPrice(_underlyingPriceIndex);
-            // if this is the latest updated timestamp, values in _globalFundingGrowthX96Map are up-to-date already
-            globalTwPremium = lastTwPremium;
-        } else {
+        } else if (timestamp - lastSettledTimestamp > _fundingPeriod) {
             //when funding period is over
             uint256 fundingLatestTimestamp = lastSettledTimestamp + ((timestamp - lastSettledTimestamp) / _fundingPeriod) * _fundingPeriod;
-            (indexTwap,) = IIndexPriceOracle(_indexPriceOracleArg).getLastEpochTwap(_underlyingPriceIndex);
-            markTwap = IMarkPriceOracle(_markPriceOracleArg).getLastMarkPrice(_underlyingPriceIndex);
+            markTwap = IMarkPriceOracle(_markPriceOracleArg).getCustomMarkTwap(_underlyingPriceIndex, lastSettledTimestamp, fundingLatestTimestamp);
+            indexTwap = IIndexPriceOracle(_indexPriceOracleArg).getCustomIndexTwap(_underlyingPriceIndex, lastSettledTimestamp, fundingLatestTimestamp);
             // deltaTwPremium = (markTwap - indexTwap) * (now - lastSettledTimestamp)
             int256 deltaTwPremiumX96 = _getDeltaTwap(markTwap, indexTwap) * (fundingLatestTimestamp - lastSettledTimestamp).toInt256();
-            globalTwPremium = lastTwPremium + deltaTwPremiumX96;
+            globalTwPremium += deltaTwPremiumX96;
         }
 
         return (globalTwPremium, markTwap, indexTwap);
