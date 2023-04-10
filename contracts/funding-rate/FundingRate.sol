@@ -40,8 +40,8 @@ contract FundingRate is IFundingRate, BlockContext, PositioningCallee, FundingRa
             // update fundingGrowthGlobal and _lastSettledTimestamp
             (_lastSettledTimestampMap[baseToken], _globalFundingGrowthMap[baseToken]) = (fundingLatestTimestamp, globalTwPremiumGrowth);
             _lastFundingIndexPrice[baseToken] = indexTwap;
+            emit FundingUpdated(baseToken, markTwap, indexTwap);
         }
-        emit FundingUpdated(baseToken, markTwap, indexTwap);
         return (fundingPayment, globalTwPremiumGrowth);
     }
 
