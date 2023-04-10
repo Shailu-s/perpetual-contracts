@@ -105,11 +105,14 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
     ) external override returns (int256 positionSize) {
         _requireOnlyPositioning();
         (positionSize, ) = _modifyTakerBalance(trader, baseToken, takerBase, takerQuote);
-        _modifyOwedRealizedPnl(trader, fee, baseToken);
-
-        // @audit should merge _addOwedRealizedPnl and settleQuoteToOwedRealizedPnl in some way.
-        // PnlRealized will be emitted three times when removing trader's liquidity
-        _settleQuoteToOwedRealizedPnl(trader, baseToken, realizedPnl);
+        if (fee != 0) {
+            _modifyOwedRealizedPnl(trader, fee, baseToken);
+        }
+        if (realizedPnl != 0) {
+            // @audit should merge _addOwedRealizedPnl and settleQuoteToOwedRealizedPnl in some way.
+            // PnlRealized will be emitted three times when removing trader's liquidity
+            _settleQuoteToOwedRealizedPnl(trader, baseToken, realizedPnl);
+        }
         _deregisterBaseToken(trader, baseToken);
     }
 
