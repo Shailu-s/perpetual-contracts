@@ -68,9 +68,7 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
         int256 lastTwPremiumGrowthGlobal
     ) external override {
         _requireOnlyPositioning();
-        if (lastTwPremiumGrowthGlobal != 0) {
-            _accountMarketMap[trader][baseToken].lastTwPremiumGrowthGlobal = lastTwPremiumGrowthGlobal;
-        }
+        _accountMarketMap[trader][baseToken].lastTwPremiumGrowthGlobal = lastTwPremiumGrowthGlobal;
     }
 
     /// @inheritdoc IAccountBalance

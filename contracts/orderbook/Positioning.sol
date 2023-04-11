@@ -350,8 +350,9 @@ contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, 
             IAccountBalance(_accountBalance).modifyOwedRealizedPnl(trader, fundingPayment.neg256(), baseToken);
             emit FundingPaymentSettled(trader, baseToken, fundingPayment);
         }
-
-        IAccountBalance(_accountBalance).updateTwPremiumGrowthGlobal(trader, baseToken, globalTwPremiumGrowth);
+        if (globalTwPremiumGrowth != 0) {
+            IAccountBalance(_accountBalance).updateTwPremiumGrowthGlobal(trader, baseToken, globalTwPremiumGrowth);
+        }
     }
 
     /// @dev Add given amount to PnL of the address provided
