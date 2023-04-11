@@ -339,7 +339,7 @@ contract MarkPriceOracle is AccessControlUpgradeable {
 
     function _calculateMarkPriceAtEpoch(uint256 _index) internal {
         uint256 currentTimestamp = block.timestamp;
-        if (initialTimestamp != 0 && currentTimestamp - lastEpochAddTimestamp >= markTwInterval) {
+        if (currentTimestamp - lastEpochAddTimestamp >= markTwInterval) {
             uint256 _startTimestamp = ((currentTimestamp - initialTimestamp) / markTwInterval) * markTwInterval;
             (uint256 twap, uint256 epochTimestamp) = _getCustomTwap(_index, _startTimestamp, currentTimestamp, false);
 
