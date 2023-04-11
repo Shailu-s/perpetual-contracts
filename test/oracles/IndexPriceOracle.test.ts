@@ -4,7 +4,7 @@ const assert = require("assert");
 import { Signer, ContractReceipt, ContractTransaction } from "ethers";
 const { expectRevert, time } = require("@openzeppelin/test-helpers");
 
-describe.only("IndexPriceOracle", function () {
+describe("IndexPriceOracle", function () {
   let owner: string;
   let accounts: Signer[];
   let volmexOracleFactory: any;
