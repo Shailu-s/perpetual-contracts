@@ -135,7 +135,7 @@ contract MarkPriceOracle is AccessControlUpgradeable {
         uint256 fundingPeriod = positioning.getFundingPeriod();
 
         int256[3] memory prices;
-        int256 indexPrice = indexOracle.getLastTwap(indexTwInterval, _index).toInt256();
+        int256 indexPrice = indexOracle.getLastPrice(_index).toInt256();
         // Note: Check for actual precision and data type
         prices[0] = indexPrice * (1 + lastFundingRate * (nextFunding.toInt256() / fundingPeriod.toInt256()));
         uint256 markTwap = getMarkTwap(markTwInterval, _index);
@@ -281,7 +281,8 @@ contract MarkPriceOracle is AccessControlUpgradeable {
         uint256 _markPrice,
         bytes32 _proofHash
     ) internal {
-        MarkPriceObservation memory observation = MarkPriceObservation({ timestamp: block.timestamp, underlyingPrice: _underlyingPrice, proofHash: _proofHash, markPrice: _markPrice });
+        MarkPriceObservation memory observation =
+            MarkPriceObservation({ timestamp: block.timestamp, underlyingPrice: _underlyingPrice, proofHash: _proofHash, markPrice: _markPrice });
         MarkPriceObservation[] storage observations = observationsByIndex[_index];
         observations.push(observation);
         uint256 totalObservations = observations.length;
