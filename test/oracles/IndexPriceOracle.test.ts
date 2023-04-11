@@ -66,6 +66,7 @@ describe("IndexPriceOracle", function () {
 
     await volmexOracle.deployed();
     await volmexOracle.setObservationAdder(owner);
+    await volmexOracle.grantInitialTimestampRole(owner);
     for (let i = 0; i < 10; i++) {
       await volmexOracle.addObservation([10000000], [0], [proofHash]);
       await time.increase(1000);

@@ -291,7 +291,8 @@ contract MarkPriceOracle is AccessControlUpgradeable {
         uint256 _markPrice,
         bytes32 _proofHash
     ) internal {
-        MarkPriceObservation memory observation = MarkPriceObservation({ timestamp: block.timestamp, underlyingPrice: _underlyingPrice, proofHash: _proofHash, markPrice: _markPrice });
+        MarkPriceObservation memory observation =
+            MarkPriceObservation({ timestamp: block.timestamp, underlyingPrice: _underlyingPrice, proofHash: _proofHash, markPrice: _markPrice });
         MarkPriceObservation[] storage observations = observationsByIndex[_index];
         observations.push(observation);
         uint256 totalObservations = observations.length;
@@ -342,7 +343,7 @@ contract MarkPriceOracle is AccessControlUpgradeable {
             uint256 _startTimestamp = ((currentTimestamp - initialTimestamp) / markTwInterval) * markTwInterval;
             (uint256 twap, uint256 epochTimestamp) = _getCustomTwap(_index, _startTimestamp, currentTimestamp, false);
 
-            MarkPriceByEpoch memory markPriceByEpoch = MarkPriceByEpoch({price: twap, timestamp: epochTimestamp});
+            MarkPriceByEpoch memory markPriceByEpoch = MarkPriceByEpoch({ price: twap, timestamp: epochTimestamp });
             MarkPriceByEpoch[] storage markPricesByEpoch = markPriceAtEpochs[_index];
             markPricesByEpoch.push(markPriceByEpoch);
         }
