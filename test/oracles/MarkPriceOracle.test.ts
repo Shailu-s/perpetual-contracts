@@ -50,6 +50,8 @@ describe("MarkPriceOracle", function () {
   const TAKE_PROFIT_LIMIT_ORDER = "0xe0fc7f94";
   const ZERO_ADDR = "0x0000000000000000000000000000000000000000";
   const proofHash = "0x6c00000000000000000000000000000000000000000000000000000000000000";
+  const initialTimeStampRole =
+    "0x8426feed6a25f9f5e06c145118f728dcb93a441fbf150f1e4c2e84c5ffd3c927";
   const capRatio = "250";
   const twapType = "0x1444f8cf";
 
@@ -124,6 +126,7 @@ describe("MarkPriceOracle", function () {
       },
     );
     positioningConfig = await upgrades.deployProxy(PositioningConfig, [markPriceOracle.address]);
+    await indexPriceOracle.grantInitialTimestampRole(markPriceOracle.address);
     matchingEngine = await upgrades.deployProxy(MatchingEngine, [
       owner.address,
       markPriceOracle.address,
@@ -153,7 +156,6 @@ describe("MarkPriceOracle", function () {
       accountBalance1.address,
       USDC.address,
       vaultController.address,
-      false,
     ]);
     await vault.deployed();
     await (await perpView.incrementVaultIndex()).wait();

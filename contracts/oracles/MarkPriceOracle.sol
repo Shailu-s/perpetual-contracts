@@ -25,7 +25,6 @@ contract MarkPriceOracle is AccessControlUpgradeable {
     IPositioning public positioning;
     IIndexPriceOracle public indexOracle;
     uint256 public markTwInterval;
-    uint256 public indexTwInterval;
     // price oracle admin role
     bytes32 public constant PRICE_ORACLE_ADMIN = keccak256("PRICE_ORACLE_ADMIN");
     // role of observation collection
@@ -62,7 +61,6 @@ contract MarkPriceOracle is AccessControlUpgradeable {
         _setRoleAdmin(PRICE_ORACLE_ADMIN, PRICE_ORACLE_ADMIN);
         _grantRole(PRICE_ORACLE_ADMIN, _admin);
         markTwInterval = 300; // 5 minutes
-        indexTwInterval = 3600; // 1 hour
     }
 
     /**
@@ -102,15 +100,6 @@ contract MarkPriceOracle is AccessControlUpgradeable {
     }
 
     /**
-     * @notice Set positioning contract
-     * @param _indexTwInterval Address of positioning contract typed in interface
-     */
-    function setIndexTwInterval(uint256 _indexTwInterval) external virtual {
-        _requireTwapIntervalRole();
-        indexTwInterval = _indexTwInterval;
-    }
-
-    /**
      * @notice Used to add price cumulative of an asset at a given timestamp
      *
      * @param _underlyingPrice Price of the asset
@@ -135,7 +124,7 @@ contract MarkPriceOracle is AccessControlUpgradeable {
         uint256 fundingPeriod = positioning.getFundingPeriod();
 
         int256[3] memory prices;
-        int256 indexPrice = indexOracle.getLastTwap(indexTwInterval, _index).toInt256();
+        int256 indexPrice = indexOracle.getLastPrice(_index).toInt256();
         // Note: Check for actual precision and data type
         prices[0] = indexPrice * (1 + lastFundingRate * (nextFunding.toInt256() / fundingPeriod.toInt256()));
         uint256 markTwap = getMarkTwap(markTwInterval, _index);
@@ -281,7 +270,8 @@ contract MarkPriceOracle is AccessControlUpgradeable {
         uint256 _markPrice,
         bytes32 _proofHash
     ) internal {
-        MarkPriceObservation memory observation = MarkPriceObservation({ timestamp: block.timestamp, underlyingPrice: _underlyingPrice, proofHash: _proofHash, markPrice: _markPrice });
+        MarkPriceObservation memory observation =
+            MarkPriceObservation({ timestamp: block.timestamp, underlyingPrice: _underlyingPrice, proofHash: _proofHash, markPrice: _markPrice });
         MarkPriceObservation[] storage observations = observationsByIndex[_index];
         observations.push(observation);
         uint256 totalObservations = observations.length;

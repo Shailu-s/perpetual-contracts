@@ -53,8 +53,6 @@ interface IMarkPriceOracle {
         bytes32 _proofHash
     ) external;
 
-    function setIndexTwInterval(uint256 _indexTwInterval) external;
-
     function setMarkTwInterval(uint256 _markTwInterval) external;
 
     function setIndexOracle(IIndexPriceOracle _indexOracle) external;

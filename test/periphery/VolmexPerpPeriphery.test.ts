@@ -131,12 +131,7 @@ describe("VolmexPerpPeriphery", function () {
 
     positioningConfig = await upgrades.deployProxy(PositioningConfig, [markPriceOracle.address]);
 
-    USDC = await TestERC20.deploy(
-      "100000000000000000000000",
-      "Tether USD",
-      "USDT",
-      6
-    );
+    USDC = await TestERC20.deploy("100000000000000000000000", "Tether USD", "USDT", 6);
     await USDC.deployed();
 
     matchingEngine = await upgrades.deployProxy(MatchingEngine, [
@@ -164,7 +159,6 @@ describe("VolmexPerpPeriphery", function () {
       accountBalance1.address,
       USDC.address,
       vaultController.address,
-      false,
     ]);
     await vault.deployed();
     await (await perpView.incrementVaultIndex()).wait();
@@ -516,7 +510,6 @@ describe("VolmexPerpPeriphery", function () {
         accountBalance1.address,
         USDC.address,
         accountBalance1.address,
-        false,
       ]);
       expect(await volmexPerpPeriphery.whitelistVault(vault1.address, true))
         .to.emit(volmexPerpPeriphery, "VaultWhitelisted")

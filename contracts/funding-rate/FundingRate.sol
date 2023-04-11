@@ -57,7 +57,9 @@ contract FundingRate is IFundingRate, BlockContext, PositioningCallee, FundingRa
         if (_globalFundingGrowthMap[baseToken] == 0 || (_lastFundingIndexPrice[baseToken]).toInt256() == 0) {
             return 0;
         }
-        lastFundingRate = (_globalFundingGrowthMap[baseToken] * _ORACLE_BASE_X6.toInt256()) / ((_lastFundingIndexPrice[baseToken]).toInt256() * (_lastSettledTimestampMap[baseToken] - _firstTradedTimestampMap[baseToken]).toInt256());
+        lastFundingRate =
+            (_globalFundingGrowthMap[baseToken] * _ORACLE_BASE_X6.toInt256()) /
+            ((_lastFundingIndexPrice[baseToken]).toInt256() * (_lastSettledTimestampMap[baseToken] - _firstTradedTimestampMap[baseToken]).toInt256());
     }
 
     /// @inheritdoc IFundingRate
@@ -121,7 +123,7 @@ contract FundingRate is IFundingRate, BlockContext, PositioningCallee, FundingRa
         globalTwPremium = _globalFundingGrowthMap[baseToken];
         if (lastSettledTimestamp == 0) {
             markTwap = IMarkPriceOracle(_markPriceOracleArg).getMarkTwap(twapInterval, _underlyingPriceIndex);
-            indexTwap = IIndexPriceOracle(_indexPriceOracleArg).getLastTwap(twapInterval, _underlyingPriceIndex);
+            indexTwap = IIndexPriceOracle(_indexPriceOracleArg).getLastPrice(_underlyingPriceIndex);
         } else if (timestamp - lastSettledTimestamp > _fundingPeriod) {
             //when funding period is over
             uint256 fundingLatestTimestamp = lastSettledTimestamp + ((timestamp - lastSettledTimestamp) / _fundingPeriod) * _fundingPeriod;
