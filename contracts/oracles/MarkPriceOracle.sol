@@ -224,6 +224,12 @@ contract MarkPriceOracle is AccessControlUpgradeable {
         underlyingLastPrice = observations[index].underlyingPrice;
     }
 
+    function getLastMarkPrice(uint256 _index) external view returns (uint256 underlyingLastPrice) {
+        MarkPriceObservation[] memory observations = observationsByIndex[_index];
+        uint256 index = observations.length - 1;
+        underlyingLastPrice = observations[index].markPrice;
+    }
+
     /**
      * @notice Get index count of assets
      */
@@ -275,10 +281,13 @@ contract MarkPriceOracle is AccessControlUpgradeable {
         uint256 _markPrice,
         bytes32 _proofHash
     ) internal {
-        MarkPriceObservation memory observation =
-            MarkPriceObservation({ timestamp: block.timestamp, underlyingPrice: _underlyingPrice, proofHash: _proofHash, markPrice: _markPrice });
+        MarkPriceObservation memory observation = MarkPriceObservation({ timestamp: block.timestamp, underlyingPrice: _underlyingPrice, proofHash: _proofHash, markPrice: _markPrice });
         MarkPriceObservation[] storage observations = observationsByIndex[_index];
         observations.push(observation);
+        uint256 totalObservations = observations.length;
+        if (totalObservations == 2) {
+            indexOracle.setInitialTimestamp(block.timestamp);
+        }
     }
 
     function _getCustomTwap(
@@ -292,7 +301,7 @@ contract MarkPriceOracle is AccessControlUpgradeable {
         lastUpdatedTimestamp = observations[index - 1].timestamp;
         _endTimestamp = lastUpdatedTimestamp < _endTimestamp ? lastUpdatedTimestamp : _endTimestamp;
         if (lastUpdatedTimestamp < _startTimestamp) {
-            _startTimestamp = ((lastUpdatedTimestamp - observations[0].timestamp) / markTwInterval) * markTwInterval;
+            _startTimestamp = observations[0].timestamp + (((lastUpdatedTimestamp - observations[0].timestamp) / markTwInterval) * markTwInterval);
         }
         uint256 priceCount;
         if (_isMarkTwapRequired) {
