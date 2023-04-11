@@ -4,7 +4,7 @@ const assert = require("assert");
 import { Signer, ContractReceipt, ContractTransaction } from "ethers";
 const { expectRevert, time } = require("@openzeppelin/test-helpers");
 
-describe("IndexPriceOracle", function () {
+describe.only("IndexPriceOracle", function () {
   let owner: string;
   let accounts: Signer[];
   let volmexOracleFactory: any;
@@ -66,6 +66,7 @@ describe("IndexPriceOracle", function () {
 
     await volmexOracle.deployed();
     await volmexOracle.setObservationAdder(owner);
+    await volmexOracle.grantInitialTimestampRole(owner);
     for (let i = 0; i < 10; i++) {
       await volmexOracle.addObservation(10000000, 0, proofHash);
       await time.increase(1000);
