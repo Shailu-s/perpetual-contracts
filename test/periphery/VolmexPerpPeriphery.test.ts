@@ -127,6 +127,7 @@ describe("VolmexPerpPeriphery", function () {
       },
     );
     await markPriceOracle.deployed();
+    await (await indexPriceOracle.grantInitialTimestampRole(markPriceOracle.address)).wait();
 
     positioningConfig = await upgrades.deployProxy(PositioningConfig, [markPriceOracle.address]);
 

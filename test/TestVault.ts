@@ -72,6 +72,7 @@ describe("Vault", function () {
         initializer: "initialize",
       },
     );
+    await markPriceOracle.deployed();
     const positioningConfigFactory = await ethers.getContractFactory("PositioningConfig");
     positioningConfig = await upgrades.deployProxy(positioningConfigFactory, [
       markPriceOracle.address,

@@ -110,6 +110,7 @@ describe("MatchingEngine", function () {
       },
     );
     await markPriceOracle.deployed();
+    await (await indexPriceOracle.grantInitialTimestampRole(markPriceOracle.address)).wait();
     await volmexBaseToken.setPriceFeed(indexPriceOracle.address);
     positioningConfig = await upgrades.deployProxy(PositioningConfig, [markPriceOracle.address]);
     await positioningConfig.deployed();

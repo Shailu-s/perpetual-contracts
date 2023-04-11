@@ -2293,6 +2293,7 @@ describe("Liquidation test in Positioning", function () {
       },
     );
     await markPriceOracle.deployed();
+    await (await indexPriceOracle.grantInitialTimestampRole(markPriceOracle.address)).wait();
 
     erc1271Test = await ERC1271Test.deploy();
 

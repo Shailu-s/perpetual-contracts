@@ -23,6 +23,7 @@ describe("PositioningConfig", function () {
         initializer: "initialize",
       },
     );
+    await markPriceOracle.deployed();
 
     positioningConfig = await upgrades.deployProxy(PositioningConfig, [markPriceOracle.address], {
       initializer: "initialize",
