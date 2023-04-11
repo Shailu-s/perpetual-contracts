@@ -149,6 +149,15 @@ describe("IndexPriceOracle", function () {
       const txn = await volmexOracle.latestRoundData(10000, 0);
       expect(Number(txn.answer)).equal(1000000000);
     });
+    it("should  give last epoch price", async () => {
+      await time.increase(28800);
+      for (let i = 0; i < 50; i++) {
+        await volmexOracle.addObservation([800000000], [0], [proofHash]);
+      }
+
+      const lastEpochPrice = await volmexOracle.getLastEpochTwap(0);
+      expect(lastEpochPrice.price.toString()).to.be.equal("800000000");
+    });
 
     it("Should get cumulative price with time delay", async () => {
       for (let i = 0; i < 9; i++) {
