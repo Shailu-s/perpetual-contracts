@@ -211,6 +211,13 @@ contract IndexPriceOracle is AccessControlUpgradeable, ERC165StorageUpgradeable 
         (price, timestamp) = _getLastEpochTwap(_index);
     }
 
+    function getCustomEpochTwap(uint256 _index, uint256 _epochTimestamp) external view returns (uint256 epochTwap) {
+        IndexPriceByEpoch[] memory indexPriceByEpoch = indexPriceAtEpochs[_index];
+        uint256 index = indexPriceByEpoch.length;
+        for (; indexPriceByEpoch[index - 1].timestamp >= _epochTimestamp; --index) {}
+        epochTwap = indexPriceByEpoch[index - 1].price;
+    }
+
     function _addAssets(
         uint256[] calldata _underlyingPrices,
         address[] calldata _assets,
