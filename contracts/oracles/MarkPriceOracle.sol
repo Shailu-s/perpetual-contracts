@@ -25,7 +25,6 @@ contract MarkPriceOracle is AccessControlUpgradeable {
     IPositioning public positioning;
     IIndexPriceOracle public indexOracle;
     uint256 public markTwInterval;
-    uint256 public indexTwInterval;
     // price oracle admin role
     bytes32 public constant PRICE_ORACLE_ADMIN = keccak256("PRICE_ORACLE_ADMIN");
     // role of observation collection
@@ -62,7 +61,6 @@ contract MarkPriceOracle is AccessControlUpgradeable {
         _setRoleAdmin(PRICE_ORACLE_ADMIN, PRICE_ORACLE_ADMIN);
         _grantRole(PRICE_ORACLE_ADMIN, _admin);
         markTwInterval = 300; // 5 minutes
-        indexTwInterval = 3600; // 1 hour
     }
 
     /**
@@ -99,15 +97,6 @@ contract MarkPriceOracle is AccessControlUpgradeable {
     function setMarkTwInterval(uint256 _markTwInterval) external virtual {
         _requireTwapIntervalRole();
         markTwInterval = _markTwInterval;
-    }
-
-    /**
-     * @notice Set positioning contract
-     * @param _indexTwInterval Address of positioning contract typed in interface
-     */
-    function setIndexTwInterval(uint256 _indexTwInterval) external virtual {
-        _requireTwapIntervalRole();
-        indexTwInterval = _indexTwInterval;
     }
 
     /**
