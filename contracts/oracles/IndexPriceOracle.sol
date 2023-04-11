@@ -170,19 +170,6 @@ contract IndexPriceOracle is AccessControlUpgradeable, ERC165StorageUpgradeable 
     }
 
     /**
-     * @notice Get the single moving average price of the asset
-     *
-     * @param _twInterval Time in seconds of the range
-     * @param _index Index of the observation, the index base token mapping
-     * @return priceCumulative The SMA price of the asset
-     */
-    function getLastTwap(uint256 _twInterval, uint256 _index) public view returns (uint256 priceCumulative) {
-        IndexObservation[] memory observations = observationsByIndex[_index];
-        uint256 length = observations.length;
-        priceCumulative = observations[length - 1].underlyingPrice;
-    }
-
-    /**
      * @notice Get price cumulative of custom window of the observations
      *
      * @param _index Position of the asset in Observations
