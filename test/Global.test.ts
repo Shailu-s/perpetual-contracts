@@ -106,8 +106,8 @@ describe("Global", function () {
     await indexPriceOracle.deployed();
     await indexPriceOracle.setObservationAdder(owner.address);
     for (let index = 0; index < 10; index++) {
-      await (await indexPriceOracle.addObservation(100000000, 0, proofHash)).wait();
-      await (await indexPriceOracle.addObservation(100000000, 1, proofHash)).wait();
+      await (await indexPriceOracle.addObservation([100000000], [0], [proofHash])).wait();
+      await (await indexPriceOracle.addObservation([100000000], [1], [proofHash])).wait();
     }
     await volmexBaseToken.setPriceFeed(indexPriceOracle.address);
     await (await perpView.setBaseToken(volmexBaseToken.address)).wait();
@@ -317,8 +317,8 @@ describe("Global", function () {
     const proofHash = "0x6c00000000000000000000000000000000000000000000000000000000000000";
 
     for (let index = 0; index < 10; index++) {
-      await (await indexPriceOracle.addObservation(100000000, 0, proofHash)).wait();
-      await (await indexPriceOracle.addObservation(100000000, 1, proofHash)).wait();
+      await (await indexPriceOracle.addObservation([100000000], [0], [proofHash])).wait();
+      await (await indexPriceOracle.addObservation([100000000], [1], [proofHash])).wait();
     }
 
     orderLeft = Order(
@@ -525,8 +525,8 @@ describe("Global", function () {
     const proofHash = "0x6c00000000000000000000000000000000000000000000000000000000000000";
 
     for (let index = 0; index < 10; index++) {
-      await (await indexPriceOracle.addObservation(100000000, 0, proofHash)).wait();
-      await (await indexPriceOracle.addObservation(100000000, 1, proofHash)).wait();
+      await (await indexPriceOracle.addObservation([100000000], [0], [proofHash])).wait();
+      await (await indexPriceOracle.addObservation([100000000], [1], [proofHash])).wait();
     }
 
     // both partially filled {2, 3} {2, 1}

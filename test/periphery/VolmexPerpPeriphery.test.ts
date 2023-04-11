@@ -131,12 +131,7 @@ describe("VolmexPerpPeriphery", function () {
 
     positioningConfig = await upgrades.deployProxy(PositioningConfig, [markPriceOracle.address]);
 
-    USDC = await TestERC20.deploy(
-      "100000000000000000000000",
-      "Tether USD",
-      "USDT",
-      6
-    );
+    USDC = await TestERC20.deploy("100000000000000000000000", "Tether USD", "USDT", 6);
     await USDC.deployed();
 
     matchingEngine = await upgrades.deployProxy(MatchingEngine, [

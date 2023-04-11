@@ -62,7 +62,6 @@ describe("Vault Controller Mock tests for account value", function () {
       accountBalance.address,
       USDC.address,
       vaultController.address,
-      false,
     ]);
     await vault.deployed();
 
