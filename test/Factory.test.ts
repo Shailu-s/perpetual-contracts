@@ -316,17 +316,21 @@ describe("PerpFactory", function () {
   });
 
   describe("Price Feed", async () => {
-    const newVolmexBaseToken = await upgrades.deployProxy(
-      VolmexBaseToken,
-      [
-        "VolmexBaseToken", // nameArg
-        "VBT", // symbolArg,
-        indexPriceOracle.address, // priceFeedArg
-      ],
-      {
-        initializer: "initialize",
-      },
-    );
+    let newVolmexBaseToken;
+    this.beforeEach(async () => {
+      newVolmexBaseToken = await upgrades.deployProxy(
+        VolmexBaseToken,
+        [
+          "VolmexBaseToken", // nameArg
+          "VBT", // symbolArg,
+          indexPriceOracle.address, // priceFeedArg
+          true
+        ],
+        {
+          initializer: "initialize",
+        },
+      );
+    });
 
     it("Should update the priceFeed", async () => {
       const [owner] = await ethers.getSigners();
