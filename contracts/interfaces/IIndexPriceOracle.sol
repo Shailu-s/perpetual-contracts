@@ -17,8 +17,6 @@ interface IIndexPriceOracle {
 
     function volatilityCapRatioByIndex(uint256 _index) external view returns (uint256);
 
-    function getLastTwap(uint256 _twInterval, uint256 _index) external view returns (uint256 priceCumulative);
-
     function indexByBaseToken(address _baseToken) external view returns (uint256 index);
 
     function baseTokenByIndex(uint256 _index) external view returns (address baseToken);
