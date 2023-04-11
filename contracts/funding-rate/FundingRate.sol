@@ -57,7 +57,7 @@ contract FundingRate is IFundingRate, BlockContext, PositioningCallee, FundingRa
         if (_globalFundingGrowthMap[baseToken] == 0 || (_lastFundingIndexPrice[baseToken]).toInt256() == 0) {
             return 0;
         }
-        lastFundingRate = (_globalFundingGrowthMap[baseToken] * _ORACLE_BASE_X6.toInt256()) / (_lastFundingIndexPrice[baseToken]).toInt256();
+        lastFundingRate = (_globalFundingGrowthMap[baseToken] * _ORACLE_BASE_X6.toInt256()) / ((_lastFundingIndexPrice[baseToken]).toInt256() * (_lastSettledTimestampMap[baseToken] - _firstTradedTimestampMap[baseToken]).toInt256());
     }
 
     /// @inheritdoc IFundingRate
