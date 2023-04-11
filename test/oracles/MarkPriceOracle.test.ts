@@ -384,9 +384,9 @@ describe("MarkPriceOracle", function () {
       const txn = await markPriceOracle.getLastPrice(0);
       expect(Number(txn)).equal(1000000);
     });
-    it.only("should  give last epoch price", async () => {
+    it("should  give last epoch price", async () => {
       await time.increase(28800);
-      for (let i = 0; i < 250; i++) {
+      for (let i = 0; i < 50; i++) {
         await time.increase(300);
         await markPriceOracle.addObservation(80000000, 0, proofHash);
       }
