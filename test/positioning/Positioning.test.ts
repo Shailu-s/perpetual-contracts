@@ -698,7 +698,7 @@ describe("Positioning", function () {
               liquidator,
             ),
         ).to.emit(positioning, "PositionChanged");
-        console.log("herehjjji");
+
         const positionSize = await accountBalance1.getPositionSize(
           account1.address,
           orderLeft.takeAsset.virtualToken,
