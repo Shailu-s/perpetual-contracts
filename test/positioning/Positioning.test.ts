@@ -116,6 +116,7 @@ describe("Positioning", function () {
       },
     );
     await markPriceOracle.deployed();
+    await (await indexPriceOracle.grantInitialTimestampRole(markPriceOracle.address)).wait();
 
     baseToken = await upgrades.deployProxy(
       VolmexBaseToken,
