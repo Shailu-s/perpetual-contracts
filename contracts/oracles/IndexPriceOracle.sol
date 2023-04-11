@@ -303,8 +303,8 @@ contract IndexPriceOracle is AccessControlUpgradeable, ERC165StorageUpgradeable 
     function _getLastEpochTwap(uint256 _index) internal view returns (uint256 price, uint256 timestamp) {
         IndexPriceByEpoch[] memory indexPriceByEpoch = indexPriceAtEpochs[_index];
         uint256 length = indexPriceByEpoch.length;
-        price = indexPriceByEpoch[length - 1].price;
-        timestamp = indexPriceByEpoch[length - 1].timestamp;
+        price = length != 0 ? indexPriceByEpoch[length - 1].price : getLastPrice(_index);
+        timestamp = length != 0 ? indexPriceByEpoch[length - 1].timestamp : block.timestamp;
     }
 
     function _requireOracleAdmin() internal view {
