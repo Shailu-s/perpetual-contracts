@@ -261,7 +261,8 @@ contract IndexPriceOracle is AccessControlUpgradeable, ERC165StorageUpgradeable 
     function _calculateIndexPriceAtEpoch(uint256 _index) internal {
         uint256 currentTimestamp = block.timestamp;
         if (initialTimestamp != 0 && currentTimestamp - lastEpochAddTimestamp >= indexTwInterval) {
-            uint256 _startTimestamp = ((currentTimestamp - initialTimestamp) / indexTwInterval) * indexTwInterval;
+            IndexObservation[] memory observations = observationsByIndex[_index];
+            uint256 _startTimestamp = observations[1].timestamp + (((currentTimestamp - initialTimestamp) / indexTwInterval) * indexTwInterval);
             (uint256 twap, uint256 epochTimestamp,) = _getCustomIndexTwap(_index, _startTimestamp, currentTimestamp);
 
             IndexPriceByEpoch memory indexPriceByEpoch = IndexPriceByEpoch({price: twap, timestamp: epochTimestamp});
