@@ -141,8 +141,7 @@ const positioning = async () => {
     positioningConfig.address,
     accountBalance.address,
     usdtAddress,
-    vaultController.address,
-    false,
+    vaultController.address
   ]);
   await vault.deployed();
   console.log(vault.address);

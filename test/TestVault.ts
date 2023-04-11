@@ -775,10 +775,6 @@ describe("Vault", function () {
     it("Tests for getAccountBalance", async function () {
       expect(await vault.getAccountBalance()).to.be.equal(accountBalance.address);
     });
-
-    it("should get type of vault", async () => {
-      expect(await vault.isEthVault()).to.be.equal(false);
-    });
   });
 
   describe("Test for setters", function () {

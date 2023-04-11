@@ -160,7 +160,6 @@ describe("Priodic Funding payment", function () {
       accountBalance1.address,
       USDC.address,
       vaultController.address,
-      false,
     ]);
     await vault.deployed();
     await (await perpView.incrementVaultIndex()).wait();

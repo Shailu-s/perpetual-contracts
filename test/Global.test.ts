@@ -169,7 +169,6 @@ describe("Global", function () {
       accountBalance.address,
       usdc.address,
       vaultController.address,
-      false,
     ]);
     await vault.deployed();
     await (await perpView.incrementVaultIndex()).wait();

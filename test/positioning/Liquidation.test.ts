@@ -183,7 +183,6 @@ describe("Liquidation test in Positioning", function () {
       accountBalance.address,
       virtualToken.address,
       accountBalance.address,
-      false,
     ]);
 
     accountBalance1 = await upgrades.deployProxy(AccountBalance, [positioningConfig.address]);
