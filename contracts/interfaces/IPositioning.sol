@@ -51,14 +51,13 @@ interface IPositioning is IFundingRate {
     /// @param exchangedPositionNotional The cost of position, include fee
     /// @param fee The fee of open/close position
     event PositionChanged(
-        address indexed trader,
+        address[2] trader,
         address indexed baseToken,
-        int256 exchangedPositionSize,
-        int256 exchangedPositionNotional,
-        uint256 fee,
-        uint256 orderIndexPrice,
-        bytes4 orderType,
-        bool isShort
+        int256[2] exchangedPositionSize,
+        int256[2] exchangedPositionNotional,
+        uint256[2] fee,
+        bytes4[2] orderType,
+        bool[2] isShort
     );
     /// @notice Emitted when settling a trader's funding payment
     /// @param trader The address of trader

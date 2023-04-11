@@ -134,6 +134,7 @@ describe("Global", function () {
       },
     );
     await markPriceOracle.deployed();
+    await (await indexPriceOracle.grantInitialTimestampRole(markPriceOracle.address)).wait();
 
     usdc = await upgrades.deployProxy(TestERC20, ["VolmexUSDC", "VUSDC", 6], {
       initializer: "__TestERC20_init",

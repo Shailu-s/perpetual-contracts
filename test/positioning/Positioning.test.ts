@@ -116,6 +116,7 @@ describe("Positioning", function () {
       },
     );
     await markPriceOracle.deployed();
+    await (await indexPriceOracle.grantInitialTimestampRole(markPriceOracle.address)).wait();
 
     baseToken = await upgrades.deployProxy(
       VolmexBaseToken,
@@ -698,7 +699,7 @@ describe("Positioning", function () {
               liquidator,
             ),
         ).to.emit(positioning, "PositionChanged");
-        console.log("herehjjji");
+
         const positionSize = await accountBalance1.getPositionSize(
           account1.address,
           orderLeft.takeAsset.virtualToken,
@@ -2292,6 +2293,7 @@ describe("Liquidation test in Positioning", function () {
       },
     );
     await markPriceOracle.deployed();
+    await (await indexPriceOracle.grantInitialTimestampRole(markPriceOracle.address)).wait();
 
     erc1271Test = await ERC1271Test.deploy();
 

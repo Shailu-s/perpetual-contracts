@@ -86,6 +86,8 @@ const positioning = async () => {
   await markPriceOracle.deployed();
   console.log(markPriceOracle.address);
   await (await markPriceOracle.setIndexOracle(indexOracle)).wait();
+  const indexPriceOracle = IndexPriceOracle.attach(indexOracle);
+  await (await indexPriceOracle.grantInitialTimestampRole(markPriceOracle.address)).wait();
 
   console.log("Deploying USDC ...");
   let usdtAddress = process.env.USDT;

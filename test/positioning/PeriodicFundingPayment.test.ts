@@ -126,6 +126,7 @@ describe("Priodic Funding payment", function () {
       },
     );
     await markPriceOracle.deployed();
+    await (await indexPriceOracle.grantInitialTimestampRole(markPriceOracle.address)).wait();
     positioningConfig = await upgrades.deployProxy(PositioningConfig, [markPriceOracle.address]);
     await markPriceOracle.grantTwapIntervalRole(positioningConfig.address);
     USDC = await TestERC20.deploy();
