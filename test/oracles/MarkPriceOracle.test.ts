@@ -124,6 +124,7 @@ describe("MarkPriceOracle", function () {
       },
     );
     positioningConfig = await upgrades.deployProxy(PositioningConfig, [markPriceOracle.address]);
+    await indexPriceOracle.grantInitialTimestampRole(markPriceOracle.address);
     matchingEngine = await upgrades.deployProxy(MatchingEngine, [
       owner.address,
       markPriceOracle.address,
