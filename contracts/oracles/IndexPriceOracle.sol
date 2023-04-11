@@ -45,7 +45,7 @@ contract IndexPriceOracle is AccessControlUpgradeable, ERC165StorageUpgradeable 
     uint256 public lastEpochAddTimestamp; // stores last timestamp of epoch added
 
     event ObservationAdderSet(address indexed matchingEngine);
-    event ObservationAdded(uint256 indexed index, uint256 underlyingPrice, uint256 timestamp);
+    event ObservationAdded(uint256[] index, uint256[] underlyingPrice, uint256 timestamp);
     event AssetsAdded(uint256 indexed lastIndex, address[] assets, uint256[] underlyingPrices);
 
     /**
@@ -87,21 +87,24 @@ contract IndexPriceOracle is AccessControlUpgradeable, ERC165StorageUpgradeable 
     /**
      * @notice Used to add price cumulative of an asset at a given timestamp
      *
-     * @param _underlyingPrice Price of the asset
-     * @param _index position of the asset
-     * @param _underlyingPrice hash of price collection
+     * @param _underlyingPrices Price of the asset
+     * @param _indexes position of the asset
+     * @param _proofHashes hash of price collection
      */
     function addObservation(
-        uint256 _underlyingPrice,
-        uint256 _index,
-        bytes32 _proofHash
+        uint256[] memory _underlyingPrices,
+        uint256[] memory _indexes,
+        bytes32[] memory _proofHashes
     ) external virtual {
         _requireCanAddObservation();
-        require(_underlyingPrice != 0, "IndexPriceOracle: Not zero");
-        _pushOrderPrice(_index, _underlyingPrice, _proofHash);
-        _calculateIndexPriceAtEpoch(_index);
+        uint256 numberOfPrices = _underlyingPrices.length;
+        for (uint256 index; index < numberOfPrices; ++index) {
+            require(_underlyingPrices[index] != 0, "IndexPriceOracle: Not zero");
+            _pushOrderPrice(_indexes[index], _underlyingPrices[index], _proofHashes[index]);
+            _calculateIndexPriceAtEpoch(_indexes[index]);
+        }
         lastEpochAddTimestamp = block.timestamp;
-        emit ObservationAdded(_index, _underlyingPrice, block.timestamp);
+        emit ObservationAdded(_indexes, _underlyingPrices, block.timestamp);
     }
 
     /**
@@ -164,19 +167,6 @@ contract IndexPriceOracle is AccessControlUpgradeable, ERC165StorageUpgradeable 
     ) external {
         _requireOracleAdmin();
         _addAssets(_underlyingPrice, _asset, _proofHash, _capRatio);
-    }
-
-    /**
-     * @notice Get the single moving average price of the asset
-     *
-     * @param _twInterval Time in seconds of the range
-     * @param _index Index of the observation, the index base token mapping
-     * @return priceCumulative The SMA price of the asset
-     */
-    function getLastTwap(uint256 _twInterval, uint256 _index) public view returns (uint256 priceCumulative) {
-        IndexObservation[] memory observations = observationsByIndex[_index];
-        uint256 length = observations.length;
-        priceCumulative = observations[length - 1].underlyingPrice;
     }
 
     /**

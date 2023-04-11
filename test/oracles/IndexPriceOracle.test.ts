@@ -66,8 +66,9 @@ describe("IndexPriceOracle", function () {
 
     await volmexOracle.deployed();
     await volmexOracle.setObservationAdder(owner);
+    await volmexOracle.grantInitialTimestampRole(owner);
     for (let i = 0; i < 10; i++) {
-      await volmexOracle.addObservation(10000000, 0, proofHash);
+      await volmexOracle.addObservation([10000000], [0], [proofHash]);
       await time.increase(1000);
     }
   });
@@ -116,7 +117,7 @@ describe("IndexPriceOracle", function () {
   describe("Add Observation", async () => {
     it("Should add observation", async () => {
       for (let i = 0; i < 10; i++) {
-        await volmexOracle.addObservation(10000000, 0, proofHash);
+        await volmexOracle.addObservation([10000000], [0], [proofHash]);
       }
 
       const txn = await volmexOracle.getIndexTwap(10000, 0);
@@ -124,26 +125,26 @@ describe("IndexPriceOracle", function () {
     });
 
     it("should fail to add observation when cumulative price is zero ", async () => {
-      await expect(volmexOracle.addObservation(0, 0, proofHash)).to.be.revertedWith(
+      await expect(volmexOracle.addObservation([0], [0], [proofHash])).to.be.revertedWith(
         "IndexPriceOracle: Not zero",
       );
     });
     it("Should fail to add observation when caller is not observation adder", async () => {
       const [owner, account1] = await ethers.getSigners();
       await expect(
-        volmexOracle.connect(account1).addObservation(1000000, 0, proofHash),
+        volmexOracle.connect(account1).addObservation([1000000], [0], [proofHash]),
       ).to.be.revertedWith("IndexPriceOracle: not observation adder");
     });
 
     it("Should get cumulative price", async () => {
-      await volmexOracle.addObservation(10000000, 0, proofHash);
+      await volmexOracle.addObservation([10000000], [0], [proofHash]);
 
       const txn = await volmexOracle.getIndexTwap(10000000, 0);
       expect(Number(txn.volatilityTokenTwap)).equal(10000000);
     });
 
     it("Should latest round data", async () => {
-      await volmexOracle.addObservation(10000000, 0, proofHash);
+      await volmexOracle.addObservation([10000000], [0], [proofHash]);
       await time.increase(10000);
 
       const txn = await volmexOracle.latestRoundData(10000, 0);
@@ -152,7 +153,7 @@ describe("IndexPriceOracle", function () {
 
     it("Should get cumulative price with time delay", async () => {
       for (let i = 0; i < 9; i++) {
-        await volmexOracle.addObservation(10000000, 0, proofHash);
+        await volmexOracle.addObservation([10000000], [0], [proofHash]);
         await time.increase(1000);
       }
       const txns = await Promise.all([
@@ -177,7 +178,7 @@ describe("IndexPriceOracle", function () {
       const txn1 = await volmexOracle.getIndexTwap(20000, 0);
       expect(Number(txn1.volatilityTokenTwap)).equal(10000000);
       for (let i = 0; i < 9; i++) {
-        await volmexOracle.addObservation(10000000, 0, proofHash);
+        await volmexOracle.addObservation([10000000], [0], [proofHash]);
         await time.increase(1000);
       }
       // this covers the case of zero recent datapoints
@@ -194,7 +195,7 @@ describe("IndexPriceOracle", function () {
       expect(Number(txn1.volatilityTokenTwap)).equal(10000000);
 
       for (let i = 0; i < 10; i++) {
-        await volmexOracle.addObservation(20000000, 0, proofHash);
+        await volmexOracle.addObservation([20000000], [0], [proofHash]);
         await time.increase(1000);
       }
       const txn2 = await volmexOracle.getIndexTwap(9000, 0);
