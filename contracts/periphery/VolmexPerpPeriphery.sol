@@ -107,19 +107,15 @@ contract VolmexPerpPeriphery is AccessControlUpgradeable, IVolmexPerpPeriphery {
         uint256 _index,
         address _token,
         uint256 _amount
-    ) external payable {
-        /**
-        Getter for _isEthVault in Vault contract
-            - Check the msg.value and send it to vault controller
-         */
+    ) external {
         IVaultController vaultController = perpView.vaultControllers(_index);
-        vaultController.deposit{ value: msg.value }(IVolmexPerpPeriphery(address(this)), _token, _msgSender(), _amount);
+        vaultController.deposit(IVolmexPerpPeriphery(address(this)), _token, _msgSender(), _amount);
     }
 
     function withdrawFromVault(
         uint256 _index,
         address _token,
-        address payable _to,
+        address _to,
         uint256 _amount
     ) external {
         IVaultController vaultController = perpView.vaultControllers(_index);
