@@ -281,7 +281,7 @@ contract IndexPriceOracle is AccessControlUpgradeable, ERC165StorageUpgradeable 
         lastUpdatedTimestamp = observations[index - 1].timestamp;
         _endTimestamp = lastUpdatedTimestamp < _endTimestamp ? lastUpdatedTimestamp : _endTimestamp;
         if (lastUpdatedTimestamp < _startTimestamp) {
-            _startTimestamp = observations[0].timestamp + (((lastUpdatedTimestamp - initialTimestamp) / indexTwInterval) * indexTwInterval);
+            _startTimestamp = _endTimestamp - indexTwInterval;
         }
 
         uint256 priceCount;
@@ -292,8 +292,8 @@ contract IndexPriceOracle is AccessControlUpgradeable, ERC165StorageUpgradeable 
                 priceCount++;
             }
         }
-        priceCumulative = priceCumulative / priceCount;
-        epochTimestamp = epochTimestamp / priceCount;
+        priceCumulative = priceCumulative != 0 ? priceCumulative / priceCount : 0;
+        epochTimestamp = epochTimestamp != 0 ? epochTimestamp / priceCount : 0;
     }
 
     /**
