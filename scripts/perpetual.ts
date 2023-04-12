@@ -91,7 +91,7 @@ const positioning = async () => {
 
   console.log("Deploying USDC ...");
   let usdtAddress = process.env.USDT;
-  if (!process.env.USDC) {
+  if (!process.env.USDT) {
     const usdt = await TestERC20.deploy(
       "1000000000000000000",
       "Tether USD",
