@@ -70,7 +70,7 @@ const config: HardhatUserConfig = {
       throwOnTransactionFailures: true,
       loggingEnabled: true,
       gasMultiplier: 1.5,
-      // timeout: 36000000,
+      timeout: 36000000,
     },
   },
   contractSizer: {
