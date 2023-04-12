@@ -3,7 +3,7 @@ import { ethers, upgrades } from "hardhat";
 const { Order, Asset, sign, encodeAddress } = require("../order");
 import { BigNumber } from "ethers";
 import { time } from "@nomicfoundation/hardhat-network-helpers";
-describe.only("Periodic Funding payment", function () {
+describe("Periodic Funding payment", function () {
   let MatchingEngine;
   let matchingEngine;
   let VirtualToken;
@@ -1330,7 +1330,7 @@ describe.only("Periodic Funding payment", function () {
     });
   });
 
-  describe.only("funding paymnet test with numbers", () => {
+  describe("funding paymnet test with numbers", () => {
     let MatchingEngine;
     let matchingEngine;
     let VirtualToken;
@@ -1711,6 +1711,10 @@ describe.only("Periodic Funding payment", function () {
 
       expect(traderCollateral.toString()).to.be.equal("999839951919976000000");
     });
+    // Fees deduction
+    // user collateral = 1000
+    // when user opens  position his collateral value  = 1000 - (200.06 *4/100);
+    // when user closes position his collateral value  = 1000 - (200.06 *4/100) - (200.06 *4/100) - funding payment;
     it("funding should occur", async () => {
       // await positioningConfig.setMaxFundingRate("100000");
       await markPriceOracle.setObservationAdder(owner.address);
@@ -2047,6 +2051,7 @@ describe.only("Periodic Funding payment", function () {
         liquidator,
       );
       const traderCollateral = await vaultController.getFreeCollateralByRatio(account4.address, 1);
+
       expect(traderCollateral.toString()).to.be.equal("999879951919976000000");
     });
     it("should test clamp upper bound ", async () => {
