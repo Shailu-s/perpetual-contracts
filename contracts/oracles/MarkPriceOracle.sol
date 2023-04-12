@@ -344,7 +344,7 @@ contract MarkPriceOracle is AccessControlUpgradeable {
             uint256 _startTimestamp = observations[1].timestamp + (((currentTimestamp - initialTimestamp) / markTwInterval) * markTwInterval);
             (uint256 twap, uint256 epochTimestamp) = _getCustomTwap(_index, _startTimestamp, currentTimestamp, false);
 
-            MarkPriceByEpoch memory markPriceByEpoch = MarkPriceByEpoch({price: twap, timestamp: epochTimestamp});
+            MarkPriceByEpoch memory markPriceByEpoch = MarkPriceByEpoch({ price: twap, timestamp: epochTimestamp });
             MarkPriceByEpoch[] storage markPricesByEpoch = markPriceAtEpochs[_index];
             markPricesByEpoch.push(markPriceByEpoch);
         }

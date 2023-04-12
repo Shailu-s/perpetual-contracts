@@ -384,6 +384,16 @@ describe("MarkPriceOracle", function () {
       const txn = await markPriceOracle.getLastPrice(0);
       expect(Number(txn)).equal(1000000);
     });
+    it("should  give last epoch price", async () => {
+      await time.increase(28800);
+      for (let i = 0; i < 50; i++) {
+        await time.increase(300);
+        await markPriceOracle.addObservation(80000000, 0, proofHash);
+      }
+      const timestamp = await time.latest();
+      const lastEpochPrice = await markPriceOracle.getLastEpochTwap(0);
+      expect(parseInt(lastEpochPrice.price)).to.be.equal(80000000);
+    });
 
     it("Should get cumulative price with time delay", async () => {
       for (let i = 0; i < 9; i++) {
