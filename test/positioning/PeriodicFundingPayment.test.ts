@@ -1599,7 +1599,10 @@ describe.only("Periodic Funding payment", function () {
         await indexPriceOracle.addObservation([75000000], [0], [proofHash]);
       }
     });
-
+    // Fees deduction
+    // user collateral = 1000
+    // when user opens  position his collateral value  = 1000 - (200.06 *4/100);
+    // when user closes position his collateral value  = 1000 - (200.06 *4/100) - (200.06 *4/100);
     it("Funding should not occur is user closes his position before 8 hours", async () => {
       await markPriceOracle.setObservationAdder(owner.address);
       await indexPriceOracle.setObservationAdder(owner.address);
@@ -1856,6 +1859,7 @@ describe.only("Periodic Funding payment", function () {
       const traderCollateral = await vaultController.getFreeCollateralByRatio(account4.address, 1);
       expect(traderCollateral.toString()).to.be.equal("999859951919976000000");
     });
+
     it("Funding should occur during multiple cycles", async () => {
       await positioningConfig.setMaxFundingRate("100000");
       await markPriceOracle.setObservationAdder(owner.address);
