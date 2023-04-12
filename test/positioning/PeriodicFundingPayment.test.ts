@@ -3,7 +3,7 @@ import { ethers, upgrades } from "hardhat";
 const { Order, Asset, sign, encodeAddress } = require("../order");
 import { BigNumber } from "ethers";
 import { time } from "@nomicfoundation/hardhat-network-helpers";
-describe("Periodic Funding payment", function () {
+describe.only("Periodic Funding payment", function () {
   let MatchingEngine;
   let matchingEngine;
   let VirtualToken;
@@ -510,8 +510,8 @@ describe("Periodic Funding payment", function () {
         account2.address,
         volmexBaseToken.address,
       );
-      expect(parseInt(fundingPayment3)).to.be.greaterThan(parseInt(fundingPayment1));
-      expect(parseInt(fundingPayment4)).to.be.lessThan(parseInt(fundingPayment2));
+      expect(parseInt(fundingPayment3)).to.be.lessThan(parseInt(fundingPayment1));
+      expect(parseInt(fundingPayment4)).to.be.greaterThan(parseInt(fundingPayment2));
 
       const accountInfo2 = await accountBalance1.getAccountInfo(
         alice.address,
@@ -698,8 +698,8 @@ describe("Periodic Funding payment", function () {
         volmexBaseToken.address,
       );
 
-      expect(parseInt(fundingPayment3)).to.be.lessThan(parseInt(fundingPayment5));
-      expect(parseInt(fundingPayment4)).to.greaterThan(parseInt(fundingPayment6));
+      expect(parseInt(fundingPayment3)).to.be.greaterThan(parseInt(fundingPayment5));
+      expect(parseInt(fundingPayment4)).to.lessThan(parseInt(fundingPayment6));
       const accountInfo3 = await accountBalance1.getAccountInfo(
         alice.address,
         volmexBaseToken.address,
@@ -1976,7 +1976,7 @@ describe("Periodic Funding payment", function () {
       const traderCollateral = await vaultController.getFreeCollateralByRatio(account4.address, 1);
       console.log(traderCollateral.toString());
     });
-    it.only("Testing when funding rate goes positive to negative from cycle 1 to cycle 2", async () => {
+    it("Testing when funding rate goes positive to negative from cycle 1 to cycle 2", async () => {
       await positioningConfig.setMaxFundingRate("100000");
       await markPriceOracle.setObservationAdder(owner.address);
       await indexPriceOracle.setObservationAdder(owner.address);
