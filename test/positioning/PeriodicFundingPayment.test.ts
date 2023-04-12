@@ -1332,10 +1332,10 @@ describe.only("Periodic Funding payment", function () {
       await markPriceOracle.setObservationAdder(owner.address);
       await indexPriceOracle.setObservationAdder(owner.address);
       for (let index = 0; index <= 100; index++) {
-        await markPriceOracle.addObservation(200060000, 0, proofHash);
+        await markPriceOracle.addObservation([200060000], [0], [proofHash]);
       }
       for (let index = 0; index <= 100; index++) {
-        await indexPriceOracle.addObservation(200000000, 0, proofHash);
+        await indexPriceOracle.addObservation([200000000], [0], [proofHash]);
       }
       await markPriceOracle.setObservationAdder(matchingEngine.address);
       await USDC.transfer(account4.address, "1000000000000000000");
