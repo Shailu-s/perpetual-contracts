@@ -1863,7 +1863,10 @@ describe("Periodic Funding payment", function () {
       const traderCollateral = await vaultController.getFreeCollateralByRatio(account4.address, 1);
       expect(traderCollateral.toString()).to.be.equal("999859951919976000000");
     });
-
+    // Fees deduction
+    // user collateral = 1000
+    // when user opens  position his collateral value  = 1000 - (200.06 *4/100);
+    // when user closes position his collateral value  = 1000 - (200.06 *4/100) - (200.06 *4/100) - funding payment in last cycle
     it("Funding should occur during multiple cycles", async () => {
       await positioningConfig.setMaxFundingRate("100000");
       await markPriceOracle.setObservationAdder(owner.address);
@@ -2054,6 +2057,10 @@ describe("Periodic Funding payment", function () {
 
       expect(traderCollateral.toString()).to.be.equal("999879951919976000000");
     });
+    // Fees deduction
+    // user collateral = 1000
+    // when user opens  position his collateral value  = 1000 - (200.06 *4/100);
+    // when user closes position his collateral value  = 1000 - (200.06 *4/100) - (200.06 *4/100) - funding payment in last cycle
     it("should test clamp upper bound ", async () => {
       await positioningConfig.setMaxFundingRate("100000");
       await markPriceOracle.setObservationAdder(owner.address);
@@ -2172,6 +2179,10 @@ describe("Periodic Funding payment", function () {
       const traderCollateral = await vaultController.getFreeCollateralByRatio(account4.address, 1);
       expect(traderCollateral.toString()).to.be.equal("999859951919976000000");
     });
+    // Fees deduction
+    // user collateral = 1000
+    // when user opens  position his collateral value  = 1000 - (200.06 *4/100);
+    // when user closes position his collateral value  = 1000 - (200.06 *4/100) - (200.06 *4/100) - funding payment in last cycle
     it("should test clamp lower bound ", async () => {
       await positioningConfig.setMaxFundingRate("100000");
       await markPriceOracle.setObservationAdder(owner.address);
@@ -2290,6 +2301,10 @@ describe("Periodic Funding payment", function () {
       const traderCollateral = await vaultController.getFreeCollateralByRatio(account4.address, 1);
       expect(traderCollateral.toString()).to.be.equal("999843285253309333333");
     });
+    // Fees deduction
+    // user collateral = 1000
+    // when user opens  position his collateral value  = 1000 - (200.06 *4/100);
+    // when user closes position his collateral value  = 1000 - (200.06 *4/100) - (200.06 *4/100) - funding payment in last cycle
     it("Testing when funding rate goes positive to negative from cycle 1 to cycle 2", async () => {
       await positioningConfig.setMaxFundingRate("100000");
       await markPriceOracle.setObservationAdder(owner.address);
