@@ -47,7 +47,7 @@ contract VaultController is ReentrancyGuardUpgradeable, OwnerPausable, VaultCont
         address token,
         address from,
         uint256 amount
-    ) external payable override whenNotPaused nonReentrant {
+    ) external override whenNotPaused nonReentrant {
         address _vault = getVault(token);
         // vault of token is not available
         require(_vault != address(0), "VC_VOTNA");
@@ -58,7 +58,7 @@ contract VaultController is ReentrancyGuardUpgradeable, OwnerPausable, VaultCont
         // VC_CWZA: can't deposit zero amount
         require(amount > 0, "VC_CDZA");
 
-        IVault(_vault).deposit{ value: msg.value }(periphery, amount, from);
+        IVault(_vault).deposit(periphery, amount, from);
 
         uint256 amountX10_18 = LibSettlementTokenMath.parseSettlementToken(amount, IVault(_vault).decimals());
         _modifyBalance(from, token, amountX10_18.toInt256(), _vault);
@@ -66,7 +66,7 @@ contract VaultController is ReentrancyGuardUpgradeable, OwnerPausable, VaultCont
 
     function withdraw(
         address token,
-        address payable to,
+        address to,
         uint256 amount
     ) external override whenNotPaused nonReentrant {
         // the full process of withdrawal:

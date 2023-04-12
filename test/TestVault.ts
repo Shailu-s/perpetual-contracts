@@ -72,6 +72,7 @@ describe("Vault", function () {
         initializer: "initialize",
       },
     );
+    await markPriceOracle.deployed();
     const positioningConfigFactory = await ethers.getContractFactory("PositioningConfig");
     positioningConfig = await upgrades.deployProxy(positioningConfigFactory, [
       markPriceOracle.address,
@@ -93,21 +94,12 @@ describe("Vault", function () {
       accountBalance.address,
       USDC.address,
       vaultController.address,
-      false,
     ]);
     DAIVault = await upgrades.deployProxy(vaultFactory, [
       positioningConfig.address,
       accountBalance.address,
       DAI.address,
       vaultController.address,
-      false,
-    ]);
-    ethVault = await upgrades.deployProxy(vaultFactory, [
-      positioningConfig.address,
-      accountBalance.address,
-      ETH.address,
-      vaultController.address,
-      true,
     ]);
 
     await markPriceOracle.deployed();
@@ -136,27 +128,9 @@ describe("Vault", function () {
       },
     );
 
-    ethPositioning = await upgrades.deployProxy(
-      Positioning,
-      [
-        positioningConfig.address,
-        vaultController.address,
-        accountBalance.address,
-        matchingEngine.address,
-        markPriceOracle.address,
-        indexPriceOracle.address,
-        1,
-        [owner.address, alice.address],
-      ],
-      {
-        initializer: "initialize",
-      },
-    );
-
     await vaultController.connect(owner).setPositioning(positioning.address);
     await vaultController.registerVault(vault.address, USDC.address);
     await vaultController.registerVault(DAIVault.address, DAI.address);
-    await vaultController.registerVault(ethVault.address, ETH.address);
 
     const amount = parseUnits("100000000000000000000", await USDC.decimals());
     await USDC.mint(alice.address, amount);
@@ -173,20 +147,7 @@ describe("Vault", function () {
 
     await DAI.mint(owner.address, daiAmount);
 
-    const ethAmount = parseUnits("1000", await ETH.decimals());
-    await ETH.mint(alice.address, ethAmount);
-    await ETH.connect(alice).approve(ethVault.address, ethAmount);
-
     volmexPerpPeriphery = await upgrades.deployProxy(VolmexPerpPeriphery, [
-      perpViewFake.address,
-      markPriceOracle.address,
-      indexPriceOracle.address,
-      [vault.address, vault.address],
-      owner.address,
-      relayer.address,
-    ]);
-
-    volmexPerpPeripheryEth = await upgrades.deployProxy(VolmexPerpPeriphery, [
       perpViewFake.address,
       markPriceOracle.address,
       indexPriceOracle.address,
@@ -203,7 +164,6 @@ describe("Vault", function () {
           accountBalance.address,
           USDC.address,
           vaultController.address,
-          false,
         ]),
       ).to.be.revertedWith("V_CHCNC");
     });
@@ -214,7 +174,6 @@ describe("Vault", function () {
           alice.address,
           USDC.address,
           vaultController.address,
-          false,
         ]),
       ).to.be.revertedWith("V_ABNC");
     });
@@ -225,7 +184,6 @@ describe("Vault", function () {
           accountBalance.address,
           USDC.address,
           vaultController.address,
-          false,
         ),
       ).to.be.revertedWith("Initializable: contract is already initialized");
     });
@@ -388,45 +346,6 @@ describe("Vault", function () {
         ),
       ).to.be.revertedWith("V_GTSTBC");
     });
-    it("Negative Test For desposit from vault", async () => {
-      await positioningConfig.setSettlementTokenBalanceCap(10000);
-
-      const USDCVaultAddress = await vaultController.getVault(ETH.address);
-
-      const USDCVaultContract = await vaultFactory.attach(USDCVaultAddress);
-      await ETH.connect(alice).approve(ETH.address, 10000);
-      await ETH.connect(alice).approve(volmexPerpPeriphery.address, 10000);
-
-      // Check if it is reverted or not with given reason
-      await expect(
-        vaultController
-          .connect(alice)
-          .deposit(volmexPerpPeriphery.address, ETH.address, alice.address, 10000, {
-            value: 9000,
-          }),
-      ).to.be.revertedWith("V_ANE");
-    });
-
-    it("should fail to deposit if user tries to perform transaction with value != 0 in a non eth vault ", async () => {
-      const amount = parseUnits("100", await USDC.decimals());
-
-      await positioningConfig.setSettlementTokenBalanceCap(amount);
-
-      const USDCVaultAddress = await vaultController.getVault(USDC.address);
-
-      const USDCVaultContract = await vaultFactory.attach(USDCVaultAddress);
-      await USDC.connect(alice).approve(USDCVaultAddress, amount);
-      await USDC.connect(alice).approve(volmexPerpPeriphery.address, amount);
-
-      // check event has been sent
-      await expect(
-        vaultController
-          .connect(alice)
-          .deposit(volmexPerpPeriphery.address, USDC.address, alice.address, amount, {
-            value: 45,
-          }),
-      ).to.be.revertedWith("V_ANA");
-    });
   });
   describe("Withdraw", function () {
     it("should not allow user to withdraw from vault if vault balance is empty", async () => {
@@ -436,15 +355,6 @@ describe("Vault", function () {
 
       await expect(
         vaultController.connect(alice).withdraw(USDC.address, alice.address, amount),
-      ).to.be.revertedWith("V_NEFC");
-    });
-    it("should not allow user to withdraw from ETH vault if vault balance is empty", async () => {
-      const amount = parseUnits("100", await ETH.decimals());
-      await positioningConfig.setSettlementTokenBalanceCap(amount);
-      await accountBalance.grantSettleRealizedPnlRole(vaultController.address);
-
-      await expect(
-        vaultController.connect(alice).withdraw(ETH.address, alice.address, amount),
       ).to.be.revertedWith("V_NEFC");
     });
 
@@ -477,40 +387,6 @@ describe("Vault", function () {
       // update sender's balance
       expect(await vaultController.getBalanceByToken(alice.address, USDC.address)).to.eq(
         "100000000000000000000000000000000000000",
-      );
-    });
-
-    it("should allow user to deposit collateral to ETH vault", async () => {
-      const provider = waffle.provider;
-      const userBalance = await provider.getBalance(alice.address);
-
-      const amount = parseUnits("100", await ETH.decimals());
-
-      await positioningConfig.setSettlementTokenBalanceCap(userBalance);
-
-      const ethVaultAddress = await vaultController.getVault(ETH.address);
-
-      const ethVaultContract = await vaultFactory.attach(ethVaultAddress);
-      await ETH.connect(alice).approve(ethVaultAddress, amount);
-      await ETH.connect(alice).approve(volmexPerpPeripheryEth.address, amount);
-
-      // Deposit max amount equal to balance of the user
-      await expect(
-        vaultController
-          .connect(alice)
-          .deposit(volmexPerpPeripheryEth.address, ETH.address, alice.address, amount, {
-            value: amount.toString(),
-          }),
-      )
-        .to.emit(ethVaultContract, "Deposited")
-        .withArgs(ETH.address, alice.address, amount);
-
-      // Vault balance should increase
-      expect((await provider.getBalance(ethVaultAddress)).toString()).to.eq(amount.toString());
-
-      // update sender's balance
-      expect(await vaultController.getBalanceByToken(alice.address, ETH.address)).to.eq(
-        amount.toString(),
       );
     });
 
@@ -663,7 +539,7 @@ describe("Vault", function () {
       await USDC.connect(owner).approve(vault.address, amount);
       await vault.pause();
       // caller not owner
-      await expect(vault.transferFundToVault(ETH.address, amount)).to.be.revertedWith(
+      await expect(vault.transferFundToVault(USDC.address, amount)).to.be.revertedWith(
         "Pausable: paused",
       );
     });
@@ -773,10 +649,6 @@ describe("Vault", function () {
 
     it("Tests for getAccountBalance", async function () {
       expect(await vault.getAccountBalance()).to.be.equal(accountBalance.address);
-    });
-
-    it("should get type of vault", async () => {
-      expect(await vault.isEthVault()).to.be.equal(false);
     });
   });
 

@@ -127,6 +127,7 @@ describe("VolmexPerpPeriphery", function () {
       },
     );
     await markPriceOracle.deployed();
+    await (await indexPriceOracle.grantInitialTimestampRole(markPriceOracle.address)).wait();
 
     positioningConfig = await upgrades.deployProxy(PositioningConfig, [markPriceOracle.address]);
 
@@ -158,7 +159,6 @@ describe("VolmexPerpPeriphery", function () {
       accountBalance1.address,
       USDC.address,
       vaultController.address,
-      false,
     ]);
     await vault.deployed();
     await (await perpView.incrementVaultIndex()).wait();
@@ -510,7 +510,6 @@ describe("VolmexPerpPeriphery", function () {
         accountBalance1.address,
         USDC.address,
         accountBalance1.address,
-        false,
       ]);
       expect(await volmexPerpPeriphery.whitelistVault(vault1.address, true))
         .to.emit(volmexPerpPeriphery, "VaultWhitelisted")

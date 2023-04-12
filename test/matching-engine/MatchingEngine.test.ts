@@ -110,6 +110,7 @@ describe("MatchingEngine", function () {
       },
     );
     await markPriceOracle.deployed();
+    await (await indexPriceOracle.grantInitialTimestampRole(markPriceOracle.address)).wait();
     await volmexBaseToken.setPriceFeed(indexPriceOracle.address);
     positioningConfig = await upgrades.deployProxy(PositioningConfig, [markPriceOracle.address]);
     await positioningConfig.deployed();
@@ -170,7 +171,6 @@ describe("MatchingEngine", function () {
       accountBalance.address,
       virtualToken.address,
       accountBalance.address,
-      false,
     ]);
     await (await virtualToken.setMintBurnRole(owner.address)).wait();
     await virtualToken.mint(account1.address, ten.toString());

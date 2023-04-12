@@ -1,11 +1,9 @@
-import { expect, util } from "chai";
+import { expect } from "chai";
 import { ethers, upgrades } from "hardhat";
-import { FakeContract, smock } from "@defi-wonderland/smock";
 import { BigNumber } from "ethers";
 import { getCurrentTimestamp } from "../../coverage/temp/isolated-pools/scenario/src/Utils";
 const { Order, Asset, sign, encodeAddress } = require("../order");
-import { utils } from "ethers";
-const { expectRevert, time } = require("@openzeppelin/test-helpers");
+const { time } = require("@openzeppelin/test-helpers");
 interface Observation {
   timestamp: number;
   price: number;
@@ -157,6 +155,8 @@ describe("Custom Cumulative Price", function () {
         initializer: "initialize",
       },
     );
+    await markPriceOracle.deployed();
+    await (await indexPriceOracle.grantInitialTimestampRole(markPriceOracle.address)).wait();
     positioningConfig = await upgrades.deployProxy(PositioningConfig, [markPriceOracle.address]);
     matchingEngine = await upgrades.deployProxy(MatchingEngine, [
       owner.address,
@@ -187,7 +187,6 @@ describe("Custom Cumulative Price", function () {
       accountBalance1.address,
       USDC.address,
       vaultController.address,
-      false,
     ]);
     await vault.deployed();
     await (await perpView.incrementVaultIndex()).wait();
@@ -327,7 +326,10 @@ describe("Custom Cumulative Price", function () {
   });
   describe("Custom window ", async () => {
     this.beforeEach(async () => {
-      firstTimestamp = getCurrentTimestamp();
+      const blockNumBefore = await ethers.provider.getBlockNumber();
+      const blockBefore = await ethers.provider.getBlock(blockNumBefore);
+      const timestampBefore = blockBefore.timestamp;
+      firstTimestamp = timestampBefore;
       secondTimestamp = firstTimestamp + interval;
       thirdTimestamp = secondTimestamp + interval;
       for (index = 0; index < 96; index++) {
