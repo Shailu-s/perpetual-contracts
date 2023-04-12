@@ -97,7 +97,7 @@ describe.only("Periodic Funding payment", function () {
     await (await perpView.setBaseToken(volmexBaseToken.address)).wait();
     indexPriceOracle = await upgrades.deployProxy(
       IndexPriceOracle,
-      [owner.address, [200000000], [volmexBaseToken.address], [proofHash], [capRatio]],
+      [owner.address, [75000000], [volmexBaseToken.address], [proofHash], [capRatio]],
       {
         initializer: "initialize",
       },
@@ -120,7 +120,7 @@ describe.only("Periodic Funding payment", function () {
 
     markPriceOracle = await upgrades.deployProxy(
       MarkPriceOracle,
-      [[200060000], [volmexBaseToken.address], [proofHash], owner.address],
+      [[70000000], [volmexBaseToken.address], [proofHash], owner.address],
       {
         initializer: "initialize",
       },
@@ -193,7 +193,7 @@ describe.only("Periodic Funding payment", function () {
 
     await marketRegistry.connect(owner).addBaseToken(volmexBaseToken.address);
     await marketRegistry.connect(owner).setMakerFeeRatio(0.0004e6);
-    await marketRegistry.connect(owner).setTakerFeeRatio(0.0004e6);
+    await marketRegistry.connect(owner).setTakerFeeRatio(0.0009e6);
 
     await accountBalance1.connect(owner).setPositioning(positioning.address);
 
@@ -510,8 +510,8 @@ describe.only("Periodic Funding payment", function () {
         account2.address,
         volmexBaseToken.address,
       );
-      expect(parseInt(fundingPayment3)).to.be.lessThan(parseInt(fundingPayment1));
-      expect(parseInt(fundingPayment4)).to.be.greaterThan(parseInt(fundingPayment2));
+      expect(parseInt(fundingPayment3)).to.be.greaterThan(parseInt(fundingPayment1));
+      expect(parseInt(fundingPayment4)).to.be.lessThan(parseInt(fundingPayment2));
 
       const accountInfo2 = await accountBalance1.getAccountInfo(
         alice.address,
@@ -698,8 +698,8 @@ describe.only("Periodic Funding payment", function () {
         volmexBaseToken.address,
       );
 
-      expect(parseInt(fundingPayment3)).to.be.greaterThan(parseInt(fundingPayment5));
-      expect(parseInt(fundingPayment4)).to.lessThan(parseInt(fundingPayment6));
+      expect(parseInt(fundingPayment3)).to.be.lessThan(parseInt(fundingPayment5));
+      expect(parseInt(fundingPayment4)).to.greaterThan(parseInt(fundingPayment6));
       const accountInfo3 = await accountBalance1.getAccountInfo(
         alice.address,
         volmexBaseToken.address,
@@ -1328,11 +1328,283 @@ describe.only("Periodic Funding payment", function () {
       expect(fundingPayment9.toString()).to.not.equal(fundingPayment11.toString());
       expect(fundingPayment10.toString()).to.not.equal(fundingPayment12.toString());
     });
+  });
+
+  describe.only("funding paymnet test with numbers", () => {
+    let MatchingEngine;
+    let matchingEngine;
+    let VirtualToken;
+    let virtualToken;
+    let ERC20TransferProxyTest;
+    let Positioning;
+    let positioning;
+    let PositioningConfig;
+    let positioningConfig;
+    let Vault;
+    let vault;
+    let VaultController;
+    let vaultController;
+    let AccountBalance;
+    let MarkPriceOracle;
+    let markPriceOracle;
+    let IndexPriceOracle;
+    let indexPriceOracle;
+    let VolmexBaseToken;
+    let volmexBaseToken;
+    let VolmexQuoteToken;
+    let volmexQuoteToken;
+    let VolmexPerpPeriphery;
+    let volmexPerpPeriphery;
+    let VolmexPerpView;
+    let perpView;
+
+    let accountBalance1;
+    let MarketRegistry;
+    let marketRegistry;
+    let TestERC20;
+    let USDC;
+    let owner, account1, account2, account3, account4, alice, bob;
+    let liquidator;
+    const deadline = 87654321987654;
+    const one = ethers.constants.WeiPerEther; // 1e18
+    const two = ethers.constants.WeiPerEther.mul(BigNumber.from("2")); // 2e18
+    const index = 0;
+    const ORDER = "0xf555eb98";
+    const STOP_LOSS_LIMIT_ORDER = "0xeeaed735";
+    const TAKE_PROFIT_LIMIT_ORDER = "0xe0fc7f94";
+    const ZERO_ADDR = "0x0000000000000000000000000000000000000000";
+    const capRatio = "400000000";
+    const proofHash = "0x6c00000000000000000000000000000000000000000000000000000000000000";
+    async function getSignature(orderObj, signer) {
+      return sign(orderObj, signer, positioning.address);
+    }
+    this.beforeAll(async () => {
+      VolmexPerpPeriphery = await ethers.getContractFactory("VolmexPerpPeriphery");
+      MarkPriceOracle = await ethers.getContractFactory("MarkPriceOracle");
+      IndexPriceOracle = await ethers.getContractFactory("IndexPriceOracle");
+      MatchingEngine = await ethers.getContractFactory("MatchingEngine");
+      VirtualToken = await ethers.getContractFactory("VirtualTokenTest");
+      ERC20TransferProxyTest = await ethers.getContractFactory("ERC20TransferProxyTest");
+      Positioning = await ethers.getContractFactory("Positioning");
+      PositioningConfig = await ethers.getContractFactory("PositioningConfig");
+      Vault = await ethers.getContractFactory("Vault");
+      VaultController = await ethers.getContractFactory("VaultController");
+      MarketRegistry = await ethers.getContractFactory("MarketRegistry");
+      AccountBalance = await ethers.getContractFactory("AccountBalance");
+      TestERC20 = await ethers.getContractFactory("TestERC20");
+      VolmexBaseToken = await ethers.getContractFactory("VolmexBaseToken");
+      VolmexQuoteToken = await ethers.getContractFactory("VolmexQuoteToken");
+      VolmexPerpView = await ethers.getContractFactory("VolmexPerpView");
+      [owner, account1, account2, account3, account4, alice, bob] = await ethers.getSigners();
+      liquidator = encodeAddress(owner.address);
+    });
+
+    this.beforeEach(async () => {
+      const volatilityTokenPrice1 = "1000000";
+      const volatilityTokenPrice2 = "1000000";
+
+      perpView = await upgrades.deployProxy(VolmexPerpView, [owner.address]);
+      await perpView.deployed();
+      await (await perpView.grantViewStatesRole(owner.address)).wait();
+
+      volmexBaseToken = await upgrades.deployProxy(
+        VolmexBaseToken,
+        [
+          "VolmexBaseToken", // nameArg
+          "VBT", // symbolArg,
+          account1.address, // priceFeedArg
+          true, // isBase
+        ],
+        {
+          initializer: "initialize",
+        },
+      );
+      await volmexBaseToken.deployed();
+
+      await (await perpView.setBaseToken(volmexBaseToken.address)).wait();
+      indexPriceOracle = await upgrades.deployProxy(
+        IndexPriceOracle,
+        [owner.address, [200000000], [volmexBaseToken.address], [proofHash], [capRatio]],
+        {
+          initializer: "initialize",
+        },
+      );
+      await indexPriceOracle.deployed();
+      await volmexBaseToken.setPriceFeed(indexPriceOracle.address);
+      volmexQuoteToken = await upgrades.deployProxy(
+        VolmexQuoteToken,
+        [
+          "VolmexBaseToken", // nameArg
+          "VBT", // symbolArg,
+          false, // isBase
+        ],
+        {
+          initializer: "initialize",
+        },
+      );
+      await volmexQuoteToken.deployed();
+      await (await perpView.setQuoteToken(volmexQuoteToken.address)).wait();
+
+      markPriceOracle = await upgrades.deployProxy(
+        MarkPriceOracle,
+        [[200060000], [volmexBaseToken.address], [proofHash], owner.address],
+        {
+          initializer: "initialize",
+        },
+      );
+      await markPriceOracle.deployed();
+      await (await indexPriceOracle.grantInitialTimestampRole(markPriceOracle.address)).wait();
+      positioningConfig = await upgrades.deployProxy(PositioningConfig, [markPriceOracle.address]);
+      await markPriceOracle.grantTwapIntervalRole(positioningConfig.address);
+      USDC = await TestERC20.deploy();
+      await USDC.__TestERC20_init("TestUSDC", "USDC", 6);
+      await USDC.deployed();
+
+      matchingEngine = await upgrades.deployProxy(MatchingEngine, [
+        owner.address,
+        markPriceOracle.address,
+      ]);
+      await markPriceOracle.setObservationAdder(matchingEngine.address);
+
+      virtualToken = await upgrades.deployProxy(VirtualToken, ["VirtualToken", "VTK", false], {
+        initializer: "initialize",
+      });
+      await virtualToken.deployed();
+
+      accountBalance1 = await upgrades.deployProxy(AccountBalance, [positioningConfig.address]);
+
+      await accountBalance1.deployed();
+      await (await perpView.setAccount(accountBalance1.address)).wait();
+      vaultController = await upgrades.deployProxy(VaultController, [
+        positioningConfig.address,
+        accountBalance1.address,
+      ]);
+      await vaultController.deployed();
+      await (await perpView.setVaultController(vaultController.address)).wait();
+
+      vault = await upgrades.deployProxy(Vault, [
+        positioningConfig.address,
+        accountBalance1.address,
+        USDC.address,
+        vaultController.address,
+      ]);
+      await vault.deployed();
+      await (await perpView.incrementVaultIndex()).wait();
+
+      (await accountBalance1.grantSettleRealizedPnlRole(vault.address)).wait();
+      (await accountBalance1.grantSettleRealizedPnlRole(vaultController.address)).wait();
+
+      positioning = await upgrades.deployProxy(
+        Positioning,
+        [
+          positioningConfig.address,
+          vaultController.address,
+          accountBalance1.address,
+          matchingEngine.address,
+          markPriceOracle.address,
+          indexPriceOracle.address,
+          0,
+          [owner.address, account1.address],
+        ],
+        {
+          initializer: "initialize",
+        },
+      );
+      await positioning.deployed();
+      await (await perpView.setPositioning(positioning.address)).wait();
+      await (await perpView.incrementPerpIndex()).wait();
+      await (await volmexBaseToken.setMintBurnRole(positioning.address)).wait();
+      await (await volmexQuoteToken.setMintBurnRole(positioning.address)).wait();
+
+      marketRegistry = await upgrades.deployProxy(MarketRegistry, [volmexQuoteToken.address]);
+
+      await marketRegistry.connect(owner).addBaseToken(volmexBaseToken.address);
+      await marketRegistry.connect(owner).setMakerFeeRatio(0.0004e6);
+      await marketRegistry.connect(owner).setTakerFeeRatio(0.0004e6);
+
+      await accountBalance1.connect(owner).setPositioning(positioning.address);
+
+      await vault.connect(owner).setPositioning(positioning.address);
+      await vault.connect(owner).setVaultController(vaultController.address);
+      await vaultController.registerVault(vault.address, USDC.address);
+      await vaultController.connect(owner).setPositioning(positioning.address);
+
+      await positioningConfig.connect(owner).setMaxMarketsPerAccount(5);
+      await positioningConfig
+        .connect(owner)
+        .setSettlementTokenBalanceCap("10000000000000000000000000000000000000000000");
+
+      await positioning.connect(owner).setMarketRegistry(marketRegistry.address);
+      await positioning.connect(owner).setDefaultFeeReceiver(owner.address);
+      await positioning.connect(owner).setPositioning(positioning.address);
+
+      await (await markPriceOracle.setObservationAdder(owner.address)).wait();
+      await (await matchingEngine.grantMatchOrders(positioning.address)).wait();
+      await (await markPriceOracle.setObservationAdder(matchingEngine.address)).wait();
+      volmexPerpPeriphery = await upgrades.deployProxy(VolmexPerpPeriphery, [
+        perpView.address,
+        markPriceOracle.address,
+        indexPriceOracle.address,
+        [vault.address, vault.address],
+        owner.address,
+        owner.address, // replace with replayer address
+      ]);
+      await (await markPriceOracle.setPositioning(positioning.address)).wait();
+      await (await markPriceOracle.setIndexOracle(indexPriceOracle.address)).wait();
+      await positioningConfig.setTwapInterval(28800);
+
+      await volmexPerpPeriphery.deployed();
+      await USDC.transfer(account1.address, "1000000000000000000000000");
+      await USDC.transfer(account2.address, "1000000000000000000000000");
+      await USDC.transfer(alice.address, "1000000000000000000000000");
+      await USDC.transfer(bob.address, "1000000000000000000000000");
+
+      await USDC.connect(account1).approve(
+        volmexPerpPeriphery.address,
+        "1000000000000000000000000",
+      );
+      await USDC.connect(account2).approve(
+        volmexPerpPeriphery.address,
+        "1000000000000000000000000",
+      );
+      await USDC.connect(alice).approve(volmexPerpPeriphery.address, "1000000000000000000000000");
+      await USDC.connect(bob).approve(volmexPerpPeriphery.address, "1000000000000000000000000");
+      await volmexPerpPeriphery.whitelistTrader(alice.address, true);
+      await volmexPerpPeriphery.whitelistTrader(bob.address, true);
+      await volmexPerpPeriphery.whitelistTrader(account1.address, true);
+      await volmexPerpPeriphery.whitelistTrader(account2.address, true);
+
+      (
+        await volmexPerpPeriphery
+          .connect(account1)
+          .depositToVault(index, USDC.address, "1000000000000000000000000")
+      ).wait();
+      (
+        await volmexPerpPeriphery
+          .connect(account2)
+          .depositToVault(index, USDC.address, "1000000000000000000000000")
+      ).wait();
+      (
+        await volmexPerpPeriphery
+          .connect(alice)
+          .depositToVault(index, USDC.address, "1000000000000000000000000")
+      ).wait();
+      (
+        await volmexPerpPeriphery
+          .connect(bob)
+          .depositToVault(index, USDC.address, "1000000000000000000000000")
+      ).wait();
+      await indexPriceOracle.setObservationAdder(owner.address);
+      for (let i = 0; i < 10; i++) {
+        await indexPriceOracle.addObservation([75000000], [0], [proofHash]);
+      }
+    });
+
     it("Funding should not occur is user closes his position before 8 hours", async () => {
       await markPriceOracle.setObservationAdder(owner.address);
       await indexPriceOracle.setObservationAdder(owner.address);
       for (let index = 0; index <= 100; index++) {
-        await markPriceOracle.addObservation([200060000], [0], [proofHash]);
+        await markPriceOracle.addObservation(200060000, 0, proofHash);
       }
       for (let index = 0; index <= 100; index++) {
         await indexPriceOracle.addObservation([200000000], [0], [proofHash]);
@@ -1444,7 +1716,7 @@ describe.only("Periodic Funding payment", function () {
         await markPriceOracle.addObservation(200060000, 0, proofHash);
       }
       for (let index = 0; index <= 100; index++) {
-        await indexPriceOracle.addObservation(200000000, 0, proofHash);
+        await indexPriceOracle.addObservation([200000000], [0], [proofHash]);
       }
       await markPriceOracle.setObservationAdder(matchingEngine.address);
       await USDC.transfer(account4.address, "1000000000000000000");
@@ -1541,7 +1813,14 @@ describe.only("Periodic Funding payment", function () {
           liquidator,
         );
       }
-      await time.increase(28800);
+      await time.increase(18800);
+      for (let index = 0; index <= 10; index++) {
+        await indexPriceOracle.addObservation([200000000], [0], [proofHash]);
+      }
+      await time.increase(10000);
+      for (let index = 0; index <= 10; index++) {
+        await indexPriceOracle.addObservation([200000000], [0], [proofHash]);
+      }
       console.log("close position");
       const orderLeft1 = Order(
         ORDER,
@@ -1575,7 +1854,7 @@ describe.only("Periodic Funding payment", function () {
         liquidator,
       );
       const traderCollateral = await vaultController.getFreeCollateralByRatio(account4.address, 1);
-      expect(traderCollateral.toString()).to.be.equal("999841951919976000000");
+      expect(traderCollateral.toString()).to.be.equal("999859951919976000000");
     });
     it("Funding should occur during multiple cycles", async () => {
       await positioningConfig.setMaxFundingRate("100000");
@@ -1585,7 +1864,7 @@ describe.only("Periodic Funding payment", function () {
         await markPriceOracle.addObservation(200060000, 0, proofHash);
       }
       for (let index = 0; index <= 100; index++) {
-        await indexPriceOracle.addObservation(200000000, 0, proofHash);
+        await indexPriceOracle.addObservation([200000000], [0], [proofHash]);
       }
       await markPriceOracle.setObservationAdder(matchingEngine.address);
       await USDC.transfer(account4.address, "1000000000000000000");
@@ -1681,7 +1960,14 @@ describe.only("Periodic Funding payment", function () {
           liquidator,
         );
       }
-      await time.increase(28800);
+      await time.increase(18800);
+      for (let index = 0; index <= 10; index++) {
+        await indexPriceOracle.addObservation([200000000], [0], [proofHash]);
+      }
+      await time.increase(10000);
+      for (let index = 0; index <= 10; index++) {
+        await indexPriceOracle.addObservation([200000000], [0], [proofHash]);
+      }
       for (let i = 38; i < 40; i++) {
         const orderLeft = Order(
           ORDER,
@@ -1716,7 +2002,14 @@ describe.only("Periodic Funding payment", function () {
         );
       }
 
-      await time.increase(28800);
+      await time.increase(18800);
+      for (let index = 0; index <= 10; index++) {
+        await indexPriceOracle.addObservation([200000000], [0], [proofHash]);
+      }
+      await time.increase(10000);
+      for (let index = 0; index <= 10; index++) {
+        await indexPriceOracle.addObservation([200000000], [0], [proofHash]);
+      }
 
       const orderLeft1 = Order(
         ORDER,
@@ -1750,17 +2043,17 @@ describe.only("Periodic Funding payment", function () {
         liquidator,
       );
       const traderCollateral = await vaultController.getFreeCollateralByRatio(account4.address, 1);
-      console.log(traderCollateral.toString());
+      expect(traderCollateral.toString()).to.be.equal("999879951919976000000");
     });
     it("should test clamp upper bound ", async () => {
       await positioningConfig.setMaxFundingRate("100000");
       await markPriceOracle.setObservationAdder(owner.address);
       await indexPriceOracle.setObservationAdder(owner.address);
-      for (let index = 0; index <= 100; index++) {
+      for (let index = 0; index <= 10; index++) {
         await markPriceOracle.addObservation(200060000, 0, proofHash);
       }
-      for (let index = 0; index <= 100; index++) {
-        await indexPriceOracle.addObservation(200000000, 0, proofHash);
+      for (let index = 0; index <= 10; index++) {
+        await indexPriceOracle.addObservation([200000000], [0], [proofHash]);
       }
       await markPriceOracle.setObservationAdder(matchingEngine.address);
       await USDC.transfer(account4.address, "1000000000000000000");
@@ -1825,11 +2118,17 @@ describe.only("Periodic Funding payment", function () {
       expect(positionSize2.toString()).to.be.equal("-1000000000000000000");
       await markPriceOracle.setObservationAdder(owner.address);
       await time.increase(10000);
-      for (let index = 0; index < 50; index++) {
+      for (let index = 0; index <= 10; index++) {
         await markPriceOracle.addObservation(400000000, 0, proofHash);
+      }
+      for (let index = 0; index <= 10; index++) {
+        await indexPriceOracle.addObservation([200000000], [0], [proofHash]);
       }
 
       await time.increase(18800);
+      for (let index = 0; index <= 10; index++) {
+        await indexPriceOracle.addObservation([200000000], [0], [proofHash]);
+      }
       const orderLeft1 = Order(
         ORDER,
         deadline,
@@ -1862,17 +2161,17 @@ describe.only("Periodic Funding payment", function () {
         liquidator,
       );
       const traderCollateral = await vaultController.getFreeCollateralByRatio(account4.address, 1);
-      console.log(traderCollateral.toString());
+      expect(traderCollateral.toString()).to.be.equal("999859951919976000000");
     });
     it("should test clamp lower bound ", async () => {
       await positioningConfig.setMaxFundingRate("100000");
       await markPriceOracle.setObservationAdder(owner.address);
       await indexPriceOracle.setObservationAdder(owner.address);
-      for (let index = 0; index <= 100; index++) {
+      for (let index = 0; index <= 10; index++) {
         await markPriceOracle.addObservation(200060000, 0, proofHash);
       }
-      for (let index = 0; index <= 100; index++) {
-        await indexPriceOracle.addObservation(200000000, 0, proofHash);
+      for (let index = 0; index <= 10; index++) {
+        await indexPriceOracle.addObservation([200000000], [0], [proofHash]);
       }
       await markPriceOracle.setObservationAdder(matchingEngine.address);
       await USDC.transfer(account4.address, "1000000000000000000");
@@ -1937,11 +2236,17 @@ describe.only("Periodic Funding payment", function () {
       expect(positionSize2.toString()).to.be.equal("-1000000000000000000");
       await markPriceOracle.setObservationAdder(owner.address);
       await time.increase(10000);
-      for (let index = 0; index < 50; index++) {
+      for (let index = 0; index <= 10; index++) {
         await markPriceOracle.addObservation(10000000, 0, proofHash);
+      }
+      for (let index = 0; index <= 10; index++) {
+        await indexPriceOracle.addObservation([200000000], [0], [proofHash]);
       }
 
       await time.increase(18800);
+      for (let index = 0; index <= 10; index++) {
+        await indexPriceOracle.addObservation([200000000], [0], [proofHash]);
+      }
       const orderLeft1 = Order(
         ORDER,
         deadline,
@@ -1974,7 +2279,7 @@ describe.only("Periodic Funding payment", function () {
         liquidator,
       );
       const traderCollateral = await vaultController.getFreeCollateralByRatio(account4.address, 1);
-      console.log(traderCollateral.toString());
+      expect(traderCollateral.toString()).to.be.equal("999843285253309333333");
     });
     it("Testing when funding rate goes positive to negative from cycle 1 to cycle 2", async () => {
       await positioningConfig.setMaxFundingRate("100000");
@@ -1983,8 +2288,8 @@ describe.only("Periodic Funding payment", function () {
       for (let index = 0; index <= 100; index++) {
         await markPriceOracle.addObservation(200060000, 0, proofHash);
       }
-      for (let index = 0; index <= 100; index++) {
-        await indexPriceOracle.addObservation(200000000, 0, proofHash);
+      for (let index = 0; index <= 50; index++) {
+        await indexPriceOracle.addObservation([200000000], [0], [proofHash]);
       }
       await markPriceOracle.setObservationAdder(matchingEngine.address);
       await USDC.transfer(account4.address, "1000000000000000000");
@@ -2049,15 +2354,28 @@ describe.only("Periodic Funding payment", function () {
       expect(positionSize2.toString()).to.be.equal("-1000000000000000000");
       await markPriceOracle.setObservationAdder(owner.address);
       await time.increase(10000);
-      for (let index = 0; index < 30; index++) {
+      for (let index = 0; index <= 10; index++) {
+        await indexPriceOracle.addObservation([200000000], [0], [proofHash]);
+      }
+      for (let index = 0; index <= 10; index++) {
         await markPriceOracle.addObservation(400000000, 0, proofHash);
+      }
+      await time.increase(18800);
+      for (let index = 0; index <= 10; index++) {
+        await indexPriceOracle.addObservation([200000000], [0], [proofHash]);
+      }
+      await time.increase(10000);
+      for (let index = 0; index <= 10; index++) {
+        await markPriceOracle.addObservation(10000000, 0, proofHash);
+      }
+      for (let index = 0; index <= 10; index++) {
+        await indexPriceOracle.addObservation([200000000], [0], [proofHash]);
       }
 
       await time.increase(18800);
-      for (let index = 0; index < 30; index++) {
-        await markPriceOracle.addObservation(10000000, 0, proofHash);
+      for (let index = 0; index <= 10; index++) {
+        await indexPriceOracle.addObservation([200000000], [0], [proofHash]);
       }
-      await time.increase(28800);
       const orderLeft1 = Order(
         ORDER,
         deadline,
@@ -2090,7 +2408,7 @@ describe.only("Periodic Funding payment", function () {
         liquidator,
       );
       const traderCollateral = await vaultController.getFreeCollateralByRatio(account4.address, 1);
-      console.log(traderCollateral.toString());
+      expect(traderCollateral.toString()).to.be.equal("999862560586642666666");
     });
   });
 });
