@@ -262,7 +262,7 @@ contract IndexPriceOracle is AccessControlUpgradeable, ERC165StorageUpgradeable 
         uint256 currentTimestamp = block.timestamp;
         if (initialTimestamp != 0 && currentTimestamp - lastEpochAddTimestamp >= indexTwInterval) {
             IndexObservation[] memory observations = observationsByIndex[_index];
-            uint256 _startTimestamp = observations[1].timestamp + (((currentTimestamp - initialTimestamp) / indexTwInterval) * indexTwInterval);
+            uint256 _startTimestamp = observations[0].timestamp + (((currentTimestamp - initialTimestamp) / indexTwInterval) * indexTwInterval);
             (uint256 twap, uint256 epochTimestamp,) = _getCustomIndexTwap(_index, _startTimestamp, currentTimestamp);
 
             IndexPriceByEpoch memory indexPriceByEpoch = IndexPriceByEpoch({price: twap, timestamp: epochTimestamp});
@@ -280,6 +280,9 @@ contract IndexPriceOracle is AccessControlUpgradeable, ERC165StorageUpgradeable 
         uint256 index = observations.length;
         lastUpdatedTimestamp = observations[index - 1].timestamp;
         _endTimestamp = lastUpdatedTimestamp < _endTimestamp ? lastUpdatedTimestamp : _endTimestamp;
+        if (lastUpdatedTimestamp < _startTimestamp) {
+            _startTimestamp = observations[0].timestamp + (((lastUpdatedTimestamp - initialTimestamp) / indexTwInterval) * indexTwInterval);
+        }
 
         uint256 priceCount;
         for (; index != 0 && observations[index - 1].timestamp >= _startTimestamp; index--) {
