@@ -99,32 +99,12 @@ contract IndexPriceOracle is AccessControlUpgradeable, ERC165StorageUpgradeable 
         emit ObservationAdded(_index, _underlyingPrice, block.timestamp);
     }
 
-    function _storePartEpochPrice(uint256 _index, uint256 _price) internal {
-        uint256 currentTimestamp = block.timestamp;
-        if (currentTimestamp - lastUpdatedEndTimestamp > indexTwInterval) {
-            lastUpdatedEndTimestamp = currentTimestamp;
-            currentEpochPriceCount = 0;
-        }
-        IndexPriceByEpoch[] memory indexPriceByEpoch = indexPriceAtEpochs[_index];
-        uint256 totalEpochs = indexPriceByEpoch.length;
-        IndexPriceByEpoch[] storage indexPriceEpoch = indexPriceAtEpochs[_index];
-        if (totalEpochs == 0 || currentEpochPriceCount == 0) {
-            indexPriceEpoch.push(IndexPriceByEpoch({price: _price, timestamp: currentTimestamp}));
-        } else {
-            uint256 actualPrice = (indexPriceByEpoch[totalEpochs - 1].price * currentEpochPriceCount + _price) / (currentEpochPriceCount + 1);
-            indexPriceEpoch[totalEpochs - 1] = IndexPriceByEpoch({
-                price: actualPrice,
-                timestamp: currentTimestamp
-            });
-        }
-        ++currentEpochPriceCount;
+    function getLastEpochPrice(uint256 _index) external view returns (uint256 price, uint256 timestamp) {
+        (price, timestamp) = _getCustomEpochPrice(_index, block.timestamp);
     }
 
-    function getEpochPrice(uint256 _index) external view returns (uint256 price, uint256 timestamp) {
-        IndexPriceByEpoch[] memory indexPriceByEpoch = indexPriceAtEpochs[_index];
-        uint256 totalEpochs = indexPriceByEpoch.length;
-        price = indexPriceByEpoch[totalEpochs - 1].price;
-        timestamp = indexPriceByEpoch[totalEpochs - 1].timestamp;
+    function getCustomEpochPrice(uint256 _index, uint256 _epochTimestamp) external view returns (uint256 price, uint256 timestamp) {
+        (price, timestamp) = _getCustomEpochPrice(_index, _epochTimestamp);
     }
 
     /**
@@ -282,6 +262,39 @@ contract IndexPriceOracle is AccessControlUpgradeable, ERC165StorageUpgradeable 
         IndexObservation memory observation = IndexObservation({ timestamp: block.timestamp, underlyingPrice: _underlyingPrice, proofHash: _proofHash });
         IndexObservation[] storage observations = observationsByIndex[_index];
         observations.push(observation);
+    }
+
+    function _storePartEpochPrice(uint256 _index, uint256 _price) internal {
+        uint256 currentTimestamp = block.timestamp;
+        if (currentTimestamp - lastUpdatedEndTimestamp > indexTwInterval) {
+            lastUpdatedEndTimestamp = currentTimestamp;
+            currentEpochPriceCount = 0;
+        }
+        IndexPriceByEpoch[] memory indexPriceByEpoch = indexPriceAtEpochs[_index];
+        uint256 totalEpochs = indexPriceByEpoch.length;
+        IndexPriceByEpoch[] storage indexPriceEpoch = indexPriceAtEpochs[_index];
+        if (totalEpochs == 0 || currentEpochPriceCount == 0) {
+            indexPriceEpoch.push(IndexPriceByEpoch({price: _price, timestamp: currentTimestamp}));
+        } else {
+            uint256 actualPrice = (indexPriceByEpoch[totalEpochs - 1].price * currentEpochPriceCount + _price) / (currentEpochPriceCount + 1);
+            indexPriceEpoch[totalEpochs - 1] = IndexPriceByEpoch({
+                price: actualPrice,
+                timestamp: currentTimestamp
+            });
+        }
+        ++currentEpochPriceCount;
+    }
+
+    function _getCustomEpochPrice(uint256 _index, uint256 _epochTimestamp) internal view returns (uint256 price, uint256 timestamp) {
+        IndexPriceByEpoch[] memory indexPriceByEpoch = indexPriceAtEpochs[_index];
+        uint256 totalEpochs = indexPriceByEpoch.length;
+        if (totalEpochs != 0) {
+            for (; totalEpochs != 0 && indexPriceByEpoch[totalEpochs - 1].timestamp >= _epochTimestamp; totalEpochs--) {}
+            price = indexPriceByEpoch[totalEpochs].price;
+            timestamp = indexPriceByEpoch[totalEpochs].timestamp;
+        } else {
+            return (0, 0);
+        }
     }
 
     function _getCustomIndexTwap(
