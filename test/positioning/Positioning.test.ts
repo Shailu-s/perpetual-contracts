@@ -110,7 +110,7 @@ describe("Positioning", function () {
     await volmexBaseToken.setPriceFeed(indexPriceOracle.address);
     markPriceOracle = await upgrades.deployProxy(
       MarkPriceOracle,
-      [[100000000], [volmexBaseToken.address], [proofHash], owner.address],
+      [[100000000], [volmexBaseToken.address], owner.address],
       {
         initializer: "initialize",
       },
@@ -2283,7 +2283,6 @@ describe("Liquidation test in Positioning", function () {
       [
         [100000000, 100000000],
         [volmexBaseToken.address, volmexBaseToken1.address],
-        [proofHash, proofHash],
         owner.address,
       ],
       {

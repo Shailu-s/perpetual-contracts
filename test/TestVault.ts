@@ -67,7 +67,7 @@ describe("Vault", function () {
 
     markPriceOracle = await upgrades.deployProxy(
       MarkPriceOracle,
-      [[100000], [alice.address], [proofHash], owner.address],
+      [[100000], [alice.address], owner.address],
       {
         initializer: "initialize",
       },
