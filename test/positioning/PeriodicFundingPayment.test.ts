@@ -120,7 +120,7 @@ describe("Periodic Funding payment", function () {
 
     markPriceOracle = await upgrades.deployProxy(
       MarkPriceOracle,
-      [[70000000], [volmexBaseToken.address], [proofHash], owner.address],
+      [[70000000], [volmexBaseToken.address], owner.address],
       {
         initializer: "initialize",
       },

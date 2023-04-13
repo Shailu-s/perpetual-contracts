@@ -128,7 +128,7 @@ describe("Global", function () {
 
     markPriceOracle = await upgrades.deployProxy(
       MarkPriceOracle,
-      [[10000000], [volmexBaseToken.address], [proofHash], owner.address],
+      [[10000000], [volmexBaseToken.address], owner.address],
       {
         initializer: "initialize",
       },
