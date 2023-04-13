@@ -133,6 +133,7 @@ contract MarkPriceOracle is AccessControlUpgradeable {
         require(_underlyingPrice != 0, "MarkPriceOracle: Not zero");
         uint256 markPrice = _getMarkPrice(baseTokenByIndex[_index], _index).abs();
         _pushOrderPrice(_index, _underlyingPrice, markPrice);
+        _storePartEpochPrice(_index, _underlyingPrice);
         emit ObservationAdded(_index, _underlyingPrice, markPrice, block.timestamp);
     }
 
@@ -236,6 +237,14 @@ contract MarkPriceOracle is AccessControlUpgradeable {
         underlyingLastPrice = observations[index].markPrice;
     }
 
+    function getLastEpochPrice(uint256 _index) external view returns (uint256 price, uint256 timestamp) {
+        (price, timestamp) = _getCustomEpochPrice(_index, block.timestamp);
+    }
+
+    function getCustomEpochPrice(uint256 _index, uint256 _epochTimestamp) external view returns (uint256 price, uint256 timestamp) {
+        (price, timestamp) = _getCustomEpochPrice(_index, _epochTimestamp);
+    }
+
     /**
      * @notice Get index count of assets
      */
@@ -296,19 +305,31 @@ contract MarkPriceOracle is AccessControlUpgradeable {
             lastEpochEndTimestamp = currentTimestamp;
             currentEpochPriceCount = 0;
         }
-        MarkPriceByEpoch[] memory indexPriceByEpoch = markPriceAtEpochs[_index];
-        uint256 totalEpochs = indexPriceByEpoch.length;
+        MarkPriceByEpoch[] memory markPriceByEpoch = markPriceAtEpochs[_index];
+        uint256 totalEpochs = markPriceByEpoch.length;
         MarkPriceByEpoch[] storage markPriceEpoch = markPriceAtEpochs[_index];
         if (totalEpochs == 0 || currentEpochPriceCount == 0) {
             markPriceEpoch.push(MarkPriceByEpoch({price: _price, timestamp: currentTimestamp}));
         } else {
-            uint256 actualPrice = (indexPriceByEpoch[totalEpochs - 1].price * currentEpochPriceCount + _price) / (currentEpochPriceCount + 1);
+            uint256 actualPrice = (markPriceByEpoch[totalEpochs - 1].price * currentEpochPriceCount + _price) / (currentEpochPriceCount + 1);
             markPriceEpoch[totalEpochs - 1] = MarkPriceByEpoch({
                 price: actualPrice,
                 timestamp: currentTimestamp
             });
         }
         ++currentEpochPriceCount;
+    }
+
+    function _getCustomEpochPrice(uint256 _index, uint256 _epochTimestamp) internal view returns (uint256 price, uint256 timestamp) {
+        MarkPriceByEpoch[] memory markPriceByEpoch = markPriceAtEpochs[_index];
+        uint256 totalEpochs = markPriceByEpoch.length;
+        if (totalEpochs != 0) {
+            for (; totalEpochs != 0 && markPriceByEpoch[totalEpochs - 1].timestamp >= _epochTimestamp; totalEpochs--) {}
+            price = markPriceByEpoch[totalEpochs].price;
+            timestamp = markPriceByEpoch[totalEpochs].timestamp;
+        } else {
+            return (0, 0);
+        }
     }
 
     function _getCustomTwap(
