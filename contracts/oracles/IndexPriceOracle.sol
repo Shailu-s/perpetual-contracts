@@ -42,6 +42,7 @@ contract IndexPriceOracle is AccessControlUpgradeable, ERC165StorageUpgradeable 
     mapping(uint256 => IndexPriceByEpoch[]) public indexPriceAtEpochs;
     uint256 public indexTwInterval; // interval for twap calculation
     uint256 public lastEpochEndTimestamp; // timestamp of last calculated epoch's end timestamp
+    uint256 public initialTimestamp; // timestamp at the mark oracle first observation addition
     uint256 public cardinality; // number of prices used to calculate current epoch's average price
 
     event ObservationAdderSet(address indexed matchingEngine);
@@ -78,6 +79,11 @@ contract IndexPriceOracle is AccessControlUpgradeable, ERC165StorageUpgradeable 
     function setIndextwInterval(uint256 _twInterval) external {
         _requireOracleAdmin();
         indexTwInterval = _twInterval;
+    }
+
+    function setInitialTimestamp(uint256 _timestamp) external {
+        _requireInitialTimestampRole();
+        initialTimestamp = _timestamp;
     }
 
     /**

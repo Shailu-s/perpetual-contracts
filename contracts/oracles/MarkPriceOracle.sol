@@ -302,6 +302,11 @@ contract MarkPriceOracle is AccessControlUpgradeable {
             MarkPriceObservation({ timestamp: block.timestamp, underlyingPrice: _underlyingPrice, markPrice: _markPrice });
         MarkPriceObservation[] storage observations = observationsByIndex[_index];
         observations.push(observation);
+        uint256 totalObservations = observations.length;
+        if (totalObservations == 2) {
+            indexOracle.setInitialTimestamp(block.timestamp);
+            initialTimestamp = block.timestamp;
+        }
     }
 
     function _storePartEpochPrice(uint256 _index, uint256 _price) internal {
