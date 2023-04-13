@@ -46,7 +46,9 @@ contract MarkPriceOracle is AccessControlUpgradeable {
     // mapping to store baseToken to Observations
     mapping(uint256 => MarkPriceObservation[]) public observationsByIndex;
     mapping(uint256 => MarkPriceByEpoch[]) public markPriceAtEpochs;
-    uint256 public lastEpochAddTimestamp; // stores last timestamp of epoch added
+    uint256 public epochInterval; // interval for epoch calculation
+    uint256 public lastEpochAddTimestamp; // timestamp of last calculated epoch's end timestamp
+    uint256 public currentEpochPriceCount; // number of prices used to calculate current epoch's average price
 
     event ObservationAdderSet(address indexed matchingEngine);
     event ObservationAdded(uint256 indexed index, uint256 underlyingPrice, uint256 markPrice, uint256 timestamp);
@@ -67,6 +69,7 @@ contract MarkPriceOracle is AccessControlUpgradeable {
         _setRoleAdmin(PRICE_ORACLE_ADMIN, PRICE_ORACLE_ADMIN);
         _grantRole(PRICE_ORACLE_ADMIN, _admin);
         markTwInterval = 300; // 5 minutes
+        epochInterval = 8 hours;
     }
 
     /**
@@ -106,6 +109,15 @@ contract MarkPriceOracle is AccessControlUpgradeable {
     }
 
     /**
+     * @notice Set positioning contract
+     * @param _epochInterval Address of positioning contract typed in interface
+     */
+    function setEpochInterval(uint256 _epochInterval) external virtual {
+        _requireTwapIntervalRole();
+        epochInterval = _epochInterval;
+    }
+
+    /**
      * @notice Used to add price cumulative of an asset at a given timestamp
      *
      * @param _underlyingPrice Price of the asset
@@ -120,8 +132,6 @@ contract MarkPriceOracle is AccessControlUpgradeable {
         require(_underlyingPrice != 0, "MarkPriceOracle: Not zero");
         uint256 markPrice = _getMarkPrice(baseTokenByIndex[_index], _index).abs();
         _pushOrderPrice(_index, _underlyingPrice, markPrice);
-        _calculateMarkPriceAtEpoch(_index);
-
         emit ObservationAdded(_index, _underlyingPrice, markPrice, block.timestamp);
     }
 
@@ -237,17 +247,6 @@ contract MarkPriceOracle is AccessControlUpgradeable {
         lastUpdatedTimestamp = observations[observations.length - 1].timestamp;
     }
 
-    function getCustomEpochTwap(uint256 _index, uint256 _epochTimestamp) external view returns (uint256 epochTwap) {
-        MarkPriceByEpoch[] memory markPriceByEpoch = markPriceAtEpochs[_index];
-        uint256 index = markPriceByEpoch.length;
-        for (; markPriceByEpoch[index - 1].timestamp >= _epochTimestamp; --index) {}
-        epochTwap = markPriceByEpoch[index - 1].price;
-    }
-
-    function getLastEpochTwap(uint256 _index) external view returns (uint256 price, uint256 timestamp) {
-        (price, timestamp) = _getLastEpochTwap(_index);
-    }
-
     function _addAssets(
         uint256[] calldata _underlyingPrices,
         address[] calldata _assets
@@ -323,26 +322,6 @@ contract MarkPriceOracle is AccessControlUpgradeable {
             lastTimestamp = epochTimestamps / priceCount;
         }
         priceCumulative = priceCumulative / priceCount;
-    }
-
-    function _calculateMarkPriceAtEpoch(uint256 _index) internal {
-        uint256 currentTimestamp = block.timestamp;
-        if (currentTimestamp - lastEpochAddTimestamp >= markTwInterval) {
-            MarkPriceObservation[] memory observations = observationsByIndex[_index];
-            uint256 _startTimestamp = observations[1].timestamp + (((currentTimestamp - initialTimestamp) / markTwInterval) * markTwInterval);
-            (uint256 twap, uint256 epochTimestamp) = _getCustomTwap(_index, _startTimestamp, currentTimestamp, false);
-
-            MarkPriceByEpoch memory markPriceByEpoch = MarkPriceByEpoch({ price: twap, timestamp: epochTimestamp });
-            MarkPriceByEpoch[] storage markPricesByEpoch = markPriceAtEpochs[_index];
-            markPricesByEpoch.push(markPriceByEpoch);
-        }
-    }
-
-    function _getLastEpochTwap(uint256 _index) internal view returns (uint256 price, uint256 timestamp) {
-        MarkPriceByEpoch[] memory markPriceByEpoch = markPriceAtEpochs[_index];
-        uint256 length = markPriceByEpoch.length;
-        price = length != 0 ? markPriceByEpoch[length - 1].price : getLastPrice(_index);
-        timestamp = length != 0 ? markPriceByEpoch[length - 1].timestamp : block.timestamp;
     }
 
     function _requireOracleAdmin() internal view {
