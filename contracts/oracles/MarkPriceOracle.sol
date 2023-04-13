@@ -47,7 +47,7 @@ contract MarkPriceOracle is AccessControlUpgradeable {
     mapping(uint256 => MarkPriceObservation[]) public observationsByIndex;
     mapping(uint256 => MarkPriceByEpoch[]) public markPriceAtEpochs;
     uint256 public epochInterval; // interval for epoch calculation
-    uint256 public lastEpochAddTimestamp; // timestamp of last calculated epoch's end timestamp
+    uint256 public lastEpochEndTimestamp; // timestamp of last calculated epoch's end timestamp
     uint256 public currentEpochPriceCount; // number of prices used to calculate current epoch's average price
 
     event ObservationAdderSet(address indexed matchingEngine);
@@ -70,6 +70,7 @@ contract MarkPriceOracle is AccessControlUpgradeable {
         _grantRole(PRICE_ORACLE_ADMIN, _admin);
         markTwInterval = 300; // 5 minutes
         epochInterval = 8 hours;
+        lastEpochEndTimestamp = block.timestamp;
     }
 
     /**
@@ -287,6 +288,27 @@ contract MarkPriceOracle is AccessControlUpgradeable {
             MarkPriceObservation({ timestamp: block.timestamp, underlyingPrice: _underlyingPrice, markPrice: _markPrice });
         MarkPriceObservation[] storage observations = observationsByIndex[_index];
         observations.push(observation);
+    }
+
+    function _storePartEpochPrice(uint256 _index, uint256 _price) internal {
+        uint256 currentTimestamp = block.timestamp;
+        if (currentTimestamp - lastEpochEndTimestamp > epochInterval) {
+            lastEpochEndTimestamp = currentTimestamp;
+            currentEpochPriceCount = 0;
+        }
+        MarkPriceByEpoch[] memory indexPriceByEpoch = markPriceAtEpochs[_index];
+        uint256 totalEpochs = indexPriceByEpoch.length;
+        MarkPriceByEpoch[] storage markPriceEpoch = markPriceAtEpochs[_index];
+        if (totalEpochs == 0 || currentEpochPriceCount == 0) {
+            markPriceEpoch.push(MarkPriceByEpoch({price: _price, timestamp: currentTimestamp}));
+        } else {
+            uint256 actualPrice = (indexPriceByEpoch[totalEpochs - 1].price * currentEpochPriceCount + _price) / (currentEpochPriceCount + 1);
+            markPriceEpoch[totalEpochs - 1] = MarkPriceByEpoch({
+                price: actualPrice,
+                timestamp: currentTimestamp
+            });
+        }
+        ++currentEpochPriceCount;
     }
 
     function _getCustomTwap(
