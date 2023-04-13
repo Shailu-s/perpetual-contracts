@@ -47,7 +47,7 @@ contract MarkPriceOracle is AccessControlUpgradeable {
     mapping(uint256 => MarkPriceObservation[]) public observationsByIndex;
     mapping(uint256 => MarkPriceByEpoch[]) public markPriceAtEpochs;
     uint256 public epochInterval; // interval for epoch calculation
-    uint256 public lastEpochEndTimestamp; // timestamp of last calculated epoch's end timestamp
+    uint256 public cardinality; // timestamp of last calculated epoch's end timestamp
     uint256 public currentEpochPriceCount; // number of prices used to calculate current epoch's average price
 
     event ObservationAdderSet(address indexed matchingEngine);
@@ -70,7 +70,7 @@ contract MarkPriceOracle is AccessControlUpgradeable {
         _grantRole(PRICE_ORACLE_ADMIN, _admin);
         markTwInterval = 300; // 5 minutes
         epochInterval = 8 hours;
-        lastEpochEndTimestamp = block.timestamp;
+        cardinality = block.timestamp;
     }
 
     /**
@@ -306,8 +306,8 @@ contract MarkPriceOracle is AccessControlUpgradeable {
 
     function _storePartEpochPrice(uint256 _index, uint256 _price) internal {
         uint256 currentTimestamp = block.timestamp;
-        if (currentTimestamp - lastEpochEndTimestamp > epochInterval) {
-            lastEpochEndTimestamp = currentTimestamp;
+        if (currentTimestamp - cardinality > epochInterval) {
+            cardinality = currentTimestamp;
             currentEpochPriceCount = 0;
         }
         MarkPriceByEpoch[] memory markPriceByEpoch = markPriceAtEpochs[_index];
