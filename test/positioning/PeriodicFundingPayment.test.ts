@@ -1330,7 +1330,7 @@ describe("Periodic Funding payment", function () {
     });
   });
 
-  describe("funding paymnet test with numbers", () => {
+  describe("funding payment test with numbers", () => {
     let MatchingEngine;
     let matchingEngine;
     let VirtualToken;
@@ -1594,10 +1594,6 @@ describe("Periodic Funding payment", function () {
           .connect(bob)
           .depositToVault(index, USDC.address, "1000000000000000000000000")
       ).wait();
-      await indexPriceOracle.setObservationAdder(owner.address);
-      for (let i = 0; i < 10; i++) {
-        await indexPriceOracle.addObservation([75000000], [0], [proofHash]);
-      }
     });
     // Fees deduction
     // user collateral = 1000
@@ -1706,6 +1702,7 @@ describe("Periodic Funding payment", function () {
         signatureRight1,
         liquidator,
       );
+
       const traderCollateral = await vaultController.getFreeCollateralByRatio(account4.address, 1);
       await time.increase(28800);
 
@@ -1787,39 +1784,7 @@ describe("Periodic Funding payment", function () {
       );
       expect(positionSize1.toString()).to.be.equal("1000000000000000000");
       expect(positionSize2.toString()).to.be.equal("-1000000000000000000");
-      for (let i = 34; i < 36; i++) {
-        const orderLeft = Order(
-          ORDER,
-          deadline,
-          alice.address,
-          Asset(volmexBaseToken.address, "1000000000000000000"),
-          Asset(virtualToken.address, "200060000000000000000"),
-          i,
-          (1e6).toString(),
-          true,
-        );
-        const orderRight = Order(
-          ORDER,
-          deadline,
-          bob.address,
-          Asset(virtualToken.address, "200060000000000000000"),
-          Asset(volmexBaseToken.address, "1000000000000000000"),
-          i + 1,
-          (1e6).toString(),
-          false,
-        );
 
-        const signatureLeft = await getSignature(orderLeft, alice.address);
-        const signatureRight = await getSignature(orderRight, bob.address);
-        await volmexPerpPeriphery.openPosition(
-          index,
-          orderLeft,
-          signatureLeft,
-          orderRight,
-          signatureRight,
-          liquidator,
-        );
-      }
       await time.increase(18800);
       for (let index = 0; index <= 10; index++) {
         await indexPriceOracle.addObservation([200000000], [0], [proofHash]);
@@ -1860,6 +1825,11 @@ describe("Periodic Funding payment", function () {
         signatureRight1,
         liquidator,
       );
+      const traderCollateral3 = await vaultController.getFreeCollateralByRatio(
+        account3.address,
+        1,
+      );
+      expect(traderCollateral3.toString()).to.be.equal("999819951919976000000");
       const traderCollateral = await vaultController.getFreeCollateralByRatio(account4.address, 1);
       expect(traderCollateral.toString()).to.be.equal("999859951919976000000");
     });
@@ -1868,7 +1838,6 @@ describe("Periodic Funding payment", function () {
     // when user opens  position his collateral value  = 1000 - (200.06 *4/100);
     // when user closes position his collateral value  = 1000 - (200.06 *4/100) - (200.06 *4/100) - funding payment in last cycle
     it("Funding should occur during multiple cycles", async () => {
-      await positioningConfig.setMaxFundingRate("100000");
       await markPriceOracle.setObservationAdder(owner.address);
       await indexPriceOracle.setObservationAdder(owner.address);
       for (let index = 0; index <= 100; index++) {
@@ -1938,39 +1907,7 @@ describe("Periodic Funding payment", function () {
       );
       expect(positionSize1.toString()).to.be.equal("1000000000000000000");
       expect(positionSize2.toString()).to.be.equal("-1000000000000000000");
-      for (let i = 34; i < 36; i++) {
-        const orderLeft = Order(
-          ORDER,
-          deadline,
-          alice.address,
-          Asset(volmexBaseToken.address, "1000000000000000000"),
-          Asset(virtualToken.address, "200060000000000000000"),
-          i,
-          (1e6).toString(),
-          true,
-        );
-        const orderRight = Order(
-          ORDER,
-          deadline,
-          bob.address,
-          Asset(virtualToken.address, "200060000000000000000"),
-          Asset(volmexBaseToken.address, "1000000000000000000"),
-          i + 1,
-          (1e6).toString(),
-          false,
-        );
 
-        const signatureLeft = await getSignature(orderLeft, alice.address);
-        const signatureRight = await getSignature(orderRight, bob.address);
-        await volmexPerpPeriphery.openPosition(
-          index,
-          orderLeft,
-          signatureLeft,
-          orderRight,
-          signatureRight,
-          liquidator,
-        );
-      }
       await time.increase(18800);
       for (let index = 0; index <= 10; index++) {
         await indexPriceOracle.addObservation([200000000], [0], [proofHash]);
@@ -1978,39 +1915,6 @@ describe("Periodic Funding payment", function () {
       await time.increase(10000);
       for (let index = 0; index <= 10; index++) {
         await indexPriceOracle.addObservation([200000000], [0], [proofHash]);
-      }
-      for (let i = 38; i < 40; i++) {
-        const orderLeft = Order(
-          ORDER,
-          deadline,
-          alice.address,
-          Asset(volmexBaseToken.address, "1000000000000000000"),
-          Asset(virtualToken.address, "200060000000000000000"),
-          i,
-          (1e6).toString(),
-          true,
-        );
-        const orderRight = Order(
-          ORDER,
-          deadline,
-          bob.address,
-          Asset(virtualToken.address, "200060000000000000000"),
-          Asset(volmexBaseToken.address, "1000000000000000000"),
-          i + 1,
-          (1e6).toString(),
-          false,
-        );
-
-        const signatureLeft = await getSignature(orderLeft, alice.address);
-        const signatureRight = await getSignature(orderRight, bob.address);
-        await volmexPerpPeriphery.openPosition(
-          index,
-          orderLeft,
-          signatureLeft,
-          orderRight,
-          signatureRight,
-          liquidator,
-        );
       }
 
       await time.increase(18800);
@@ -2053,6 +1957,11 @@ describe("Periodic Funding payment", function () {
         signatureRight1,
         liquidator,
       );
+      const traderCollateral3 = await vaultController.getFreeCollateralByRatio(
+        account3.address,
+        1,
+      );
+      expect(traderCollateral3.toString()).to.be.equal("999799951919976000000");
       const traderCollateral = await vaultController.getFreeCollateralByRatio(account4.address, 1);
 
       expect(traderCollateral.toString()).to.be.equal("999879951919976000000");
@@ -2062,7 +1971,7 @@ describe("Periodic Funding payment", function () {
     // when user opens  position his collateral value  = 1000 - (200.06 *4/100);
     // when user closes position his collateral value  = 1000 - (200.06 *4/100) - (200.06 *4/100) - funding payment in last cycle
     it("should test clamp upper bound ", async () => {
-      await positioningConfig.setMaxFundingRate("100000");
+      await positioningConfig.setMaxFundingRate("1000000");
       await markPriceOracle.setObservationAdder(owner.address);
       await indexPriceOracle.setObservationAdder(owner.address);
       for (let index = 0; index <= 10; index++) {
@@ -2134,17 +2043,21 @@ describe("Periodic Funding payment", function () {
       expect(positionSize2.toString()).to.be.equal("-1000000000000000000");
       await markPriceOracle.setObservationAdder(owner.address);
       await time.increase(10000);
-      for (let index = 0; index <= 10; index++) {
-        await markPriceOracle.addObservation(400000000, 0, proofHash);
-      }
+
       for (let index = 0; index <= 10; index++) {
         await indexPriceOracle.addObservation([200000000], [0], [proofHash]);
       }
+      for (let index = 0; index <= 10; index++) {
+        await markPriceOracle.addObservation(400000000, 0, proofHash);
+      }
+      const timestamp = await time.latest();
 
       await time.increase(18800);
       for (let index = 0; index <= 10; index++) {
         await indexPriceOracle.addObservation([200000000], [0], [proofHash]);
       }
+      await markPriceOracle.setObservationAdder(matchingEngine.address);
+
       const orderLeft1 = Order(
         ORDER,
         deadline,
@@ -2184,7 +2097,7 @@ describe("Periodic Funding payment", function () {
     // when user opens  position his collateral value  = 1000 - (200.06 *4/100);
     // when user closes position his collateral value  = 1000 - (200.06 *4/100) - (200.06 *4/100) - funding payment in last cycle
     it("should test clamp lower bound ", async () => {
-      await positioningConfig.setMaxFundingRate("100000");
+      await positioningConfig.setMaxFundingRate("1000000");
       await markPriceOracle.setObservationAdder(owner.address);
       await indexPriceOracle.setObservationAdder(owner.address);
       for (let index = 0; index <= 10; index++) {
@@ -2256,17 +2169,18 @@ describe("Periodic Funding payment", function () {
       expect(positionSize2.toString()).to.be.equal("-1000000000000000000");
       await markPriceOracle.setObservationAdder(owner.address);
       await time.increase(10000);
-      for (let index = 0; index <= 10; index++) {
-        await markPriceOracle.addObservation(10000000, 0, proofHash);
-      }
+
       for (let index = 0; index <= 10; index++) {
         await indexPriceOracle.addObservation([200000000], [0], [proofHash]);
       }
-
+      for (let index = 0; index <= 10; index++) {
+        await markPriceOracle.addObservation(10000000, 0, proofHash);
+      }
       await time.increase(18800);
       for (let index = 0; index <= 10; index++) {
         await indexPriceOracle.addObservation([200000000], [0], [proofHash]);
       }
+      await markPriceOracle.setObservationAdder(matchingEngine.address);
       const orderLeft1 = Order(
         ORDER,
         deadline,
@@ -2306,13 +2220,13 @@ describe("Periodic Funding payment", function () {
     // when user opens  position his collateral value  = 1000 - (200.06 *4/100);
     // when user closes position his collateral value  = 1000 - (200.06 *4/100) - (200.06 *4/100) - funding payment in last cycle
     it("Testing when funding rate goes positive to negative from cycle 1 to cycle 2", async () => {
-      await positioningConfig.setMaxFundingRate("100000");
+      await positioningConfig.setMaxFundingRate("800000");
       await markPriceOracle.setObservationAdder(owner.address);
       await indexPriceOracle.setObservationAdder(owner.address);
-      for (let index = 0; index <= 100; index++) {
+      for (let index = 0; index <= 10; index++) {
         await markPriceOracle.addObservation(200060000, 0, proofHash);
       }
-      for (let index = 0; index <= 50; index++) {
+      for (let index = 0; index <= 10; index++) {
         await indexPriceOracle.addObservation([200000000], [0], [proofHash]);
       }
       await markPriceOracle.setObservationAdder(matchingEngine.address);
@@ -2377,13 +2291,14 @@ describe("Periodic Funding payment", function () {
       expect(positionSize1.toString()).to.be.equal("1000000000000000000");
       expect(positionSize2.toString()).to.be.equal("-1000000000000000000");
       await markPriceOracle.setObservationAdder(owner.address);
+      for (let index = 0; index <= 10; index++) {
+        await (await markPriceOracle.addObservation(400000000, 0, proofHash)).wait();
+      }
       await time.increase(10000);
       for (let index = 0; index <= 10; index++) {
         await indexPriceOracle.addObservation([200000000], [0], [proofHash]);
       }
-      for (let index = 0; index <= 10; index++) {
-        await markPriceOracle.addObservation(400000000, 0, proofHash);
-      }
+
       await time.increase(18800);
       for (let index = 0; index <= 10; index++) {
         await indexPriceOracle.addObservation([200000000], [0], [proofHash]);
@@ -2400,6 +2315,7 @@ describe("Periodic Funding payment", function () {
       for (let index = 0; index <= 10; index++) {
         await indexPriceOracle.addObservation([200000000], [0], [proofHash]);
       }
+      await markPriceOracle.setObservationAdder(matchingEngine.address);
       const orderLeft1 = Order(
         ORDER,
         deadline,
