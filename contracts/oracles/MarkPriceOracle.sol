@@ -146,7 +146,7 @@ contract MarkPriceOracle is AccessControlUpgradeable {
         int256 indexPrice = indexOracle.getLastPrice(_index).toInt256();
         // Note: Check for actual precision and data type
         prices[0] = indexPrice * (1 + lastFundingRate * (nextFunding.toInt256() / fundingPeriod.toInt256()));
-        uint256 markTwap = getMarkTwap(markTwInterval, _index);
+        uint256 markTwap = getLastTwap(_index, markTwInterval);
         prices[1] = markTwap.toInt256();
         prices[2] = getLastPrice(_index).toInt256();
         markPrice = prices[0].median(prices[1], prices[2]);
@@ -188,6 +188,11 @@ contract MarkPriceOracle is AccessControlUpgradeable {
     function getMarkTwap(uint256 _twInterval, uint256 _index) public view returns (uint256 priceCumulative) {
         uint256 startTimestamp = block.timestamp - _twInterval;
         (priceCumulative, ) = _getCustomTwap(_index, startTimestamp, block.timestamp, true);
+    }
+
+    function getLastTwap(uint256 _index, uint256 _twInterval) public view returns (uint256 priceCumulative) {
+        uint256 startTimestamp = block.timestamp - _twInterval;
+        (priceCumulative, ) = _getCustomTwap(_index, startTimestamp, block.timestamp, false);
     }
 
     /**
@@ -354,15 +359,12 @@ contract MarkPriceOracle is AccessControlUpgradeable {
                 }
             }
         } else {
-            uint256 epochTimestamps;
             for (; index != 0 && observations[index - 1].timestamp >= _startTimestamp; index--) {
                 if (observations[index - 1].timestamp <= _endTimestamp) {
                     priceCumulative += observations[index - 1].underlyingPrice;
-                    epochTimestamps += observations[index - 1].timestamp;
                     priceCount++;
                 }
             }
-            lastTimestamp = epochTimestamps / priceCount;
         }
         priceCumulative = priceCumulative / priceCount;
     }
