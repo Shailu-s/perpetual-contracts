@@ -41,6 +41,8 @@ contract IndexPriceOracle is AccessControlUpgradeable, ERC165StorageUpgradeable 
     mapping(uint256 => uint256) public volatilityCapRatioByIndex;
     mapping(uint256 => IndexPriceByEpoch[]) public indexPriceAtEpochs;
     uint256 public indexTwInterval; // interval for twap calculation
+    uint256 public lastUpdatedEndTimestamp; // timestamp of last calculated epoch's end timestamp
+    uint256 public currentEpochPriceCount; // number of prices used to calculate current epoch's average price
 
     event ObservationAdderSet(address indexed matchingEngine);
     event ObservationAdded(uint256 indexed index, uint256 underlyingPrice, uint256 timestamp);
@@ -62,6 +64,7 @@ contract IndexPriceOracle is AccessControlUpgradeable, ERC165StorageUpgradeable 
         _setRoleAdmin(PRICE_ORACLE_ADMIN, PRICE_ORACLE_ADMIN);
         __ERC165Storage_init();
         _registerInterface(_IVOLMEX_ORACLE_ID);
+        lastUpdatedEndTimestamp = block.timestamp;
     }
 
     function grantInitialTimestampRole(address _account) external {
@@ -76,11 +79,6 @@ contract IndexPriceOracle is AccessControlUpgradeable, ERC165StorageUpgradeable 
         _requireOracleAdmin();
         indexTwInterval = _twInterval;
     }
-
-    // function setInitialTimestamp(uint256 _timestamp) external { // TODO: Will be updated when part epoch is done
-    //     _requireInitialTimestampRole();
-    //     initialTimestamp = _timestamp;
-    // }
 
     /**
      * @notice Used to add price cumulative of an asset at a given timestamp
@@ -97,7 +95,36 @@ contract IndexPriceOracle is AccessControlUpgradeable, ERC165StorageUpgradeable 
         _requireCanAddObservation();
         require(_underlyingPrice != 0, "IndexPriceOracle: Not zero");
         _pushOrderPrice(_index, _underlyingPrice, _proofHash);
+        _storePartEpochPrice(_index, _underlyingPrice);
         emit ObservationAdded(_index, _underlyingPrice, block.timestamp);
+    }
+
+    function _storePartEpochPrice(uint256 _index, uint256 _price) internal {
+        uint256 currentTimestamp = block.timestamp;
+        if (currentTimestamp - lastUpdatedEndTimestamp > indexTwInterval) {
+            lastUpdatedEndTimestamp = currentTimestamp;
+            currentEpochPriceCount = 0;
+        }
+        IndexPriceByEpoch[] memory indexPriceByEpoch = indexPriceAtEpochs[_index];
+        uint256 totalEpochs = indexPriceByEpoch.length;
+        IndexPriceByEpoch[] storage indexPriceEpoch = indexPriceAtEpochs[_index];
+        if (totalEpochs == 0 || currentEpochPriceCount == 0) {
+            indexPriceEpoch.push(IndexPriceByEpoch({price: _price, timestamp: currentTimestamp}));
+        } else {
+            uint256 actualPrice = (indexPriceByEpoch[totalEpochs - 1].price * currentEpochPriceCount + _price) / (currentEpochPriceCount + 1);
+            indexPriceEpoch[totalEpochs - 1] = IndexPriceByEpoch({
+                price: actualPrice,
+                timestamp: currentTimestamp
+            });
+        }
+        ++currentEpochPriceCount;
+    }
+
+    function getEpochPrice(uint256 _index) external view returns (uint256 price, uint256 timestamp) {
+        IndexPriceByEpoch[] memory indexPriceByEpoch = indexPriceAtEpochs[_index];
+        uint256 totalEpochs = indexPriceByEpoch.length;
+        price = indexPriceByEpoch[totalEpochs - 1].price;
+        timestamp = indexPriceByEpoch[totalEpochs - 1].timestamp;
     }
 
     /**
