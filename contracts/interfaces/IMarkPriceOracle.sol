@@ -49,8 +49,7 @@ interface IMarkPriceOracle {
 
     function addObservation(
         uint256 _underlyingPrice,
-        uint256 _index,
-        bytes32 _proofHash
+        uint256 _index
     ) external;
 
     function setMarkTwInterval(uint256 _markTwInterval) external;

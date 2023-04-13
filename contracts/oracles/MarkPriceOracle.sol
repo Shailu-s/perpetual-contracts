@@ -19,7 +19,6 @@ contract MarkPriceOracle is AccessControlUpgradeable {
     struct MarkPriceObservation {
         uint256 timestamp;
         uint256 underlyingPrice;
-        bytes32 proofHash;
         uint256 markPrice;
     }
     struct MarkPriceByEpoch {
@@ -62,10 +61,9 @@ contract MarkPriceOracle is AccessControlUpgradeable {
     function initialize(
         uint256[] calldata _priceCumulative,
         address[] calldata _asset,
-        bytes32[] calldata _proofHash,
         address _admin
     ) external initializer {
-        _addAssets(_priceCumulative, _asset, _proofHash);
+        _addAssets(_priceCumulative, _asset);
         _setRoleAdmin(PRICE_ORACLE_ADMIN, PRICE_ORACLE_ADMIN);
         _grantRole(PRICE_ORACLE_ADMIN, _admin);
         markTwInterval = 300; // 5 minutes
@@ -116,13 +114,12 @@ contract MarkPriceOracle is AccessControlUpgradeable {
      */
     function addObservation(
         uint256 _underlyingPrice,
-        uint256 _index,
-        bytes32 _proofHash
+        uint256 _index
     ) external virtual {
         _requireCanAddObservation();
         require(_underlyingPrice != 0, "MarkPriceOracle: Not zero");
         uint256 markPrice = _getMarkPrice(baseTokenByIndex[_index], _index).abs();
-        _pushOrderPrice(_index, _underlyingPrice, markPrice, _proofHash);
+        _pushOrderPrice(_index, _underlyingPrice, markPrice);
         _calculateMarkPriceAtEpoch(_index);
 
         emit ObservationAdded(_index, _underlyingPrice, markPrice, block.timestamp);
@@ -163,11 +160,10 @@ contract MarkPriceOracle is AccessControlUpgradeable {
      */
     function addAssets(
         uint256[] calldata _underlyingPrice,
-        address[] calldata _asset,
-        bytes32[] calldata _proofHash
+        address[] calldata _asset
     ) external {
         _requireOracleAdmin();
-        _addAssets(_underlyingPrice, _asset, _proofHash);
+        _addAssets(_underlyingPrice, _asset);
     }
 
     /**
@@ -254,8 +250,7 @@ contract MarkPriceOracle is AccessControlUpgradeable {
 
     function _addAssets(
         uint256[] calldata _underlyingPrices,
-        address[] calldata _assets,
-        bytes32[] calldata _proofHash
+        address[] calldata _assets
     ) internal {
         uint256 underlyingPriceLength = _underlyingPrices.length;
         require(underlyingPriceLength == _assets.length, "MarkPriceOracle: Unequal length of prices & assets");
@@ -271,7 +266,6 @@ contract MarkPriceOracle is AccessControlUpgradeable {
             observation = MarkPriceObservation({
                 timestamp: currentTimestamp,
                 underlyingPrice: _underlyingPrices[index],
-                proofHash: _proofHash[index],
                 markPrice: _underlyingPrices[index]
             });
             baseTokenByIndex[indexCount] = _assets[index];
@@ -288,11 +282,10 @@ contract MarkPriceOracle is AccessControlUpgradeable {
     function _pushOrderPrice(
         uint256 _index,
         uint256 _underlyingPrice,
-        uint256 _markPrice,
-        bytes32 _proofHash
+        uint256 _markPrice
     ) internal {
         MarkPriceObservation memory observation =
-            MarkPriceObservation({ timestamp: block.timestamp, underlyingPrice: _underlyingPrice, proofHash: _proofHash, markPrice: _markPrice });
+            MarkPriceObservation({ timestamp: block.timestamp, underlyingPrice: _underlyingPrice, markPrice: _markPrice });
         MarkPriceObservation[] storage observations = observationsByIndex[_index];
         observations.push(observation);
     }
