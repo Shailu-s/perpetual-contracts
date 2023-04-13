@@ -104,7 +104,6 @@ describe("Vault Controller tests for withdrawal", function () {
       accountBalance.address,
       USDC.address,
       vaultController.address,
-      false,
     ]);
     await accountBalance.grantSettleRealizedPnlRole(vaultController.address);
     await accountBalance.grantSettleRealizedPnlRole(vault.address);
@@ -114,7 +113,6 @@ describe("Vault Controller tests for withdrawal", function () {
       accountBalance.address,
       DAI.address,
       vaultController.address,
-      false,
     ]);
 
     Positioning = await ethers.getContractFactory("PositioningTest");

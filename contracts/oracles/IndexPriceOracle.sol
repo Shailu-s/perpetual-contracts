@@ -45,7 +45,7 @@ contract IndexPriceOracle is AccessControlUpgradeable, ERC165StorageUpgradeable 
     uint256 public currentEpochPriceCount; // number of prices used to calculate current epoch's average price
 
     event ObservationAdderSet(address indexed matchingEngine);
-    event ObservationAdded(uint256 indexed index, uint256 underlyingPrice, uint256 timestamp);
+    event ObservationAdded(uint256[] index, uint256[] underlyingPrice, uint256 timestamp);
     event AssetsAdded(uint256 indexed lastIndex, address[] assets, uint256[] underlyingPrices);
 
     /**
@@ -83,20 +83,24 @@ contract IndexPriceOracle is AccessControlUpgradeable, ERC165StorageUpgradeable 
     /**
      * @notice Used to add price cumulative of an asset at a given timestamp
      *
-     * @param _underlyingPrice Price of the asset
-     * @param _index position of the asset
-     * @param _underlyingPrice hash of price collection
+     * @param _underlyingPrices Price of the asset
+     * @param _indexes position of the asset
+     * @param _proofHashes hash of price collection
      */
     function addObservation(
-        uint256 _underlyingPrice,
-        uint256 _index,
-        bytes32 _proofHash
+        uint256[] memory _underlyingPrices,
+        uint256[] memory _indexes,
+        bytes32[] memory _proofHashes
     ) external virtual {
         _requireCanAddObservation();
-        require(_underlyingPrice != 0, "IndexPriceOracle: Not zero");
-        _pushOrderPrice(_index, _underlyingPrice, _proofHash);
-        _storePartEpochPrice(_index, _underlyingPrice);
-        emit ObservationAdded(_index, _underlyingPrice, block.timestamp);
+        uint256 numberOfPrices = _underlyingPrices.length;
+        for (uint256 index; index < numberOfPrices; ++index) {
+            require(_underlyingPrices[index] != 0, "IndexPriceOracle: Not zero");
+            _pushOrderPrice(_indexes[index], _underlyingPrices[index], _proofHashes[index]);
+            _storePartEpochPrice(_indexes[index], _underlyingPrices[index]);
+
+        }
+        emit ObservationAdded(_indexes, _underlyingPrices, block.timestamp);
     }
 
     function getLastEpochPrice(uint256 _index) external view returns (uint256 price, uint256 timestamp) {
@@ -224,6 +228,13 @@ contract IndexPriceOracle is AccessControlUpgradeable, ERC165StorageUpgradeable 
         (price, timestamp) = _getLastEpochTwap(_index);
     }
 
+    function getCustomEpochTwap(uint256 _index, uint256 _epochTimestamp) external view returns (uint256 epochTwap) {
+        IndexPriceByEpoch[] memory indexPriceByEpoch = indexPriceAtEpochs[_index];
+        uint256 index = indexPriceByEpoch.length;
+        for (; indexPriceByEpoch[index - 1].timestamp >= _epochTimestamp; --index) {}
+        epochTwap = indexPriceByEpoch[index - 1].price;
+    }
+
     function _addAssets(
         uint256[] calldata _underlyingPrices,
         address[] calldata _assets,
@@ -306,6 +317,9 @@ contract IndexPriceOracle is AccessControlUpgradeable, ERC165StorageUpgradeable 
         uint256 index = observations.length;
         lastUpdatedTimestamp = observations[index - 1].timestamp;
         _endTimestamp = lastUpdatedTimestamp < _endTimestamp ? lastUpdatedTimestamp : _endTimestamp;
+        if (lastUpdatedTimestamp < _startTimestamp) {
+            _startTimestamp = _endTimestamp - indexTwInterval;
+        }
 
         uint256 priceCount;
         for (; index != 0 && observations[index - 1].timestamp >= _startTimestamp; index--) {
@@ -314,7 +328,7 @@ contract IndexPriceOracle is AccessControlUpgradeable, ERC165StorageUpgradeable 
                 priceCount++;
             }
         }
-        priceCumulative = priceCumulative / priceCount;
+        priceCumulative = priceCumulative != 0 ? priceCumulative / priceCount : 0;
     }
 
     /**

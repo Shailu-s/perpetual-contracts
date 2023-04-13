@@ -107,19 +107,15 @@ contract VolmexPerpPeriphery is AccessControlUpgradeable, IVolmexPerpPeriphery {
         uint256 _index,
         address _token,
         uint256 _amount
-    ) external payable {
-        /**
-        Getter for _isEthVault in Vault contract
-            - Check the msg.value and send it to vault controller
-         */
+    ) external {
         IVaultController vaultController = perpView.vaultControllers(_index);
-        vaultController.deposit{ value: msg.value }(IVolmexPerpPeriphery(address(this)), _token, _msgSender(), _amount);
+        vaultController.deposit(IVolmexPerpPeriphery(address(this)), _token, _msgSender(), _amount);
     }
 
     function withdrawFromVault(
         uint256 _index,
         address _token,
-        address payable _to,
+        address _to,
         uint256 _amount
     ) external {
         IVaultController vaultController = perpView.vaultControllers(_index);
@@ -251,7 +247,7 @@ contract VolmexPerpPeriphery is AccessControlUpgradeable, IVolmexPerpPeriphery {
         if (_order.orderType == LibOrder.STOP_LOSS_MARK_PRICE || _order.orderType == LibOrder.TAKE_PROFIT_MARK_PRICE) {
             price = markPriceOracle.getMarkTwap(_twInterval, _index);
         } else if (_order.orderType == LibOrder.STOP_LOSS_INDEX_PRICE || _order.orderType == LibOrder.TAKE_PROFIT_INDEX_PRICE) {
-            price = indexPriceOracle.getLastTwap(_twInterval, _index);
+            price = indexPriceOracle.getLastPrice(_index);
         } else {
             price = markPriceOracle.getLastPrice(_index);
         }

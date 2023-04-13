@@ -18,8 +18,7 @@ const vault = async () => {
     `${process.env.POSITIONING_CONFIG}`,
     `${process.env.ACCOUNT_BALANCE}`,
     collateral.address,
-    `${process.env.VAULT_CONTROLLER}`,
-    false,
+    `${process.env.VAULT_CONTROLLER}`
   ]);
   await vault.deployed();
   const perpView = VolmexPerpView.attach(`${process.env.PERP_VIEW}`);

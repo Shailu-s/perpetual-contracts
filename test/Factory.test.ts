@@ -265,7 +265,6 @@ describe("PerpFactory", function () {
       );
       const vaultClone = await factory.cloneVault(
         USDC.address,
-        true,
         positioningConfig.address,
         accountBalance.address,
         vault.address,
@@ -305,7 +304,6 @@ describe("PerpFactory", function () {
       await expect(
         factory.cloneVault(
           USDC.address,
-          true,
           positioningConfig.address,
           accountBalance.address,
           vault.address,
@@ -356,7 +354,7 @@ describe("PerpFactory", function () {
 
   describe("Index Price", () => {
     it("Should return the current index price", async () => {
-      await indexPriceOracle.addObservation(250000000, 0, proofHash);
+      await indexPriceOracle.addObservation([250000000], [0], [proofHash]);
       const newVolmexBaseToken = await upgrades.deployProxy(
         VolmexBaseToken,
         [
