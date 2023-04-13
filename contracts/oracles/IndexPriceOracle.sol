@@ -42,7 +42,8 @@ contract IndexPriceOracle is AccessControlUpgradeable, ERC165StorageUpgradeable 
     mapping(uint256 => IndexPriceByEpoch[]) public indexPriceAtEpochs;
     uint256 public indexTwInterval; // interval for twap calculation
     uint256 public lastEpochEndTimestamp; // timestamp of last calculated epoch's end timestamp
-    uint256 public currentEpochPriceCount; // number of prices used to calculate current epoch's average price
+    uint256 public initialTimestamp; // timestamp at the mark oracle first observation addition
+    uint256 public cardinality; // number of prices used to calculate current epoch's average price
 
     event ObservationAdderSet(address indexed matchingEngine);
     event ObservationAdded(uint256[] index, uint256[] underlyingPrice, uint256 timestamp);
@@ -78,6 +79,11 @@ contract IndexPriceOracle is AccessControlUpgradeable, ERC165StorageUpgradeable 
     function setIndextwInterval(uint256 _twInterval) external {
         _requireOracleAdmin();
         indexTwInterval = _twInterval;
+    }
+
+    function setInitialTimestamp(uint256 _timestamp) external {
+        _requireInitialTimestampRole();
+        initialTimestamp = _timestamp;
     }
 
     /**
@@ -279,21 +285,21 @@ contract IndexPriceOracle is AccessControlUpgradeable, ERC165StorageUpgradeable 
         uint256 currentTimestamp = block.timestamp;
         if (currentTimestamp - lastEpochEndTimestamp > indexTwInterval) {
             lastEpochEndTimestamp = currentTimestamp;
-            currentEpochPriceCount = 0;
+            cardinality = 0;
         }
         IndexPriceByEpoch[] memory indexPriceByEpoch = indexPriceAtEpochs[_index];
         uint256 totalEpochs = indexPriceByEpoch.length;
         IndexPriceByEpoch[] storage indexPriceEpoch = indexPriceAtEpochs[_index];
-        if (totalEpochs == 0 || currentEpochPriceCount == 0) {
+        if (totalEpochs == 0 || cardinality == 0) {
             indexPriceEpoch.push(IndexPriceByEpoch({price: _price, timestamp: currentTimestamp}));
         } else {
-            uint256 actualPrice = (indexPriceByEpoch[totalEpochs - 1].price * currentEpochPriceCount + _price) / (currentEpochPriceCount + 1);
+            uint256 actualPrice = (indexPriceByEpoch[totalEpochs - 1].price * cardinality + _price) / (cardinality + 1);
             indexPriceEpoch[totalEpochs - 1] = IndexPriceByEpoch({
                 price: actualPrice,
                 timestamp: currentTimestamp
             });
         }
-        ++currentEpochPriceCount;
+        ++cardinality;
     }
 
     function _getCustomEpochPrice(uint256 _index, uint256 _epochTimestamp) internal view returns (uint256 price, uint256 timestamp) {
