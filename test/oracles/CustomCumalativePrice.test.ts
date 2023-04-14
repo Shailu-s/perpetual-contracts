@@ -150,7 +150,7 @@ describe("Custom Cumulative Price", function () {
 
     markPriceOracle = await upgrades.deployProxy(
       MarkPriceOracle,
-      [[70000000], [volmexBaseToken.address], [proofHash], owner.address],
+      [[70000000], [volmexBaseToken.address], owner.address],
       {
         initializer: "initialize",
       },
@@ -357,7 +357,7 @@ describe("Custom Cumulative Price", function () {
       for (index = 0; index < 96; index++) {
         // add obeservation in every 5 minutes
         await time.increase(300);
-        const tx = await markPriceOracle.addObservation(75000000, 0, proofHash);
+        const tx = await markPriceOracle.addObservation(75000000, 0);
         const { events } = await tx.wait();
         let data;
         events.forEach((log: any) => {

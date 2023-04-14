@@ -6,7 +6,7 @@ interface IIndexPriceOracle {
     // Getter  methods
     function latestRoundData(uint256 _twInterval, uint256 _index) external view returns (uint256 answer, uint256 lastUpdateTimestamp);
 
-    function getIndexTwap(uint256 _twInterval, uint256 _index)
+    function getIndexSma(uint256 _twInterval, uint256 _index)
         external
         view
         returns (
@@ -21,7 +21,7 @@ interface IIndexPriceOracle {
 
     function baseTokenByIndex(uint256 _index) external view returns (address baseToken);
 
-    function getCustomIndexTwap(
+    function getCustomIndexSma(
         uint256 _index,
         uint256 _startTimestamp,
         uint256 _endTimestamp
@@ -49,6 +49,6 @@ interface IIndexPriceOracle {
 
     function setObservationAdder(address _adder) external;
     function setInitialTimestamp(uint256 _timestamp) external;
-    function setIndextwInterval(uint256 _twInterval) external;
+    function setIndexTwInterval(uint256 _twInterval) external;
     function grantInitialTimestampRole(address _account) external;
 }

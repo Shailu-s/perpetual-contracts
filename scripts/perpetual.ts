@@ -78,7 +78,7 @@ const positioning = async () => {
   console.log("Deploying Mark Price Oracle ...");
   const markPriceOracle = await upgrades.deployProxy(
     MarkPriceOracle,
-    [[52000000], [volmexBaseToken.address], [proofHash], owner.address],
+    [[52000000], [volmexBaseToken.address], owner.address],
     {
       initializer: "initialize",
     },
