@@ -78,7 +78,7 @@ const positioning = async () => {
   console.log("Deploying Mark Price Oracle ...");
   const markPriceOracle = await upgrades.deployProxy(
     MarkPriceOracle,
-    [[52000000], [volmexBaseToken.address], owner.address],
+    [[52000000], [volmexBaseToken.address], [proofHash], owner.address],
     {
       initializer: "initialize",
     },
@@ -116,7 +116,7 @@ const positioning = async () => {
   const positioningConfig = await upgrades.deployProxy(PositioningConfig, [markPriceOracle.address]);
   await positioningConfig.deployed();
   console.log(positioningConfig.address);
-  await (await markPriceOracle.grantSmaIntervalRole(positioningConfig.address)).wait();
+  await (await markPriceOracle.grantTwapIntervalRole(positioningConfig.address)).wait();
   await positioningConfig.setMaxMarketsPerAccount(5);
   await positioningConfig.setSettlementTokenBalanceCap("10000000000000");
 

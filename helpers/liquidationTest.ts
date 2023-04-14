@@ -77,7 +77,7 @@ const deposit = async () => {
   console.log("Deposited!!!");
   const indexPriceOracle = await ethers.getContractAt("IndexPriceOracle", indexPriceOracleAddress);
   console.log("Before index price:");
-  console.log((await indexPriceOracle.getIndexSma(0))[0].toString());
+  console.log((await indexPriceOracle.getIndexTwap(0))[0].toString());
   for (var i = 0; i < 6; i++) {
     await (
       await indexPriceOracle
@@ -87,7 +87,7 @@ const deposit = async () => {
     console.log("Update ", i + 1);
   }
   console.log("Updated Index price !!!");
-  console.log((await indexPriceOracle.getIndexSma(0))[0].toString());
+  console.log((await indexPriceOracle.getIndexTwap(0))[0].toString());
   console.log("Opening position");
   console.log("Signature creation started ...");
   console.log("account 1: ", alice.address);
@@ -144,9 +144,9 @@ const deposit = async () => {
     ).wait();
   }
   console.log("Updated index price !!!");
-  console.log((await indexPriceOracle.getIndexSma(0))[0].toString());
-  console.log("Primary", (await indexPriceOracle.getIndexSma(0))[0].div("1000000").toString());
-  console.log("Complement", (await indexPriceOracle.getIndexSma(0))[1].div("1000000").toString());
+  console.log((await indexPriceOracle.getIndexTwap(0))[0].toString());
+  console.log("Primary", (await indexPriceOracle.getIndexTwap(0))[0].div("1000000").toString());
+  console.log("Complement", (await indexPriceOracle.getIndexTwap(0))[1].div("1000000").toString());
 };
 deposit()
   .then(() => process.exit(0))
