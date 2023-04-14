@@ -156,8 +156,8 @@ describe("IndexPriceOracle", function () {
         await volmexOracle.addObservation([800000000], [0], [proofHash]);
       }
 
-      const lastEpochPrice = await volmexOracle.getLastEpochTwap(0);
-      expect(lastEpochPrice.price.toString()).to.be.equal("800000000");
+      const lastEpochPrice = (await volmexOracle.getLastEpochPrice(0))[0];
+      expect(lastEpochPrice.toString()).to.be.equal("800000000");
     });
 
     it("Should get cumulative price with time delay", async () => {

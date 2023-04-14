@@ -4,9 +4,9 @@ pragma solidity =0.8.18;
 
 interface IIndexPriceOracle {
     // Getter  methods
-    function latestRoundData(uint256 _twInterval, uint256 _index) external view returns (uint256 answer, uint256 lastUpdateTimestamp);
+    function latestRoundData(uint256 _smInterval, uint256 _index) external view returns (uint256 answer, uint256 lastUpdateTimestamp);
 
-    function getIndexSma(uint256 _twInterval, uint256 _index)
+    function getIndexSma(uint256 _smInterval, uint256 _index)
         external
         view
         returns (
@@ -30,7 +30,7 @@ interface IIndexPriceOracle {
     function getIndexCount() external view returns (uint256);
 
     function getLastPrice(uint256 _index) external view returns (uint256 underlyingLastPrice);
-    function getLastEpochTwap(uint256 _index) external view returns (uint256 price, uint256 timestamp);
+    function getLastEpochPrice(uint256 _index) external view returns (uint256 price, uint256 timestamp);
     function getLastUpdatedTimestamp(uint256 _index) external view returns (uint256 lastUpdatedTimestamp);
 
 
@@ -49,6 +49,6 @@ interface IIndexPriceOracle {
 
     function setObservationAdder(address _adder) external;
     function setInitialTimestamp(uint256 _timestamp) external;
-    function setIndexTwInterval(uint256 _twInterval) external;
+    function setIndexSmInterval(uint256 _smInterval) external;
     function grantInitialTimestampRole(address _account) external;
 }
