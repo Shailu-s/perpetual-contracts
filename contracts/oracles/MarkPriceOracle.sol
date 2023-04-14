@@ -28,6 +28,7 @@ contract MarkPriceOracle is AccessControlUpgradeable {
     IPositioning public positioning;
     IIndexPriceOracle public indexOracle;
     uint256 public markTwInterval;
+    uint256 public epochInterval;
     uint256 public initialTimestamp; // Set at mark-oracle when first successful openPosition.
     // price oracle admin role
     bytes32 public constant PRICE_ORACLE_ADMIN = keccak256("PRICE_ORACLE_ADMIN");
@@ -102,6 +103,15 @@ contract MarkPriceOracle is AccessControlUpgradeable {
     function setMarkTwInterval(uint256 _markTwInterval) external virtual {
         _requireTwapIntervalRole();
         markTwInterval = _markTwInterval;
+    }
+
+    /**
+     * @notice Set positioning contract
+     * @param _epochInterval Address of positioning contract typed in interface
+     */
+    function setMarkEpochInterval(uint256 _epochInterval) external virtual {
+        _requireOracleAdmin();
+        epochInterval = _epochInterval;
     }
 
     /**
@@ -290,8 +300,8 @@ contract MarkPriceOracle is AccessControlUpgradeable {
         uint256 currentTimestamp = block.timestamp;
         MarkPriceByEpoch[] memory markPriceByEpoch = markPriceAtEpochs[_index];
         uint256 currentEpochIndex = markPriceByEpoch.length;
-        if ((currentTimestamp - initialTimestamp) / markTwInterval > currentEpochIndex || currentEpochIndex == 0) {
-            if (currentEpochIndex != 0 && (currentTimestamp - markPriceByEpoch[currentEpochIndex - 1].timestamp) / markTwInterval == 0) {
+        if ((currentTimestamp - initialTimestamp) / epochInterval > currentEpochIndex || currentEpochIndex == 0) {
+            if (currentEpochIndex != 0 && (currentTimestamp - markPriceByEpoch[currentEpochIndex - 1].timestamp) / epochInterval == 0) {
                 _updatePriceEpoch(_index, currentEpochIndex - 1, markPriceByEpoch[currentEpochIndex - 1].price, _price, markPriceByEpoch[currentEpochIndex - 1].timestamp);
             } else {
                 MarkPriceByEpoch[] storage markPriceEpoch = markPriceAtEpochs[_index];
@@ -339,7 +349,7 @@ contract MarkPriceOracle is AccessControlUpgradeable {
         lastTimestamp = observations[index - 1].timestamp;
         _endTimestamp = lastTimestamp < _endTimestamp ? lastTimestamp : _endTimestamp;
         if (lastTimestamp < _startTimestamp) {
-            _startTimestamp = observations[0].timestamp + (((lastTimestamp - observations[0].timestamp) / markTwInterval) * markTwInterval);
+            _startTimestamp = observations[0].timestamp + (((lastTimestamp - observations[0].timestamp) / epochInterval) * epochInterval);
         }
         uint256 priceCount;
         if (_isMarkTwapRequired) {
