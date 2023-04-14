@@ -7,8 +7,6 @@ import { IPositioning } from "../interfaces/IPositioning.sol";
 import { IIndexPriceOracle } from "../interfaces/IIndexPriceOracle.sol";
 import { LibSafeCastUint } from "../libs/LibSafeCastUint.sol";
 import { LibPerpMath } from "../libs/LibPerpMath.sol";
-import "hardhat/console.sol";
-
 /**
  * @title Volmex Oracle Mark SMA
  * @author volmex.finance [security@volmexlabs.com]
@@ -136,8 +134,6 @@ contract MarkPriceOracle is AccessControlUpgradeable {
         prices[1] = markTwap.toInt256();
         prices[2] = getLastPrice(_index).toInt256();
         markPrice = prices[0].median(prices[1], prices[2]);
-        console.log(" mark price");
-        console.logInt(markPrice);
     }
 
     /**
