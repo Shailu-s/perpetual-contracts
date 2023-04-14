@@ -58,8 +58,7 @@ contract PositioningConfig is IPositioningConfig, PositioningConfigStorageV1, Ac
         // PC_ITI: invalid twapInterval
         require(twapIntervalArg != 0, "PC_ITI");
         _twapInterval = twapIntervalArg;
-        markPriceOracle.setMarkTwInterval(twapIntervalArg);
-        markPriceOracle.setIndexTwInterval(twapIntervalArg);
+        markPriceOracle.setMarkSmInterval(twapIntervalArg);
         emit TwapIntervalChanged(twapIntervalArg);
     }
 

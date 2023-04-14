@@ -78,7 +78,7 @@ const positioning = async () => {
   console.log("Deploying Mark Price Oracle ...");
   const markPriceOracle = await upgrades.deployProxy(
     MarkPriceOracle,
-    [[52000000], [volmexBaseToken.address], [proofHash], owner.address],
+    [[52000000], [volmexBaseToken.address], owner.address],
     {
       initializer: "initialize",
     },
@@ -91,7 +91,7 @@ const positioning = async () => {
 
   console.log("Deploying USDC ...");
   let usdtAddress = process.env.USDT;
-  if (!process.env.USDC) {
+  if (!process.env.USDT) {
     const usdt = await TestERC20.deploy(
       "1000000000000000000",
       "Tether USD",
@@ -141,8 +141,7 @@ const positioning = async () => {
     positioningConfig.address,
     accountBalance.address,
     usdtAddress,
-    vaultController.address,
-    false,
+    vaultController.address
   ]);
   await vault.deployed();
   console.log(vault.address);

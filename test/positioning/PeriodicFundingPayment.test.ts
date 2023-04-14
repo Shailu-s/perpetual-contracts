@@ -3,7 +3,7 @@ import { ethers, upgrades } from "hardhat";
 const { Order, Asset, sign, encodeAddress } = require("../order");
 import { BigNumber } from "ethers";
 import { time } from "@nomicfoundation/hardhat-network-helpers";
-describe("Priodic Funding payment", function () {
+describe("Periodic Funding payment", function () {
   let MatchingEngine;
   let matchingEngine;
   let VirtualToken;
@@ -47,6 +47,7 @@ describe("Priodic Funding payment", function () {
   const TAKE_PROFIT_LIMIT_ORDER = "0xe0fc7f94";
   const ZERO_ADDR = "0x0000000000000000000000000000000000000000";
   const capRatio = "400000000";
+  const proofHash = "0x6c00000000000000000000000000000000000000000000000000000000000000";
   async function getSignature(orderObj, signer) {
     return sign(orderObj, signer, positioning.address);
   }
@@ -74,7 +75,6 @@ describe("Priodic Funding payment", function () {
   this.beforeEach(async () => {
     const volatilityTokenPrice1 = "1000000";
     const volatilityTokenPrice2 = "1000000";
-    const proofHash = "0x6c00000000000000000000000000000000000000000000000000000000000000";
 
     perpView = await upgrades.deployProxy(VolmexPerpView, [owner.address]);
     await perpView.deployed();
@@ -120,7 +120,7 @@ describe("Priodic Funding payment", function () {
 
     markPriceOracle = await upgrades.deployProxy(
       MarkPriceOracle,
-      [[70000000], [volmexBaseToken.address], [proofHash], owner.address],
+      [[70000000], [volmexBaseToken.address], owner.address],
       {
         initializer: "initialize",
       },
@@ -160,7 +160,6 @@ describe("Priodic Funding payment", function () {
       accountBalance1.address,
       USDC.address,
       vaultController.address,
-      false,
     ]);
     await vault.deployed();
     await (await perpView.incrementVaultIndex()).wait();
@@ -262,6 +261,10 @@ describe("Priodic Funding payment", function () {
         .connect(bob)
         .depositToVault(index, USDC.address, "1000000000000000000000000")
     ).wait();
+    await indexPriceOracle.setObservationAdder(owner.address);
+    for (let i = 0; i < 10; i++) {
+      await indexPriceOracle.addObservation([75000000], [0], [proofHash]);
+    }
   });
 
   describe("Periodic Funding Payment", function () {
@@ -457,8 +460,13 @@ describe("Priodic Funding payment", function () {
         volmexBaseToken.address,
       );
 
+      for (let i = 0; i < 10; i++) {
+        await indexPriceOracle.addObservation([75000000], [0], [proofHash]);
+      }
       await time.increase(30000);
-
+      for (let i = 0; i < 10; i++) {
+        await indexPriceOracle.addObservation([75000000], [0], [proofHash]);
+      }
       for (let i = 67; i < 68; i++) {
         const orderLeft = Order(
           ORDER,
@@ -639,7 +647,13 @@ describe("Priodic Funding payment", function () {
         volmexBaseToken.address,
       );
       expect(accountInfo1.lastTwPremiumGrowthGlobal.toString()).to.equal("0");
+      for (let i = 0; i < 10; i++) {
+        await indexPriceOracle.addObservation([75000000], [0], [proofHash]);
+      }
       await time.increase(30000);
+      for (let i = 0; i < 10; i++) {
+        await indexPriceOracle.addObservation([75000000], [0], [proofHash]);
+      }
       for (let i = 30; i < 31; i++) {
         const orderLeft = Order(
           ORDER,
@@ -842,7 +856,13 @@ describe("Priodic Funding payment", function () {
       expect(fundingPayment1.toString()).to.equal("0");
       expect(fundingPayment2.toString()).to.equal("0");
 
+      for (let i = 0; i < 10; i++) {
+        await indexPriceOracle.addObservation([75000000], [0], [proofHash]);
+      }
       await time.increase(30000);
+      for (let i = 0; i < 20; i++) {
+        await indexPriceOracle.addObservation([75000000], [0], [proofHash]);
+      }
 
       const fundingPayment3 = await positioning.getPendingFundingPayment(
         account1.address,
@@ -999,7 +1019,13 @@ describe("Priodic Funding payment", function () {
       expect(fundingPayment1.toString()).to.equal("0");
       expect(fundingPayment2.toString()).to.equal("0");
 
+      for (let i = 0; i < 10; i++) {
+        await indexPriceOracle.addObservation([75000000], [0], [proofHash]);
+      }
       await time.increase(30000);
+      for (let i = 0; i < 10; i++) {
+        await indexPriceOracle.addObservation([75000000], [0], [proofHash]);
+      }
 
       const fundingPayment3 = await positioning.getPendingFundingPayment(
         account1.address,
@@ -1044,7 +1070,13 @@ describe("Priodic Funding payment", function () {
           liquidator,
         );
       }
+      for (let i = 0; i < 10; i++) {
+        await indexPriceOracle.addObservation([75000000], [0], [proofHash]);
+      }
       await time.increase(30000);
+      for (let i = 0; i < 10; i++) {
+        await indexPriceOracle.addObservation([75000000], [0], [proofHash]);
+      }
       const fundingPayment5 = await positioning.getPendingFundingPayment(
         account1.address,
         volmexBaseToken.address,
@@ -1154,8 +1186,11 @@ describe("Priodic Funding payment", function () {
       );
       expect(fundingPayment1.toString()).to.equal("0");
       expect(fundingPayment2.toString()).to.equal("0");
-
+      for (let i = 0; i < 10; i++) {
+        await indexPriceOracle.addObservation([75000000], [0], [proofHash]);
+      }
       await time.increase(14000);
+
       for (let i = 34; i < 38; i++) {
         const orderLeft = Order(
           ORDER,
@@ -1247,7 +1282,9 @@ describe("Priodic Funding payment", function () {
       );
 
       await time.increase(15000);
-
+      for (let i = 0; i < 10; i++) {
+        await indexPriceOracle.addObservation([75000000], [0], [proofHash]);
+      }
       const fundingPayment7 = await positioning.getPendingFundingPayment(
         account1.address,
         volmexBaseToken.address,
@@ -1276,6 +1313,9 @@ describe("Priodic Funding payment", function () {
       );
 
       await time.increase(30000);
+      for (let i = 0; i < 10; i++) {
+        await indexPriceOracle.addObservation([75000000], [0], [proofHash]);
+      }
       const fundingPayment11 = await positioning.getPendingFundingPayment(
         alice.address,
         volmexBaseToken.address,

@@ -69,14 +69,12 @@ describe("Vault Controller deposit tests", function () {
       accountBalance.address,
       USDC.address,
       vaultController.address,
-      false,
     ]);
     DAIVault = await upgrades.deployProxy(vaultFactory, [
       positioningConfig.address,
       accountBalance.address,
       DAI.address,
       vaultController.address,
-      false,
     ]);
 
     Positioning = await ethers.getContractFactory("PositioningTest");

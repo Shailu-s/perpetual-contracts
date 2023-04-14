@@ -26,15 +26,15 @@ interface IVault {
     /// @param amount The amount of the fund
     event DebtRepayed(address to, uint256 amount);
 
-    function initialize(address PositioningConfigArg, address accountBalanceArg, address tokenArg, address vaultControllerArg, bool isEthVaultArg) external;
+    function initialize(address PositioningConfigArg, address accountBalanceArg, address tokenArg, address vaultControllerArg) external;
     /// @notice Deposit collateral into vault
     /// @param amount The amount of the token to deposit
     /// @param from The address of the trader
-    function deposit(IVolmexPerpPeriphery periphery, uint256 amount, address from) external payable;
+    function deposit(IVolmexPerpPeriphery periphery, uint256 amount, address from) external;
     /// @notice Withdraw collateral from vault
     /// @param amount The amount of the token to withdraw
     /// @param to The address of the trader
-    function withdraw(uint256 amount, address payable to) external;
+    function withdraw(uint256 amount, address to) external;
     /// @notice transfer fund to vault in case of low balance
     /// @dev once multi-collateral is implemented, the token is not limited to settlementToken
     /// @param token The address of the token vault need funding
@@ -71,7 +71,6 @@ interface IVault {
     /// @notice Get `Positioning` contract address
     /// @return Positioning The address of `Positioning` contract
     function getPositioning() external view returns (address);
-    function isEthVault() external view returns (bool);
     /// @notice Get `Vault controller` contract address
     function getVaultController() external view returns (address);
 }

@@ -106,8 +106,8 @@ describe("Global", function () {
     await indexPriceOracle.deployed();
     await indexPriceOracle.setObservationAdder(owner.address);
     for (let index = 0; index < 10; index++) {
-      await (await indexPriceOracle.addObservation(100000000, 0, proofHash)).wait();
-      await (await indexPriceOracle.addObservation(100000000, 1, proofHash)).wait();
+      await (await indexPriceOracle.addObservation([100000000], [0], [proofHash])).wait();
+      await (await indexPriceOracle.addObservation([100000000], [1], [proofHash])).wait();
     }
     await volmexBaseToken.setPriceFeed(indexPriceOracle.address);
     await (await perpView.setBaseToken(volmexBaseToken.address)).wait();
@@ -128,7 +128,7 @@ describe("Global", function () {
 
     markPriceOracle = await upgrades.deployProxy(
       MarkPriceOracle,
-      [[10000000], [volmexBaseToken.address], [proofHash], owner.address],
+      [[10000000], [volmexBaseToken.address], owner.address],
       {
         initializer: "initialize",
       },
@@ -169,7 +169,6 @@ describe("Global", function () {
       accountBalance.address,
       usdc.address,
       vaultController.address,
-      false,
     ]);
     await vault.deployed();
     await (await perpView.incrementVaultIndex()).wait();
@@ -240,7 +239,7 @@ describe("Global", function () {
   });
 
   it("should match orders and open position", async () => {
-    const txn = await markPriceOracle.getMarkTwap(10000000, 0);
+    const txn = await markPriceOracle.getMarkSma(10000000, 0);
 
     await matchingEngine.grantMatchOrders(positioning.address);
 
@@ -318,8 +317,8 @@ describe("Global", function () {
     const proofHash = "0x6c00000000000000000000000000000000000000000000000000000000000000";
 
     for (let index = 0; index < 10; index++) {
-      await (await indexPriceOracle.addObservation(100000000, 0, proofHash)).wait();
-      await (await indexPriceOracle.addObservation(100000000, 1, proofHash)).wait();
+      await (await indexPriceOracle.addObservation([100000000], [0], [proofHash])).wait();
+      await (await indexPriceOracle.addObservation([100000000], [1], [proofHash])).wait();
     }
 
     orderLeft = Order(
@@ -444,7 +443,7 @@ describe("Global", function () {
 
   it("should match orders and open position", async () => {
     const index = await markPriceOracle.indexByBaseToken(volmexBaseToken.address);
-    let observations = await markPriceOracle.getMarkTwap(3600, index);
+    let observations = await markPriceOracle.getMarkSma(3600, index);
     console.log("observations", observations.toString());
 
     await matchingEngine.grantMatchOrders(positioning.address);
@@ -516,7 +515,7 @@ describe("Global", function () {
       ],
     ]);
 
-    observations = await markPriceOracle.getMarkTwap(3600, index);
+    observations = await markPriceOracle.getMarkSma(3600, index);
     console.log("observations", observations.toString());
     console.log("Another call \n");
 
@@ -526,8 +525,8 @@ describe("Global", function () {
     const proofHash = "0x6c00000000000000000000000000000000000000000000000000000000000000";
 
     for (let index = 0; index < 10; index++) {
-      await (await indexPriceOracle.addObservation(100000000, 0, proofHash)).wait();
-      await (await indexPriceOracle.addObservation(100000000, 1, proofHash)).wait();
+      await (await indexPriceOracle.addObservation([100000000], [0], [proofHash])).wait();
+      await (await indexPriceOracle.addObservation([100000000], [1], [proofHash])).wait();
     }
 
     // both partially filled {2, 3} {2, 1}
@@ -588,7 +587,7 @@ describe("Global", function () {
       ],
     ]);
 
-    observations = await markPriceOracle.getMarkTwap(3600, index);
+    observations = await markPriceOracle.getMarkSma(3600, index);
     console.log("observations", observations.toString());
 
     console.log("Another call \n");
@@ -651,7 +650,7 @@ describe("Global", function () {
       ],
     ]);
 
-    observations = await markPriceOracle.getMarkTwap(3600, index);
+    observations = await markPriceOracle.getMarkSma(3600, index);
     console.log("observations", observations.toString());
   });
 

@@ -104,7 +104,7 @@ describe("MatchingEngine", function () {
 
     markPriceOracle = await upgrades.deployProxy(
       MarkPriceOracle,
-      [[1000000], [volmexBaseToken.address], [proofHash], owner.address],
+      [[1000000], [volmexBaseToken.address], owner.address],
       {
         initializer: "initialize",
       },
@@ -171,7 +171,6 @@ describe("MatchingEngine", function () {
       accountBalance.address,
       virtualToken.address,
       accountBalance.address,
-      false,
     ]);
     await (await virtualToken.setMintBurnRole(owner.address)).wait();
     await virtualToken.mint(account1.address, ten.toString());

@@ -40,12 +40,12 @@ contract IndexPriceOracle is AccessControlUpgradeable, ERC165StorageUpgradeable 
     // Store the volatilitycapratio by index
     mapping(uint256 => uint256) public volatilityCapRatioByIndex;
     mapping(uint256 => IndexPriceByEpoch[]) public indexPriceAtEpochs;
-    uint256 public initialTimestamp; // Set at mark-oracle when first successful openPosition.
-    uint256 public indexTwInterval; // interval for twap calculation
-    uint256 public lastEpochAddTimestamp; // stores last timestamp of epoch added
+    uint256 public indexSmInterval; // interval for sma calculation
+    uint256 public initialTimestamp; // timestamp at the mark oracle first observation addition
+    uint256 public cardinality; // number of prices used to calculate current epoch's average price
 
     event ObservationAdderSet(address indexed matchingEngine);
-    event ObservationAdded(uint256 indexed index, uint256 underlyingPrice, uint256 timestamp);
+    event ObservationAdded(uint256[] index, uint256[] underlyingPrice, uint256 timestamp);
     event AssetsAdded(uint256 indexed lastIndex, address[] assets, uint256[] underlyingPrices);
 
     /**
@@ -58,7 +58,7 @@ contract IndexPriceOracle is AccessControlUpgradeable, ERC165StorageUpgradeable 
         bytes32[] calldata _proofHash,
         uint256[] calldata _capRatio
     ) external initializer {
-        indexTwInterval = 8 hours;
+        indexSmInterval = 8 hours;
         _grantRole(PRICE_ORACLE_ADMIN, _admin);
         _addAssets(_volatilityPrices, _volatilityIndex, _proofHash, _capRatio);
         _setRoleAdmin(PRICE_ORACLE_ADMIN, PRICE_ORACLE_ADMIN);
@@ -72,11 +72,11 @@ contract IndexPriceOracle is AccessControlUpgradeable, ERC165StorageUpgradeable 
     }
 
     /**
-     * @param _twInterval Time in seconds
+     * @param _smInterval Time in seconds
      */
-    function setIndextwInterval(uint256 _twInterval) external {
+    function setIndexSmInterval(uint256 _smInterval) external {
         _requireOracleAdmin();
-        indexTwInterval = _twInterval;
+        indexSmInterval = _smInterval;
     }
 
     function setInitialTimestamp(uint256 _timestamp) external {
@@ -87,51 +87,63 @@ contract IndexPriceOracle is AccessControlUpgradeable, ERC165StorageUpgradeable 
     /**
      * @notice Used to add price cumulative of an asset at a given timestamp
      *
-     * @param _underlyingPrice Price of the asset
-     * @param _index position of the asset
-     * @param _underlyingPrice hash of price collection
+     * @param _underlyingPrices Price of the asset
+     * @param _indexes position of the asset
+     * @param _proofHashes hash of price collection
      */
     function addObservation(
-        uint256 _underlyingPrice,
-        uint256 _index,
-        bytes32 _proofHash
+        uint256[] memory _underlyingPrices,
+        uint256[] memory _indexes,
+        bytes32[] memory _proofHashes
     ) external virtual {
         _requireCanAddObservation();
-        require(_underlyingPrice != 0, "IndexPriceOracle: Not zero");
-        _pushOrderPrice(_index, _underlyingPrice, _proofHash);
-        _calculateIndexPriceAtEpoch(_index);
-        lastEpochAddTimestamp = block.timestamp;
-        emit ObservationAdded(_index, _underlyingPrice, block.timestamp);
+        uint256 numberOfPrices = _underlyingPrices.length;
+        for (uint256 index; index < numberOfPrices; ++index) {
+            require(_underlyingPrices[index] != 0, "IndexPriceOracle: Not zero");
+            _pushOrderPrice(_indexes[index], _underlyingPrices[index], _proofHashes[index]);
+            _saveEpoch(_indexes[index], _underlyingPrices[index]);
+
+        }
+        emit ObservationAdded(_indexes, _underlyingPrices, block.timestamp);
+    }
+
+    function getLastEpochPrice(uint256 _index) external view returns (uint256 price, uint256 timestamp) {
+        (price, timestamp) = _getCustomEpochPrice(_index, block.timestamp);
+    }
+
+    function getCustomEpochPrice(uint256 _index, uint256 _epochTimestamp) external view returns (uint256 price, uint256 timestamp) {
+        (price, timestamp) = _getCustomEpochPrice(_index, _epochTimestamp);
     }
 
     /**
-     * @notice Emulate the Chainlink Oracle interface for retrieving Volmex TWAP volatility index
+     * @notice Emulate the Chainlink Oracle interface for retrieving Volmex SMA volatility index
      * @param _index Datapoints volatility index id {0}
-     * @param _twInterval time for averaging observations
+     * @param _smInterval time for averaging observations
      * @return answer is the answer for the given round
      */
-    function latestRoundData(uint256 _twInterval, uint256 _index) external view virtual returns (uint256 answer, uint256 lastUpdateTimestamp) {
-        uint256 startTimestamp = block.timestamp - _twInterval;
-        (answer, lastUpdateTimestamp) = _getLastEpochTwap(_index);
+    function latestRoundData(uint256 _smInterval, uint256 _index) external view virtual returns (uint256 answer, uint256 lastUpdateTimestamp) {
+        uint256 startTimestamp = block.timestamp - _smInterval;
+        (answer, lastUpdateTimestamp) = _getCustomIndexSma(_index, startTimestamp, block.timestamp);
         answer *= 100;
     }
 
     /**
      * @notice Get volatility indices price of normal and inverse with last timestamp
-     * @param _twInterval time interval for twap
+     * @param _smInterval time interval for sma
      * @param _index Position of the observation
      */
-    function getIndexTwap(uint256 _twInterval, uint256 _index)
+    function getIndexSma(uint256 _smInterval, uint256 _index)
         external
         view
         returns (
-            uint256 volatilityTokenTwap,
-            uint256 iVolatilityTokenTwap,
+            uint256 volatilityTokenSma,
+            uint256 iVolatilityTokenSma,
             uint256 lastUpdateTimestamp
         )
     {
-        (volatilityTokenTwap, lastUpdateTimestamp) = _getLastEpochTwap(_index);
-        iVolatilityTokenTwap = volatilityCapRatioByIndex[_index] - volatilityTokenTwap;
+        uint256 startTimestamp = block.timestamp - _smInterval;
+        (volatilityTokenSma, lastUpdateTimestamp) = _getCustomIndexSma(_index, startTimestamp, block.timestamp);
+        iVolatilityTokenSma = volatilityCapRatioByIndex[_index] - volatilityTokenSma;
     }
 
     function supportsInterface(bytes4 interfaceId) public view virtual override(AccessControlUpgradeable, ERC165StorageUpgradeable) returns (bool) {
@@ -169,14 +181,13 @@ contract IndexPriceOracle is AccessControlUpgradeable, ERC165StorageUpgradeable 
     /**
      * @notice Get the single moving average price of the asset
      *
-     * @param _twInterval Time in seconds of the range
+     * @param _smInterval Time in seconds of the range
      * @param _index Index of the observation, the index base token mapping
      * @return priceCumulative The SMA price of the asset
      */
-    function getLastTwap(uint256 _twInterval, uint256 _index) public view returns (uint256 priceCumulative) {
-        IndexObservation[] memory observations = observationsByIndex[_index];
-        uint256 length = observations.length;
-        priceCumulative = observations[length - 1].underlyingPrice;
+    function getLastSma(uint256 _smInterval, uint256 _index) public view returns (uint256 priceCumulative) {
+        uint256 startTimestamp = block.timestamp - _smInterval;
+        (priceCumulative,) = _getCustomIndexSma(_index, startTimestamp, block.timestamp);
     }
 
     /**
@@ -186,12 +197,12 @@ contract IndexPriceOracle is AccessControlUpgradeable, ERC165StorageUpgradeable 
      * @param _startTimestamp timestamp of start of window
      * @param _endTimestamp timestamp of last of window
      */
-    function getCustomIndexTwap(
+    function getCustomIndexSma(
         uint256 _index,
         uint256 _startTimestamp,
         uint256 _endTimestamp
     ) external view returns (uint256 priceCumulative) {
-        (priceCumulative,, ) = _getCustomIndexTwap(_index, _startTimestamp, _endTimestamp);
+        (priceCumulative, ) = _getCustomIndexSma(_index, _startTimestamp, _endTimestamp);
     }
 
     /**
@@ -215,10 +226,6 @@ contract IndexPriceOracle is AccessControlUpgradeable, ERC165StorageUpgradeable 
     function getLastUpdatedTimestamp(uint256 _index) external view returns (uint256 lastUpdatedTimestamp) {
         IndexObservation[] memory observations = observationsByIndex[_index];
         lastUpdatedTimestamp = observations[observations.length - 1].timestamp;
-    }
-
-    function getLastEpochTwap(uint256 _index) external view returns (uint256 price, uint256 timestamp) {
-        (price, timestamp) = _getLastEpochTwap(_index);
     }
 
     function _addAssets(
@@ -261,50 +268,67 @@ contract IndexPriceOracle is AccessControlUpgradeable, ERC165StorageUpgradeable 
         observations.push(observation);
     }
 
-    function _calculateIndexPriceAtEpoch(uint256 _index) internal {
+    function _saveEpoch(uint256 _index, uint256 _price) internal {
         uint256 currentTimestamp = block.timestamp;
-        if (initialTimestamp != 0 && currentTimestamp - lastEpochAddTimestamp >= indexTwInterval) {
-            uint256 _startTimestamp = ((currentTimestamp - initialTimestamp) / indexTwInterval) * indexTwInterval;
-            (uint256 twap, uint256 epochTimestamp,) = _getCustomIndexTwap(_index, _startTimestamp, currentTimestamp);
-
-            IndexPriceByEpoch memory indexPriceByEpoch = IndexPriceByEpoch({price: twap, timestamp: epochTimestamp});
-            IndexPriceByEpoch[] storage indexPricesByEpoch = indexPriceAtEpochs[_index];
-            indexPricesByEpoch.push(indexPriceByEpoch);
+        IndexPriceByEpoch[] memory indexPriceByEpoch = indexPriceAtEpochs[_index];
+        uint256 currentEpochIndex = indexPriceByEpoch.length;
+        
+        if ((currentTimestamp - initialTimestamp) / indexSmInterval > currentEpochIndex || currentEpochIndex == 0) {
+            if (currentEpochIndex != 0 && (currentTimestamp - indexPriceByEpoch[currentEpochIndex - 1].timestamp) / indexSmInterval == 0) {
+                _updatePriceEpoch(_index, currentEpochIndex - 1, indexPriceByEpoch[currentEpochIndex - 1].price, _price, indexPriceByEpoch[currentEpochIndex - 1].timestamp);
+            } else {
+                IndexPriceByEpoch[] storage indexPriceEpoch = indexPriceAtEpochs[_index];
+                indexPriceEpoch.push(IndexPriceByEpoch({price: _price, timestamp: currentTimestamp}));
+                cardinality = 1;
+            }
+        } else {
+            _updatePriceEpoch(_index, currentEpochIndex - 1, indexPriceByEpoch[currentEpochIndex - 1].price, _price, indexPriceByEpoch[currentEpochIndex - 1].timestamp);
         }
     }
 
-    function _getCustomIndexTwap(
+    function _updatePriceEpoch(uint256 _index, uint256 _epochIndex, uint256 _previousPrice, uint256 _price, uint256 _timestamp) private {
+        uint256 actualPrice = (_previousPrice * cardinality + _price) / (cardinality + 1);
+        IndexPriceByEpoch[] storage indexPriceEpoch = indexPriceAtEpochs[_index];
+        indexPriceEpoch[_epochIndex] = IndexPriceByEpoch({
+            price: actualPrice,
+            timestamp: _timestamp
+        });
+        ++cardinality;
+    }
+
+    function _getCustomEpochPrice(uint256 _index, uint256 _epochTimestamp) internal view returns (uint256 price, uint256 timestamp) {
+        IndexPriceByEpoch[] memory indexPriceByEpoch = indexPriceAtEpochs[_index];
+        uint256 currentEpochIndex = indexPriceByEpoch.length;
+        if (currentEpochIndex != 0) {
+            for (; currentEpochIndex != 0 && indexPriceByEpoch[currentEpochIndex - 1].timestamp >= _epochTimestamp; currentEpochIndex--) {}
+            price = indexPriceByEpoch[currentEpochIndex - 1].price;
+            timestamp = indexPriceByEpoch[currentEpochIndex - 1].timestamp;
+        } else {
+            return (0, 0);
+        }
+    }
+
+    function _getCustomIndexSma(
         uint256 _index,
         uint256 _startTimestamp,
         uint256 _endTimestamp
-    ) internal view returns (uint256 priceCumulative, uint256 epochTimestamp, uint256 lastUpdatedTimestamp) {
+    ) internal view returns (uint256 priceCumulative, uint256 lastUpdatedTimestamp) {
         IndexObservation[] memory observations = observationsByIndex[_index];
         uint256 index = observations.length;
         lastUpdatedTimestamp = observations[index - 1].timestamp;
         _endTimestamp = lastUpdatedTimestamp < _endTimestamp ? lastUpdatedTimestamp : _endTimestamp;
+        if (lastUpdatedTimestamp < _startTimestamp) {
+            _startTimestamp = _endTimestamp - indexSmInterval;
+        }
 
         uint256 priceCount;
         for (; index != 0 && observations[index - 1].timestamp >= _startTimestamp; index--) {
             if (observations[index - 1].timestamp <= _endTimestamp) {
                 priceCumulative += observations[index - 1].underlyingPrice;
-                epochTimestamp += observations[index - 1].timestamp;
                 priceCount++;
             }
         }
-        priceCumulative = priceCumulative / priceCount;
-        epochTimestamp = epochTimestamp / priceCount;
-    }
-
-    /**
-     * @notice Fetch index price of last epoch
-     * 
-     * @param _index Index of the observation, the index base token mapping
-     */
-    function _getLastEpochTwap(uint256 _index) internal view returns (uint256 price, uint256 timestamp) {
-        IndexPriceByEpoch[] memory indexPriceByEpoch = indexPriceAtEpochs[_index];
-        uint256 length = indexPriceByEpoch.length;
-        price = length != 0 ? indexPriceByEpoch[length - 1].price : getLastPrice(_index);
-        timestamp = length != 0 ? indexPriceByEpoch[length - 1].timestamp : block.timestamp;
+        priceCumulative = priceCumulative != 0 ? priceCumulative / priceCount : 0;
     }
 
     function _requireOracleAdmin() internal view {

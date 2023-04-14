@@ -121,7 +121,7 @@ describe("VolmexPerpPeriphery", function () {
 
     markPriceOracle = await upgrades.deployProxy(
       MarkPriceOracle,
-      [[60000000], [volmexBaseToken.address], [proofHash], owner.address],
+      [[60000000], [volmexBaseToken.address], owner.address],
       {
         initializer: "initialize",
       },
@@ -131,12 +131,7 @@ describe("VolmexPerpPeriphery", function () {
 
     positioningConfig = await upgrades.deployProxy(PositioningConfig, [markPriceOracle.address]);
 
-    USDC = await TestERC20.deploy(
-      "100000000000000000000000",
-      "Tether USD",
-      "USDT",
-      6
-    );
+    USDC = await TestERC20.deploy("100000000000000000000000", "Tether USD", "USDT", 6);
     await USDC.deployed();
 
     matchingEngine = await upgrades.deployProxy(MatchingEngine, [
@@ -164,7 +159,6 @@ describe("VolmexPerpPeriphery", function () {
       accountBalance1.address,
       USDC.address,
       vaultController.address,
-      false,
     ]);
     await vault.deployed();
     await (await perpView.incrementVaultIndex()).wait();
@@ -307,7 +301,7 @@ describe("VolmexPerpPeriphery", function () {
         );
         const receipt = await tx.wait();
         let txDataBefore = {
-          "Mark price": (await markPriceOracle.getMarkTwap("3600", 0)).toString(),
+          "Mark price": (await markPriceOracle.getMarkSma("3600", 0)).toString(),
           "Alice position": (
             await accountBalance1.getPositionSize(alice.address, volmexBaseToken.address)
           ).toString(),
@@ -358,7 +352,7 @@ describe("VolmexPerpPeriphery", function () {
           );
           const receipt = await tx.wait();
           txDataBefore = {
-            "Mark price": (await markPriceOracle.getMarkTwap("3600", 0)).toString(),
+            "Mark price": (await markPriceOracle.getMarkSma("3600", 0)).toString(),
             "Alice position": (
               await accountBalance1.getPositionSize(alice.address, volmexBaseToken.address)
             ).toString(),
@@ -516,7 +510,6 @@ describe("VolmexPerpPeriphery", function () {
         accountBalance1.address,
         USDC.address,
         accountBalance1.address,
-        false,
       ]);
       expect(await volmexPerpPeriphery.whitelistVault(vault1.address, true))
         .to.emit(volmexPerpPeriphery, "VaultWhitelisted")

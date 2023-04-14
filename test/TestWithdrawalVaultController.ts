@@ -63,7 +63,7 @@ describe("Vault Controller tests for withdrawal", function () {
     await volmexBaseToken.setPriceFeed(indexPriceOracle.address);
     markPriceOracle = await upgrades.deployProxy(
       MarkPriceOracle,
-      [[100000], [volmexBaseToken.address], [proofHash], owner.address],
+      [[100000], [volmexBaseToken.address], owner.address],
       {
         initializer: "initialize",
       },
@@ -104,7 +104,6 @@ describe("Vault Controller tests for withdrawal", function () {
       accountBalance.address,
       USDC.address,
       vaultController.address,
-      false,
     ]);
     await accountBalance.grantSettleRealizedPnlRole(vaultController.address);
     await accountBalance.grantSettleRealizedPnlRole(vault.address);
@@ -114,7 +113,6 @@ describe("Vault Controller tests for withdrawal", function () {
       accountBalance.address,
       DAI.address,
       vaultController.address,
-      false,
     ]);
 
     Positioning = await ethers.getContractFactory("PositioningTest");
