@@ -28,7 +28,7 @@ describe("PositioningConfig", function () {
       initializer: "initialize",
     });
     await positioningConfig.deployed();
-    await markPriceOracle.grantTwapIntervalRole(positioningConfig.address);
+    await markPriceOracle.grantSmaIntervalRole(positioningConfig.address);
   });
 
   describe("Deployment", () => {

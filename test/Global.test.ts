@@ -205,7 +205,7 @@ describe("Global", function () {
     await (await accountBalance.setPositioning(positioning.address)).wait();
     await (await markPriceOracle.setPositioning(positioning.address)).wait();
     await (await markPriceOracle.setIndexOracle(indexPriceOracle.address)).wait();
-    await markPriceOracle.grantTwapIntervalRole(positioningConfig.address);
+    await markPriceOracle.grantSmaIntervalRole(positioningConfig.address);
     await positioningConfig.setTwapInterval(28800);
 
     periphery = await upgrades.deployProxy(VolmexPerpPeriphery, [

@@ -141,7 +141,7 @@ describe("Positioning", function () {
 
     positioningConfig = await upgrades.deployProxy(PositioningConfig, [markPriceOracle.address]);
     await positioningConfig.deployed();
-    await markPriceOracle.grantTwapIntervalRole(positioningConfig.address);
+    await markPriceOracle.grantSmaIntervalRole(positioningConfig.address);
     accountBalance = await upgrades.deployProxy(AccountBalance, [positioningConfig.address]);
     await accountBalance.deployed();
 
@@ -2459,7 +2459,7 @@ describe("Liquidation test in Positioning", function () {
     );
     await (await markPriceOracle.setPositioning(positioning.address)).wait();
     await (await markPriceOracle.setIndexOracle(indexPriceOracle.address)).wait();
-    await (await markPriceOracle.grantTwapIntervalRole(positioningConfig.address)).wait();
+    await (await markPriceOracle.grantSmaIntervalRole(positioningConfig.address)).wait();
     await positioningConfig.setTwapInterval(28800);
     // for (let i = 0; i < 9; i++) {
     //   await matchingEngine.addObservation(1000000, 0);

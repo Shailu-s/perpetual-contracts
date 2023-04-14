@@ -211,7 +211,7 @@ describe("MarkPriceOracle", function () {
     await positioning.connect(owner).setPositioning(positioning.address);
 
     await (await matchingEngine.grantMatchOrders(positioning.address)).wait();
-    await markPriceOracle.grantTwapIntervalRole(positioningConfig.address);
+    await markPriceOracle.grantSmaIntervalRole(positioningConfig.address);
     await markPriceOracle.setPositioning(positioning.address);
     await markPriceOracle.setIndexOracle(indexPriceOracle.address);
     await positioningConfig.setTwapInterval(28800);

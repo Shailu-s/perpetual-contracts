@@ -231,7 +231,7 @@ describe("Custom Cumulative Price", function () {
     await vault.connect(owner).setVaultController(vaultController.address);
     await vaultController.registerVault(vault.address, USDC.address);
     await vaultController.connect(owner).setPositioning(positioning.address);
-    await markPriceOracle.grantTwapIntervalRole(positioningConfig.address);
+    await markPriceOracle.grantSmaIntervalRole(positioningConfig.address);
     await positioningConfig.connect(owner).setMaxMarketsPerAccount(5);
     await positioningConfig
       .connect(owner)
