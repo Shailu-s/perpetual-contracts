@@ -120,7 +120,7 @@ describe("Periodic Funding payment", function () {
 
     markPriceOracle = await upgrades.deployProxy(
       MarkPriceOracle,
-      [[70000000], [volmexBaseToken.address], [proofHash], owner.address],
+      [[70000000], [volmexBaseToken.address], owner.address],
       {
         initializer: "initialize",
       },
@@ -128,7 +128,7 @@ describe("Periodic Funding payment", function () {
     await markPriceOracle.deployed();
     await (await indexPriceOracle.grantInitialTimestampRole(markPriceOracle.address)).wait();
     positioningConfig = await upgrades.deployProxy(PositioningConfig, [markPriceOracle.address]);
-    await markPriceOracle.grantTwapIntervalRole(positioningConfig.address);
+    await markPriceOracle.grantSmaIntervalRole(positioningConfig.address);
     USDC = await TestERC20.deploy();
     await USDC.__TestERC20_init("TestUSDC", "USDC", 6);
     await USDC.deployed();
