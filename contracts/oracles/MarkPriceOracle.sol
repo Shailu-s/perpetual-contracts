@@ -35,7 +35,7 @@ contract MarkPriceOracle is AccessControlUpgradeable {
     // role of observation collection
     bytes32 public constant ADD_OBSERVATION_ROLE = keccak256("ADD_OBSERVATION_ROLE");
     // role of observation collection
-    bytes32 public constant TWAP_INTERVAL_ROLE = keccak256("TWAP_INTERVAL_ROLE");
+    bytes32 public constant SMA_INTERVAL_ROLE = keccak256("SMA_INTERVAL_ROLE");
 
     // indices of volatility index {0: ETHV, 1: BTCV}
     uint256 internal _indexCount;
@@ -79,12 +79,12 @@ contract MarkPriceOracle is AccessControlUpgradeable {
     }
 
     /**
-     * @notice grant Twap interval role to positioning config contract
+     * @notice grant SMA interval role to positioning config contract
      * @param _positioningConfig Address of positioning contract typed
      */
-    function grantTwapIntervalRole(address _positioningConfig) external virtual {
+    function grantSmaIntervalRole(address _positioningConfig) external virtual {
         _requireOracleAdmin();
-        _grantRole(TWAP_INTERVAL_ROLE, _positioningConfig);
+        _grantRole(SMA_INTERVAL_ROLE, _positioningConfig);
     }
 
     /**
@@ -101,7 +101,7 @@ contract MarkPriceOracle is AccessControlUpgradeable {
      * @param _markTwInterval Address of positioning contract typed in interface
      */
     function setMarkTwInterval(uint256 _markTwInterval) external virtual {
-        _requireTwapIntervalRole();
+        _requireSmaIntervalRole();
         markTwInterval = _markTwInterval;
     }
 
@@ -133,8 +133,8 @@ contract MarkPriceOracle is AccessControlUpgradeable {
         int256 indexPrice = indexOracle.getLastPrice(_index).toInt256();
         // Note: Check for actual precision and data type
         prices[0] = indexPrice * (1 + lastFundingRate * (nextFunding.toInt256() / fundingPeriod.toInt256()));
-        uint256 markTwap = getLastTwap(_index, markTwInterval);
-        prices[1] = markTwap.toInt256();
+        uint256 markSma = getLastSma(_index, markTwInterval);
+        prices[1] = markSma.toInt256();
         prices[2] = getLastPrice(_index).toInt256();
         markPrice = prices[0].median(prices[1], prices[2]);
     }
@@ -172,14 +172,14 @@ contract MarkPriceOracle is AccessControlUpgradeable {
      * @param _index Index of the observation, the index base token mapping
      * @return priceCumulative The SMA price of the asset
      */
-    function getMarkTwap(uint256 _twInterval, uint256 _index) public view returns (uint256 priceCumulative) {
+    function getMarkSma(uint256 _twInterval, uint256 _index) public view returns (uint256 priceCumulative) {
         uint256 startTimestamp = block.timestamp - _twInterval;
-        (priceCumulative, ) = _getCustomTwap(_index, startTimestamp, block.timestamp, true);
+        (priceCumulative, ) = _getCustomSma(_index, startTimestamp, block.timestamp, true);
     }
 
-    function getLastTwap(uint256 _index, uint256 _twInterval) public view returns (uint256 priceCumulative) {
+    function getLastSma(uint256 _index, uint256 _twInterval) public view returns (uint256 priceCumulative) {
         uint256 startTimestamp = block.timestamp - _twInterval;
-        (priceCumulative, ) = _getCustomTwap(_index, startTimestamp, block.timestamp, false);
+        (priceCumulative, ) = _getCustomSma(_index, startTimestamp, block.timestamp, false);
     }
 
     /**
@@ -189,12 +189,12 @@ contract MarkPriceOracle is AccessControlUpgradeable {
      * @param _startTimestamp timestamp of start of window
      * @param _endTimestamp timestamp of last of window
      */
-    function getCustomUnderlyingTwap(
+    function getCustomUnderlyingSma(
         uint256 _index,
         uint256 _startTimestamp,
         uint256 _endTimestamp
     ) external view returns (uint256 priceCumulative) {
-        (priceCumulative, ) = _getCustomTwap(_index, _startTimestamp, _endTimestamp, false);
+        (priceCumulative, ) = _getCustomSma(_index, _startTimestamp, _endTimestamp, false);
     }
 
     /**
@@ -204,12 +204,12 @@ contract MarkPriceOracle is AccessControlUpgradeable {
      * @param _startTimestamp timestamp of start of window
      * @param _endTimestamp timestamp of last of window
      */
-    function getCustomMarkTwap(
+    function getCustomMarkSma(
         uint256 _index,
         uint256 _startTimestamp,
         uint256 _endTimestamp
     ) external view returns (uint256 priceCumulative) {
-        (priceCumulative, ) = _getCustomTwap(_index, _startTimestamp, _endTimestamp, true);
+        (priceCumulative, ) = _getCustomSma(_index, _startTimestamp, _endTimestamp, true);
     }
 
     /**
@@ -335,11 +335,11 @@ contract MarkPriceOracle is AccessControlUpgradeable {
         }
     }
 
-    function _getCustomTwap(
+    function _getCustomSma(
         uint256 _index,
         uint256 _startTimestamp,
         uint256 _endTimestamp,
-        bool _isMarkTwapRequired
+        bool _isMarkSmaRequired
     ) internal view returns (uint256 priceCumulative, uint256 lastTimestamp) {
         MarkPriceObservation[] memory observations = observationsByIndex[_index];
         uint256 index = observations.length;
@@ -349,7 +349,7 @@ contract MarkPriceOracle is AccessControlUpgradeable {
             _startTimestamp = observations[0].timestamp + (((lastTimestamp - observations[0].timestamp) / markTwInterval) * markTwInterval);
         }
         uint256 priceCount;
-        if (_isMarkTwapRequired) {
+        if (_isMarkSmaRequired) {
             for (; index != 0 && observations[index - 1].timestamp >= _startTimestamp; index--) {
                 if (observations[index - 1].timestamp <= _endTimestamp) {
                     priceCumulative += observations[index - 1].markPrice;
@@ -371,8 +371,8 @@ contract MarkPriceOracle is AccessControlUpgradeable {
         require(hasRole(PRICE_ORACLE_ADMIN, _msgSender()), "MarkPriceOracle: not admin");
     }
 
-    function _requireTwapIntervalRole() internal view {
-        require(hasRole(TWAP_INTERVAL_ROLE, _msgSender()), "MarkPriceOracle: not twap interval role");
+    function _requireSmaIntervalRole() internal view {
+        require(hasRole(SMA_INTERVAL_ROLE, _msgSender()), "MarkPriceOracle: not sma interval role");
     }
 
     function _requireCanAddObservation() internal view {

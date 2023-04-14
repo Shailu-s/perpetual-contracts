@@ -114,7 +114,7 @@ describe("MatchingEngine", function () {
     await volmexBaseToken.setPriceFeed(indexPriceOracle.address);
     positioningConfig = await upgrades.deployProxy(PositioningConfig, [markPriceOracle.address]);
     await positioningConfig.deployed();
-    await markPriceOracle.grantTwapIntervalRole(positioningConfig.address);
+    await markPriceOracle.grantSmaIntervalRole(positioningConfig.address);
     accountBalance = await upgrades.deployProxy(AccountBalance, [positioningConfig.address]);
     await accountBalance.deployed();
     vaultController = await upgrades.deployProxy(VaultController, [

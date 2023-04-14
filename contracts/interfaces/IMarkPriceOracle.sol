@@ -6,23 +6,23 @@ import "./IPositioning.sol";
 
 interface IMarkPriceOracle {
     // getter
-    function getMarkTwap(uint256 _twInterval, uint256 _index) external view returns (uint256 priceCumulative);
+    function getMarkSma(uint256 _twInterval, uint256 _index) external view returns (uint256 priceCumulative);
     function indexByBaseToken(address _baseToken) external view returns (uint256 index);
     function baseTokenByIndex(uint256 _index) external view returns (address baseToken);
-    function getCustomMarkTwap(
+    function getCustomMarkSma(
         uint256 _index,
         uint256 _startTimestamp,
         uint256 _endTimestamp
     ) external view returns (uint256 priceCumulative);
     function getLastMarkPrice(uint256 _index) external view returns (uint256 underlyingLastPrice);
-    function getCustomUnderlyingTwap(
+    function getCustomUnderlyingSma(
         uint256 _index,
         uint256 _startTimestamp,
         uint256 _endTimestamp
     ) external view returns (uint256 priceCumulative);
     function getIndexCount() external view returns (uint256);
     function getLastPrice(uint256 _index) external view returns (uint256 underlyingLastPrice);
-    function getLastTwap(uint256 _index, uint256 _twInterval) external view returns (uint256 priceCumulative);
+    function getLastSma(uint256 _index, uint256 _twInterval) external view returns (uint256 priceCumulative);
 
     // setter
     function initialize(

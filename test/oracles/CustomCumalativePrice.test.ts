@@ -8,7 +8,7 @@ interface Observation {
   timestamp: number;
   price: number;
 }
-const getCustomUnderlyingTwap = (
+const getCustomUnderlyingSma = (
   observations: Array<Observation>,
   startTime: number,
   endTime: number,
@@ -231,7 +231,7 @@ describe("Custom Cumulative Price", function () {
     await vault.connect(owner).setVaultController(vaultController.address);
     await vaultController.registerVault(vault.address, USDC.address);
     await vaultController.connect(owner).setPositioning(positioning.address);
-    await markPriceOracle.grantTwapIntervalRole(positioningConfig.address);
+    await markPriceOracle.grantSmaIntervalRole(positioningConfig.address);
     await positioningConfig.connect(owner).setMaxMarketsPerAccount(5);
     await positioningConfig
       .connect(owner)
@@ -377,19 +377,19 @@ describe("Custom Cumulative Price", function () {
       }
     });
     it("should return cumulative price between first time stamp and second and third", async () => {
-      const cumulativePrice1 = await markPriceOracle.getCustomUnderlyingTwap(
+      const cumulativePrice1 = await markPriceOracle.getCustomUnderlyingSma(
         0,
         firstTimestamp + 300,
         secondTimestamp,
       );
-      const price = getCustomUnderlyingTwap(observations, firstTimestamp, secondTimestamp);
+      const price = getCustomUnderlyingSma(observations, firstTimestamp, secondTimestamp);
       expect(parseInt(cumulativePrice1)).to.equal(price);
-      const cumulativePrice2 = await markPriceOracle.getCustomUnderlyingTwap(
+      const cumulativePrice2 = await markPriceOracle.getCustomUnderlyingSma(
         0,
         secondTimestamp + 300,
         thirdTimestamp,
       );
-      const price1 = getCustomUnderlyingTwap(observations, secondTimestamp + 300, thirdTimestamp);
+      const price1 = getCustomUnderlyingSma(observations, secondTimestamp + 300, thirdTimestamp);
       expect(parseInt(cumulativePrice2)).to.equal(price1);
     });
   });

@@ -116,7 +116,7 @@ const positioning = async () => {
   const positioningConfig = await upgrades.deployProxy(PositioningConfig, [markPriceOracle.address]);
   await positioningConfig.deployed();
   console.log(positioningConfig.address);
-  await (await markPriceOracle.grantTwapIntervalRole(positioningConfig.address)).wait();
+  await (await markPriceOracle.grantSmaIntervalRole(positioningConfig.address)).wait();
   await positioningConfig.setMaxMarketsPerAccount(5);
   await positioningConfig.setSettlementTokenBalanceCap("10000000000000");
 
