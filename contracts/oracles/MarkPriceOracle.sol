@@ -130,7 +130,7 @@ contract MarkPriceOracle is AccessControlUpgradeable {
         uint256 markPrice = _getMarkPrice(baseTokenByIndex[_index], _index).abs();
         MarkPriceObservation[] storage observations = observationsByIndex[_index];
         observations[totalObservations - 1] = MarkPriceObservation({ timestamp: block.timestamp, underlyingPrice: _underlyingPrice, markPrice: markPrice });
-        _save(_index, markPrice);
+        _saveEpoch(_index, markPrice);
         emit ObservationAdded(_index, _underlyingPrice, markPrice, block.timestamp);
     }
 
@@ -296,7 +296,7 @@ contract MarkPriceOracle is AccessControlUpgradeable {
         return totalObservations;
     }
 
-    function _save(uint256 _index, uint256 _price) internal {
+    function _saveEpoch(uint256 _index, uint256 _price) internal {
         uint256 currentTimestamp = block.timestamp;
         MarkPriceByEpoch[] memory markPriceByEpoch = markPriceAtEpochs[_index];
         uint256 currentEpochIndex = markPriceByEpoch.length;

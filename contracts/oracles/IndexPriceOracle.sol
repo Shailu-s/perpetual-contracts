@@ -101,7 +101,7 @@ contract IndexPriceOracle is AccessControlUpgradeable, ERC165StorageUpgradeable 
         for (uint256 index; index < numberOfPrices; ++index) {
             require(_underlyingPrices[index] != 0, "IndexPriceOracle: Not zero");
             _pushOrderPrice(_indexes[index], _underlyingPrices[index], _proofHashes[index]);
-            _save(_indexes[index], _underlyingPrices[index]);
+            _saveEpoch(_indexes[index], _underlyingPrices[index]);
 
         }
         emit ObservationAdded(_indexes, _underlyingPrices, block.timestamp);
@@ -268,7 +268,7 @@ contract IndexPriceOracle is AccessControlUpgradeable, ERC165StorageUpgradeable 
         observations.push(observation);
     }
 
-    function _save(uint256 _index, uint256 _price) internal {
+    function _saveEpoch(uint256 _index, uint256 _price) internal {
         uint256 currentTimestamp = block.timestamp;
         IndexPriceByEpoch[] memory indexPriceByEpoch = indexPriceAtEpochs[_index];
         uint256 currentEpochIndex = indexPriceByEpoch.length;
