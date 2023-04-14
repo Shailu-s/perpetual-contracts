@@ -41,7 +41,6 @@ contract IndexPriceOracle is AccessControlUpgradeable, ERC165StorageUpgradeable 
     mapping(uint256 => uint256) public volatilityCapRatioByIndex;
     mapping(uint256 => IndexPriceByEpoch[]) public indexPriceAtEpochs;
     uint256 public indexTwInterval; // interval for twap calculation
-    uint256 public lastEpochEndTimestamp; // timestamp of last calculated epoch's end timestamp
     uint256 public initialTimestamp; // timestamp at the mark oracle first observation addition
     uint256 public cardinality; // number of prices used to calculate current epoch's average price
 
@@ -65,7 +64,6 @@ contract IndexPriceOracle is AccessControlUpgradeable, ERC165StorageUpgradeable 
         _setRoleAdmin(PRICE_ORACLE_ADMIN, PRICE_ORACLE_ADMIN);
         __ERC165Storage_init();
         _registerInterface(_IVOLMEX_ORACLE_ID);
-        lastEpochEndTimestamp = block.timestamp;
     }
 
     function grantInitialTimestampRole(address _account) external {
@@ -103,7 +101,7 @@ contract IndexPriceOracle is AccessControlUpgradeable, ERC165StorageUpgradeable 
         for (uint256 index; index < numberOfPrices; ++index) {
             require(_underlyingPrices[index] != 0, "IndexPriceOracle: Not zero");
             _pushOrderPrice(_indexes[index], _underlyingPrices[index], _proofHashes[index]);
-            _storePartEpochPrice(_indexes[index], _underlyingPrices[index]);
+            _save(_indexes[index], _underlyingPrices[index]);
 
         }
         emit ObservationAdded(_indexes, _underlyingPrices, block.timestamp);
@@ -281,34 +279,41 @@ contract IndexPriceOracle is AccessControlUpgradeable, ERC165StorageUpgradeable 
         observations.push(observation);
     }
 
-    function _storePartEpochPrice(uint256 _index, uint256 _price) internal {
+    function _save(uint256 _index, uint256 _price) internal {
         uint256 currentTimestamp = block.timestamp;
-        if (currentTimestamp - lastEpochEndTimestamp > indexTwInterval) {
-            lastEpochEndTimestamp = currentTimestamp;
-            cardinality = 0;
-        }
         IndexPriceByEpoch[] memory indexPriceByEpoch = indexPriceAtEpochs[_index];
-        uint256 totalEpochs = indexPriceByEpoch.length;
-        IndexPriceByEpoch[] storage indexPriceEpoch = indexPriceAtEpochs[_index];
-        if (totalEpochs == 0 || cardinality == 0) {
-            indexPriceEpoch.push(IndexPriceByEpoch({price: _price, timestamp: currentTimestamp}));
+        uint256 currentEpochIndex = indexPriceByEpoch.length;
+        
+        if ((currentTimestamp - initialTimestamp) / indexTwInterval > currentEpochIndex || currentEpochIndex == 0) {
+            if (currentEpochIndex != 0 && (currentTimestamp - indexPriceByEpoch[currentEpochIndex - 1].timestamp) / indexTwInterval == 0) {
+                _updatePriceEpoch(_index, currentEpochIndex - 1, indexPriceByEpoch[currentEpochIndex - 1].price, _price, indexPriceByEpoch[currentEpochIndex - 1].timestamp);
+            } else {
+                IndexPriceByEpoch[] storage indexPriceEpoch = indexPriceAtEpochs[_index];
+                indexPriceEpoch.push(IndexPriceByEpoch({price: _price, timestamp: currentTimestamp}));
+                cardinality = 1;
+            }
         } else {
-            uint256 actualPrice = (indexPriceByEpoch[totalEpochs - 1].price * cardinality + _price) / (cardinality + 1);
-            indexPriceEpoch[totalEpochs - 1] = IndexPriceByEpoch({
-                price: actualPrice,
-                timestamp: currentTimestamp
-            });
+            _updatePriceEpoch(_index, currentEpochIndex - 1, indexPriceByEpoch[currentEpochIndex - 1].price, _price, indexPriceByEpoch[currentEpochIndex - 1].timestamp);
         }
+    }
+
+    function _updatePriceEpoch(uint256 _index, uint256 _epochIndex, uint256 _previousPrice, uint256 _price, uint256 _timestamp) private {
+        uint256 actualPrice = (_previousPrice * cardinality + _price) / (cardinality + 1);
+        IndexPriceByEpoch[] storage indexPriceEpoch = indexPriceAtEpochs[_index];
+        indexPriceEpoch[_epochIndex] = IndexPriceByEpoch({
+            price: actualPrice,
+            timestamp: _timestamp
+        });
         ++cardinality;
     }
 
     function _getCustomEpochPrice(uint256 _index, uint256 _epochTimestamp) internal view returns (uint256 price, uint256 timestamp) {
         IndexPriceByEpoch[] memory indexPriceByEpoch = indexPriceAtEpochs[_index];
-        uint256 totalEpochs = indexPriceByEpoch.length;
-        if (totalEpochs != 0) {
-            for (; totalEpochs != 0 && indexPriceByEpoch[totalEpochs - 1].timestamp >= _epochTimestamp; totalEpochs--) {}
-            price = indexPriceByEpoch[totalEpochs].price;
-            timestamp = indexPriceByEpoch[totalEpochs].timestamp;
+        uint256 currentEpochIndex = indexPriceByEpoch.length;
+        if (currentEpochIndex != 0) {
+            for (; currentEpochIndex != 0 && indexPriceByEpoch[currentEpochIndex - 1].timestamp >= _epochTimestamp; currentEpochIndex--) {}
+            price = indexPriceByEpoch[currentEpochIndex - 1].price;
+            timestamp = indexPriceByEpoch[currentEpochIndex - 1].timestamp;
         } else {
             return (0, 0);
         }
