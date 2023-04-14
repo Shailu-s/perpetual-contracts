@@ -40,9 +40,9 @@ contract IndexPriceOracle is AccessControlUpgradeable, ERC165StorageUpgradeable 
     // Store the volatilitycapratio by index
     mapping(uint256 => uint256) public volatilityCapRatioByIndex;
     mapping(uint256 => IndexPriceByEpoch[]) public indexPriceAtEpochs;
-    uint256 public initialTimestamp; // Set at mark-oracle when first successful openPosition.
     uint256 public indexTwInterval; // interval for twap calculation
-    uint256 public lastEpochAddTimestamp; // stores last timestamp of epoch added
+    uint256 public initialTimestamp; // timestamp at the mark oracle first observation addition
+    uint256 public cardinality; // number of prices used to calculate current epoch's average price
 
     event ObservationAdderSet(address indexed matchingEngine);
     event ObservationAdded(uint256[] index, uint256[] underlyingPrice, uint256 timestamp);
@@ -101,10 +101,18 @@ contract IndexPriceOracle is AccessControlUpgradeable, ERC165StorageUpgradeable 
         for (uint256 index; index < numberOfPrices; ++index) {
             require(_underlyingPrices[index] != 0, "IndexPriceOracle: Not zero");
             _pushOrderPrice(_indexes[index], _underlyingPrices[index], _proofHashes[index]);
-            _calculateIndexPriceAtEpoch(_indexes[index]);
+            _save(_indexes[index], _underlyingPrices[index]);
+
         }
-        lastEpochAddTimestamp = block.timestamp;
         emit ObservationAdded(_indexes, _underlyingPrices, block.timestamp);
+    }
+
+    function getLastEpochPrice(uint256 _index) external view returns (uint256 price, uint256 timestamp) {
+        (price, timestamp) = _getCustomEpochPrice(_index, block.timestamp);
+    }
+
+    function getCustomEpochPrice(uint256 _index, uint256 _epochTimestamp) external view returns (uint256 price, uint256 timestamp) {
+        (price, timestamp) = _getCustomEpochPrice(_index, _epochTimestamp);
     }
 
     /**
@@ -115,7 +123,7 @@ contract IndexPriceOracle is AccessControlUpgradeable, ERC165StorageUpgradeable 
      */
     function latestRoundData(uint256 _twInterval, uint256 _index) external view virtual returns (uint256 answer, uint256 lastUpdateTimestamp) {
         uint256 startTimestamp = block.timestamp - _twInterval;
-        (answer, lastUpdateTimestamp) = _getLastEpochTwap(_index);
+        (answer, lastUpdateTimestamp) = _getCustomIndexTwap(_index, startTimestamp, block.timestamp);
         answer *= 100;
     }
 
@@ -133,7 +141,8 @@ contract IndexPriceOracle is AccessControlUpgradeable, ERC165StorageUpgradeable 
             uint256 lastUpdateTimestamp
         )
     {
-        (volatilityTokenTwap, lastUpdateTimestamp) = _getLastEpochTwap(_index);
+        uint256 startTimestamp = block.timestamp - _twInterval;
+        (volatilityTokenTwap, lastUpdateTimestamp) = _getCustomIndexTwap(_index, startTimestamp, block.timestamp);
         iVolatilityTokenTwap = volatilityCapRatioByIndex[_index] - volatilityTokenTwap;
     }
 
@@ -170,6 +179,18 @@ contract IndexPriceOracle is AccessControlUpgradeable, ERC165StorageUpgradeable 
     }
 
     /**
+     * @notice Get the single moving average price of the asset
+     *
+     * @param _twInterval Time in seconds of the range
+     * @param _index Index of the observation, the index base token mapping
+     * @return priceCumulative The SMA price of the asset
+     */
+    function getLastTwap(uint256 _twInterval, uint256 _index) public view returns (uint256 priceCumulative) {
+        uint256 startTimestamp = block.timestamp - _twInterval;
+        (priceCumulative,) = _getCustomIndexTwap(_index, startTimestamp, block.timestamp);
+    }
+
+    /**
      * @notice Get price cumulative of custom window of the observations
      *
      * @param _index Position of the asset in Observations
@@ -181,7 +202,7 @@ contract IndexPriceOracle is AccessControlUpgradeable, ERC165StorageUpgradeable 
         uint256 _startTimestamp,
         uint256 _endTimestamp
     ) external view returns (uint256 priceCumulative) {
-        (priceCumulative,, ) = _getCustomIndexTwap(_index, _startTimestamp, _endTimestamp);
+        (priceCumulative, ) = _getCustomIndexTwap(_index, _startTimestamp, _endTimestamp);
     }
 
     /**
@@ -258,16 +279,43 @@ contract IndexPriceOracle is AccessControlUpgradeable, ERC165StorageUpgradeable 
         observations.push(observation);
     }
 
-    function _calculateIndexPriceAtEpoch(uint256 _index) internal {
+    function _save(uint256 _index, uint256 _price) internal {
         uint256 currentTimestamp = block.timestamp;
-        if (initialTimestamp != 0 && currentTimestamp - lastEpochAddTimestamp >= indexTwInterval) {
-            IndexObservation[] memory observations = observationsByIndex[_index];
-            uint256 _startTimestamp = observations[0].timestamp + (((currentTimestamp - initialTimestamp) / indexTwInterval) * indexTwInterval);
-            (uint256 twap, uint256 epochTimestamp,) = _getCustomIndexTwap(_index, _startTimestamp, currentTimestamp);
+        IndexPriceByEpoch[] memory indexPriceByEpoch = indexPriceAtEpochs[_index];
+        uint256 currentEpochIndex = indexPriceByEpoch.length;
+        
+        if ((currentTimestamp - initialTimestamp) / indexTwInterval > currentEpochIndex || currentEpochIndex == 0) {
+            if (currentEpochIndex != 0 && (currentTimestamp - indexPriceByEpoch[currentEpochIndex - 1].timestamp) / indexTwInterval == 0) {
+                _updatePriceEpoch(_index, currentEpochIndex - 1, indexPriceByEpoch[currentEpochIndex - 1].price, _price, indexPriceByEpoch[currentEpochIndex - 1].timestamp);
+            } else {
+                IndexPriceByEpoch[] storage indexPriceEpoch = indexPriceAtEpochs[_index];
+                indexPriceEpoch.push(IndexPriceByEpoch({price: _price, timestamp: currentTimestamp}));
+                cardinality = 1;
+            }
+        } else {
+            _updatePriceEpoch(_index, currentEpochIndex - 1, indexPriceByEpoch[currentEpochIndex - 1].price, _price, indexPriceByEpoch[currentEpochIndex - 1].timestamp);
+        }
+    }
 
-            IndexPriceByEpoch memory indexPriceByEpoch = IndexPriceByEpoch({price: twap, timestamp: epochTimestamp});
-            IndexPriceByEpoch[] storage indexPricesByEpoch = indexPriceAtEpochs[_index];
-            indexPricesByEpoch.push(indexPriceByEpoch);
+    function _updatePriceEpoch(uint256 _index, uint256 _epochIndex, uint256 _previousPrice, uint256 _price, uint256 _timestamp) private {
+        uint256 actualPrice = (_previousPrice * cardinality + _price) / (cardinality + 1);
+        IndexPriceByEpoch[] storage indexPriceEpoch = indexPriceAtEpochs[_index];
+        indexPriceEpoch[_epochIndex] = IndexPriceByEpoch({
+            price: actualPrice,
+            timestamp: _timestamp
+        });
+        ++cardinality;
+    }
+
+    function _getCustomEpochPrice(uint256 _index, uint256 _epochTimestamp) internal view returns (uint256 price, uint256 timestamp) {
+        IndexPriceByEpoch[] memory indexPriceByEpoch = indexPriceAtEpochs[_index];
+        uint256 currentEpochIndex = indexPriceByEpoch.length;
+        if (currentEpochIndex != 0) {
+            for (; currentEpochIndex != 0 && indexPriceByEpoch[currentEpochIndex - 1].timestamp >= _epochTimestamp; currentEpochIndex--) {}
+            price = indexPriceByEpoch[currentEpochIndex - 1].price;
+            timestamp = indexPriceByEpoch[currentEpochIndex - 1].timestamp;
+        } else {
+            return (0, 0);
         }
     }
 
@@ -275,7 +323,7 @@ contract IndexPriceOracle is AccessControlUpgradeable, ERC165StorageUpgradeable 
         uint256 _index,
         uint256 _startTimestamp,
         uint256 _endTimestamp
-    ) internal view returns (uint256 priceCumulative, uint256 epochTimestamp, uint256 lastUpdatedTimestamp) {
+    ) internal view returns (uint256 priceCumulative, uint256 lastUpdatedTimestamp) {
         IndexObservation[] memory observations = observationsByIndex[_index];
         uint256 index = observations.length;
         lastUpdatedTimestamp = observations[index - 1].timestamp;
@@ -288,12 +336,10 @@ contract IndexPriceOracle is AccessControlUpgradeable, ERC165StorageUpgradeable 
         for (; index != 0 && observations[index - 1].timestamp >= _startTimestamp; index--) {
             if (observations[index - 1].timestamp <= _endTimestamp) {
                 priceCumulative += observations[index - 1].underlyingPrice;
-                epochTimestamp += observations[index - 1].timestamp;
                 priceCount++;
             }
         }
         priceCumulative = priceCumulative != 0 ? priceCumulative / priceCount : 0;
-        epochTimestamp = epochTimestamp != 0 ? epochTimestamp / priceCount : 0;
     }
 
     /**
