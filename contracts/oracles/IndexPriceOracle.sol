@@ -283,18 +283,28 @@ contract IndexPriceOracle is AccessControlUpgradeable, ERC165StorageUpgradeable 
         uint256 currentTimestamp = block.timestamp;
         IndexPriceByEpoch[] memory indexPriceByEpoch = indexPriceAtEpochs[_index];
         uint256 currentEpochIndex = indexPriceByEpoch.length;
-        IndexPriceByEpoch[] storage indexPriceEpoch = indexPriceAtEpochs[_index];
+        
         if ((currentTimestamp - initialTimestamp) / indexTwInterval > currentEpochIndex || currentEpochIndex == 0) {
-            indexPriceEpoch.push(IndexPriceByEpoch({price: _price, timestamp: currentTimestamp}));
-            cardinality = 1;
+            if (currentEpochIndex != 0 && (currentTimestamp - indexPriceByEpoch[currentEpochIndex - 1].timestamp) / indexTwInterval == 0) {
+                _updatePriceEpoch(_index, currentEpochIndex - 1, indexPriceByEpoch[currentEpochIndex - 1].price, _price, indexPriceByEpoch[currentEpochIndex - 1].timestamp);
+            } else {
+                IndexPriceByEpoch[] storage indexPriceEpoch = indexPriceAtEpochs[_index];
+                indexPriceEpoch.push(IndexPriceByEpoch({price: _price, timestamp: currentTimestamp}));
+                cardinality = 1;
+            }
         } else {
-            uint256 actualPrice = (indexPriceByEpoch[currentEpochIndex - 1].price * cardinality + _price) / (cardinality + 1);
-            indexPriceEpoch[currentEpochIndex - 1] = IndexPriceByEpoch({
-                price: actualPrice,
-                timestamp: currentTimestamp
-            });
-            ++cardinality;
+            _updatePriceEpoch(_index, currentEpochIndex - 1, indexPriceByEpoch[currentEpochIndex - 1].price, _price, indexPriceByEpoch[currentEpochIndex - 1].timestamp);
         }
+    }
+
+    function _updatePriceEpoch(uint256 _index, uint256 _epochIndex, uint256 _previousPrice, uint256 _price, uint256 _timestamp) private {
+        uint256 actualPrice = (_previousPrice * cardinality + _price) / (cardinality + 1);
+        IndexPriceByEpoch[] storage indexPriceEpoch = indexPriceAtEpochs[_index];
+        indexPriceEpoch[_epochIndex] = IndexPriceByEpoch({
+            price: actualPrice,
+            timestamp: _timestamp
+        });
+        ++cardinality;
     }
 
     function _getCustomEpochPrice(uint256 _index, uint256 _epochTimestamp) internal view returns (uint256 price, uint256 timestamp) {
@@ -302,8 +312,8 @@ contract IndexPriceOracle is AccessControlUpgradeable, ERC165StorageUpgradeable 
         uint256 currentEpochIndex = indexPriceByEpoch.length;
         if (currentEpochIndex != 0) {
             for (; currentEpochIndex != 0 && indexPriceByEpoch[currentEpochIndex - 1].timestamp >= _epochTimestamp; currentEpochIndex--) {}
-            price = indexPriceByEpoch[currentEpochIndex].price;
-            timestamp = indexPriceByEpoch[currentEpochIndex].timestamp;
+            price = indexPriceByEpoch[currentEpochIndex - 1].price;
+            timestamp = indexPriceByEpoch[currentEpochIndex - 1].timestamp;
         } else {
             return (0, 0);
         }

@@ -120,7 +120,7 @@ contract MarkPriceOracle is AccessControlUpgradeable {
         require(_underlyingPrice != 0, "MarkPriceOracle: Not zero");
         uint256 markPrice = _getMarkPrice(baseTokenByIndex[_index], _index).abs();
         _pushOrderPrice(_index, _underlyingPrice, markPrice);
-        _save(_index, _underlyingPrice);
+        _save(_index, markPrice);
         emit ObservationAdded(_index, _underlyingPrice, markPrice, block.timestamp);
     }
 
@@ -300,18 +300,27 @@ contract MarkPriceOracle is AccessControlUpgradeable {
         uint256 currentTimestamp = block.timestamp;
         MarkPriceByEpoch[] memory markPriceByEpoch = markPriceAtEpochs[_index];
         uint256 currentEpochIndex = markPriceByEpoch.length;
-        MarkPriceByEpoch[] storage markPriceEpoch = markPriceAtEpochs[_index];
         if ((currentTimestamp - initialTimestamp) / markTwInterval > currentEpochIndex || currentEpochIndex == 0) {
-            markPriceEpoch.push(MarkPriceByEpoch({price: _price, timestamp: currentTimestamp}));
-            cardinality = 1;
+            if (currentEpochIndex != 0 && (currentTimestamp - markPriceByEpoch[currentEpochIndex - 1].timestamp) / markTwInterval == 0) {
+                _updatePriceEpoch(_index, currentEpochIndex - 1, markPriceByEpoch[currentEpochIndex - 1].price, _price, markPriceByEpoch[currentEpochIndex - 1].timestamp);
+            } else {
+                MarkPriceByEpoch[] storage markPriceEpoch = markPriceAtEpochs[_index];
+                markPriceEpoch.push(MarkPriceByEpoch({price: _price, timestamp: currentTimestamp}));
+                cardinality = 1;
+            }
         } else {
-            uint256 actualPrice = (markPriceByEpoch[currentEpochIndex - 1].price * cardinality + _price) / (cardinality + 1);
-            markPriceEpoch[currentEpochIndex - 1] = MarkPriceByEpoch({
-                price: actualPrice,
-                timestamp: currentTimestamp
-            });
-            ++cardinality;
+            _updatePriceEpoch(_index, currentEpochIndex - 1, markPriceByEpoch[currentEpochIndex - 1].price, _price, markPriceByEpoch[currentEpochIndex - 1].timestamp);
         }
+    }
+
+    function _updatePriceEpoch(uint256 _index, uint256 _epochIndex, uint256 _previousPrice, uint256 _price, uint256 _timestamp) private {
+        uint256 actualPrice = (_previousPrice * cardinality + _price) / (cardinality + 1);
+        MarkPriceByEpoch[] storage markPriceEpoch = markPriceAtEpochs[_index];
+        markPriceEpoch[_epochIndex] = MarkPriceByEpoch({
+            price: actualPrice,
+            timestamp: _timestamp
+        });
+        ++cardinality;
     }
 
     function _getCustomEpochPrice(uint256 _index, uint256 _epochTimestamp) internal view returns (uint256 price, uint256 timestamp) {
@@ -319,8 +328,8 @@ contract MarkPriceOracle is AccessControlUpgradeable {
         uint256 totalEpochs = markPriceByEpoch.length;
         if (totalEpochs != 0) {
             for (; totalEpochs != 0 && markPriceByEpoch[totalEpochs - 1].timestamp >= _epochTimestamp; totalEpochs--) {}
-            price = markPriceByEpoch[totalEpochs].price;
-            timestamp = markPriceByEpoch[totalEpochs].timestamp;
+            price = markPriceByEpoch[totalEpochs - 1].price;
+            timestamp = markPriceByEpoch[totalEpochs - 1].timestamp;
         } else {
             return (0, 0);
         }
