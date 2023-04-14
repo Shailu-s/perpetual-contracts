@@ -121,7 +121,7 @@ describe("IndexPriceOracle", function () {
       }
 
       const txn = await volmexOracle.getIndexSma(10000, 0);
-      expect(Number(txn.volatilityTokenTwap)).equal(10000000);
+      expect(Number(txn.volatilityTokenSma)).equal(10000000);
     });
 
     it("should fail to add observation when cumulative price is zero ", async () => {
@@ -140,7 +140,7 @@ describe("IndexPriceOracle", function () {
       await volmexOracle.addObservation([10000000], [0], [proofHash]);
 
       const txn = await volmexOracle.getIndexSma(10000000, 0);
-      expect(Number(txn.volatilityTokenTwap)).equal(10000000);
+      expect(Number(txn.volatilityTokenSma)).equal(10000000);
     });
 
     it("Should latest round data", async () => {
@@ -179,13 +179,13 @@ describe("IndexPriceOracle", function () {
         volmexOracle.getIndexSma(20000, 0),
       ]);
       txns.forEach(txn => {
-        expect(Number(txn.volatilityTokenTwap)).equal(10000000);
+        expect(Number(txn.volatilityTokenSma)).equal(10000000);
       });
     });
 
     it("Should not error when there are no recent datapoints added for cumulative price", async () => {
       const txn1 = await volmexOracle.getIndexSma(20000, 0);
-      expect(Number(txn1.volatilityTokenTwap)).equal(10000000);
+      expect(Number(txn1.volatilityTokenSma)).equal(10000000);
       for (let i = 0; i < 9; i++) {
         await volmexOracle.addObservation([10000000], [0], [proofHash]);
         await time.increase(1000);
@@ -193,22 +193,22 @@ describe("IndexPriceOracle", function () {
       // this covers the case of zero recent datapoints
       await time.increase(100000);
       const txn2 = await volmexOracle.getIndexSma(200, 0);
-      expect(Number(txn2.volatilityTokenTwap)).equal(10000000);
+      expect(Number(txn2.volatilityTokenSma)).equal(10000000);
       const txn3 = await volmexOracle.getIndexSma(200000, 0);
-      expect(Number(txn3.volatilityTokenTwap)).equal(10000000);
+      expect(Number(txn3.volatilityTokenSma)).equal(10000000);
     });
 
     it("Should not error when there are no recent datapoints then more datapoints are added for cumulative price", async () => {
       await time.increase(200001);
       const txn1 = await volmexOracle.getIndexSma(20, 0);
-      expect(Number(txn1.volatilityTokenTwap)).equal(10000000);
+      expect(Number(txn1.volatilityTokenSma)).equal(10000000);
 
       for (let i = 0; i < 10; i++) {
         await volmexOracle.addObservation([20000000], [0], [proofHash]);
         await time.increase(1000);
       }
       const txn2 = await volmexOracle.getIndexSma(9000, 0);
-      expect(Number(txn2.volatilityTokenTwap)).equal(20000000);
+      expect(Number(txn2.volatilityTokenSma)).equal(20000000);
     });
 
     it("Should fail to  add multiple observations because uneuqal length of inputs", async () => {

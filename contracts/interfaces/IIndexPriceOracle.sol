@@ -10,8 +10,8 @@ interface IIndexPriceOracle {
         external
         view
         returns (
-            uint256 volatilityTokenTwap,
-            uint256 iVolatilityTokenTwap,
+            uint256 volatilityTokenSma,
+            uint256 iVolatilityTokenSma,
             uint256 lastUpdateTimestamp
         );
 
