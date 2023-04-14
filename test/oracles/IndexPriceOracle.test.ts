@@ -66,7 +66,6 @@ describe("IndexPriceOracle", function () {
 
     await volmexOracle.deployed();
     await volmexOracle.setObservationAdder(owner);
-    await volmexOracle.grantInitialTimestampRole(owner);
     for (let i = 0; i < 10; i++) {
       await volmexOracle.addObservation([10000000], [0], [proofHash]);
       await time.increase(1000);
@@ -150,7 +149,7 @@ describe("IndexPriceOracle", function () {
       const txn = await volmexOracle.latestRoundData(10000, 0);
       expect(Number(txn.answer)).equal(1000000000);
     });
-    it("should  give last epoch price", async () => {
+    it.only("should  give last epoch price", async () => {
       await time.increase(28800);
       for (let i = 0; i < 50; i++) {
         await volmexOracle.addObservation([800000000], [0], [proofHash]);

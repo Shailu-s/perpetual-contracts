@@ -32,8 +32,6 @@ describe("IndexPriceOracle", function () {
     ]);
     await indexOracle.deployed();
     await (await indexOracle.setObservationAdder(owner)).wait();
-    await (await indexOracle.grantInitialTimestampRole(owner)).wait();
-    await (await indexOracle.setInitialTimestamp((await time.latest()).toString())).wait();
     await (await baseToken.setPriceFeed(indexOracle.address)).wait();
   });
   it("Should deploy index oracle", async () => {
@@ -42,22 +40,13 @@ describe("IndexPriceOracle", function () {
   });
 
   it("Should add one observation", async () => {
-    let outer, inner;
-    for (outer = 0; outer < 2; ++outer) {
-      for (inner = 0; inner < 10; ++inner) {
-        await (await indexOracle.addObservation([10000000 + inner * 1000000], [0], [proofHash])).wait();
+    for (let outer = 0; outer < 10; ++outer) {
+      for (let inner = 0; inner < 10; ++inner) {
+        await (await indexOracle.addObservation([10000000 + outer * 10000000 + inner * 1000000], [0], [proofHash])).wait();
       }
       console.log(`First Epoch: ${outer}`, (await indexOracle.getLastEpochPrice(0)).toString());
-      // const timestamp = Number((await time.latest()).toString()) - 28900;
-      // console.log(`First Custom Epoch: ${outer}`, (await indexOracle.getCustomEpochPrice(0, timestamp)).toString());
-      time.increase(28800);
-    }
-    time.increase(28800 * 4);
-    for (outer = 0; outer < 5; ++outer) {
-      for (inner = 0; inner < 10; ++inner) {
-        await (await indexOracle.addObservation([10000000 + inner * 1000000], [0], [proofHash])).wait();
-      }
-      console.log(`First Epoch: ${outer}`, (await indexOracle.getLastEpochPrice(0)).toString());
+      const timestamp = Number((await time.latest()).toString()) - 28900;
+      console.log(`First Custom Epoch: ${outer}`, (await indexOracle.getCustomEpochPrice(0, timestamp)).toString());
       time.increase(28800);
     }
   });
