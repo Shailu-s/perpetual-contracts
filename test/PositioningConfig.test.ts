@@ -18,7 +18,7 @@ describe("PositioningConfig", function () {
   this.beforeEach(async () => {
     markPriceOracle = await upgrades.deployProxy(
       MarkPriceOracle,
-      [[100000], [account1.address], owner.address],
+      [[100000], [account1.address], [proofHash], owner.address],
       {
         initializer: "initialize",
       },
@@ -29,7 +29,7 @@ describe("PositioningConfig", function () {
       initializer: "initialize",
     });
     await positioningConfig.deployed();
-    await markPriceOracle.grantSmaIntervalRole(positioningConfig.address);
+    await markPriceOracle.grantTwapIntervalRole(positioningConfig.address);
   });
 
   describe("Deployment", () => {
@@ -55,10 +55,10 @@ describe("PositioningConfig", function () {
       await expect(liquidationPenaltyRatio).to.be.equal(50000);
     });
 
-    it("should set mark Price oracle mark sma interval to 500", async () => {
+    it("should set mark Price oracle mark twap interval to 500", async () => {
       await positioningConfig.setTwapInterval(500);
-      const sma = await markPriceOracle.markTwInterval();
-      expect(parseInt(sma)).to.be.equal(500);
+      const twap = await markPriceOracle.markTwInterval();
+      expect(parseInt(twap)).to.be.equal(500);
     });
 
     it("should setLiquidationPenaltyRatio for ratio = 1e6", async () => {

@@ -128,7 +128,7 @@ describe("Global", function () {
 
     markPriceOracle = await upgrades.deployProxy(
       MarkPriceOracle,
-      [[10000000], [volmexBaseToken.address], owner.address],
+      [[10000000], [volmexBaseToken.address], [proofHash], owner.address],
       {
         initializer: "initialize",
       },
@@ -205,7 +205,7 @@ describe("Global", function () {
     await (await accountBalance.setPositioning(positioning.address)).wait();
     await (await markPriceOracle.setPositioning(positioning.address)).wait();
     await (await markPriceOracle.setIndexOracle(indexPriceOracle.address)).wait();
-    await markPriceOracle.grantSmaIntervalRole(positioningConfig.address);
+    await markPriceOracle.grantTwapIntervalRole(positioningConfig.address);
     await positioningConfig.setTwapInterval(28800);
 
     periphery = await upgrades.deployProxy(VolmexPerpPeriphery, [
@@ -239,7 +239,7 @@ describe("Global", function () {
   });
 
   it("should match orders and open position", async () => {
-    const txn = await markPriceOracle.getMarkSma(10000000, 0);
+    const txn = await markPriceOracle.getMarkTwap(10000000, 0);
 
     await matchingEngine.grantMatchOrders(positioning.address);
 
@@ -443,7 +443,7 @@ describe("Global", function () {
 
   it("should match orders and open position", async () => {
     const index = await markPriceOracle.indexByBaseToken(volmexBaseToken.address);
-    let observations = await markPriceOracle.getMarkSma(3600, index);
+    let observations = await markPriceOracle.getMarkTwap(3600, index);
     console.log("observations", observations.toString());
 
     await matchingEngine.grantMatchOrders(positioning.address);
@@ -515,7 +515,7 @@ describe("Global", function () {
       ],
     ]);
 
-    observations = await markPriceOracle.getMarkSma(3600, index);
+    observations = await markPriceOracle.getMarkTwap(3600, index);
     console.log("observations", observations.toString());
     console.log("Another call \n");
 
@@ -587,7 +587,7 @@ describe("Global", function () {
       ],
     ]);
 
-    observations = await markPriceOracle.getMarkSma(3600, index);
+    observations = await markPriceOracle.getMarkTwap(3600, index);
     console.log("observations", observations.toString());
 
     console.log("Another call \n");
@@ -650,7 +650,7 @@ describe("Global", function () {
       ],
     ]);
 
-    observations = await markPriceOracle.getMarkSma(3600, index);
+    observations = await markPriceOracle.getMarkTwap(3600, index);
     console.log("observations", observations.toString());
   });
 

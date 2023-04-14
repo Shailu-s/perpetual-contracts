@@ -29,7 +29,7 @@ abstract contract ParentToken is IVolmexBaseToken, IIndexPrice, VirtualToken, Ba
         emit PriceFeedChanged(_priceFeed);
     }
 
-    /// @dev Used to set sma interval from price feed
+    /// @dev Used to set twap interval from price feed
     function setTwInterval(uint256 _interval) external {
         _twInterval = _interval;
     }

@@ -22,8 +22,8 @@ const indexPrice = async () => {
       .updateBatchVolatilityTokenPrice([0], [price], [proofHash])
   ).wait();
   console.log("Updated index price !!!");
-  console.log("Primary", (await indexPriceOracle.getIndexSma(0))[0].div("1000000").toString());
-  console.log("Complement", (await indexPriceOracle.getIndexSma(0))[1].div("1000000").toString());
+  console.log("Primary", (await indexPriceOracle.getIndexTwap(0))[0].div("1000000").toString());
+  console.log("Complement", (await indexPriceOracle.getIndexTwap(0))[1].div("1000000").toString());
 };
 
 indexPrice()

@@ -95,7 +95,7 @@ interface IAccountBalance {
     function getPositionSize(address trader, address baseToken) external view returns (int256);
     /// @notice Get total position value of trader's baseToken market
     /// @dev A negative returned value is only be used when calculating pnl,
-    /// @dev we use `15 mins` sma to calc position value
+    /// @dev we use `15 mins` twap to calc position value
     /// @param trader The address of trader
     /// @param baseToken The address of baseToken
     /// @return totalPositionValue Total position value of trader's baseToken market
