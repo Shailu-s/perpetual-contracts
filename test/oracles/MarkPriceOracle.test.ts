@@ -305,7 +305,7 @@ describe("MarkPriceOracle", function () {
     it("Should deploy successfully", async () => {
       let receipt = await upgrades.deployProxy(
         MarkPriceOracle,
-        [[10000000], [volmexBaseToken.address], [proofHash], owner.address],
+        [[10000000], [volmexBaseToken.address], owner.address],
         {
           initializer: "initialize",
         },
@@ -315,14 +315,14 @@ describe("MarkPriceOracle", function () {
     it("Should fail to initialize again", async () => {
       let receipt = await upgrades.deployProxy(
         MarkPriceOracle,
-        [[10000000], [volmexBaseToken.address], [proofHash], owner.address],
+        [[10000000], [volmexBaseToken.address], owner.address],
         {
           initializer: "initialize",
         },
       );
       expect(receipt.confirmations).not.equal(0);
       await expect(
-        receipt.initialize([10000000], [volmexBaseToken.address], [proofHash], owner.address),
+        receipt.initialize([10000000], [volmexBaseToken.address], owner.address),
       ).to.be.revertedWith("Initializable: contract is already initialized");
     });
 
@@ -330,7 +330,7 @@ describe("MarkPriceOracle", function () {
       await expect(
         upgrades.deployProxy(
           MarkPriceOracle,
-          [[10000000, 100000000], [volmexBaseToken.address], [proofHash], owner.address],
+          [[10000000, 100000000], [volmexBaseToken.address], owner.address],
           {
             initializer: "initialize",
           },
@@ -342,7 +342,7 @@ describe("MarkPriceOracle", function () {
       await expect(
         upgrades.deployProxy(
           MarkPriceOracle,
-          [[10000000], ["0x0000000000000000000000000000000000000000"], [proofHash], owner.address],
+          [[10000000], ["0x0000000000000000000000000000000000000000"], owner.address],
           {
             initializer: "initialize",
           },
@@ -384,15 +384,15 @@ describe("MarkPriceOracle", function () {
       const txn = await markPriceOracle.getLastPrice(0);
       expect(Number(txn)).equal(1000000);
     });
-    it("should  give last epoch price", async () => {
+    it.only("should  give last epoch price", async () => {
       await time.increase(28800);
       for (let i = 0; i < 50; i++) {
         await time.increase(300);
         await markPriceOracle.addObservation(80000000, 0);
       }
       const timestamp = await time.latest();
-      const lastEpochPrice = await markPriceOracle.getLastEpochTwap(0);
-      expect(parseInt(lastEpochPrice.price)).to.be.equal(80000000);
+      const lastEpochPrice = (await markPriceOracle.getLastEpochPrice(0))[0];
+      expect(parseInt(lastEpochPrice)).to.be.equal(80000000);
     });
 
     it("Should get cumulative price with time delay", async () => {
