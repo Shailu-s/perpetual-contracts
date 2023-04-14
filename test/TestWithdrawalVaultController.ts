@@ -63,7 +63,7 @@ describe("Vault Controller tests for withdrawal", function () {
     await volmexBaseToken.setPriceFeed(indexPriceOracle.address);
     markPriceOracle = await upgrades.deployProxy(
       MarkPriceOracle,
-      [[100000], [volmexBaseToken.address], owner.address],
+      [[100000], [volmexBaseToken.address], [proofHash], owner.address],
       {
         initializer: "initialize",
       },

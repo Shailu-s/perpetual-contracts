@@ -121,7 +121,7 @@ describe("VolmexPerpPeriphery", function () {
 
     markPriceOracle = await upgrades.deployProxy(
       MarkPriceOracle,
-      [[60000000], [volmexBaseToken.address], owner.address],
+      [[60000000], [volmexBaseToken.address], [proofHash], owner.address],
       {
         initializer: "initialize",
       },
@@ -200,7 +200,7 @@ describe("VolmexPerpPeriphery", function () {
     await vault.connect(owner).setVaultController(vaultController.address);
     await vaultController.registerVault(vault.address, USDC.address);
     await vaultController.connect(owner).setPositioning(positioning.address);
-    await markPriceOracle.grantSmaIntervalRole(positioningConfig.address);
+    await markPriceOracle.grantTwapIntervalRole(positioningConfig.address);
     await positioningConfig.connect(owner).setTwapInterval(28800);
     await positioningConfig.connect(owner).setMaxMarketsPerAccount(5);
     await positioningConfig
@@ -301,7 +301,7 @@ describe("VolmexPerpPeriphery", function () {
         );
         const receipt = await tx.wait();
         let txDataBefore = {
-          "Mark price": (await markPriceOracle.getMarkSma("3600", 0)).toString(),
+          "Mark price": (await markPriceOracle.getMarkTwap("3600", 0)).toString(),
           "Alice position": (
             await accountBalance1.getPositionSize(alice.address, volmexBaseToken.address)
           ).toString(),
@@ -352,7 +352,7 @@ describe("VolmexPerpPeriphery", function () {
           );
           const receipt = await tx.wait();
           txDataBefore = {
-            "Mark price": (await markPriceOracle.getMarkSma("3600", 0)).toString(),
+            "Mark price": (await markPriceOracle.getMarkTwap("3600", 0)).toString(),
             "Alice position": (
               await accountBalance1.getPositionSize(alice.address, volmexBaseToken.address)
             ).toString(),
