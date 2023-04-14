@@ -7,7 +7,6 @@ import { IPositioning } from "../interfaces/IPositioning.sol";
 import { IIndexPriceOracle } from "../interfaces/IIndexPriceOracle.sol";
 import { LibSafeCastUint } from "../libs/LibSafeCastUint.sol";
 import { LibPerpMath } from "../libs/LibPerpMath.sol";
-
 /**
  * @title Volmex Oracle Mark SMA
  * @author volmex.finance [security@volmexlabs.com]
@@ -29,7 +28,6 @@ contract MarkPriceOracle is AccessControlUpgradeable {
     IPositioning public positioning;
     IIndexPriceOracle public indexOracle;
     uint256 public markTwInterval;
-    uint256 public epochInterval;
     uint256 public initialTimestamp; // Set at mark-oracle when first successful openPosition.
     // price oracle admin role
     bytes32 public constant PRICE_ORACLE_ADMIN = keccak256("PRICE_ORACLE_ADMIN");
@@ -68,7 +66,6 @@ contract MarkPriceOracle is AccessControlUpgradeable {
         _setRoleAdmin(PRICE_ORACLE_ADMIN, PRICE_ORACLE_ADMIN);
         _grantRole(PRICE_ORACLE_ADMIN, _admin);
         markTwInterval = 300; // 5 minutes
-        epochInterval = 8 hours;
     }
 
     /**
@@ -108,15 +105,6 @@ contract MarkPriceOracle is AccessControlUpgradeable {
     }
 
     /**
-     * @notice Set positioning contract
-     * @param _epochInterval Address of positioning contract typed in interface
-     */
-    function setMarkEpochInterval(uint256 _epochInterval) external virtual {
-        _requireOracleAdmin();
-        epochInterval = _epochInterval;
-    }
-
-    /**
      * @notice Used to add price cumulative of an asset at a given timestamp
      *
      * @param _underlyingPrice Price of the asset
@@ -126,10 +114,9 @@ contract MarkPriceOracle is AccessControlUpgradeable {
     function addObservation(uint256 _underlyingPrice, uint256 _index) external virtual {
         _requireCanAddObservation();
         require(_underlyingPrice != 0, "MarkPriceOracle: Not zero");
-        uint256 totalObservations = _pushOrderPrice(_index, _underlyingPrice, 0);
+       _pushOrderPrice(_index, _underlyingPrice, 0, false);
         uint256 markPrice = _getMarkPrice(baseTokenByIndex[_index], _index).abs();
-        MarkPriceObservation[] storage observations = observationsByIndex[_index];
-        observations[totalObservations - 1] = MarkPriceObservation({ timestamp: block.timestamp, underlyingPrice: _underlyingPrice, markPrice: markPrice });
+        _pushOrderPrice(_index, _underlyingPrice, markPrice, true);
         _save(_index, markPrice);
         emit ObservationAdded(_index, _underlyingPrice, markPrice, block.timestamp);
     }
@@ -283,25 +270,31 @@ contract MarkPriceOracle is AccessControlUpgradeable {
     function _pushOrderPrice(
         uint256 _index,
         uint256 _underlyingPrice,
-        uint256 _markPrice
-    ) internal returns (uint256) {
-        MarkPriceObservation memory observation = MarkPriceObservation({ timestamp: block.timestamp, underlyingPrice: _underlyingPrice, markPrice: _markPrice });
+        uint256 _markPrice,
+        bool isUpdate
+    ) internal  {
+       
         MarkPriceObservation[] storage observations = observationsByIndex[_index];
-        observations.push(observation);
-        uint256 totalObservations = observations.length;
-        if (totalObservations == 2) {
-            indexOracle.setInitialTimestamp(block.timestamp);
-            initialTimestamp = block.timestamp;
-        }
-        return totalObservations;
+        if(!isUpdate){
+            observations.push(MarkPriceObservation({ timestamp: block.timestamp, underlyingPrice: _underlyingPrice, markPrice: _markPrice }));
+            uint256 totalPrices = observations.length - 1 ;
+            if (totalPrices == 1) {
+                indexOracle.setInitialTimestamp(block.timestamp);
+                initialTimestamp = block.timestamp;
+            }
+        } else {
+            uint256 totalPrices = observations.length -1 ;
+            observations[totalPrices].markPrice = _markPrice;
+        } 
+
     }
 
     function _save(uint256 _index, uint256 _price) internal {
         uint256 currentTimestamp = block.timestamp;
         MarkPriceByEpoch[] memory markPriceByEpoch = markPriceAtEpochs[_index];
         uint256 currentEpochIndex = markPriceByEpoch.length;
-        if ((currentTimestamp - initialTimestamp) / epochInterval > currentEpochIndex || currentEpochIndex == 0) {
-            if (currentEpochIndex != 0 && (currentTimestamp - markPriceByEpoch[currentEpochIndex - 1].timestamp) / epochInterval == 0) {
+        if ((currentTimestamp - initialTimestamp) / markTwInterval > currentEpochIndex || currentEpochIndex == 0) {
+            if (currentEpochIndex != 0 && (currentTimestamp - markPriceByEpoch[currentEpochIndex - 1].timestamp) / markTwInterval == 0) {
                 _updatePriceEpoch(_index, currentEpochIndex - 1, markPriceByEpoch[currentEpochIndex - 1].price, _price, markPriceByEpoch[currentEpochIndex - 1].timestamp);
             } else {
                 MarkPriceByEpoch[] storage markPriceEpoch = markPriceAtEpochs[_index];
@@ -349,7 +342,7 @@ contract MarkPriceOracle is AccessControlUpgradeable {
         lastTimestamp = observations[index - 1].timestamp;
         _endTimestamp = lastTimestamp < _endTimestamp ? lastTimestamp : _endTimestamp;
         if (lastTimestamp < _startTimestamp) {
-            _startTimestamp = observations[0].timestamp + (((lastTimestamp - observations[0].timestamp) / epochInterval) * epochInterval);
+            _startTimestamp = observations[0].timestamp + (((lastTimestamp - observations[0].timestamp) / markTwInterval) * markTwInterval);
         }
         uint256 priceCount;
         if (_isMarkTwapRequired) {
