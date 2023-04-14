@@ -28,7 +28,7 @@ contract MarkPriceOracle is AccessControlUpgradeable {
 
     IPositioning public positioning;
     IIndexPriceOracle public indexOracle;
-    uint256 public markTwInterval;
+    uint256 public markSmInterval;
     uint256 public epochInterval;
     uint256 public initialTimestamp; // Set at mark-oracle when first successful openPosition.
     // price oracle admin role
@@ -67,7 +67,7 @@ contract MarkPriceOracle is AccessControlUpgradeable {
         _addAssets(_priceCumulative, _asset);
         _setRoleAdmin(PRICE_ORACLE_ADMIN, PRICE_ORACLE_ADMIN);
         _grantRole(PRICE_ORACLE_ADMIN, _admin);
-        markTwInterval = 300; // 5 minutes
+        markSmInterval = 300; // 5 minutes
         epochInterval = 8 hours;
     }
 
@@ -100,11 +100,11 @@ contract MarkPriceOracle is AccessControlUpgradeable {
 
     /**
      * @notice Set positioning contract
-     * @param _markTwInterval Address of positioning contract typed in interface
+     * @param _markSmInterval Address of positioning contract typed in interface
      */
-    function setMarkTwInterval(uint256 _markTwInterval) external virtual {
+    function setMarkSmInterval(uint256 _markSmInterval) external virtual {
         _requireSmaIntervalRole();
-        markTwInterval = _markTwInterval;
+        markSmInterval = _markSmInterval;
     }
 
     /**
@@ -143,7 +143,7 @@ contract MarkPriceOracle is AccessControlUpgradeable {
         int256 indexPrice = indexOracle.getLastPrice(_index).toInt256();
         // Note: Check for actual precision and data type
         prices[0] = indexPrice * (1 + lastFundingRate * (nextFunding.toInt256() / fundingPeriod.toInt256()));
-        uint256 markSma = getLastSma(_index, markTwInterval);
+        uint256 markSma = getLastSma(_index, markSmInterval);
         prices[1] = markSma.toInt256();
         prices[2] = getLastPrice(_index).toInt256();
         markPrice = prices[0].median(prices[1], prices[2]);
@@ -175,17 +175,17 @@ contract MarkPriceOracle is AccessControlUpgradeable {
     /**
      * @notice Get the single moving average price of the asset
      *
-     * @param _twInterval Time in seconds of the range
+     * @param _smInterval Time in seconds of the range
      * @param _index Index of the observation, the index base token mapping
      * @return priceCumulative The SMA price of the asset
      */
-    function getMarkSma(uint256 _twInterval, uint256 _index) public view returns (uint256 priceCumulative) {
-        uint256 startTimestamp = block.timestamp - _twInterval;
+    function getMarkSma(uint256 _smInterval, uint256 _index) public view returns (uint256 priceCumulative) {
+        uint256 startTimestamp = block.timestamp - _smInterval;
         (priceCumulative, ) = _getCustomSma(_index, startTimestamp, block.timestamp, true);
     }
 
-    function getLastSma(uint256 _index, uint256 _twInterval) public view returns (uint256 priceCumulative) {
-        uint256 startTimestamp = block.timestamp - _twInterval;
+    function getLastSma(uint256 _index, uint256 _smInterval) public view returns (uint256 priceCumulative) {
+        uint256 startTimestamp = block.timestamp - _smInterval;
         (priceCumulative, ) = _getCustomSma(_index, startTimestamp, block.timestamp, false);
     }
 
