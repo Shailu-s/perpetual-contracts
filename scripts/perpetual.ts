@@ -64,7 +64,7 @@ const positioning = async () => {
     VolmexQuoteToken,
     [
       "Virtual USD Coin", // nameArg
-      "VUSDC", // symbolArg,
+      "VUSDT", // symbolArg,
       false, // isBase
     ],
     {
@@ -89,7 +89,7 @@ const positioning = async () => {
   const indexPriceOracle = IndexPriceOracle.attach(indexOracle);
   await (await indexPriceOracle.grantInitialTimestampRole(markPriceOracle.address)).wait();
 
-  console.log("Deploying USDC ...");
+  console.log("Deploying USDT ...");
   let usdtAddress = process.env.USDT;
   if (!process.env.USDT) {
     const usdt = await TestERC20.deploy(
@@ -248,7 +248,7 @@ const positioning = async () => {
     QuoteToken: volmexQuoteToken.address,
     Vault: vault.address,
     VaultController: vaultController.address,
-    USDC: usdtAddress,
+    USDT: usdtAddress,
     Deployer: await owner.getAddress()
   };
   console.log("\n =====Deployment Successful===== \n");
@@ -286,7 +286,7 @@ const positioning = async () => {
       ]
     });
   } catch (error) {
-    console.log("ERROR - verify - usdc token!");
+    console.log("ERROR - verify - usdt token!");
   }
   try {
     await run("verify:verify", {
