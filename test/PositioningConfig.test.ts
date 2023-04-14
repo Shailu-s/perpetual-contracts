@@ -18,7 +18,7 @@ describe("PositioningConfig", function () {
   this.beforeEach(async () => {
     markPriceOracle = await upgrades.deployProxy(
       MarkPriceOracle,
-      [[100000], [account1.address], owner.address],
+      [[100000], [account1.address], [proofHash], owner.address],
       {
         initializer: "initialize",
       },

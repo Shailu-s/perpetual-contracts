@@ -104,7 +104,7 @@ describe("MatchingEngine", function () {
 
     markPriceOracle = await upgrades.deployProxy(
       MarkPriceOracle,
-      [[1000000], [volmexBaseToken.address], owner.address],
+      [[1000000], [volmexBaseToken.address], [proofHash], owner.address],
       {
         initializer: "initialize",
       },

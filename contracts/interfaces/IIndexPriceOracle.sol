@@ -48,7 +48,7 @@ interface IIndexPriceOracle {
     ) external;
 
     function setObservationAdder(address _adder) external;
-    function setIndextwInterval(uint256 _twInterval) external;
     function setInitialTimestamp(uint256 _timestamp) external;
+    function setIndextwInterval(uint256 _twInterval) external;
     function grantInitialTimestampRole(address _account) external;
 }

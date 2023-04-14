@@ -26,7 +26,7 @@ contract MatchingEngineTest is MatchingEngine {
     }
 
     function addObservation(uint256 _priceCumulative, uint256 _index) public {
-        markPriceOracle.addObservation(_priceCumulative, _index);
+        markPriceOracle.addObservation(_priceCumulative, _index, bytes32(0));
     }
 
     //TODO Should be inculded in matching engine core

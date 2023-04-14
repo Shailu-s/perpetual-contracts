@@ -120,7 +120,7 @@ describe("MarkPriceOracle", function () {
 
     markPriceOracle = await upgrades.deployProxy(
       MarkPriceOracle,
-      [[60000000], [volmexBaseToken.address], owner.address],
+      [[60000000], [volmexBaseToken.address], [proofHash], owner.address],
       {
         initializer: "initialize",
       },
@@ -354,7 +354,7 @@ describe("MarkPriceOracle", function () {
   describe("Add Observation", async () => {
     it("Should add observation", async () => {
       for (let i = 0; i < 9; i++) {
-        await markPriceOracle.addObservation(60000000, 0);
+        await markPriceOracle.addObservation(60000000, 0, proofHash);
       }
 
       const txn = await markPriceOracle.getMarkTwap(100000, 0);
@@ -362,24 +362,24 @@ describe("MarkPriceOracle", function () {
     });
 
     it("should fail to add observation when cumulative price is zero ", async () => {
-      await expect(markPriceOracle.addObservation(0, 0)).to.be.revertedWith(
+      await expect(markPriceOracle.addObservation(0, 0, proofHash)).to.be.revertedWith(
         "MarkPriceOracle: Not zero",
       );
     });
     it("Should fail to add observation when caller is not exchange", async () => {
       await expect(
-        markPriceOracle.connect(account1).addObservation(1000000, 0),
+        markPriceOracle.connect(account1).addObservation(1000000, 0, proofHash),
       ).to.be.revertedWith("MarkPriceOracle: not observation adder");
     });
 
     it("Should get cumulative price", async () => {
-      await markPriceOracle.addObservation(60000000, 0);
+      await markPriceOracle.addObservation(60000000, 0, proofHash);
 
       const txn = await markPriceOracle.getMarkTwap(10000000, 0);
       expect(Number(txn)).equal(60000000);
     });
     it("Should get last price ", async () => {
-      await markPriceOracle.addObservation(1000000, 0);
+      await markPriceOracle.addObservation(1000000, 0, proofHash);
 
       const txn = await markPriceOracle.getLastPrice(0);
       expect(Number(txn)).equal(1000000);
@@ -388,7 +388,7 @@ describe("MarkPriceOracle", function () {
       await time.increase(28800);
       for (let i = 0; i < 50; i++) {
         await time.increase(300);
-        await markPriceOracle.addObservation(80000000, 0);
+        await markPriceOracle.addObservation(80000000, 0, proofHash);
       }
       const timestamp = await time.latest();
       const lastEpochPrice = (await markPriceOracle.getLastEpochPrice(0))[0];
@@ -397,7 +397,7 @@ describe("MarkPriceOracle", function () {
 
     it("Should get cumulative price with time delay", async () => {
       for (let i = 0; i < 9; i++) {
-        await markPriceOracle.addObservation(60000000, 0);
+        await markPriceOracle.addObservation(60000000, 0, proofHash);
         await time.increase(1000);
       }
       const txns = await Promise.all([
@@ -422,7 +422,7 @@ describe("MarkPriceOracle", function () {
       const txn1 = await markPriceOracle.getMarkTwap(20000, 0);
       expect(Number(txn1)).equal(60000000);
       for (let i = 0; i < 9; i++) {
-        await markPriceOracle.addObservation(60000000, 0);
+        await markPriceOracle.addObservation(60000000, 0, proofHash);
         await time.increase(1000);
       }
       // this covers the case of zero recent datapoints
@@ -439,7 +439,7 @@ describe("MarkPriceOracle", function () {
       expect(Number(txn1)).equal(60000000);
 
       for (let i = 0; i < 10; i++) {
-        await markPriceOracle.addObservation(20000000, 0);
+        await markPriceOracle.addObservation(20000000, 0, proofHash);
         await time.increase(1000);
       }
       const txn2 = await markPriceOracle.getMarkTwap(10000, 0);
@@ -448,7 +448,7 @@ describe("MarkPriceOracle", function () {
 
     it("Should fail to  add multiple observations because uneuqal length of inputs", async () => {
       await expect(
-        markPriceOracle.addAssets([10000000, 20000000], [volmexBaseToken.address]),
+        markPriceOracle.addAssets([10000000, 20000000], [volmexBaseToken.address], [proofHash]),
       ).to.be.revertedWith("MarkPriceOracle: Unequal length of prices & assets");
     });
 
@@ -457,6 +457,7 @@ describe("MarkPriceOracle", function () {
         markPriceOracle.addAssets(
           [10000000, 20000000],
           [volmexBaseToken.address, ZERO_ADDR],
+          [proofHash, proofHash],
         ),
       ).to.be.revertedWith("MarkPriceOracle: Asset address can't be 0");
     });
@@ -477,7 +478,7 @@ describe("MarkPriceOracle", function () {
       await time.increase(28800);
       const firstTimestamp = await time.latest();
       for (let i = 0; i <= 20; i++) {
-        await markPriceOracle.addObservation(70000000, 0);
+        await markPriceOracle.addObservation(70000000, 0, proofHash);
       }
       await time.increase(28800);
       const secondTimestamp = await time.latest();

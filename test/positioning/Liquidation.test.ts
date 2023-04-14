@@ -139,6 +139,7 @@ describe("Liquidation test in Positioning", function () {
       [
         [100000000, 100000000],
         [volmexBaseToken.address, volmexBaseToken1.address],
+        [proofHash, proofHash],
         owner.address,
       ],
       {
