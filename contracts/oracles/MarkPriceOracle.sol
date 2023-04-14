@@ -112,14 +112,13 @@ contract MarkPriceOracle is AccessControlUpgradeable {
      * @param _index position of the asset
      * @param _underlyingPrice hash of price collection
      */
-    function addObservation(
-        uint256 _underlyingPrice,
-        uint256 _index
-    ) external virtual {
+    function addObservation(uint256 _underlyingPrice, uint256 _index) external virtual {
         _requireCanAddObservation();
         require(_underlyingPrice != 0, "MarkPriceOracle: Not zero");
+        uint256 totalObservations = _pushOrderPrice(_index, _underlyingPrice, 0);
         uint256 markPrice = _getMarkPrice(baseTokenByIndex[_index], _index).abs();
-        _pushOrderPrice(_index, _underlyingPrice, markPrice);
+        MarkPriceObservation[] storage observations = observationsByIndex[_index];
+        observations[totalObservations - 1] = MarkPriceObservation({ timestamp: block.timestamp, underlyingPrice: _underlyingPrice, markPrice: markPrice });
         _save(_index, markPrice);
         emit ObservationAdded(_index, _underlyingPrice, markPrice, block.timestamp);
     }
@@ -157,10 +156,7 @@ contract MarkPriceOracle is AccessControlUpgradeable {
      * @param _underlyingPrice Array of current prices
      * @param _asset Array of assets {base token addresses}
      */
-    function addAssets(
-        uint256[] calldata _underlyingPrice,
-        address[] calldata _asset
-    ) external {
+    function addAssets(uint256[] calldata _underlyingPrice, address[] calldata _asset) external {
         _requireOracleAdmin();
         _addAssets(_underlyingPrice, _asset);
     }
@@ -249,10 +245,7 @@ contract MarkPriceOracle is AccessControlUpgradeable {
         lastUpdatedTimestamp = observations[observations.length - 1].timestamp;
     }
 
-    function _addAssets(
-        uint256[] calldata _underlyingPrices,
-        address[] calldata _assets
-    ) internal {
+    function _addAssets(uint256[] calldata _underlyingPrices, address[] calldata _assets) internal {
         uint256 underlyingPriceLength = _underlyingPrices.length;
         require(underlyingPriceLength == _assets.length, "MarkPriceOracle: Unequal length of prices & assets");
 
@@ -264,11 +257,7 @@ contract MarkPriceOracle is AccessControlUpgradeable {
         uint256 indexCount = _indexCount;
         uint256 currentTimestamp = block.timestamp;
         for (uint256 index; index < underlyingPriceLength; index++) {
-            observation = MarkPriceObservation({
-                timestamp: currentTimestamp,
-                underlyingPrice: _underlyingPrices[index],
-                markPrice: _underlyingPrices[index]
-            });
+            observation = MarkPriceObservation({ timestamp: currentTimestamp, underlyingPrice: _underlyingPrices[index], markPrice: _underlyingPrices[index] });
             baseTokenByIndex[indexCount] = _assets[index];
             indexByBaseToken[_assets[index]] = indexCount;
             MarkPriceObservation[] storage observations = observationsByIndex[indexCount];
@@ -284,9 +273,8 @@ contract MarkPriceOracle is AccessControlUpgradeable {
         uint256 _index,
         uint256 _underlyingPrice,
         uint256 _markPrice
-    ) internal {
-        MarkPriceObservation memory observation =
-            MarkPriceObservation({ timestamp: block.timestamp, underlyingPrice: _underlyingPrice, markPrice: _markPrice });
+    ) internal returns (uint256) {
+        MarkPriceObservation memory observation = MarkPriceObservation({ timestamp: block.timestamp, underlyingPrice: _underlyingPrice, markPrice: _markPrice });
         MarkPriceObservation[] storage observations = observationsByIndex[_index];
         observations.push(observation);
         uint256 totalObservations = observations.length;
@@ -294,6 +282,7 @@ contract MarkPriceOracle is AccessControlUpgradeable {
             indexOracle.setInitialTimestamp(block.timestamp);
             initialTimestamp = block.timestamp;
         }
+        return totalObservations;
     }
 
     function _save(uint256 _index, uint256 _price) internal {
@@ -305,7 +294,7 @@ contract MarkPriceOracle is AccessControlUpgradeable {
                 _updatePriceEpoch(_index, currentEpochIndex - 1, markPriceByEpoch[currentEpochIndex - 1].price, _price, markPriceByEpoch[currentEpochIndex - 1].timestamp);
             } else {
                 MarkPriceByEpoch[] storage markPriceEpoch = markPriceAtEpochs[_index];
-                markPriceEpoch.push(MarkPriceByEpoch({price: _price, timestamp: currentTimestamp}));
+                markPriceEpoch.push(MarkPriceByEpoch({ price: _price, timestamp: currentTimestamp }));
                 cardinality = 1;
             }
         } else {
@@ -313,13 +302,16 @@ contract MarkPriceOracle is AccessControlUpgradeable {
         }
     }
 
-    function _updatePriceEpoch(uint256 _index, uint256 _epochIndex, uint256 _previousPrice, uint256 _price, uint256 _timestamp) private {
+    function _updatePriceEpoch(
+        uint256 _index,
+        uint256 _epochIndex,
+        uint256 _previousPrice,
+        uint256 _price,
+        uint256 _timestamp
+    ) private {
         uint256 actualPrice = (_previousPrice * cardinality + _price) / (cardinality + 1);
         MarkPriceByEpoch[] storage markPriceEpoch = markPriceAtEpochs[_index];
-        markPriceEpoch[_epochIndex] = MarkPriceByEpoch({
-            price: actualPrice,
-            timestamp: _timestamp
-        });
+        markPriceEpoch[_epochIndex] = MarkPriceByEpoch({ price: actualPrice, timestamp: _timestamp });
         ++cardinality;
     }
 
