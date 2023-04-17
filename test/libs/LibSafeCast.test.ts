@@ -2,7 +2,7 @@ import { expect } from "chai";
 import { BigNumber } from "ethers";
 import { ethers } from "hardhat";
 
-describe.only("PerpSafeCast test", async () => {
+describe("PerpSafeCast test", async () => {
   const maxUint256 = BigNumber.from(2).pow(256).sub(1);
   const maxUint128 = BigNumber.from(2).pow(128).sub(1);
   const maxUint64 = BigNumber.from(2).pow(64).sub(1);
