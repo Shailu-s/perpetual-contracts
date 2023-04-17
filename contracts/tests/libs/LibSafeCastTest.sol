@@ -11,8 +11,8 @@ contract TestPerpSafeCast {
 
     // uint test
 
-    function testToUint128(int256 value) external pure returns (int128) {
-        return value.toInt128();
+    function testToUint128(uint256 value) external pure returns (uint128) {
+        return value.toUint128();
     }
 
     function testToUint64(uint256 value) external pure returns (uint64) {
