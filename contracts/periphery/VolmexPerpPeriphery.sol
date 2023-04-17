@@ -245,7 +245,7 @@ contract VolmexPerpPeriphery is AccessControlUpgradeable, IVolmexPerpPeriphery {
         // TODO: change to index, mark and mark's latest price
         uint256 _index = markPriceOracle.indexByBaseToken(baseToken);
         if (_order.orderType == LibOrder.STOP_LOSS_MARK_PRICE || _order.orderType == LibOrder.TAKE_PROFIT_MARK_PRICE) {
-            price = markPriceOracle.getMarkTwap(_twInterval, _index);
+            price = markPriceOracle.getMarkSma(_twInterval, _index);
         } else if (_order.orderType == LibOrder.STOP_LOSS_INDEX_PRICE || _order.orderType == LibOrder.TAKE_PROFIT_INDEX_PRICE) {
             price = indexPriceOracle.getLastPrice(_index);
         } else {

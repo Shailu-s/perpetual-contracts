@@ -120,8 +120,8 @@ describe("IndexPriceOracle", function () {
         await volmexOracle.addObservation([10000000], [0], [proofHash]);
       }
 
-      const txn = await volmexOracle.getIndexTwap(10000, 0);
-      expect(Number(txn.volatilityTokenTwap)).equal(10000000);
+      const txn = await volmexOracle.getIndexSma(10000, 0);
+      expect(Number(txn.volatilityTokenSma)).equal(10000000);
     });
 
     it("should fail to add observation when cumulative price is zero ", async () => {
@@ -139,8 +139,8 @@ describe("IndexPriceOracle", function () {
     it("Should get cumulative price", async () => {
       await volmexOracle.addObservation([10000000], [0], [proofHash]);
 
-      const txn = await volmexOracle.getIndexTwap(10000000, 0);
-      expect(Number(txn.volatilityTokenTwap)).equal(10000000);
+      const txn = await volmexOracle.getIndexSma(10000000, 0);
+      expect(Number(txn.volatilityTokenSma)).equal(10000000);
     });
 
     it("Should latest round data", async () => {
@@ -157,8 +157,8 @@ describe("IndexPriceOracle", function () {
         await volmexOracle.addObservation([800000000], [0], [proofHash]);
       }
 
-      const lastEpochPrice = await volmexOracle.getLastEpochTwap(0);
-      expect(lastEpochPrice.price.toString()).to.be.equal("800000000");
+      const lastEpochPrice = (await volmexOracle.getLastEpochPrice(0))[0];
+      expect(lastEpochPrice.toString()).to.be.equal("800000000");
     });
 
     it.only("should  give average price last epoch price", async () => {
@@ -180,49 +180,49 @@ describe("IndexPriceOracle", function () {
         await time.increase(1000);
       }
       const txns = await Promise.all([
-        volmexOracle.getIndexTwap(1000, 0),
-        volmexOracle.getIndexTwap(2000, 0),
-        volmexOracle.getIndexTwap(3000, 0),
-        volmexOracle.getIndexTwap(4000, 0),
-        volmexOracle.getIndexTwap(5000, 0),
-        volmexOracle.getIndexTwap(6000, 0),
-        volmexOracle.getIndexTwap(7000, 0),
-        volmexOracle.getIndexTwap(8000, 0),
-        volmexOracle.getIndexTwap(9000, 0),
-        volmexOracle.getIndexTwap(10000, 0),
-        volmexOracle.getIndexTwap(20000, 0),
+        volmexOracle.getIndexSma(1000, 0),
+        volmexOracle.getIndexSma(2000, 0),
+        volmexOracle.getIndexSma(3000, 0),
+        volmexOracle.getIndexSma(4000, 0),
+        volmexOracle.getIndexSma(5000, 0),
+        volmexOracle.getIndexSma(6000, 0),
+        volmexOracle.getIndexSma(7000, 0),
+        volmexOracle.getIndexSma(8000, 0),
+        volmexOracle.getIndexSma(9000, 0),
+        volmexOracle.getIndexSma(10000, 0),
+        volmexOracle.getIndexSma(20000, 0),
       ]);
       txns.forEach(txn => {
-        expect(Number(txn.volatilityTokenTwap)).equal(10000000);
+        expect(Number(txn.volatilityTokenSma)).equal(10000000);
       });
     });
 
     it("Should not error when there are no recent datapoints added for cumulative price", async () => {
-      const txn1 = await volmexOracle.getIndexTwap(20000, 0);
-      expect(Number(txn1.volatilityTokenTwap)).equal(10000000);
+      const txn1 = await volmexOracle.getIndexSma(20000, 0);
+      expect(Number(txn1.volatilityTokenSma)).equal(10000000);
       for (let i = 0; i < 9; i++) {
         await volmexOracle.addObservation([10000000], [0], [proofHash]);
         await time.increase(1000);
       }
       // this covers the case of zero recent datapoints
       await time.increase(100000);
-      const txn2 = await volmexOracle.getIndexTwap(200, 0);
-      expect(Number(txn2.volatilityTokenTwap)).equal(10000000);
-      const txn3 = await volmexOracle.getIndexTwap(200000, 0);
-      expect(Number(txn3.volatilityTokenTwap)).equal(10000000);
+      const txn2 = await volmexOracle.getIndexSma(200, 0);
+      expect(Number(txn2.volatilityTokenSma)).equal(10000000);
+      const txn3 = await volmexOracle.getIndexSma(200000, 0);
+      expect(Number(txn3.volatilityTokenSma)).equal(10000000);
     });
 
     it("Should not error when there are no recent datapoints then more datapoints are added for cumulative price", async () => {
       await time.increase(200001);
-      const txn1 = await volmexOracle.getIndexTwap(20, 0);
-      expect(Number(txn1.volatilityTokenTwap)).equal(10000000);
+      const txn1 = await volmexOracle.getIndexSma(20, 0);
+      expect(Number(txn1.volatilityTokenSma)).equal(10000000);
 
       for (let i = 0; i < 10; i++) {
         await volmexOracle.addObservation([20000000], [0], [proofHash]);
         await time.increase(1000);
       }
-      const txn2 = await volmexOracle.getIndexTwap(9000, 0);
-      expect(Number(txn2.volatilityTokenTwap)).equal(20000000);
+      const txn2 = await volmexOracle.getIndexSma(9000, 0);
+      expect(Number(txn2.volatilityTokenSma)).equal(20000000);
     });
 
     it("Should fail to  add multiple observations because uneuqal length of inputs", async () => {

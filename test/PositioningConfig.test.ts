@@ -7,7 +7,6 @@ describe("PositioningConfig", function () {
   let MarkPriceOracle;
   let markPriceOracle;
   let owner, account1;
-  const proofHash = "0x6c00000000000000000000000000000000000000000000000000000000000000";
 
   this.beforeAll(async () => {
     PositioningConfig = await ethers.getContractFactory("PositioningConfig");
@@ -18,7 +17,7 @@ describe("PositioningConfig", function () {
   this.beforeEach(async () => {
     markPriceOracle = await upgrades.deployProxy(
       MarkPriceOracle,
-      [[100000], [account1.address], [proofHash], owner.address],
+      [[100000], [account1.address], owner.address],
       {
         initializer: "initialize",
       },
@@ -29,7 +28,7 @@ describe("PositioningConfig", function () {
       initializer: "initialize",
     });
     await positioningConfig.deployed();
-    await markPriceOracle.grantTwapIntervalRole(positioningConfig.address);
+    await markPriceOracle.grantSmaIntervalRole(positioningConfig.address);
   });
 
   describe("Deployment", () => {

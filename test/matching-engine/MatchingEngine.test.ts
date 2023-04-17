@@ -104,7 +104,7 @@ describe("MatchingEngine", function () {
 
     markPriceOracle = await upgrades.deployProxy(
       MarkPriceOracle,
-      [[1000000], [volmexBaseToken.address], [proofHash], owner.address],
+      [[1000000], [volmexBaseToken.address], owner.address],
       {
         initializer: "initialize",
       },
@@ -114,7 +114,7 @@ describe("MatchingEngine", function () {
     await volmexBaseToken.setPriceFeed(indexPriceOracle.address);
     positioningConfig = await upgrades.deployProxy(PositioningConfig, [markPriceOracle.address]);
     await positioningConfig.deployed();
-    await markPriceOracle.grantTwapIntervalRole(positioningConfig.address);
+    await markPriceOracle.grantSmaIntervalRole(positioningConfig.address);
     accountBalance = await upgrades.deployProxy(AccountBalance, [positioningConfig.address]);
     await accountBalance.deployed();
     vaultController = await upgrades.deployProxy(VaultController, [

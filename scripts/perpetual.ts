@@ -64,7 +64,7 @@ const positioning = async () => {
     VolmexQuoteToken,
     [
       "Virtual USD Coin", // nameArg
-      "VUSDC", // symbolArg,
+      "VUSDT", // symbolArg,
       false, // isBase
     ],
     {
@@ -78,7 +78,7 @@ const positioning = async () => {
   console.log("Deploying Mark Price Oracle ...");
   const markPriceOracle = await upgrades.deployProxy(
     MarkPriceOracle,
-    [[52000000], [volmexBaseToken.address], [proofHash], owner.address],
+    [[52000000], [volmexBaseToken.address], owner.address],
     {
       initializer: "initialize",
     },
@@ -89,7 +89,7 @@ const positioning = async () => {
   const indexPriceOracle = IndexPriceOracle.attach(indexOracle);
   await (await indexPriceOracle.grantInitialTimestampRole(markPriceOracle.address)).wait();
 
-  console.log("Deploying USDC ...");
+  console.log("Deploying USDT ...");
   let usdtAddress = process.env.USDT;
   if (!process.env.USDT) {
     const usdt = await TestERC20.deploy(
@@ -116,7 +116,7 @@ const positioning = async () => {
   const positioningConfig = await upgrades.deployProxy(PositioningConfig, [markPriceOracle.address]);
   await positioningConfig.deployed();
   console.log(positioningConfig.address);
-  await (await markPriceOracle.grantTwapIntervalRole(positioningConfig.address)).wait();
+  await (await markPriceOracle.grantSmaIntervalRole(positioningConfig.address)).wait();
   await positioningConfig.setMaxMarketsPerAccount(5);
   await positioningConfig.setSettlementTokenBalanceCap("10000000000000");
 
@@ -248,7 +248,7 @@ const positioning = async () => {
     QuoteToken: volmexQuoteToken.address,
     Vault: vault.address,
     VaultController: vaultController.address,
-    USDC: usdtAddress,
+    USDT: usdtAddress,
     Deployer: await owner.getAddress()
   };
   console.log("\n =====Deployment Successful===== \n");
@@ -286,7 +286,7 @@ const positioning = async () => {
       ]
     });
   } catch (error) {
-    console.log("ERROR - verify - usdc token!");
+    console.log("ERROR - verify - usdt token!");
   }
   try {
     await run("verify:verify", {
