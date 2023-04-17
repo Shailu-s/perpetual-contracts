@@ -10,6 +10,7 @@ describe("IndexPriceOracle", function () {
   let indexOracle: any;
   let volmexBaseToken: any;
   let baseToken: any;
+  const epochTimeSeconds = 28800;
   const proofHash = "0x6c00000000000000000000000000000000000000000000000000000000000000";
   const capRatio = "400000000";
   const ZERO_ADDR = "0x0000000000000000000000000000000000000000";
@@ -47,6 +48,16 @@ describe("IndexPriceOracle", function () {
       await time.increase(1000);
     }
   });
+
+  describe.only("Epoch", () => {
+    it ("Should calculate epoch of one price", async () => {
+      await time.increase(epochTimeSeconds);
+      await (await indexOracle.addObservation([76000000], [0], [proofHash])).wait();
+      await time.increase(epochTimeSeconds);
+      console.log(await indexOracle.getLastEpochPrice(0));
+    })
+  })
+
   describe("Deployment", function () {
     it("Should deploy volmex oracle", async () => {
       const receipt = await indexOracle.deployed();
