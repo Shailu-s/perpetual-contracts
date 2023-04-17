@@ -1,7 +1,6 @@
-const { expect } = require("chai");
-const { ethers, upgrades } = require("hardhat");
-const assert = require("assert");
-import { Signer, ContractReceipt, ContractTransaction } from "ethers";
+import { expect } from "chai";
+import { ethers, upgrades } from "hardhat";
+import { Signer } from "ethers";
 const { expectRevert, time } = require("@openzeppelin/test-helpers");
 
 describe("IndexPriceOracle", function () {
