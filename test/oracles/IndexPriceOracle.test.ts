@@ -161,7 +161,7 @@ describe("IndexPriceOracle", function () {
       expect(lastEpochPrice.toString()).to.be.equal("800000000");
     });
 
-    it.only("should  give average price last epoch price", async () => {
+    it("should  give average price last epoch price", async () => {
       await time.increase(28800);
       for (let i = 0; i < 5; i++) {
         await volmexOracle.addObservation([800000000], [0], [proofHash]);
