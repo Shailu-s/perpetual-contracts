@@ -1717,7 +1717,7 @@ describe("Periodic Funding payment", function () {
       await markPriceOracle.setObservationAdder(owner.address);
       await indexPriceOracle.setObservationAdder(owner.address);
       for (let index = 0; index <= 100; index++) {
-        await markPriceOracle.addObservation(200060000, 0, proofHash);
+        await markPriceOracle.addObservation(200060000, 0);
       }
       for (let index = 0; index <= 100; index++) {
         await indexPriceOracle.addObservation([200000000], [0], [proofHash]);
@@ -1841,7 +1841,7 @@ describe("Periodic Funding payment", function () {
       await markPriceOracle.setObservationAdder(owner.address);
       await indexPriceOracle.setObservationAdder(owner.address);
       for (let index = 0; index <= 100; index++) {
-        await markPriceOracle.addObservation(200060000, 0, proofHash);
+        await markPriceOracle.addObservation(200060000, 0);
       }
       for (let index = 0; index <= 100; index++) {
         await indexPriceOracle.addObservation([200000000], [0], [proofHash]);
@@ -1975,7 +1975,7 @@ describe("Periodic Funding payment", function () {
       await markPriceOracle.setObservationAdder(owner.address);
       await indexPriceOracle.setObservationAdder(owner.address);
       for (let index = 0; index <= 10; index++) {
-        await markPriceOracle.addObservation(200060000, 0, proofHash);
+        await markPriceOracle.addObservation(200060000, 0);
       }
       for (let index = 0; index <= 10; index++) {
         await indexPriceOracle.addObservation([200000000], [0], [proofHash]);
@@ -2048,7 +2048,7 @@ describe("Periodic Funding payment", function () {
         await indexPriceOracle.addObservation([200000000], [0], [proofHash]);
       }
       for (let index = 0; index <= 10; index++) {
-        await markPriceOracle.addObservation(400000000, 0, proofHash);
+        await markPriceOracle.addObservation(400000000, 0);
       }
       const timestamp = await time.latest();
 
@@ -2090,7 +2090,7 @@ describe("Periodic Funding payment", function () {
         liquidator,
       );
       const traderCollateral = await vaultController.getFreeCollateralByRatio(account4.address, 1);
-      expect(traderCollateral.toString()).to.be.equal("999859951919976000000");
+      expect(traderCollateral.toString()).to.be.equal("1017933874919976000000");
     });
     // Fees deduction
     // user collateral = 1000
@@ -2101,7 +2101,7 @@ describe("Periodic Funding payment", function () {
       await markPriceOracle.setObservationAdder(owner.address);
       await indexPriceOracle.setObservationAdder(owner.address);
       for (let index = 0; index <= 10; index++) {
-        await markPriceOracle.addObservation(200060000, 0, proofHash);
+        await markPriceOracle.addObservation(200060000, 0);
       }
       for (let index = 0; index <= 10; index++) {
         await indexPriceOracle.addObservation([200000000], [0], [proofHash]);
@@ -2174,7 +2174,7 @@ describe("Periodic Funding payment", function () {
         await indexPriceOracle.addObservation([200000000], [0], [proofHash]);
       }
       for (let index = 0; index <= 10; index++) {
-        await markPriceOracle.addObservation(10000000, 0, proofHash);
+        await markPriceOracle.addObservation(10000000, 0);
       }
       await time.increase(18800);
       for (let index = 0; index <= 10; index++) {
@@ -2213,7 +2213,7 @@ describe("Periodic Funding payment", function () {
         liquidator,
       );
       const traderCollateral = await vaultController.getFreeCollateralByRatio(account4.address, 1);
-      expect(traderCollateral.toString()).to.be.equal("999843285253309333333");
+      expect(traderCollateral.toString()).to.be.equal("982679147919976000000");
     });
     // Fees deduction
     // user collateral = 1000
@@ -2224,7 +2224,7 @@ describe("Periodic Funding payment", function () {
       await markPriceOracle.setObservationAdder(owner.address);
       await indexPriceOracle.setObservationAdder(owner.address);
       for (let index = 0; index <= 10; index++) {
-        await markPriceOracle.addObservation(200060000, 0, proofHash);
+        await markPriceOracle.addObservation(200060000, 0);
       }
       for (let index = 0; index <= 10; index++) {
         await indexPriceOracle.addObservation([200000000], [0], [proofHash]);
@@ -2292,7 +2292,7 @@ describe("Periodic Funding payment", function () {
       expect(positionSize2.toString()).to.be.equal("-1000000000000000000");
       await markPriceOracle.setObservationAdder(owner.address);
       for (let index = 0; index <= 10; index++) {
-        await (await markPriceOracle.addObservation(400000000, 0, proofHash)).wait();
+        await (await markPriceOracle.addObservation(400000000, 0)).wait();
       }
       await time.increase(10000);
       for (let index = 0; index <= 10; index++) {
@@ -2305,7 +2305,7 @@ describe("Periodic Funding payment", function () {
       }
       await time.increase(10000);
       for (let index = 0; index <= 10; index++) {
-        await markPriceOracle.addObservation(10000000, 0, proofHash);
+        await markPriceOracle.addObservation(10000000, 0);
       }
       for (let index = 0; index <= 10; index++) {
         await indexPriceOracle.addObservation([200000000], [0], [proofHash]);
@@ -2348,7 +2348,7 @@ describe("Periodic Funding payment", function () {
         liquidator,
       );
       const traderCollateral = await vaultController.getFreeCollateralByRatio(account4.address, 1);
-      expect(traderCollateral.toString()).to.be.equal("999862560586642666666");
+      expect(traderCollateral.toString()).to.be.equal("958140857253309333334");
     });
   });
 });
