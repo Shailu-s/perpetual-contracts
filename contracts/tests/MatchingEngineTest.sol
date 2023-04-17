@@ -21,12 +21,12 @@ contract MatchingEngineTest is MatchingEngine {
         makerMinSalt[_msgSender()] = _val;
     }
 
-    function addAssets(uint256[] calldata _underlyingPrices, address[] calldata _assets, bytes32[] calldata _proofHash, uint256[] calldata _capRatio) public {
-        markPriceOracle.addAssets(_underlyingPrices, _assets, _proofHash, _capRatio);
+    function addAssets(uint256[] calldata _underlyingPrices, address[] calldata _assets, uint256[] calldata _capRatio) public {
+        markPriceOracle.addAssets(_underlyingPrices, _assets, _capRatio);
     }
 
     function addObservation(uint256 _priceCumulative, uint256 _index) public {
-        markPriceOracle.addObservation(_priceCumulative, _index, bytes32(0));
+        markPriceOracle.addObservation(_priceCumulative, _index);
     }
 
     //TODO Should be inculded in matching engine core
