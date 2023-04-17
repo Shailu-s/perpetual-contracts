@@ -32,7 +32,7 @@ describe("IndexPriceOracle", function () {
     );
     indexOracle = await upgrades.deployProxy(indexOracleFactory, [
       owner,
-      [10000000],
+      [75000000],
       [baseToken.address],
       [proofHash],
       [capRatio],
