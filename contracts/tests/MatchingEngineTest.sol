@@ -24,10 +24,9 @@ contract MatchingEngineTest is MatchingEngine {
     function addAssets(
         uint256[] calldata _underlyingPrices,
         address[] calldata _assets,
-        bytes32[] calldata _proofHash,
         uint256[] calldata _capRatio
     ) public {
-        markPriceOracle.addAssets(_underlyingPrices, _assets, _proofHash, _capRatio);
+        markPriceOracle.addAssets(_underlyingPrices, _assets, _capRatio);
     }
 
     function addObservation(uint256 _priceCumulative, uint256 _index) public {
