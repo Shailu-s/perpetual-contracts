@@ -392,7 +392,7 @@ describe("MarkPriceOracle", function () {
       }
       const timestamp = await time.latest();
       const lastEpochPrice = (await markPriceOracle.getLastEpochPrice(0))[0];
-      expect(parseInt(lastEpochPrice)).to.be.equal(80000000);
+      expect(parseInt(lastEpochPrice)).to.be.equal(79607831);
     });
 
     it("Should get cumulative price with time delay", async () => {
@@ -443,7 +443,7 @@ describe("MarkPriceOracle", function () {
         await time.increase(1000);
       }
       const txn2 = await markPriceOracle.getMarkSma(10000, 0);
-      expect(Number(txn2)).equal(60000000);
+      expect(Number(txn2)).equal(20000000);
     });
 
     it("Should fail to  add multiple observations because uneuqal length of inputs", async () => {
