@@ -21,6 +21,7 @@ contract IndexPriceOracle is AccessControlUpgradeable, ERC165StorageUpgradeable 
         uint256 price;
         uint256 timestamp;
     }
+
     // Interface ID of VolmexOracle contract, hashId = 0xf9fffc9f
     bytes4 private constant _IVOLMEX_ORACLE_ID = type(IIndexPriceOracle).interfaceId;
     // price oracle admin role
@@ -226,6 +227,15 @@ contract IndexPriceOracle is AccessControlUpgradeable, ERC165StorageUpgradeable 
     function getLastUpdatedTimestamp(uint256 _index) external view returns (uint256 lastUpdatedTimestamp) {
         IndexObservation[] memory observations = observationsByIndex[_index];
         lastUpdatedTimestamp = observations[observations.length - 1].timestamp;
+    }
+
+    function getIndexObservation(uint256 _index) external view returns (uint256 length) {
+        IndexObservation[] memory observations = observationsByIndex[_index];
+        length = observations.length;
+    }
+    function getIndexPriceByEpoch(uint256 _index) external view returns (uint256 length) {
+        IndexPriceByEpoch[] memory epochs = indexPriceAtEpochs[_index];
+        length = epochs.length;
     }
 
     function _addAssets(
