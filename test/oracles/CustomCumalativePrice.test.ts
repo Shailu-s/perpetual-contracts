@@ -335,7 +335,7 @@ describe("Custom Cumulative Price", function () {
       for (index = 0; index < 96; index++) {
         // add obeservation in every 5 minutes
         await time.increase(300);
-        const tx = await markPriceOracle.addObservation(70000000, 0, proofHash);
+        const tx = await markPriceOracle.addObservation(70000000, 0);
         const { events } = await tx.wait();
 
         let data;
