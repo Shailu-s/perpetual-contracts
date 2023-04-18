@@ -69,11 +69,12 @@ describe("IndexPriceOracle", function () {
       expect((await indexOracle.getLastEpochPrice(0))[0].toString()).equal(priceCumulative.toString());
     });
 
-    it.only("Should skip an epoch and fills the epoch correctly", async () => {
+    it("Should skip an epoch and fills the epoch correctly", async () => {
       await time.increase(epochTimeSeconds * 2);
       await (await indexOracle.addObservation([76000000], [0], [proofHash])).wait();
       await time.increase(epochTimeSeconds * 2);
       await (await indexOracle.addObservation([86000000], [0], [proofHash])).wait();
+      await time.increase(epochTimeSeconds);
       const indexLength = await indexOracle.getIndexPriceByEpoch(0);
       expect((await indexOracle.getLastEpochPrice(0))[0].toString()).equal("86000000");
       expect(indexLength.toString()).equal("3");

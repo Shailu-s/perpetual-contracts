@@ -6,7 +6,7 @@ import "@openzeppelin/contracts-upgradeable/utils/introspection/ERC165StorageUpg
 import { AccessControlUpgradeable } from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 
 import "../interfaces/IIndexPriceOracle.sol";
-import "hardhat/console.sol";
+
 /**
  * @title Volmex Oracle contract
  * @author volmex.finance [security@volmexlabs.com]
@@ -309,7 +309,6 @@ contract IndexPriceOracle is AccessControlUpgradeable, ERC165StorageUpgradeable 
     function _getCustomEpochPrice(uint256 _index, uint256 _epochTimestamp) internal view returns (uint256 price, uint256 timestamp) {
         IndexPriceByEpoch[] memory indexPriceByEpoch = indexPriceAtEpochs[_index];
         uint256 currentEpochIndex = indexPriceByEpoch.length;
-        console.log("currentEpochIndex", currentEpochIndex);
         if (currentEpochIndex != 0) {
             for (; currentEpochIndex != 0 && indexPriceByEpoch[currentEpochIndex - 1].timestamp >= _epochTimestamp; currentEpochIndex--) {}
             price = indexPriceByEpoch[currentEpochIndex - 1].price;
