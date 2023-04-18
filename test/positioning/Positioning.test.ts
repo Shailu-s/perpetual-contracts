@@ -309,7 +309,26 @@ describe("Positioning", function () {
           ),
         ).to.be.revertedWith("P_PCNC");
       });
-
+      it("should fail to initialze account balance again", async () => {
+        await expect(accountBalance.initialize(positioningConfig.address)).to.be.revertedWith(
+          "Initializable: contract is already initialized",
+        );
+      });
+      it("should fail to intialize again", async () => {
+        const [owner, account1, account2] = await ethers.getSigners();
+        await expect(
+          positioning.initialize(
+            account1.address,
+            vaultController.address,
+            accountBalance1.address,
+            matchingEngine.address,
+            markPriceOracle.address,
+            indexPriceOracle.address,
+            0,
+            [owner.address, account2.address],
+          ),
+        ).to.be.revertedWith("Initializable: contract is already initialized");
+      });
       it("wrong vault controller", async () => {
         const [owner, account1, account2] = await ethers.getSigners();
 
@@ -383,12 +402,52 @@ describe("Positioning", function () {
 
   describe("setDefaultFeeReceiver", async () => {
     it("should fail to set default fee receiver as zero address", async () => {
+      await expect(positioning.connect(owner).setDefaultFeeReceiver(ZERO_ADDR)).to.be.revertedWith(
+        "PC_DFRZ",
+      );
+    });
+    it("should fail to set default fee receiver as caaler is not owner", async () => {
       await expect(
-        positioning.connect(owner).setDefaultFeeReceiver(ethers.constants.AddressZero),
-      ).to.be.revertedWith("PC_DFRZ");
+        positioning.connect(account1).setDefaultFeeReceiver(account1.address),
+      ).to.be.revertedWith("Ownable: caller is not the owner");
     });
   });
-
+  describe("setIndexPriceOracle", async () => {
+    it("should set index price oracle ", async () => {
+      expect(await positioning.connect(owner).setIndexPriceOracle(indexPriceOracle.address))
+        .to.emit(positioning, "IndexPriceSet")
+        .withArgs(indexPriceOracle.address);
+    });
+    it("should fail to set  index price oracle ", async () => {
+      await expect(positioning.connect(owner).setIndexPriceOracle(ZERO_ADDR)).to.be.revertedWith(
+        "P_AZ",
+      );
+    });
+  });
+  describe("setUnderlying price index", async () => {
+    it("should set index price oracle ", async () => {
+      expect(await accountBalance.connect(owner).setUnderlyingPriceIndex(1))
+        .to.emit(accountBalance, "UnderlyingPriceIndexSet")
+        .withArgs(1);
+    });
+    it("should fail to set  index price oracle ", async () => {
+      await expect(accountBalance.connect(account1).setUnderlyingPriceIndex(1)).to.be.revertedWith(
+        "AccountBalance: Not admin",
+      );
+    });
+  });
+  describe("set funding period", async () => {
+    it("should set index price oracle ", async () => {
+      expect(await positioning.connect(owner).setFundingPeriod("500"))
+        .to.emit(positioning, "FundingPeriodSet")
+        .withArgs("500");
+    });
+    it("should fail to set  index price oracle ", async () => {
+      await expect(positioning.connect(account1).setFundingPeriod(28800)).to.be.revertedWith(
+        "Positioning: Not admin",
+      );
+    });
+  });
   describe("toggleLiquidatorWhitelist", async () => {
     it("should fail to set whitelisted flag if caller doesn't have admin role", async () => {
       await expect(positioning.connect(account1).toggleLiquidatorWhitelist()).to.be.revertedWith(
@@ -463,6 +522,34 @@ describe("Positioning", function () {
 
         await expect(positionSize).to.be.equal(convert("24"));
         await expect(positionSize1).to.be.equal(convert("-24"));
+      });
+      it(" should fail to validate orders", async () => {
+        let orderLeftLeverage = Order(
+          ORDER,
+          deadline,
+          ZERO_ADDR,
+          Asset(virtualToken.address, convert("2000")),
+          Asset(volmexBaseToken.address, convert("20")),
+          2,
+          0,
+          false,
+        );
+        await expect(positioning.getOrderValidate(orderLeftLeverage)).to.revertedWith(
+          "V_PERP_M: order verification failed",
+        );
+        orderLeftLeverage = Order(
+          ORDER,
+          deadline,
+          account1.address,
+          Asset(virtualToken.address, convert("2000")),
+          Asset(volmexBaseToken.address, convert("20")),
+          0,
+          0,
+          false,
+        );
+        await expect(positioning.getOrderValidate(orderLeftLeverage)).to.revertedWith(
+          "V_PERP_M: 0 salt can't be used",
+        );
       });
 
       it("should match orders and open position with leverage", async () => {
@@ -540,7 +627,12 @@ describe("Positioning", function () {
           account2.address,
           orderLeft.takeAsset.virtualToken,
         );
-
+        const indexPrice = await positioning.getIndexPrice(volmexBaseToken.address);
+        expect(indexPrice.toString()).to.be.equal("10000000000");
+        const isTraderLiquidatable = await positioning.isAccountLiquidatable(account1.address);
+        expect(isTraderLiquidatable).to.be.equal(false);
+        const accountValue = await positioning.getAccountValue(account1.address);
+        console.log("trader1 account value :", accountValue.toString());
         await expect(positionSize.toString()).to.be.equal(convert("20"));
         await expect(positionSize1.toString()).to.be.equal(convert("-20"));
       });
@@ -623,7 +715,13 @@ describe("Positioning", function () {
           account2.address,
           orderLeft.takeAsset.virtualToken,
         );
-
+        const pnltoBerealized = await positioning.getPnlToBeRealized({
+          trader: account1.address,
+          baseToken: volmexBaseToken.address,
+          base: "10000",
+          quote: "10000000",
+        });
+        expect(pnltoBerealized.toString()).to.be.equal("0");
         await expect(positionSize.toString()).to.be.equal(convert("40"));
         await expect(positionSize1.toString()).to.be.equal(convert("-40"));
       });
@@ -1322,6 +1420,101 @@ describe("Positioning", function () {
         );
 
         await expect(positionSizeAfter).to.be.equal("0");
+      });
+      it("should not be allowed to close position", async () => {
+        // indexPriceOracle.getIndexSma.whenCalledWith(0).returns(['1000000000000000', '0', '0']);
+        // indexPriceOracle.getIndexSma.whenCalledWith(3600).returns(['1000000000000000', '0', '0']);
+
+        await matchingEngine.grantMatchOrders(positioning.address);
+
+        await virtualToken.mint(account1.address, convert("1000000000"));
+        await virtualToken.mint(account2.address, convert("1000000000"));
+
+        await virtualToken.connect(account1).approve(vault.address, convert("1000000000"));
+        await virtualToken.connect(account2).approve(vault.address, convert("1000000000"));
+        await virtualToken
+          .connect(account1)
+          .approve(volmexPerpPeriphery.address, convert("1000000000"));
+        await virtualToken
+          .connect(account2)
+          .approve(volmexPerpPeriphery.address, convert("1000000000"));
+        await vaultController
+          .connect(account1)
+          .deposit(
+            volmexPerpPeriphery.address,
+            virtualToken.address,
+            account1.address,
+            convert("1000"),
+          );
+        await vaultController
+          .connect(account2)
+          .deposit(
+            volmexPerpPeriphery.address,
+            virtualToken.address,
+            account2.address,
+            convert("1000"),
+          );
+
+        const orderLeft1 = Order(
+          ORDER,
+          deadline,
+          account1.address,
+          Asset(volmexBaseToken.address, BigNumber.from("24").mul(one).toString()),
+          Asset(virtualToken.address, BigNumber.from("240").mul(one).toString()),
+          1,
+          0,
+          true,
+        );
+
+        const orderRight1 = Order(
+          ORDER,
+          deadline,
+          account2.address,
+          Asset(virtualToken.address, BigNumber.from("240").mul(one).toString()),
+          Asset(volmexBaseToken.address, BigNumber.from("24").mul(one).toString()),
+          1,
+          0,
+          false,
+        );
+
+        let signatureLeft = await getSignature(orderLeft, account1.address);
+        let signatureRight = await getSignature(orderRight, account2.address);
+
+        // opening the position here
+        await expect(
+          positioning
+            .connect(account1)
+            .openPosition(orderLeft, signatureLeft, orderRight, signatureRight, liquidator),
+        ).to.emit(positioning, "PositionChanged");
+
+        const positionSize = await accountBalance1.getPositionSize(
+          account1.address,
+          orderLeft.takeAsset.virtualToken,
+        );
+        const positionSize1 = await accountBalance1.getPositionSize(
+          account2.address,
+          orderLeft.takeAsset.virtualToken,
+        );
+        await indexPriceOracle.setObservationAdder(owner.address);
+        for (let i = 0; i < 10; i++) {
+          await indexPriceOracle.addObservation([400000000], [0], [proofHash]);
+        }
+        await time.increase(28800);
+        for (let i = 0; i < 10; i++) {
+          await indexPriceOracle.addObservation([400000000], [0], [proofHash]);
+        }
+        await expect(positionSize).to.be.equal("24000000000000000000");
+        await expect(positionSize1).to.be.equal("-24000000000000000000");
+
+        let signatureLeft1 = await getSignature(orderLeft1, account1.address);
+        let signatureRight1 = await getSignature(orderRight1, account2.address);
+
+        // reducing the position here
+        await expect(
+          positioning
+            .connect(account1)
+            .openPosition(orderLeft1, signatureLeft1, orderRight1, signatureRight1, liquidator),
+        ).to.be.revertedWith("CH_NEMRM");
       });
 
       it("should close the whole position", async () => {
@@ -2280,11 +2473,7 @@ describe("Liquidation test in Positioning", function () {
     await volmexBaseToken1.setPriceFeed(indexPriceOracle.address);
     markPriceOracle = await upgrades.deployProxy(
       MarkPriceOracle,
-      [
-        [100000000, 100000000],
-        [volmexBaseToken.address, volmexBaseToken1.address],
-        owner.address,
-      ],
+      [[100000000, 100000000], [volmexBaseToken.address, volmexBaseToken1.address], owner.address],
       {
         initializer: "initialize",
       },

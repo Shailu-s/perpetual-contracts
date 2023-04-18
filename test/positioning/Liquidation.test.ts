@@ -136,11 +136,7 @@ describe("Liquidation test in Positioning", function () {
     await volmexBaseToken1.setPriceFeed(indexPriceOracle.address);
     markPriceOracle = await upgrades.deployProxy(
       MarkPriceOracle,
-      [
-        [100000000, 100000000],
-        [volmexBaseToken.address, volmexBaseToken1.address],
-        owner.address,
-      ],
+      [[100000000, 100000000], [volmexBaseToken.address, volmexBaseToken1.address], owner.address],
       {
         initializer: "initialize",
       },
@@ -382,7 +378,112 @@ describe("Liquidation test in Positioning", function () {
         await expect(positionSizeAfter.toString()).to.be.equal("-1000000000000000000");
         await expect(positionSizeLiquidator.toString()).to.be.equal("1000000000000000000");
       });
+      it("should liquidate trader when liquidator white list is disabled", async () => {
+        await positioning.toggleLiquidatorWhitelist();
+        let signatureLeft = await getSignature(orderLeft, account1.address);
+        let signatureRight = await getSignature(orderRight, account2.address);
 
+        await expect(
+          positioning.openPosition(
+            orderLeft,
+            signatureLeft,
+            orderRight,
+            signatureRight,
+            liquidator,
+          ),
+        ).to.emit(positioning, "PositionChanged");
+
+        const positionSize = await accountBalance1.getPositionSize(
+          account1.address,
+          orderLeft.makeAsset.virtualToken,
+        );
+        const positionSize1 = await accountBalance1.getPositionSize(
+          account2.address,
+          orderLeft.makeAsset.virtualToken,
+        );
+
+        await expect(positionSize.toString()).to.be.equal("-2000000000000000000");
+        await expect(positionSize1.toString()).to.be.equal("2000000000000000000");
+        await time.increase(14400);
+        const proofHash = "0x6c00000000000000000000000000000000000000000000000000000000000000";
+
+        for (let index = 0; index < 10; index++) {
+          await (await indexPriceOracle.addObservation([200000000], [0], [proofHash])).wait();
+          await (await indexPriceOracle.addObservation([200000000], [1], [proofHash])).wait();
+        }
+
+        await time.increase(28800);
+        for (let index = 0; index < 50; index++) {
+          await (await indexPriceOracle.addObservation([250000000], [0], [proofHash])).wait();
+          await (await indexPriceOracle.addObservation([250000000], [1], [proofHash])).wait();
+        }
+        // liquidating the position
+        await expect(
+          positioning
+            .connect(account2)
+            .liquidate(account1.address, volmexBaseToken.address, "-1000000000000000000"),
+        ).to.emit(positioning, "PositionLiquidated");
+
+        const positionSizeAfter = await accountBalance1.getPositionSize(
+          account1.address,
+          volmexBaseToken.address,
+        );
+
+        const positionSizeLiquidator = await accountBalance1.getPositionSize(
+          account2.address,
+          volmexBaseToken.address,
+        );
+
+        await expect(positionSizeAfter.toString()).to.be.equal("-1000000000000000000");
+        await expect(positionSizeLiquidator.toString()).to.be.equal("1000000000000000000");
+      });
+      it("should not liquidate when contract is paused", async () => {
+        await positioning.toggleLiquidatorWhitelist();
+        let signatureLeft = await getSignature(orderLeft, account1.address);
+        let signatureRight = await getSignature(orderRight, account2.address);
+
+        await expect(
+          positioning.openPosition(
+            orderLeft,
+            signatureLeft,
+            orderRight,
+            signatureRight,
+            liquidator,
+          ),
+        ).to.emit(positioning, "PositionChanged");
+
+        const positionSize = await accountBalance1.getPositionSize(
+          account1.address,
+          orderLeft.makeAsset.virtualToken,
+        );
+        const positionSize1 = await accountBalance1.getPositionSize(
+          account2.address,
+          orderLeft.makeAsset.virtualToken,
+        );
+
+        await expect(positionSize.toString()).to.be.equal("-2000000000000000000");
+        await expect(positionSize1.toString()).to.be.equal("2000000000000000000");
+        await time.increase(14400);
+        const proofHash = "0x6c00000000000000000000000000000000000000000000000000000000000000";
+
+        for (let index = 0; index < 10; index++) {
+          await (await indexPriceOracle.addObservation([200000000], [0], [proofHash])).wait();
+          await (await indexPriceOracle.addObservation([200000000], [1], [proofHash])).wait();
+        }
+
+        await time.increase(28800);
+        for (let index = 0; index < 50; index++) {
+          await (await indexPriceOracle.addObservation([250000000], [0], [proofHash])).wait();
+          await (await indexPriceOracle.addObservation([250000000], [1], [proofHash])).wait();
+        }
+        // liquidating the position
+        await positioning.pause();
+        await expect(
+          positioning
+            .connect(account2)
+            .liquidate(account1.address, volmexBaseToken.address, "-1000000000000000000"),
+        ).to.be.revertedWith("Pausable: paused");
+      });
       it("should liquidate trader when position size / total position size < 1 liquidatable position size > 0  ", async () => {
         let signatureLeft = await getSignature(orderLeft, account1.address);
         let signatureRight = await getSignature(orderRight, account2.address);

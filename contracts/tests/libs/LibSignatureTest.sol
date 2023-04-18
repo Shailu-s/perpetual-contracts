@@ -8,7 +8,7 @@ import "../../libs/LibSignature.sol";
 contract LibSignatureTest {
     using LibSignature for bytes32;
 
-    function recoverFromSigTest(bytes32 hash, bytes memory signature) external pure returns (address) {
+    function recoverFromSigTest(bytes32 hash, bytes memory signature) external view returns (address) {
         return hash.recover(signature);
     }
 
@@ -17,7 +17,7 @@ contract LibSignatureTest {
         uint8 v,
         bytes32 r,
         bytes32 s
-    ) external pure returns (address) {
+    ) external view returns (address) {
         return hash.recover(v, r, s);
     }
 

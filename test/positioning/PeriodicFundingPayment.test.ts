@@ -1793,6 +1793,7 @@ describe("Periodic Funding payment", function () {
       for (let index = 0; index <= 10; index++) {
         await indexPriceOracle.addObservation([200000000], [0], [proofHash]);
       }
+      console.log((await vaultController.getAccountValue(account4.address)).toString());
       console.log("close position");
       const orderLeft1 = Order(
         ORDER,
