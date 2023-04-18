@@ -75,7 +75,52 @@ describe("IndexPriceOracle", function () {
       expect((await indexOracle.getLastEpochPrice(0))[0].toString()).equal("86000000");
       expect(indexLength.toString()).equal("2");
     })
-  })
+  });
+
+  describe.only("Setters and getters", () => {
+    it("Should set index sm interval", async () => {
+      const receipt = await (await indexOracle.setIndexSmInterval(14400)).wait();
+      expect(receipt.confirmations).not.equal(0);
+      expect((await indexOracle.indexSmInterval()).toString()).equal("14400");
+    })
+
+    it("Should fetch custom epoch price", async () => {
+      await time.increase(epochTimeSeconds * 2);
+      await (await indexOracle.addObservation([76000000], [0], [proofHash])).wait();
+      await time.increase(epochTimeSeconds);
+      expect((await indexOracle.getCustomEpochPrice(0, (await time.latest()).toString()))[0].toString()).equal("76000000");
+    });
+
+    it("Should fetch last sma", async () => {
+      await (await indexOracle.addObservation([76000000], [0], [proofHash])).wait();
+      await time.increase(epochTimeSeconds);
+      expect((await indexOracle.getLastSma(28801, 0)).toString()).equal("76000000");
+    })
+
+    it("Should get current added indices", async () => {
+      expect((await indexOracle.getIndexCount()).toString()).equal("1");
+    })
+
+    it("Should get last updated timestamp", async () => {
+      await (await indexOracle.addObservation([76000000], [0], [proofHash])).wait();
+      expect((await indexOracle.getLastUpdatedTimestamp(0)).toString()).equal((await time.latest()).toString());
+    })
+
+    it("Should get total observations added", async () => {
+      expect((await indexOracle.getIndexObservation(0)).toString()).equal("1");
+    })
+
+    it("Should return zero when no epoch is added", async () => {
+      expect((await indexOracle.getLastEpochPrice(0))[0].toString()).equal("0");
+    })
+
+    it("Should revert for non role call of initial timestamp", async () => {
+      await expectRevert(
+        indexOracle.connect(accounts[1]).setInitialTimestamp((await time.latest()).toString()),
+        "IndexPriceOracle: not first interval adder"
+      );
+    })
+  });
 
   describe("Deployment", function () {
     it("Should deploy volmex oracle", async () => {
