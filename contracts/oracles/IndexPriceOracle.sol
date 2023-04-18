@@ -311,8 +311,8 @@ contract IndexPriceOracle is AccessControlUpgradeable, ERC165StorageUpgradeable 
         uint256 currentEpochIndex = indexPriceByEpoch.length;
         if (currentEpochIndex != 0) {
             for (; currentEpochIndex != 0 && indexPriceByEpoch[currentEpochIndex - 1].timestamp >= _epochTimestamp; currentEpochIndex--) {}
-            price = indexPriceByEpoch[currentEpochIndex - 1].price;
-            timestamp = indexPriceByEpoch[currentEpochIndex - 1].timestamp;
+            price = indexPriceByEpoch[currentEpochIndex].price;
+            timestamp = indexPriceByEpoch[currentEpochIndex].timestamp;
         } else {
             return (0, 0);
         }
