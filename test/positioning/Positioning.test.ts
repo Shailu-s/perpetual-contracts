@@ -314,6 +314,11 @@ describe("Positioning", function () {
           "Initializable: contract is already initialized",
         );
       });
+      it("should fail to initialze account balance again because invalid positionig config adderess", async () => {
+        await expect(upgrades.deployProxy(AccountBalance, [account1.address])).to.be.revertedWith(
+          "AB_VPMMCNC",
+        );
+      });
       it("should fail to intialize again", async () => {
         const [owner, account1, account2] = await ethers.getSigners();
         await expect(
@@ -1722,7 +1727,93 @@ describe("Positioning", function () {
 
         await positioning.settleAllFunding(account1.address);
       });
+      it("should fail to settle owed realized pnl", async () => {
+        await expect(
+          accountBalance.connect(account1).settleOwedRealizedPnl(owner.address),
+        ).to.be.revertedWith("AccountBalance: Not role settle PNL");
+      });
+      it("should fail to register base token", async () => {
+        const volmexBaseToken1 = await upgrades.deployProxy(
+          VolmexBaseToken,
+          [
+            "VolmexBaseToken", // nameArg
+            "VBT", // symbolArg,
+            account1.address, // priceFeedArg
+            true, // isBase
+          ],
+          {
+            initializer: "initialize",
+          },
+        );
+        await volmexBaseToken1.deployed();
+        await marketRegistry.addBaseToken(volmexBaseToken1.address);
+        await positioningConfig.setMaxMarketsPerAccount(1);
+        await matchingEngine.grantMatchOrders(positioning.address);
 
+        await virtualToken.mint(account1.address, ten.toString());
+        await virtualToken.mint(account2.address, ten.toString());
+
+        await virtualToken.connect(account1).approve(vault.address, ten.toString());
+        await virtualToken.connect(account2).approve(vault.address, ten.toString());
+        await virtualToken.connect(account1).approve(volmexPerpPeriphery.address, ten.toString());
+        await virtualToken.connect(account2).approve(volmexPerpPeriphery.address, ten.toString());
+
+        await vaultController
+          .connect(account1)
+          .deposit(
+            volmexPerpPeriphery.address,
+            virtualToken.address,
+            account1.address,
+            ten.toString(),
+          );
+        await vaultController
+          .connect(account2)
+          .deposit(
+            volmexPerpPeriphery.address,
+            virtualToken.address,
+            account2.address,
+            ten.toString(),
+          );
+        let signatureLeft = await getSignature(orderLeft, account1.address);
+        let signatureRight = await getSignature(orderRight, account2.address);
+        await expect(
+          positioning
+            .connect(account1)
+            .openPosition(orderLeft, signatureLeft, orderRight, signatureRight, liquidator),
+        );
+        const orderLeft1 = Order(
+          ORDER,
+          deadline,
+          account1.address,
+          Asset(virtualToken.address, convert("20")),
+          Asset(volmexBaseToken1.address, convert("2")),
+          1,
+          0,
+          false,
+        );
+
+        const orderRight2 = Order(
+          ORDER,
+          deadline,
+          account2.address,
+          Asset(volmexBaseToken1.address, convert("2")),
+          Asset(virtualToken.address, convert("20")),
+          2,
+          0,
+          true,
+        );
+
+        let signatureLeft1 = await getSignature(orderLeft1, account1.address);
+        let signatureRight1 = await getSignature(orderRight2, account2.address);
+
+        // opening the position here
+        console.log("here");
+        await expect(
+          positioning
+            .connect(account1)
+            .openPosition(orderLeft1, signatureLeft1, orderRight2, signatureRight1, liquidator),
+        ).to.be.revertedWith("AB_MNE");
+      });
       it("test for liquidators", async () => {
         await expect(await positioning.isLiquidatorWhitelisted(owner.address)).to.equal(true);
 

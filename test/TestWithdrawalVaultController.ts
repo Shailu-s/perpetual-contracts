@@ -186,7 +186,144 @@ describe("Vault Controller tests for withdrawal", function () {
       vaultController.connect(alice).withdraw(USDC.address, alice.address, amount),
     ).to.emit(USDCVaultContract, "Withdrawn");
   });
+  it.only("Negative Test for withdrawal of token", async () => {
+    const amount = parseUnits("100", await USDC.decimals());
 
+    await positioningConfig.setSettlementTokenBalanceCap(amount);
+
+    const USDCVaultAddress = await vaultController.getVault(USDC.address);
+
+    const USDCVaultContract = await vaultFactory.attach(USDCVaultAddress);
+    await USDC.connect(alice).approve(USDCVaultAddress, amount);
+    await USDC.connect(alice).approve(volmexPerpPeriphery.address, amount);
+    await USDCVaultContract.setPositioning(positioning.address);
+
+    // check event has been sent
+    await expect(
+      vaultController
+        .connect(alice)
+        .deposit(volmexPerpPeriphery.address, USDC.address, alice.address, amount),
+    ).to.emit(USDCVaultContract, "Deposited");
+
+    // // check sender's balance
+    expect(await vaultController.getBalanceByToken(alice.address, USDC.address)).to.eq(
+      "100000000000000000000",
+    );
+    await vaultController.pause();
+    await expect(
+      vaultController.connect(alice).withdraw(USDC.address, alice.address, amount),
+    ).to.be.revertedWith("Pausable: paused");
+  });
+  it.only("Negative Test for withdrawal of token when vault addressis zero", async () => {
+    const amount = parseUnits("100", await USDC.decimals());
+
+    await positioningConfig.setSettlementTokenBalanceCap(amount);
+
+    const USDCVaultAddress = await vaultController.getVault(USDC.address);
+
+    const USDCVaultContract = await vaultFactory.attach(USDCVaultAddress);
+    await USDC.connect(alice).approve(USDCVaultAddress, amount);
+    await USDC.connect(alice).approve(volmexPerpPeriphery.address, amount);
+    await USDCVaultContract.setPositioning(positioning.address);
+
+    // check event has been sent
+    await expect(
+      vaultController
+        .connect(alice)
+        .deposit(volmexPerpPeriphery.address, USDC.address, alice.address, amount),
+    ).to.emit(USDCVaultContract, "Deposited");
+
+    // // check sender's balance
+    expect(await vaultController.getBalanceByToken(alice.address, USDC.address)).to.eq(
+      "100000000000000000000",
+    );
+    await expect(
+      vaultController.connect(alice).withdraw(alice.address, alice.address, amount),
+    ).to.be.revertedWith("VC_VOTNA");
+  });
+  it.only("Negative Test for withdrawal of token when vault addressis zero", async () => {
+    const amount = parseUnits("100", await USDC.decimals());
+
+    await positioningConfig.setSettlementTokenBalanceCap(amount);
+
+    const USDCVaultAddress = await vaultController.getVault(USDC.address);
+
+    const USDCVaultContract = await vaultFactory.attach(USDCVaultAddress);
+    await USDC.connect(alice).approve(USDCVaultAddress, amount);
+    await USDC.connect(alice).approve(volmexPerpPeriphery.address, amount);
+    await USDCVaultContract.setPositioning(positioning.address);
+
+    // check event has been sent
+    await expect(
+      vaultController
+        .connect(alice)
+        .deposit(volmexPerpPeriphery.address, USDC.address, alice.address, amount),
+    ).to.emit(USDCVaultContract, "Deposited");
+
+    // // check sender's balance
+    expect(await vaultController.getBalanceByToken(alice.address, USDC.address)).to.eq(
+      "100000000000000000000",
+    );
+    await expect(
+      vaultController.connect(alice).withdraw(USDC.address, alice.address, "0"),
+    ).to.be.revertedWith("VC_CWZA");
+  });
+  it.only("when positioning is not set", async () => {
+    const vaultContractFactory = await ethers.getContractFactory("VaultController");
+    const [owner, alice] = await ethers.getSigners();
+    let vaultController1 = await upgrades.deployProxy(vaultContractFactory, [
+      positioningConfig.address,
+      accountBalance.address,
+    ]);
+
+    vaultFactory = await ethers.getContractFactory("Vault");
+    vault = await upgrades.deployProxy(vaultFactory, [
+      positioningConfig.address,
+      accountBalance.address,
+      USDC.address,
+      vaultController1.address,
+    ]);
+    DAIVault = await upgrades.deployProxy(vaultFactory, [
+      positioningConfig.address,
+      accountBalance.address,
+      DAI.address,
+      vaultController1.address,
+    ]);
+
+    Positioning = await ethers.getContractFactory("PositioningTest");
+    positioning = await upgrades.deployProxy(
+      Positioning,
+      [
+        positioningConfig.address,
+        vaultController1.address,
+        accountBalance.address,
+        matchingEngineFake.address,
+        markPriceOracle.address,
+        indexPriceOracle.address,
+        0,
+        [owner.address, alice.address],
+      ],
+      {
+        initializer: "initialize",
+      },
+    );
+
+    await vaultController1.registerVault(vault.address, USDC.address);
+    await vaultController1.registerVault(DAIVault.address, DAI.address);
+
+    const amount = parseUnits("100", await USDC.decimals());
+
+    await positioningConfig.setSettlementTokenBalanceCap(amount);
+
+    const USDCVaultAddress = await vaultController1.getVault(USDC.address);
+
+    const USDCVaultContract = await vaultFactory.attach(USDCVaultAddress);
+    await USDC.connect(alice).approve(USDCVaultAddress, amount);
+    await USDC.connect(alice).approve(volmexPerpPeriphery.address, amount);
+    await expect(
+      vaultController1.connect(alice).withdraw(USDC.address, alice.address, amount),
+    ).to.be.revertedWith("VC_PNS");
+  });
   it("Negative Test for withdrawal of token", async () => {
     const amount = parseUnits("100", await USDC.decimals());
 
