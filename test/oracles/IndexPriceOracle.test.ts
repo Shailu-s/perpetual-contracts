@@ -77,7 +77,7 @@ describe("IndexPriceOracle", function () {
     })
   });
 
-  describe.only("Setters and getters", () => {
+  describe("Setters and getters", () => {
     it("Should set index sm interval", async () => {
       const receipt = await (await indexOracle.setIndexSmInterval(14400)).wait();
       expect(receipt.confirmations).not.equal(0);
