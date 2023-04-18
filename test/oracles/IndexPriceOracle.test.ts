@@ -49,12 +49,34 @@ describe("IndexPriceOracle", function () {
     }
   });
 
-  describe("Epoch", () => {
-    it ("Should calculate epoch of one price", async () => {
+  describe.only("Epoch", () => {
+    it("Should calculate epoch of one price", async () => {
+      await time.increase(epochTimeSeconds * 2);
+      await (await indexOracle.addObservation(["76000000"], [0], [proofHash])).wait();
       await time.increase(epochTimeSeconds);
+      expect((await indexOracle.getLastEpochPrice(0))[0].toString()).equal("76000000");
+    });
+
+    it("Should calculate epoch of average values in that epoch", async () => {
+      await time.increase(epochTimeSeconds * 2);
+      let sum = 0;
+      let index;
+      for (index = 0; index < 10; ++index) {
+        await (await indexOracle.addObservation([100000000 + index * 1000000], [0], [proofHash])).wait();
+        sum += 100000000 + index * 1000000;
+      }
+      const priceCumulative = sum / index;
+      expect((await indexOracle.getLastEpochPrice(0))[0].toString()).equal(priceCumulative.toString());
+    });
+
+    it.only("Should skip an epoch and fills the epoch correctly", async () => {
+      await time.increase(epochTimeSeconds * 2);
       await (await indexOracle.addObservation([76000000], [0], [proofHash])).wait();
-      await time.increase(epochTimeSeconds);
-      console.log(await indexOracle.getLastEpochPrice(0));
+      await time.increase(epochTimeSeconds * 2);
+      await (await indexOracle.addObservation([86000000], [0], [proofHash])).wait();
+      const indexLength = await indexOracle.getIndexPriceByEpoch(0);
+      expect((await indexOracle.getLastEpochPrice(0))[0].toString()).equal("86000000");
+      expect(indexLength.toString()).equal("3");
     })
   })
 
