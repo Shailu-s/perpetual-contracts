@@ -49,7 +49,7 @@ describe("IndexPriceOracle", function () {
     }
   });
 
-  describe.only("Epoch", () => {
+  describe("Epoch", () => {
     it ("Should calculate epoch of one price", async () => {
       await time.increase(epochTimeSeconds);
       await (await indexOracle.addObservation([76000000], [0], [proofHash])).wait();
