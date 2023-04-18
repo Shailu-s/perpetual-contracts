@@ -150,13 +150,13 @@ describe("IndexPriceOracle", function () {
     it("should  give average price last epoch price", async () => {
       await time.increase(28800);
       for (let i = 0; i < 5; i++) {
-        await volmexOracle.addObservation([800000000], [0], [proofHash]);
+        await indexOracle.addObservation([800000000], [0], [proofHash]);
       }
       for (let i = 0; i < 5; i++) {
-        await volmexOracle.addObservation([900000000], [0], [proofHash]);
+        await indexOracle.addObservation([900000000], [0], [proofHash]);
       }
 
-      const lastEpochPrice = await volmexOracle.getLastEpochTwap(0);
+      const lastEpochPrice = await indexOracle.getLastEpochTwap(0);
       expect(parseInt(lastEpochPrice)).to.be.equal(850000000);
     });
 
