@@ -172,8 +172,6 @@ contract Vault is IVault, ReentrancyGuardUpgradeable, OwnerPausable, VaultStorag
         address from
     ) internal {
         uint256 _vaultBalance;
-        //amount not accepted
-        require(msg.value == 0, "V_ANA");
         // check for deflationary tokens by assuring balances before and after transferring to be the same
         uint256 balanceBefore = IERC20Metadata(_settlementToken).balanceOf(address(this));
         periphery.transferToVault(IERC20Upgradeable(_settlementToken), from, amount);

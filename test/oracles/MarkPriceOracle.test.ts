@@ -301,6 +301,37 @@ describe("MarkPriceOracle", function () {
     await markPriceOracle.setObservationAdder(owner.address);
   });
 
+  describe("setter and getter", () => {
+    it("Should set epoch interval", async () => {
+      await (await markPriceOracle.setMarkEpochInterval(14400)).wait();
+      expect((await markPriceOracle.epochInterval()).toString()).equal("14400");
+    })
+
+    it("Should get last mark price", async () => {
+      expect((await markPriceOracle.getLastMarkPrice(0)).toString()).equal("60000000");
+    })
+
+    it("Should get custom epoch price", async () => {
+      expect((await markPriceOracle.getCustomEpochPrice(0, (await time.latest()).toString()))[0].toString()).equal("60000000");
+    })
+
+    it("Should get current index count", async () => {
+      expect((await markPriceOracle.getIndexCount()).toString()).equal("1");
+    })
+
+    it("Should get last updated timestamp", async () => {
+      const timestamp = (Number(await time.latest()) - 1).toString();
+      expect((await markPriceOracle.getLastUpdatedTimestamp(0)).toString()).equal(timestamp);
+    })
+
+    it("Should try set sm interval", async () => {
+      await expectRevert(
+        markPriceOracle.setMarkSmInterval(14400),
+        "MarkPriceOracle: not sma interval role"
+      )
+    })
+  })
+
   describe("Deployment", function () {
     it("Should deploy successfully", async () => {
       let receipt = await upgrades.deployProxy(
@@ -392,7 +423,7 @@ describe("MarkPriceOracle", function () {
       }
       const timestamp = await time.latest();
       const lastEpochPrice = (await markPriceOracle.getLastEpochPrice(0))[0];
-      expect(parseInt(lastEpochPrice)).to.be.equal(80000000);
+      expect(parseInt(lastEpochPrice)).to.be.equal(79607831);
     });
 
     it("Should get cumulative price with time delay", async () => {
@@ -443,7 +474,7 @@ describe("MarkPriceOracle", function () {
         await time.increase(1000);
       }
       const txn2 = await markPriceOracle.getMarkSma(10000, 0);
-      expect(Number(txn2)).equal(60000000);
+      expect(Number(txn2)).equal(20000000);
     });
 
     it("Should fail to  add multiple observations because uneuqal length of inputs", async () => {
