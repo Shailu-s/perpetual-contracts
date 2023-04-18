@@ -36,7 +36,11 @@ describe("PositioningConfig", function () {
       let receipt = await positioningConfig.deployed();
       expect(receipt.confirmations).not.equal(0);
     });
-
+    it("should not reinitilaize", async () => {
+      await expect(positioningConfig.initialize(markPriceOracle.address)).to.be.revertedWith(
+        "Initializable: contract is already initialized",
+      );
+    });
     it("should deploy without calling initialize", async () => {
       const positioningConfig1 = await PositioningConfig.deploy();
       let receipt = await positioningConfig1.deployed();
@@ -58,6 +62,19 @@ describe("PositioningConfig", function () {
       await positioningConfig.setTwapInterval(500);
       const twap = await markPriceOracle.markSmInterval();
       expect(parseInt(twap)).to.be.equal(500);
+    });
+    it("should set mark Price oracle", async () => {
+      const markPriceOracle1 = await upgrades.deployProxy(
+        MarkPriceOracle,
+        [[100000], [account1.address], owner.address],
+        {
+          initializer: "initialize",
+        },
+      );
+      await markPriceOracle1.deployed();
+      await positioningConfig.setMarkPriceOracle(markPriceOracle1.address);
+      const markPriceOracle = await positioningConfig.markPriceOracle();
+      expect(markPriceOracle).to.be.equal(markPriceOracle1.address);
     });
 
     it("should setLiquidationPenaltyRatio for ratio = 1e6", async () => {
