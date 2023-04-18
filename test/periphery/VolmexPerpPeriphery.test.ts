@@ -1364,8 +1364,6 @@ describe("VolmexPerpPeriphery", function () {
             .connect(account2)
             .depositToVault(index, USDC.address, "1000000000")
         ).wait();
-        console.log((await indexPriceOracle.getLastPrice(0)).toString(), "index price");
-        console.log((await markPriceOracle.getLastPrice(0)).toString(), "mark price");
         const orderLeft = Order(
           TAKE_PROFIT_INDEX_PRICE,
           deadline,
