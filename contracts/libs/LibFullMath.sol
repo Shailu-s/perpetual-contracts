@@ -115,7 +115,7 @@ library LibFullMath {
         uint256 b,
         uint256 denominator
     ) internal pure returns (uint256 result) {
-        result = mulDiv(a, b, denominator);
+        result = mulDiv(a, b, denominator); // Not used in perp eco system
         if (mulmod(a, b, denominator) > 0) {
             require(result < type(uint256).max);
             result++;
