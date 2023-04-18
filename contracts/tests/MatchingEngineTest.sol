@@ -21,7 +21,11 @@ contract MatchingEngineTest is MatchingEngine {
         makerMinSalt[_msgSender()] = _val;
     }
 
-    function addAssets(uint256[] calldata _underlyingPrices, address[] calldata _assets, uint256[] calldata _capRatio) public {
+    function addAssets(
+        uint256[] calldata _underlyingPrices,
+        address[] calldata _assets,
+        uint256[] calldata _capRatio
+    ) public {
         markPriceOracle.addAssets(_underlyingPrices, _assets, _capRatio);
     }
 

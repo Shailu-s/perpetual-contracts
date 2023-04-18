@@ -56,7 +56,7 @@ describe("PositioningConfig", function () {
 
     it("should set mark Price oracle mark twap interval to 500", async () => {
       await positioningConfig.setTwapInterval(500);
-      const twap = await markPriceOracle.markTwInterval();
+      const twap = await markPriceOracle.markSmInterval();
       expect(parseInt(twap)).to.be.equal(500);
     });
 
