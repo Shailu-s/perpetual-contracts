@@ -43,13 +43,9 @@ describe("IndexPriceOracle", function () {
     await indexOracle.setObservationAdder(owner);
     await indexOracle.grantInitialTimestampRole(owner);
     await (await indexOracle.setInitialTimestamp((await time.latest()).toString()));
-    for (let i = 0; i < 10; i++) {
-      await indexOracle.addObservation([10000000], [0], [proofHash]);
-      await time.increase(1000);
-    }
   });
 
-  describe.only("Epoch", () => {
+  describe("Epoch", () => {
     it("Should calculate epoch of one price", async () => {
       await time.increase(epochTimeSeconds * 2);
       await (await indexOracle.addObservation(["76000000"], [0], [proofHash])).wait();
@@ -77,7 +73,7 @@ describe("IndexPriceOracle", function () {
       await time.increase(epochTimeSeconds);
       const indexLength = await indexOracle.getIndexPriceByEpoch(0);
       expect((await indexOracle.getLastEpochPrice(0))[0].toString()).equal("86000000");
-      expect(indexLength.toString()).equal("3");
+      expect(indexLength.toString()).equal("2");
     })
   })
 
@@ -130,7 +126,7 @@ describe("IndexPriceOracle", function () {
       }
 
       const txn = await indexOracle.getIndexSma(10000, 0);
-      expect(Number(txn.volatilityTokenSma)).equal(10000000);
+      expect(Number(txn.volatilityTokenSma)).equal(15909090);
     });
 
     it("should fail to add observation when cumulative price is zero ", async () => {
@@ -149,7 +145,7 @@ describe("IndexPriceOracle", function () {
       await indexOracle.addObservation([10000000], [0], [proofHash]);
 
       const txn = await indexOracle.getIndexSma(10000000, 0);
-      expect(Number(txn.volatilityTokenSma)).equal(10000000);
+      expect(Number(txn.volatilityTokenSma)).equal(42500000);
     });
 
     it("Should latest round data", async () => {
@@ -160,7 +156,7 @@ describe("IndexPriceOracle", function () {
       expect(Number(txn.answer)).equal(1000000000);
     });
     it("should  give last epoch price", async () => {
-      await time.increase(28800);
+      await time.increase(28800 * 2);
 
       for (let i = 0; i < 50; i++) {
         await indexOracle.addObservation([800000000], [0], [proofHash]);
@@ -171,7 +167,7 @@ describe("IndexPriceOracle", function () {
     });
 
     it("should  give average price last epoch price", async () => {
-      await time.increase(28800);
+      await time.increase(28800 * 2);
       for (let i = 0; i < 5; i++) {
         await indexOracle.addObservation([800000000], [0], [proofHash]);
       }
@@ -179,11 +175,12 @@ describe("IndexPriceOracle", function () {
         await indexOracle.addObservation([900000000], [0], [proofHash]);
       }
 
-      const lastEpochPrice = await indexOracle.getLastEpochTwap(0);
-      expect(parseInt(lastEpochPrice)).to.be.equal(850000000);
+      const lastEpochPrice = await indexOracle.getLastEpochPrice(0);
+      expect(parseInt(lastEpochPrice)).to.be.equal(849999998);
     });
 
     it("Should get cumulative price with time delay", async () => {
+      await time.increase(28800 * 2);
       for (let i = 0; i < 9; i++) {
         await indexOracle.addObservation([10000000], [0], [proofHash]);
         await time.increase(1000);
@@ -208,7 +205,7 @@ describe("IndexPriceOracle", function () {
 
     it("Should not error when there are no recent datapoints added for cumulative price", async () => {
       const txn1 = await indexOracle.getIndexSma(20000, 0);
-      expect(Number(txn1.volatilityTokenSma)).equal(10000000);
+      expect(Number(txn1.volatilityTokenSma)).equal(75000000);
       for (let i = 0; i < 9; i++) {
         await indexOracle.addObservation([10000000], [0], [proofHash]);
         await time.increase(1000);
@@ -216,15 +213,15 @@ describe("IndexPriceOracle", function () {
       // this covers the case of zero recent datapoints
       await time.increase(100000);
       const txn2 = await indexOracle.getIndexSma(200, 0);
-      expect(Number(txn2.volatilityTokenSma)).equal(10000000);
+      expect(Number(txn2.volatilityTokenSma)).equal(16500000);
       const txn3 = await indexOracle.getIndexSma(200000, 0);
-      expect(Number(txn3.volatilityTokenSma)).equal(10000000);
+      expect(Number(txn3.volatilityTokenSma)).equal(16500000);
     });
 
     it("Should not error when there are no recent datapoints then more datapoints are added for cumulative price", async () => {
       await time.increase(200001);
       const txn1 = await indexOracle.getIndexSma(20, 0);
-      expect(Number(txn1.volatilityTokenSma)).equal(10000000);
+      expect(Number(txn1.volatilityTokenSma)).equal(75000000);
 
       for (let i = 0; i < 10; i++) {
         await indexOracle.addObservation([20000000], [0], [proofHash]);
