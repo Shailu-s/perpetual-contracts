@@ -157,6 +157,22 @@ describe("Vault", function () {
     ]);
   });
   describe("deployment", function () {
+    it("should fail to deploy vault", async () => {
+      const tokenFactory = await ethers.getContractFactory("TestERC20");
+
+      const USDC1 = await tokenFactory.deploy();
+      USDC = await USDC1.deployed();
+      await USDC.__TestERC20_init("TestUSDC", "USDC", 20);
+      vaultFactory = await ethers.getContractFactory("Vault");
+      await expect(
+        upgrades.deployProxy(vaultFactory, [
+          positioningConfig.address,
+          accountBalance.address,
+          USDC.address,
+          vaultController.address,
+        ]),
+      ).to.be.revertedWith("V_ISTD");
+    });
     it("should fail to deploy because  positioning config address was not contract", async () => {
       await expect(
         upgrades.deployProxy(vaultFactory, [
@@ -224,6 +240,7 @@ describe("Vault", function () {
         "100000000000000000000",
       );
     });
+
     it("Negative Test For desposit from vault after setting token balance cap ", async () => {
       await positioningConfig.setSettlementTokenBalanceCap("5000000000000000000");
       const USDCVaultAddress = await vaultController.getVault(USDC.address);

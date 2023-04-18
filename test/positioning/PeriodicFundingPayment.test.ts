@@ -1574,26 +1574,26 @@ describe("Periodic Funding payment", function () {
       await volmexPerpPeriphery.whitelistTrader(account1.address, true);
       await volmexPerpPeriphery.whitelistTrader(account2.address, true);
 
-      (
-        await volmexPerpPeriphery
-          .connect(account1)
-          .depositToVault(index, USDC.address, "1000000000000000000000000")
-      ).wait();
-      (
-        await volmexPerpPeriphery
-          .connect(account2)
-          .depositToVault(index, USDC.address, "1000000000000000000000000")
-      ).wait();
-      (
-        await volmexPerpPeriphery
-          .connect(alice)
-          .depositToVault(index, USDC.address, "1000000000000000000000000")
-      ).wait();
-      (
-        await volmexPerpPeriphery
-          .connect(bob)
-          .depositToVault(index, USDC.address, "1000000000000000000000000")
-      ).wait();
+      // (
+      //   await volmexPerpPeriphery
+      //     .connect(account1)
+      //     .depositToVault(index, USDC.address, "1000000000000000000000000")
+      // ).wait();
+      // (
+      //   await volmexPerpPeriphery
+      //     .connect(account2)
+      //     .depositToVault(index, USDC.address, "1000000000000000000000000")
+      // ).wait();
+      // (
+      //   await volmexPerpPeriphery
+      //     .connect(alice)
+      //     .depositToVault(index, USDC.address, "1000000000000000000000000")
+      // ).wait();
+      // (
+      //   await volmexPerpPeriphery
+      //     .connect(bob)
+      //     .depositToVault(index, USDC.address, "1000000000000000000000000")
+      // ).wait();
     });
     // Fees deduction
     // user collateral = 1000
@@ -2058,7 +2058,11 @@ describe("Periodic Funding payment", function () {
         await indexPriceOracle.addObservation([200000000], [0], [proofHash]);
       }
       await markPriceOracle.setObservationAdder(matchingEngine.address);
-
+      console.log("vault balance", (await USDC.balanceOf(vault.address)).toString());
+      console.log(
+        "account value ",
+        (await vaultController.getAccountValue(account3.address)).toString(),
+      );
       const orderLeft1 = Order(
         ORDER,
         deadline,

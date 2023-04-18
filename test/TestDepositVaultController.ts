@@ -123,6 +123,12 @@ describe("Vault Controller deposit tests", function () {
       vaultController.initialize(positioningConfig.address, accountBalance.address),
     ).to.be.revertedWith("Initializable: contract is already initialized");
   });
+  it("shoud fail to register vault", async () => {
+    const [owner, alice] = await ethers.getSigners();
+    await expect(
+      vaultController.connect(alice).registerVault(vault.address, USDC.address),
+    ).to.be.revertedWith("VaultController: Not admin");
+  });
   it("shoud fail to setPositioning", async () => {
     await expect(vaultController.setPositioning(ZERO_ADDR)).to.be.revertedWith("V_VPMM");
   });
