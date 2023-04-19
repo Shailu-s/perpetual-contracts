@@ -130,7 +130,7 @@ contract FundingRate is IFundingRate, BlockContext, PositioningCallee, FundingRa
             int256 deltaTwap = _getDeltaTwap(markTwap, indexTwap);
             int256 deltaTwPremiumX96 = deltaTwap * (fundingLatestTimestamp - lastSettledTimestamp).toInt256();
             globalTwPremium += deltaTwPremiumX96;
-            fundingRate = (deltaTwap * _IORACLE_BASE) / indexTwap.toInt256(); // fundingRate = _getDeltaTwap(markTwap, indexTwap) / indexTwap;
+            fundingRate = (deltaTwPremiumX96 * _IORACLE_BASE) / (indexTwap.toInt256() * 86400); // fundingRate = _getDeltaTwap(markTwap, indexTwap) / indexTwap;
         }
         return (globalTwPremium, markTwap, indexTwap, fundingRate);
     }
