@@ -293,6 +293,11 @@ describe("MatchingEngine", function () {
       let receipt = await matchingEngine.deployed();
       expect(receipt.confirmations).not.equal(0);
     });
+    it("MatchingEngineshould fail to initialze again", async () => {
+      await expect(
+        matchingEngine.initialize(owner.address, markPriceOracle.address),
+      ).to.be.revertedWith("Initializable: contract is already initialized");
+    });
   });
 
   describe("Cancel orders:", function () {
@@ -1324,6 +1329,11 @@ describe("MatchingEngine", function () {
       await expect(transferManagerTest.setTransferProxy(erc20TransferProxy.address))
         .to.emit(transferManagerTest, "ProxyChanged")
         .withArgs(erc20TransferProxy.address);
+    });
+    it("should fail set transfer proxy & emit event with proxy address", async () => {
+      await expect(
+        transferManagerTest.connect(account3).setTransferProxy(erc20TransferProxy.address),
+      ).to.be.revertedWith("TransferExecutor: Not admin");
     });
 
     it("should call do transfer with fee > 0", async () => {
