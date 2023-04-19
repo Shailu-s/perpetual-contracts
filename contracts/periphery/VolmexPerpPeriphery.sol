@@ -208,7 +208,7 @@ contract VolmexPerpPeriphery is AccessControlUpgradeable, IVolmexPerpPeriphery {
     }
 
     // Note for V2: Change the logic to round id, if Volmex Oracle implements price by round id functionality
-    function _verifyTriggerPrice(LibOrder.Order memory _limitOrder, IPositioning _positioning) private view returns (bool) {
+    function _verifyTriggerPrice(LibOrder.Order memory _limitOrder, IPositioning _positioning) private view returns (bool result) {
         // Note for V2: Add check for round id, when Volmex Oracle updates functionality
 
         address positioningConfig = _positioning.getPositioningConfig();
@@ -219,21 +219,20 @@ contract VolmexPerpPeriphery is AccessControlUpgradeable, IVolmexPerpPeriphery {
         if (_checkLimitOrderType(_limitOrder.orderType, true)) {
             if (_limitOrder.isShort) {
                 // Sell Stop Limit Order Trigger Price Not Matched
-                return triggeredPrice <= _limitOrder.limitOrderTriggerPrice;
+                result = triggeredPrice <= _limitOrder.limitOrderTriggerPrice;
             } else {
                 // Buy Stop Limit Order Trigger Price Not Matched
-                return triggeredPrice >= _limitOrder.limitOrderTriggerPrice;
+                result = triggeredPrice >= _limitOrder.limitOrderTriggerPrice;
             }
         } else if (_checkLimitOrderType(_limitOrder.orderType, false)) {
             if (_limitOrder.isShort) {
                 // Sell Take-profit Limit Order Trigger Price Not Matched
-                return triggeredPrice >= _limitOrder.limitOrderTriggerPrice;
+                result = triggeredPrice >= _limitOrder.limitOrderTriggerPrice;
             } else {
                 // Buy Take-profit Limit Order Trigger Price Not Matched
-                return triggeredPrice <= _limitOrder.limitOrderTriggerPrice;
+                result = triggeredPrice <= _limitOrder.limitOrderTriggerPrice;
             }
         }
-        return false;
     }
 
     function _getBaseTokenPrice(LibOrder.Order memory _order, uint256 _twInterval) private view returns (uint256 price) {
