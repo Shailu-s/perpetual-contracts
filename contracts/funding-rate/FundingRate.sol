@@ -28,7 +28,8 @@ contract FundingRate is IFundingRate, BlockContext, PositioningCallee, FundingRa
     function settleFunding(address trader, address baseToken) public virtual override returns (int256 fundingPayment, int256 globalTwPremiumGrowth) {
         uint256 markTwap;
         uint256 indexTwap;
-        (globalTwPremiumGrowth, markTwap, indexTwap, _lastFundingRate[baseToken]) = _getFundingGlobalPremiumAndTwaps(baseToken);
+        int256 fundingRate;
+        (globalTwPremiumGrowth, markTwap, indexTwap, fundingRate) = _getFundingGlobalPremiumAndTwaps(baseToken);
         int256 userTwPremium = IAccountBalance(_accountBalance).getAccountInfo(trader, baseToken).lastTwPremiumGrowthGlobal;
         fundingPayment = _getFundingPayment(trader, baseToken, globalTwPremiumGrowth, userTwPremium);
 
@@ -40,7 +41,8 @@ contract FundingRate is IFundingRate, BlockContext, PositioningCallee, FundingRa
             // update fundingGrowthGlobal and _lastSettledTimestamp
             (_lastSettledTimestampMap[baseToken], _globalFundingGrowthMap[baseToken]) = (fundingLatestTimestamp, globalTwPremiumGrowth);
             _lastFundingIndexPrice[baseToken] = indexTwap;
-            emit FundingUpdated(baseToken, markTwap, indexTwap);
+            _lastFundingRate[baseToken] = fundingRate;
+            emit FundingUpdated(baseToken, markTwap, indexTwap, fundingRate);
         }
         return (fundingPayment, globalTwPremiumGrowth);
     }
