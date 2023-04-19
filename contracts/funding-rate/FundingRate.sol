@@ -54,13 +54,7 @@ contract FundingRate is IFundingRate, BlockContext, PositioningCallee, FundingRa
 
     /// @inheritdoc IFundingRate
     function getLastFundingRate(address baseToken) external view returns (int256 lastFundingRate) {
-        if (_globalFundingGrowthMap[baseToken] == 0 || (_lastFundingIndexPrice[baseToken]).toInt256() == 0) {
-            return 0;
-        }
-        uint256 indexSma = IIndexPriceOracle(_indexPriceOracleArg).getCustomIndexSma(_underlyingPriceIndex, _firstTradedTimestampMap[baseToken], _lastSettledTimestampMap[baseToken]);
-        lastFundingRate =
-            (_globalFundingGrowthMap[baseToken] * _ORACLE_BASE_X6.toInt256()) /
-            (indexSma.toInt256() * (_lastSettledTimestampMap[baseToken] - _firstTradedTimestampMap[baseToken]).toInt256());
+        lastFundingRate = _lastFundingRate[baseToken];
     }
 
     /// @inheritdoc IFundingRate
@@ -134,7 +128,7 @@ contract FundingRate is IFundingRate, BlockContext, PositioningCallee, FundingRa
             int256 deltaTwap = _getDeltaTwap(markTwap, indexTwap);
             int256 deltaTwPremiumX96 = deltaTwap * (fundingLatestTimestamp - lastSettledTimestamp).toInt256();
             globalTwPremium += deltaTwPremiumX96;
-            fundingRate = deltaTwap / indexTwap.toInt256(); // fundingRate = _getDeltaTwap(markTwap, indexTwap) / indexTwap;
+            fundingRate = (deltaTwap * _IORACLE_BASE) / indexTwap.toInt256(); // fundingRate = _getDeltaTwap(markTwap, indexTwap) / indexTwap;
         }
         return (globalTwPremium, markTwap, indexTwap, fundingRate);
     }
