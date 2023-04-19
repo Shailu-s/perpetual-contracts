@@ -4,7 +4,7 @@ pragma abicoder v2;
 
 interface IFundingRate {
     /// @notice event to emit after funding updated
-    event FundingUpdated(address indexed baseToken, uint256 markTwap, uint256 indexTwap);
+    event FundingUpdated(address indexed baseToken, uint256 markTwap, uint256 indexTwap, int256 fundingRate);
 
     /// @dev this function is used to settle funding f a trader on the basis of given basetoken
     /// @param trader address of the trader

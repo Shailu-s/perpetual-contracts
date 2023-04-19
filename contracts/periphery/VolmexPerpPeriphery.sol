@@ -185,9 +185,9 @@ contract VolmexPerpPeriphery is AccessControlUpgradeable, IVolmexPerpPeriphery {
         bytes memory _signatureRight,
         bytes memory liquidator
     ) internal {
+        if (_orderLeft.orderType != LibOrder.ORDER) require(_verifyTriggerPrice(_orderLeft), "Periphery: left order price verification failed");
+        if (_orderRight.orderType != LibOrder.ORDER) require(_verifyTriggerPrice(_orderRight), "Periphery: right order price verification failed");
         IPositioning positioning = perpView.positionings(_index);
-        if (_orderLeft.orderType != LibOrder.ORDER) require(_verifyTriggerPrice(_orderLeft, positioning), "Periphery: left order price verification failed");
-        if (_orderRight.orderType != LibOrder.ORDER) require(_verifyTriggerPrice(_orderRight, positioning), "Periphery: right order price verification failed");
         positioning.openPosition(_orderLeft, _signatureLeft, _orderRight, _signatureRight, liquidator);
     }
 
@@ -208,13 +208,9 @@ contract VolmexPerpPeriphery is AccessControlUpgradeable, IVolmexPerpPeriphery {
     }
 
     // Note for V2: Change the logic to round id, if Volmex Oracle implements price by round id functionality
-    function _verifyTriggerPrice(LibOrder.Order memory _limitOrder, IPositioning _positioning) private view returns (bool) {
+    function _verifyTriggerPrice(LibOrder.Order memory _limitOrder) private view returns (bool) {
         // Note for V2: Add check for round id, when Volmex Oracle updates functionality
-
-        address positioningConfig = _positioning.getPositioningConfig();
-        uint32 twInterval = IPositioningConfig(positioningConfig).getTwapInterval();
-
-        uint256 triggeredPrice = _getBaseTokenPrice(_limitOrder, twInterval);
+        uint256 triggeredPrice = _getBaseTokenPrice(_limitOrder);
 
         if (_checkLimitOrderType(_limitOrder.orderType, true)) {
             if (_limitOrder.isShort) {
@@ -236,7 +232,7 @@ contract VolmexPerpPeriphery is AccessControlUpgradeable, IVolmexPerpPeriphery {
         return false;
     }
 
-    function _getBaseTokenPrice(LibOrder.Order memory _order, uint256 _twInterval) private view returns (uint256 price) {
+    function _getBaseTokenPrice(LibOrder.Order memory _order) private view returns (uint256 price) {
         address makeAsset = _order.makeAsset.virtualToken;
         address takeAsset = _order.takeAsset.virtualToken;
 
@@ -245,7 +241,7 @@ contract VolmexPerpPeriphery is AccessControlUpgradeable, IVolmexPerpPeriphery {
         // TODO: change to index, mark and mark's latest price
         uint256 _index = markPriceOracle.indexByBaseToken(baseToken);
         if (_order.orderType == LibOrder.STOP_LOSS_MARK_PRICE || _order.orderType == LibOrder.TAKE_PROFIT_MARK_PRICE) {
-            price = markPriceOracle.getMarkSma(_twInterval, _index);
+            price = markPriceOracle.getLastMarkPrice(_index);
         } else if (_order.orderType == LibOrder.STOP_LOSS_INDEX_PRICE || _order.orderType == LibOrder.TAKE_PROFIT_INDEX_PRICE) {
             price = indexPriceOracle.getLastPrice(_index);
         } else {
