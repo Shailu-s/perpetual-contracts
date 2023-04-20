@@ -2,6 +2,7 @@ import { expect } from "chai";
 import { Signer } from "ethers";
 import { ethers, upgrades } from "hardhat";
 import { time } from "@nomicfoundation/hardhat-network-helpers";
+const { expectRevert } = require("@openzeppelin/test-helpers");
 const BN = ethers.BigNumber;
 
 describe("Stake & Slash", function () {
@@ -35,16 +36,20 @@ describe("Stake & Slash", function () {
     await relayerSafe.deployed();
     insuranceFund = await upgrades.deployProxy(InsuranceFund, [stakeToken.address]);
     await insuranceFund.deployed();
-    slashing = await upgrades.deployProxy(Slashing, [
-      stakeToken.address,
-      relayerSafe.address,
-      await volmexSafe.getAddress(),
-      await volmexSafe.getAddress(),
-      432000, // 5 days
-      insuranceFund.address,
-    ], {
-      initializer: "Slashing_init"
-    });
+    slashing = await upgrades.deployProxy(
+      Slashing,
+      [
+        stakeToken.address,
+        relayerSafe.address,
+        await volmexSafe.getAddress(),
+        await volmexSafe.getAddress(),
+        432000, // 5 days
+        insuranceFund.address,
+      ],
+      {
+        initializer: "Slashing_init",
+      },
+    );
     await slashing.deployed();
   });
 
@@ -52,11 +57,11 @@ describe("Stake & Slash", function () {
     const receipt = await slashing.deployed();
     expect(receipt.confirmations).not.equal(0);
   });
- 
+
   it("Should set slashing receiver ", async () => {
     const aliceAddress = await alice.getAddress();
-    await slashing.connect(volmexSafe).setSlashingReceiver(aliceAddress)
-    expect(await slashing.slashingReceiver()).to.be.equal(aliceAddress)
+    await slashing.connect(volmexSafe).setSlashingReceiver(aliceAddress);
+    expect(await slashing.slashingReceiver()).to.be.equal(aliceAddress);
   });
   describe("Staking", function () {
     let aliceAddress: string;
@@ -215,14 +220,58 @@ describe("Stake & Slash", function () {
   describe("Roles", function () {
     it("Should provide staker role", async () => {
       const stakerRole = "0xb9e206fa2af7ee1331b72ce58b6d938ac810ce9b5cdb65d35ab723fd67badf9e";
-      await (await slashing.connect(volmexSafe).grantRole(stakerRole, await bob.getAddress())).wait();
+      await (
+        await slashing.connect(volmexSafe).grantRole(stakerRole, await bob.getAddress())
+      ).wait();
       await (await slashing.connect(bob).toggleStaking()).wait();
-    })
+    });
 
     it("Should provide staker role", async () => {
       const slasherRole = "0x12b42e8a160f6064dc959c6f251e3af0750ad213dbecf573b4710d67d6c28e39";
-      await (await slashing.connect(volmexSafe).grantRole(slasherRole, await chris.getAddress())).wait();
+      await (
+        await slashing.connect(volmexSafe).grantRole(slasherRole, await chris.getAddress())
+      ).wait();
       await (await slashing.connect(chris).updateSlashPenalty(2500)).wait();
-    })
-  })
+    });
+  });
+
+  describe.only("Setters", () => {
+    it("Should update min stake required amount", async () => {
+      await (await slashing.connect(volmexSafe).updateMinStakeRequired("50000000000")).wait();
+      expect((await slashing.minStakeRequired()).toString()).equal("50000000000");
+    });
+
+    it("Should update relayer multisig address", async () => {
+      await (
+        await slashing.connect(volmexSafe).updateRelayerMultisig(await chris.getAddress())
+      ).wait();
+      expect(await slashing.relayerMultisig()).equal(await chris.getAddress());
+    });
+
+    it("Should fail to execute staker role method", async () => {
+      await expectRevert(slashing.toggleStaking(), "Staking: not staker role");
+    });
+
+    it("Should revert cooldown when zero active balance", async () => {
+      await expectRevert(slashing.cooldown("10000000000"), "Staking: invalid balance to cooldown");
+    });
+
+    it("Should revert slash when no access", async () => {
+      await expectRevert(slashing.slash(await chris.getAddress()), "Slashing: not slasher role");
+    });
+
+    it("Should revert when initialize again", async () => {
+      await expectRevert(
+        slashing.Slashing_init(
+          stakeToken.address,
+          relayerSafe.address,
+          await volmexSafe.getAddress(),
+          await volmexSafe.getAddress(),
+          432000, // 5 days
+          insuranceFund.address,
+        ),
+        "Initializable: contract is already initialized",
+      );
+    });
+  });
 });
