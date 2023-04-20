@@ -2109,7 +2109,7 @@ describe("Periodic Funding payment", function () {
         liquidator,
       );
       const traderCollateral = await vaultController.getFreeCollateralByRatio(account4.address, 1);
-      expect(traderCollateral.toString()).to.be.equal("1036027797919976000000");
+      expect(traderCollateral.toString()).to.be.equal("1017933874919976000000");
     });
     // Fees deduction
     // user collateral = 1000

@@ -54,6 +54,9 @@ describe("ParentToken", function () {
         .withArgs(volmexPriceOracle.address);
       expect(await volmexBaseToken.getPriceFeed()).to.equal(volmexPriceOracle.address);
     });
+    it("should set tw interval", async () => {
+      await volmexBaseToken.setTwInterval(10000);
+    });
     describe("Getters", function () {
       it("Should get index price", async () => {
         expect(await volmexBaseToken.getIndexPrice(0)).to.eq(10000000);

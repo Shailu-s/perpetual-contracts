@@ -2,6 +2,7 @@ import { expect } from "chai";
 import { Signer } from "ethers";
 import { ethers, upgrades } from "hardhat";
 import { time } from "@nomicfoundation/hardhat-network-helpers";
+import { add } from "lodash";
 const BN = ethers.BigNumber;
 
 describe("Stake & Slash", function () {
@@ -35,16 +36,20 @@ describe("Stake & Slash", function () {
     await relayerSafe.deployed();
     insuranceFund = await upgrades.deployProxy(InsuranceFund, [stakeToken.address]);
     await insuranceFund.deployed();
-    slashing = await upgrades.deployProxy(Slashing, [
-      stakeToken.address,
-      relayerSafe.address,
-      await volmexSafe.getAddress(),
-      await volmexSafe.getAddress(),
-      432000, // 5 days
-      insuranceFund.address,
-    ], {
-      initializer: "Slashing_init"
-    });
+    slashing = await upgrades.deployProxy(
+      Slashing,
+      [
+        stakeToken.address,
+        relayerSafe.address,
+        await volmexSafe.getAddress(),
+        await volmexSafe.getAddress(),
+        432000, // 5 days
+        insuranceFund.address,
+      ],
+      {
+        initializer: "Slashing_init",
+      },
+    );
     await slashing.deployed();
   });
 
@@ -52,11 +57,24 @@ describe("Stake & Slash", function () {
     const receipt = await slashing.deployed();
     expect(receipt.confirmations).not.equal(0);
   });
- 
+  it("should fail to initialize again", async () => {
+    const address = await volmexSafe.getAddress();
+    await expect(
+      slashing.Slashing_init(
+        stakeToken.address,
+        relayerSafe.address,
+        address,
+        address,
+        432000, // 5 days
+        insuranceFund.address,
+      ),
+    ).to.be.revertedWith("Initializable: contract is already initialized");
+  });
+
   it("Should set slashing receiver ", async () => {
     const aliceAddress = await alice.getAddress();
-    await slashing.connect(volmexSafe).setSlashingReceiver(aliceAddress)
-    expect(await slashing.slashingReceiver()).to.be.equal(aliceAddress)
+    await slashing.connect(volmexSafe).setSlashingReceiver(aliceAddress);
+    expect(await slashing.slashingReceiver()).to.be.equal(aliceAddress);
   });
   describe("Staking", function () {
     let aliceAddress: string;
@@ -215,14 +233,34 @@ describe("Stake & Slash", function () {
   describe("Roles", function () {
     it("Should provide staker role", async () => {
       const stakerRole = "0xb9e206fa2af7ee1331b72ce58b6d938ac810ce9b5cdb65d35ab723fd67badf9e";
-      await (await slashing.connect(volmexSafe).grantRole(stakerRole, await bob.getAddress())).wait();
+      await (
+        await slashing.connect(volmexSafe).grantRole(stakerRole, await bob.getAddress())
+      ).wait();
       await (await slashing.connect(bob).toggleStaking()).wait();
-    })
+    });
 
     it("Should provide staker role", async () => {
       const slasherRole = "0x12b42e8a160f6064dc959c6f251e3af0750ad213dbecf573b4710d67d6c28e39";
-      await (await slashing.connect(volmexSafe).grantRole(slasherRole, await chris.getAddress())).wait();
+      await (
+        await slashing.connect(volmexSafe).grantRole(slasherRole, await chris.getAddress())
+      ).wait();
       await (await slashing.connect(chris).updateSlashPenalty(2500)).wait();
-    })
-  })
+    });
+  });
+  describe("Setters", function () {
+    it("should update min stake required", async () => {
+      await slashing.connect(volmexSafe).updateMinStakeRequired("500000000");
+      expect((await slashing.minStakeRequired()).toString()).to.be.equal("500000000");
+    });
+    it("should update min stake required", async () => {
+      const address = await alice.getAddress();
+      await slashing.connect(volmexSafe).updateRelayerMultisig(address);
+      expect((await slashing.relayerMultisig()).toString()).to.be.equal(address);
+    });
+    it("should fail to update min stake required", async () => {
+      await expect(slashing.connect(alice).updateMinStakeRequired("500000000")).to.be.revertedWith(
+        "Staking: not staker role",
+      );
+    });
+  });
 });
