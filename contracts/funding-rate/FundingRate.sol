@@ -17,7 +17,6 @@ import { BlockContext } from "../helpers/BlockContext.sol";
 import { FundingRateStorage } from "../storage/FundingRateStorage.sol";
 import { PositioningCallee } from "../helpers/PositioningCallee.sol";
 import { PositioningStorageV1 } from "../storage/PositioningStorage.sol";
-import "hardhat/console.sol";
 
 contract FundingRate is IFundingRate, BlockContext, PositioningCallee, FundingRateStorage, PositioningStorageV1 {
     using AddressUpgradeable for address;
