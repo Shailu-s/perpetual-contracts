@@ -636,10 +636,6 @@ contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, 
         return super._msgSender();
     }
 
-    function _msgData() internal view virtual override(ContextUpgradeable) returns (bytes calldata) {
-        return msg.data;
-    }
-
     function _requirePositioningAdmin() internal view {
         require(hasRole(POSITIONING_ADMIN, _msgSender()), "Positioning: Not admin");
     }

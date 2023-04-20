@@ -2,7 +2,7 @@ import { expect } from "chai";
 import { ethers, upgrades } from "hardhat";
 import { BigNumber } from "ethers";
 
-describe("Positioning", function () {
+describe("Market Registry", function () {
   let MatchingEngine;
   let matchingEngine;
   let VirtualToken;
@@ -11,6 +11,8 @@ describe("Positioning", function () {
   let ERC20TransferProxy;
   let TransferManagerTest;
   let ERC1271Test;
+  let erc1271Test;
+
   let PositioningConfig;
   let positioningConfig;
 
@@ -175,10 +177,10 @@ describe("Positioning", function () {
   });
   describe("setters", async () => {
     it("should  fail to set taker fees ration", async () => {
-      await expect(marketRegistry.setTakerFeeRatio("100000000")).to.be.revertedWith("MR_RO");
+      await expect(marketRegistry.setTakerFeeRatio("7000000")).to.be.revertedWith("MR_RO");
     });
     it("should  fail to set taker fees ration", async () => {
-      await expect(marketRegistry.setMakerFeeRatio("100000000")).to.be.revertedWith("MR_RO");
+      await expect(marketRegistry.setMakerFeeRatio("7000000")).to.be.revertedWith("MR_RO");
     });
     it("should set max order per market", async () => {
       await marketRegistry.setMaxOrdersPerMarket("125");

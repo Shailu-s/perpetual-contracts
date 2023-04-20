@@ -194,10 +194,6 @@ contract Vault is IVault, ReentrancyGuardUpgradeable, OwnerPausable, VaultStorag
         require(_msgSender() == _vaultController, "V_OVC");
     }
 
-    function _msgData() internal view virtual override(ContextUpgradeable) returns (bytes calldata) {
-        return msg.data;
-    }
-
     function _requireVaultAdmin() internal view {
         require(hasRole(VAULT_ADMIN, _msgSender()), "Vault: Not admin");
     }
