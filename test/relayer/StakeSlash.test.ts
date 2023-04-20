@@ -255,5 +255,23 @@ describe("Stake & Slash", function () {
     it("Should revert cooldown when zero active balance", async () => {
       await expectRevert(slashing.cooldown("10000000000"), "Staking: invalid balance to cooldown");
     });
+
+    it("Should revert slash when no access", async () => {
+      await expectRevert(slashing.slash(await chris.getAddress()), "Slashing: not slasher role");
+    });
+
+    it("Should revert when initialize again", async () => {
+      await expectRevert(
+        slashing.Slashing_init(
+          stakeToken.address,
+          relayerSafe.address,
+          await volmexSafe.getAddress(),
+          await volmexSafe.getAddress(),
+          432000, // 5 days
+          insuranceFund.address,
+        ),
+        "Initializable: contract is already initialized",
+      );
+    });
   });
 });
