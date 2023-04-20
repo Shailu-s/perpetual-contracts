@@ -150,7 +150,6 @@ describe("Global", function () {
 
     positioningConfig = await upgrades.deployProxy(PositioningConfig, [markPriceOracle.address]);
     await positioningConfig.deployed();
-    console.log("here");
     await positioningConfig.setMaxMarketsPerAccount(5);
     await positioningConfig.setSettlementTokenBalanceCap("10000000000000000000000000");
 
