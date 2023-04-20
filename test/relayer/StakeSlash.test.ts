@@ -235,7 +235,7 @@ describe("Stake & Slash", function () {
     });
   });
 
-  describe.only("Setters", () => {
+  describe("Setters", () => {
     it("Should update min stake required amount", async () => {
       await (await slashing.connect(volmexSafe).updateMinStakeRequired("50000000000")).wait();
       expect((await slashing.minStakeRequired()).toString()).equal("50000000000");
