@@ -2,7 +2,7 @@ import { expect } from "chai";
 import { Signer } from "ethers";
 import { ethers, upgrades } from "hardhat";
 import { time } from "@nomicfoundation/hardhat-network-helpers";
-import { add } from "lodash";
+const { expectRevert } = require("@openzeppelin/test-helpers");
 const BN = ethers.BigNumber;
 
 describe("Stake & Slash", function () {
@@ -247,19 +247,43 @@ describe("Stake & Slash", function () {
       await (await slashing.connect(chris).updateSlashPenalty(2500)).wait();
     });
   });
-  describe("Setters", function () {
-    it("should update min stake required", async () => {
-      await slashing.connect(volmexSafe).updateMinStakeRequired("500000000");
-      expect((await slashing.minStakeRequired()).toString()).to.be.equal("500000000");
+
+  describe("Setters", () => {
+    it("Should update min stake required amount", async () => {
+      await (await slashing.connect(volmexSafe).updateMinStakeRequired("50000000000")).wait();
+      expect((await slashing.minStakeRequired()).toString()).equal("50000000000");
     });
-    it("should update min stake required", async () => {
-      const address = await alice.getAddress();
-      await slashing.connect(volmexSafe).updateRelayerMultisig(address);
-      expect((await slashing.relayerMultisig()).toString()).to.be.equal(address);
+
+    it("Should update relayer multisig address", async () => {
+      await (
+        await slashing.connect(volmexSafe).updateRelayerMultisig(await chris.getAddress())
+      ).wait();
+      expect(await slashing.relayerMultisig()).equal(await chris.getAddress());
     });
-    it("should fail to update min stake required", async () => {
-      await expect(slashing.connect(alice).updateMinStakeRequired("500000000")).to.be.revertedWith(
-        "Staking: not staker role",
+
+    it("Should fail to execute staker role method", async () => {
+      await expectRevert(slashing.toggleStaking(), "Staking: not staker role");
+    });
+
+    it("Should revert cooldown when zero active balance", async () => {
+      await expectRevert(slashing.cooldown("10000000000"), "Staking: invalid balance to cooldown");
+    });
+
+    it("Should revert slash when no access", async () => {
+      await expectRevert(slashing.slash(await chris.getAddress()), "Slashing: not slasher role");
+    });
+
+    it("Should revert when initialize again", async () => {
+      await expectRevert(
+        slashing.Slashing_init(
+          stakeToken.address,
+          relayerSafe.address,
+          await volmexSafe.getAddress(),
+          await volmexSafe.getAddress(),
+          432000, // 5 days
+          insuranceFund.address,
+        ),
+        "Initializable: contract is already initialized",
       );
     });
   });
