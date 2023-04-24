@@ -186,6 +186,7 @@ describe("Vault Controller tests for withdrawal", function () {
       vaultController.connect(alice).withdraw(USDC.address, alice.address, amount),
     ).to.emit(USDCVaultContract, "Withdrawn");
   });
+
   it("Positive Test for withdrawal of token when vault has low balance", async () => {
     const amount = parseUnits("100", await USDC.decimals());
 
@@ -351,6 +352,12 @@ describe("Vault Controller tests for withdrawal", function () {
     await expect(
       vaultController1.connect(alice).withdraw(USDC.address, alice.address, amount),
     ).to.be.revertedWith("VC_PNS");
+  });
+  it("should not return  account value when contract is paused", async () => {
+    await vaultController.pause();
+    await expect(vaultController.getAccountValue(owner.address)).to.be.revertedWith(
+      "Pausable: paused",
+    );
   });
   it("Negative Test for withdrawal of token", async () => {
     const amount = parseUnits("100", await USDC.decimals());
