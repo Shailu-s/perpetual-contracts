@@ -57,6 +57,11 @@ describe("PerpMath test", async () => {
     const result = await perpMath.testMulDiv("100000000000000000", "-100000000000000000", "10000");
     expect(result.toString()).to.be.equal("-1000000000000000000000000000000");
   });
+  it("mulDiv transaction to be reverted", async () => {
+    //TODO negative of given value;
+    await expect(perpMath.testMulDiv("100000000000000000", "-100000000000000000", "0")).to.be
+      .reverted;
+  });
 
   describe("mulRatio", () => {
     it("equals to uint256.mul().div(1e6)", async () => {

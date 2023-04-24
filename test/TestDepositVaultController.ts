@@ -186,7 +186,7 @@ describe("Vault Controller deposit tests", function () {
       .to.emit(USDCVaultContract, "Deposited")
       .withArgs(USDC.address, alice.address, amount);
   });
-  it("Positive  Test for non re entrant ", async () => {
+  it("Negative  Test for non re entrant ", async () => {
     const [owner, alice] = await ethers.getSigners();
 
     const amount = parseUnits("100", await USDC.decimals());

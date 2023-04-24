@@ -410,7 +410,7 @@ describe("Vault", function () {
         ),
       ).to.be.revertedWith("Pausable: paused");
     });
-    it("shoud not allow with draw when reentered", async () => {
+    it("shoud not allow whitdraw when reentered", async () => {
       VolmexPerpPeriphery = await ethers.getContractFactory("VolmexPerpPeriphery");
       [owner, alice, relayer, bob, cole] = await ethers.getSigners();
       IndexPriceOracle = await ethers.getContractFactory("IndexPriceOracle");
@@ -567,6 +567,7 @@ describe("Vault", function () {
         vaultController1.withdraw("1000000000000", owner.address, vault.address),
       ).to.be.revertedWith("ReentrancyGuard: reentrant call'");
     });
+
     it("shoud not allow  deposit when reentered", async () => {
       VolmexPerpPeriphery = await ethers.getContractFactory("VolmexPerpPeriphery");
       [owner, alice, relayer, bob, cole] = await ethers.getSigners();
