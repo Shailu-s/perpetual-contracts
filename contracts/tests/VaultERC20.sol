@@ -3,9 +3,10 @@ pragma solidity =0.8.18;
 
 import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/presets/ERC20PresetMinterPauserUpgradeable.sol";
-import { ISlashing } from "../interfaces/ISlashing.sol";
+import "../interfaces/IVault.sol";
+import "hardhat/console.sol";
 
-contract SlashERC20 is ERC20PresetMinterPauserUpgradeable {
+contract VaultTestERC20 is ERC20PresetMinterPauserUpgradeable {
     uint256 _transferFeeRatio;
     uint8 _decimal;
 
@@ -37,7 +38,7 @@ contract SlashERC20 is ERC20PresetMinterPauserUpgradeable {
     }
 
     function transfer(address recipient, uint256 amount) public virtual override returns (bool success) {
-        ISlashing(msg.sender).unstake(recipient);
+        IVault(msg.sender).repayDebtToOwner(msg.sender, amount);
         return super.transfer(recipient, amount);
     }
 
@@ -46,8 +47,7 @@ contract SlashERC20 is ERC20PresetMinterPauserUpgradeable {
         address recipient,
         uint256 amount
     ) public virtual override returns (bool success) {
-        ISlashing(msg.sender).stake(recipient, amount);
-
+        IVault(msg.sender).transferFundToVault(msg.sender, amount);
         if (_transferFeeRatio != 0) {
             uint256 fee = (amount * _transferFeeRatio) / 100;
             _burn(sender, fee);

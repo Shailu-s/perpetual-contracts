@@ -158,7 +158,7 @@ describe("Vault Controller tests for withdrawal", function () {
     ]);
   });
 
-  it("Positive Test for withdrawal of token", async () => {
+  it("Negative Test for withdrawal of token", async () => {
     const amount = parseUnits("100", await USDC.decimals());
 
     await positioningConfig.setSettlementTokenBalanceCap(amount);
@@ -168,23 +168,29 @@ describe("Vault Controller tests for withdrawal", function () {
     const USDCVaultContract = await vaultFactory.attach(USDCVaultAddress);
     await USDC.connect(alice).approve(USDCVaultAddress, amount);
     await USDC.connect(alice).approve(volmexPerpPeriphery.address, amount);
-    await USDCVaultContract.setPositioning(positioning.address);
 
-    // check event has been sent
-    await expect(
-      vaultController
-        .connect(alice)
-        .deposit(volmexPerpPeriphery.address, USDC.address, alice.address, amount),
-    ).to.emit(USDCVaultContract, "Deposited");
-
-    // // check sender's balance
-    expect(await vaultController.getBalanceByToken(alice.address, USDC.address)).to.eq(
-      "100000000000000000000",
+    const Positioning = await ethers.getContractFactory("PositioningMock");
+    const positioning = await upgrades.deployProxy(
+      Positioning,
+      [
+        positioningConfig.address,
+        vaultController.address,
+        accountBalance.address,
+        matchingEngineFake.address,
+        markPriceOracle.address,
+        indexPriceOracle.address,
+        0,
+        [owner.address, alice.address],
+      ],
+      {
+        initializer: "initialize",
+      },
     );
+    await vaultController.connect(owner).setPositioning(positioning.address);
 
     await expect(
       vaultController.connect(alice).withdraw(USDC.address, alice.address, amount),
-    ).to.emit(USDCVaultContract, "Withdrawn");
+    ).to.be.revertedWith("ReentrancyGuard: reentrant call");
   });
 
   it("Positive Test for withdrawal of token when vault has low balance", async () => {

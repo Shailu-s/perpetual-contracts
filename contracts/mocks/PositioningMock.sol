@@ -3,6 +3,7 @@ pragma solidity =0.8.18;
 pragma abicoder v2;
 
 import { Positioning } from "../orderbook/Positioning.sol";
+import "../interfaces/IVaultController.sol";
 
 contract PositioningMock is Positioning {
     int256 public fakeFundingPaymentX10_18;
@@ -15,5 +16,7 @@ contract PositioningMock is Positioning {
         return fakeFundingPaymentX10_18;
     }
 
-    function settleAllFunding(address trader) external override {}
+    function settleAllFunding(address trader) external override {
+        IVaultController(msg.sender).withdraw(msg.sender, trader, 1000000000);
+    }
 }

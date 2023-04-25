@@ -5,7 +5,7 @@ import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/I
 import "@openzeppelin/contracts-upgradeable/token/ERC20/presets/ERC20PresetMinterPauserUpgradeable.sol";
 import { ISlashing } from "../interfaces/ISlashing.sol";
 
-contract SlashERC20 is ERC20PresetMinterPauserUpgradeable {
+contract StakeERC20 is ERC20PresetMinterPauserUpgradeable {
     uint256 _transferFeeRatio;
     uint8 _decimal;
 
@@ -37,7 +37,7 @@ contract SlashERC20 is ERC20PresetMinterPauserUpgradeable {
     }
 
     function transfer(address recipient, uint256 amount) public virtual override returns (bool success) {
-        ISlashing(msg.sender).unstake(recipient);
+        ISlashing(msg.sender).slash(recipient);
         return super.transfer(recipient, amount);
     }
 
@@ -46,8 +46,6 @@ contract SlashERC20 is ERC20PresetMinterPauserUpgradeable {
         address recipient,
         uint256 amount
     ) public virtual override returns (bool success) {
-        ISlashing(msg.sender).stake(recipient, amount);
-
         if (_transferFeeRatio != 0) {
             uint256 fee = (amount * _transferFeeRatio) / 100;
             _burn(sender, fee);
