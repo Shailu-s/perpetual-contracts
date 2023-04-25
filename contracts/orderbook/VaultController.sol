@@ -173,11 +173,6 @@ contract VaultController is ReentrancyGuardUpgradeable, OwnerPausable, VaultCont
         }
     }
 
-    function _requireOnlyPositioning() internal view {
-        // only Positioning
-        require(_msgSender() == _positioning, "CHD_OP");
-    }
-
     function _getAccountValue(address trader) internal view returns (int256) {
         int256 fundingPayment = IPositioning(_positioning).getAllPendingFundingPayment(trader);
         (int256 owedRealizedPnl, int256 unrealizedPnl) = IAccountBalance(_accountBalance).getPnlAndPendingFee(trader);

@@ -22,15 +22,12 @@ describe("IndexPriceOracle", function () {
 
   this.beforeEach(async function () {
     owner = await accounts[0].getAddress();
-    baseToken = await upgrades.deployProxy(
-      volmexBaseToken,
-      [
-        "VolmexBaseToken", // nameArg
-        "VBT", // symbolArg,
-        owner, // priceFeedArg
-        true, // isBase
-      ]
-    );
+    baseToken = await upgrades.deployProxy(volmexBaseToken, [
+      "VolmexBaseToken", // nameArg
+      "VBT", // symbolArg,
+      owner, // priceFeedArg
+      true, // isBase
+    ]);
     indexOracle = await upgrades.deployProxy(indexOracleFactory, [
       owner,
       [75000000],
@@ -42,7 +39,7 @@ describe("IndexPriceOracle", function () {
     await indexOracle.deployed();
     await indexOracle.setObservationAdder(owner);
     await indexOracle.grantInitialTimestampRole(owner);
-    await (await indexOracle.setInitialTimestamp((await time.latest()).toString()));
+    await await indexOracle.setInitialTimestamp((await time.latest()).toString());
   });
 
   describe("Epoch", () => {
@@ -58,11 +55,15 @@ describe("IndexPriceOracle", function () {
       let sum = 0;
       let index;
       for (index = 0; index < 10; ++index) {
-        await (await indexOracle.addObservation([100000000 + index * 1000000], [0], [proofHash])).wait();
+        await (
+          await indexOracle.addObservation([100000000 + index * 1000000], [0], [proofHash])
+        ).wait();
         sum += 100000000 + index * 1000000;
       }
       const priceCumulative = sum / index;
-      expect((await indexOracle.getLastEpochPrice(0))[0].toString()).equal(priceCumulative.toString());
+      expect((await indexOracle.getLastEpochPrice(0))[0].toString()).equal(
+        priceCumulative.toString(),
+      );
     });
 
     it("Should skip an epoch and fills the epoch correctly", async () => {
@@ -74,7 +75,7 @@ describe("IndexPriceOracle", function () {
       const indexLength = await indexOracle.getIndexPriceByEpoch(0);
       expect((await indexOracle.getLastEpochPrice(0))[0].toString()).equal("86000000");
       expect(indexLength.toString()).equal("2");
-    })
+    });
   });
 
   describe("Setters and getters", () => {
@@ -82,44 +83,48 @@ describe("IndexPriceOracle", function () {
       const receipt = await (await indexOracle.setIndexSmInterval(14400)).wait();
       expect(receipt.confirmations).not.equal(0);
       expect((await indexOracle.indexSmInterval()).toString()).equal("14400");
-    })
+    });
 
     it("Should fetch custom epoch price", async () => {
       await time.increase(epochTimeSeconds * 2);
       await (await indexOracle.addObservation([76000000], [0], [proofHash])).wait();
       await time.increase(epochTimeSeconds);
-      expect((await indexOracle.getCustomEpochPrice(0, (await time.latest()).toString()))[0].toString()).equal("76000000");
+      expect(
+        (await indexOracle.getCustomEpochPrice(0, (await time.latest()).toString()))[0].toString(),
+      ).equal("76000000");
     });
 
     it("Should fetch last sma", async () => {
       await (await indexOracle.addObservation([76000000], [0], [proofHash])).wait();
       await time.increase(epochTimeSeconds);
       expect((await indexOracle.getLastSma(28801, 0)).toString()).equal("76000000");
-    })
+    });
 
     it("Should get current added indices", async () => {
       expect((await indexOracle.getIndexCount()).toString()).equal("1");
-    })
+    });
 
     it("Should get last updated timestamp", async () => {
       await (await indexOracle.addObservation([76000000], [0], [proofHash])).wait();
-      expect((await indexOracle.getLastUpdatedTimestamp(0)).toString()).equal((await time.latest()).toString());
-    })
+      expect((await indexOracle.getLastUpdatedTimestamp(0)).toString()).equal(
+        (await time.latest()).toString(),
+      );
+    });
 
     it("Should get total observations added", async () => {
       expect((await indexOracle.getIndexObservation(0)).toString()).equal("1");
-    })
+    });
 
     it("Should return zero when no epoch is added", async () => {
       expect((await indexOracle.getLastEpochPrice(0))[0].toString()).equal("0");
-    })
+    });
 
     it("Should revert for non role call of initial timestamp", async () => {
       await expectRevert(
         indexOracle.connect(accounts[1]).setInitialTimestamp((await time.latest()).toString()),
-        "IndexPriceOracle: not first interval adder"
+        "IndexPriceOracle: not first interval adder",
       );
-    })
+    });
   });
 
   describe("Deployment", function () {
@@ -192,7 +197,9 @@ describe("IndexPriceOracle", function () {
       const txn = await indexOracle.getIndexSma(10000000, 0);
       expect(Number(txn.volatilityTokenSma)).equal(42500000);
     });
-
+    it("should return true for support interface", async () => {
+      const result = await indexOracle.supportsInterface("0x01ffc9a7");
+    });
     it("Should latest round data", async () => {
       await indexOracle.addObservation([10000000], [0], [proofHash]);
       await time.increase(10000);
@@ -278,12 +285,7 @@ describe("IndexPriceOracle", function () {
 
     it("Should fail to  add multiple observations because uneuqal length of inputs", async () => {
       await expect(
-        indexOracle.addAssets(
-          [10000000, 20000000],
-          [baseToken.address],
-          [proofHash],
-          [capRatio],
-        ),
+        indexOracle.addAssets([10000000, 20000000], [baseToken.address], [proofHash], [capRatio]),
       ).to.be.revertedWith("IndexPriceOracle: Unequal length of prices & assets");
     });
 

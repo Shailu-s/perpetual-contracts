@@ -12,6 +12,7 @@ describe("PerpMath test", async () => {
   const number = BigNumber.from(2).pow(20).sub(1);
   const minInt256 = BigNumber.from(2).pow(255).mul(-1);
   const maxUint24 = BigNumber.from(2).pow(24).sub(1);
+  const maxInt128 = BigNumber.from(-2).pow(127);
 
   let perpMath;
 
@@ -45,7 +46,30 @@ describe("PerpMath test", async () => {
     const result = await perpMath.neg128("100000000000000000");
     expect(result.toString()).to.be.equal("-100000000000000000");
   });
+  it("neg uint", async () => {
+    //TODO negative of given value;
+    const result = await perpMath.uintNeg128("100000000000000000");
+    expect(result.toString()).to.be.equal("-100000000000000000");
+  });
 
+  it("mulDiv", async () => {
+    //TODO negative of given value;
+    const result = await perpMath.testMulDiv("100000000000000000", "-100000000000000000", "10000");
+    expect(result.toString()).to.be.equal("-1000000000000000000000000000000");
+  });
+  it("mulDiv transaction to be reverted", async () => {
+    //TODO negative of given value;
+    await expect(perpMath.testMulDiv("100000000000000000", "-100000000000000000", "0")).to.be
+      .reverted;
+  });
+  it("mulDiv", async () => {
+    //TODO negative of given value;
+    const result = await perpMath.testMulDiv(
+      "90",
+      "-98",
+      "345678987656787789870987987678767898769876876876",
+    );
+  });
   describe("mulRatio", () => {
     it("equals to uint256.mul().div(1e6)", async () => {
       // per on FullMath.mulDiv() specs, max input without overflow

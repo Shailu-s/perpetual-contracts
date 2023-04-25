@@ -28,9 +28,19 @@ describe("ERC20TransferProxy", function () {
       });
       expect(receipt.confirmations).not.equal(0);
     });
+    it("it should fail to initialize again", async () => {
+      await expect(transferProxy.erc20TransferProxyInit()).to.be.revertedWith(
+        "Initializable: contract is already initialized",
+      );
+    });
     it("should be able to set caller of tranfer function", async () => {
       await transferProxy.addTransferProxyRole(account1.address);
       expect(transferProxy.TRANSFER_PROXY_CALLER()).not.equal(0);
+    });
+    it("should fail tomadd transfer role", async () => {
+      await expect(
+        transferProxy.connect(account1).addTransferProxyRole(account1.address),
+      ).to.be.revertedWith("Positioning: Not admin");
     });
   });
   describe("Transfer From", function () {

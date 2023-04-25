@@ -1972,7 +1972,7 @@ describe("Periodic Funding payment", function () {
     // when user opens  position his collateral value  = 1000 - (200.06 *4/100);
     // when user closes position his collateral value  = 1000 - (200.06 *4/100) - (200.06 *4/100) - funding payment in last cycle
     it("should test clamp upper bound ", async () => {
-      await positioningConfig.setMaxFundingRate("1000000");
+      await positioningConfig.setMaxFundingRate("730000");
       await markPriceOracle.setObservationAdder(owner.address);
       await indexPriceOracle.setObservationAdder(owner.address);
       for (let index = 0; index <= 10; index++) {
@@ -2040,6 +2040,10 @@ describe("Periodic Funding payment", function () {
         account4.address,
         volmexBaseToken.address,
       );
+      console.log(
+        (await vaultController.getFreeCollateralByRatio(account4.address, 1)).toString(),
+        "in test",
+      );
       expect(positionSize1.toString()).to.be.equal("1000000000000000000");
       expect(positionSize2.toString()).to.be.equal("-1000000000000000000");
       await markPriceOracle.setObservationAdder(owner.address);
@@ -2086,6 +2090,16 @@ describe("Periodic Funding payment", function () {
 
       const signatureLeft1 = await getSignature(orderLeft1, account3.address);
       const signatureRight1 = await getSignature(orderRight1, account4.address);
+      console.log(
+        (
+          await positioning.getPendingFundingPayment(account4.address, volmexBaseToken.address)
+        ).toString(),
+        "in test",
+      );
+      console.log(
+        (await vaultController.getFreeCollateralByRatio(account4.address, 1)).toString(),
+        "in test",
+      );
       await volmexPerpPeriphery.openPosition(
         index,
         orderLeft1,

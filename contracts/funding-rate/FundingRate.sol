@@ -49,7 +49,7 @@ contract FundingRate is IFundingRate, BlockContext, PositioningCallee, FundingRa
 
     /// @inheritdoc IFundingRate
     function getPendingFundingPayment(address trader, address baseToken) public view virtual override returns (int256) {
-        (int256 twPremium,,, ) = _getFundingGlobalPremiumAndTwaps(baseToken);
+        (int256 twPremium, , , ) = _getFundingGlobalPremiumAndTwaps(baseToken);
         int256 userTwPremium = IAccountBalance(_accountBalance).getAccountInfo(trader, baseToken).lastTwPremiumGrowthGlobal;
         return _getFundingPayment(trader, baseToken, twPremium, userTwPremium);
     }

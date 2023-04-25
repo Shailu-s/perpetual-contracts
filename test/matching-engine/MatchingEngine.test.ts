@@ -293,6 +293,16 @@ describe("MatchingEngine", function () {
       let receipt = await matchingEngine.deployed();
       expect(receipt.confirmations).not.equal(0);
     });
+    it("MatchingEngineshould fail to initialze again", async () => {
+      await expect(
+        matchingEngine.initialize(owner.address, markPriceOracle.address),
+      ).to.be.revertedWith("Initializable: contract is already initialized");
+    });
+    it("should fail to initialize transfer manager again", async () => {
+      await expect(
+        transferManagerTest.transferManager_init(erc20TransferProxy.address, owner.address),
+      ).to.be.revertedWith("Initializable: contract is already initialized");
+    });
   });
 
   describe("Cancel orders:", function () {
@@ -1325,6 +1335,11 @@ describe("MatchingEngine", function () {
         .to.emit(transferManagerTest, "ProxyChanged")
         .withArgs(erc20TransferProxy.address);
     });
+    it("should fail set transfer proxy & emit event with proxy address", async () => {
+      await expect(
+        transferManagerTest.connect(account3).setTransferProxy(erc20TransferProxy.address),
+      ).to.be.revertedWith("TransferExecutor: Not admin");
+    });
 
     it("should call do transfer with fee > 0", async () => {
       const [owner, account1, account2, account3, account4] = await ethers.getSigners();
@@ -1433,6 +1448,17 @@ describe("MatchingEngine", function () {
       await expect(
         matchingEngine.connect(account1).grantMatchOrders(account1.address),
       ).to.be.revertedWith("MatchingEngineCore: Not admin");
+    });
+  });
+  describe("transfer payout else condition", async () => {
+    it("should pass with 0 amount", async () => {
+      await transferManagerTest.transferPayouts(
+        account1.address,
+        0,
+        owner.address,
+        account2.address,
+        vault.address,
+      );
     });
   });
 

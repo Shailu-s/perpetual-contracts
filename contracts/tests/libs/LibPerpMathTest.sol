@@ -26,7 +26,19 @@ contract TestPerpMath {
         return value.neg128();
     }
 
+    function uintNeg128(uint128 value) external pure returns (int128) {
+        return value.neg128();
+    }
+
     function testMulRatio(uint256 value, uint24 ratio) external pure returns (uint256) {
         return value.mulRatio(ratio);
+    }
+
+    function testMulDiv(
+        int256 a,
+        int256 b,
+        uint256 denominator
+    ) external pure returns (int256) {
+        return a.mulDiv(b, denominator);
     }
 }
