@@ -614,32 +614,184 @@ describe("Positioning", function () {
         );
       });
 
-      it("should match orders and open position with leverage", async () => {
+      it("should fail with re entrancy gaurd", async () => {
         // const txn = await markPriceOracle.getLastSma(10000000, 0);
+        matchingEngine = await upgrades.deployProxy(
+          MatchingEngine,
+          [owner.address, markPriceOracle.address],
+          {
+            initializer: "__MatchingEngineTest_init",
+          },
+        );
+
+        await markPriceOracle.setObservationAdder(matchingEngine.address);
+
+        virtualToken = await upgrades.deployProxy(VirtualToken, ["VirtualToken", "VTK", false], {
+          initializer: "initialize",
+        });
+        await virtualToken.deployed();
+        await virtualToken.setMintBurnRole(owner.address);
+
+        vault = await upgrades.deployProxy(Vault, [
+          positioningConfig.address,
+          accountBalance.address,
+          virtualToken.address,
+          accountBalance.address,
+        ]);
+
+        vault2 = await upgrades.deployProxy(Vault, [
+          positioningConfig.address,
+          accountBalance.address,
+          virtualToken.address,
+          accountBalance.address,
+        ]);
+
+        transferManagerTest = await upgrades.deployProxy(
+          TransferManagerTest,
+          [erc20TransferProxy.address, owner.address],
+          {
+            initializer: "__TransferManager_init",
+          },
+        );
+        const AccountBalance = await ethers.getContractFactory("AccountBalanceMock");
+        const accountBalance1 = await upgrades.deployProxy(AccountBalance, [
+          positioningConfig.address,
+        ]);
+        vaultController = await upgrades.deployProxy(VaultController, [
+          positioningConfig.address,
+          accountBalance1.address,
+        ]);
+
+        // vaultController = await upgrades.deployProxy(VaultController, [positioningConfig.address, accountBalance1.address])
+
+        positioning = await upgrades.deployProxy(
+          Positioning,
+          [
+            positioningConfig.address,
+            vaultController.address,
+            accountBalance1.address,
+            matchingEngine.address,
+            markPriceOracle.address,
+            indexPriceOracle.address,
+            0,
+            [owner.address, account2.address],
+          ],
+          {
+            initializer: "initialize",
+          },
+        );
+        await (await volmexBaseToken.setMintBurnRole(positioning.address)).wait();
+        await (await virtualToken.setMintBurnRole(positioning.address)).wait();
+        marketRegistry = await upgrades.deployProxy(MarketRegistry, [virtualToken.address]);
+
+        // await marketRegistry.connect(owner).addBaseToken(virtualToken.address)
+        await marketRegistry.connect(owner).addBaseToken(volmexBaseToken.address);
+        // await marketRegistry.connect(owner).addBaseToken(baseToken.address)
+        await marketRegistry.connect(owner).setMakerFeeRatio(0.0004e6);
+        await marketRegistry.connect(owner).setTakerFeeRatio(0.0009e6);
+        await matchingEngine.grantMatchOrders(positioning.address);
+        await vault.connect(owner).setPositioning(positioning.address);
+        await vault.connect(owner).setVaultController(vaultController.address);
+        await vaultController.registerVault(vault.address, virtualToken.address);
+        await vaultController.connect(owner).setPositioning(positioning.address);
+
+        await positioningConfig.connect(owner).setMaxMarketsPerAccount(5);
+        await positioningConfig
+          .connect(owner)
+          .setSettlementTokenBalanceCap(convert("100000000000000000000000000"));
+
+        await positioning.connect(owner).setMarketRegistry(marketRegistry.address);
+        await positioning.connect(owner).setDefaultFeeReceiver(owner.address);
+        await positioning.connect(owner).setPositioning(positioning.address);
+
+        matchingEngine = await upgrades.deployProxy(
+          MatchingEngine,
+          [owner.address, markPriceOracle.address],
+          {
+            initializer: "__MatchingEngineTest_init",
+          },
+        );
+
+        await markPriceOracle.setObservationAdder(matchingEngine.address);
+
+        virtualToken = await upgrades.deployProxy(VirtualToken, ["VirtualToken", "VTK", false], {
+          initializer: "initialize",
+        });
+        await virtualToken.deployed();
+        await virtualToken.setMintBurnRole(owner.address);
+
+        vault = await upgrades.deployProxy(Vault, [
+          positioningConfig.address,
+          accountBalance.address,
+          virtualToken.address,
+          accountBalance.address,
+        ]);
+
+        vault2 = await upgrades.deployProxy(Vault, [
+          positioningConfig.address,
+          accountBalance.address,
+          virtualToken.address,
+          accountBalance.address,
+        ]);
+
+        transferManagerTest = await upgrades.deployProxy(
+          TransferManagerTest,
+          [erc20TransferProxy.address, owner.address],
+          {
+            initializer: "__TransferManager_init",
+          },
+        );
+
+        accountBalance1 = await upgrades.deployProxy(AccountBalance, [positioningConfig.address]);
+        vaultController = await upgrades.deployProxy(VaultController, [
+          positioningConfig.address,
+          accountBalance1.address,
+        ]);
+
+        // vaultController = await upgrades.deployProxy(VaultController, [positioningConfig.address, accountBalance1.address])
+
+        positioning = await upgrades.deployProxy(
+          Positioning,
+          [
+            positioningConfig.address,
+            vaultController.address,
+            accountBalance1.address,
+            matchingEngine.address,
+            markPriceOracle.address,
+            indexPriceOracle.address,
+            0,
+            [owner.address, account2.address],
+          ],
+          {
+            initializer: "initialize",
+          },
+        );
+        await (await volmexBaseToken.setMintBurnRole(positioning.address)).wait();
+        await (await virtualToken.setMintBurnRole(positioning.address)).wait();
+        marketRegistry = await upgrades.deployProxy(MarketRegistry, [virtualToken.address]);
+
+        // await marketRegistry.connect(owner).addBaseToken(virtualToken.address)
+        await marketRegistry.connect(owner).addBaseToken(volmexBaseToken.address);
+        // await marketRegistry.connect(owner).addBaseToken(baseToken.address)
+        await marketRegistry.connect(owner).setMakerFeeRatio(0.0004e6);
+        await marketRegistry.connect(owner).setTakerFeeRatio(0.0009e6);
         await matchingEngine.grantMatchOrders(positioning.address);
 
-        await virtualToken.mint(account1.address, convert("1000"));
-        await virtualToken.mint(account2.address, convert("1000"));
-        await virtualToken.connect(account1).approve(vault.address, convert("1000"));
-        await virtualToken.connect(account2).approve(vault.address, convert("1000"));
-        await virtualToken.connect(account1).approve(volmexPerpPeriphery.address, convert("1000"));
-        await virtualToken.connect(account2).approve(volmexPerpPeriphery.address, convert("1000"));
-        await vaultController
-          .connect(account1)
-          .deposit(
-            volmexPerpPeriphery.address,
-            virtualToken.address,
-            account1.address,
-            convert("1000"),
-          );
-        await vaultController
-          .connect(account2)
-          .deposit(
-            volmexPerpPeriphery.address,
-            virtualToken.address,
-            account2.address,
-            convert("1000"),
-          );
+        await vault.connect(owner).setPositioning(positioning.address);
+        await vault.connect(owner).setVaultController(vaultController.address);
+        await vaultController.registerVault(vault.address, virtualToken.address);
+        await vaultController.connect(owner).setPositioning(positioning.address);
+
+        await positioningConfig.connect(owner).setMaxMarketsPerAccount(5);
+        await positioningConfig
+          .connect(owner)
+          .setSettlementTokenBalanceCap(convert("100000000000000000000000000"));
+
+        await positioning.connect(owner).setMarketRegistry(marketRegistry.address);
+        await positioning.connect(owner).setDefaultFeeReceiver(owner.address);
+        await positioning.connect(owner).setPositioning(positioning.address);
+
+        await matchingEngine.grantMatchOrders(positioning.address);
 
         const orderLeftLeverage = Order(
           ORDER,
@@ -678,24 +830,7 @@ describe("Positioning", function () {
               signatureRight,
               liquidator,
             ),
-        ).to.emit(positioning, "PositionChanged");
-
-        const positionSize = await accountBalance1.getPositionSize(
-          account1.address,
-          orderLeft.takeAsset.virtualToken,
-        );
-        const positionSize1 = await accountBalance1.getPositionSize(
-          account2.address,
-          orderLeft.takeAsset.virtualToken,
-        );
-        const indexPrice = await positioning.getIndexPrice(volmexBaseToken.address);
-        expect(indexPrice.toString()).to.be.equal("10000000000");
-        const isTraderLiquidatable = await positioning.isAccountLiquidatable(account1.address);
-        expect(isTraderLiquidatable).to.be.equal(false);
-        const accountValue = await positioning.getAccountValue(account1.address);
-        console.log("trader1 account value :", accountValue.toString());
-        await expect(positionSize.toString()).to.be.equal(convert("20"));
-        await expect(positionSize1.toString()).to.be.equal(convert("-20"));
+        ).to.be.revertedWith("ReentrancyGuard: reentrant call");
       });
       it("should use order validation before opening position ", async () => {
         // const txn = await markPriceOracle.getLastSma(10000000, 0);

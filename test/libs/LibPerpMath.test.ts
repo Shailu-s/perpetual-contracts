@@ -62,7 +62,14 @@ describe("PerpMath test", async () => {
     await expect(perpMath.testMulDiv("100000000000000000", "-100000000000000000", "0")).to.be
       .reverted;
   });
-
+  it("mulDiv", async () => {
+    //TODO negative of given value;
+    const result = await perpMath.testMulDiv(
+      "90",
+      "-98",
+      "345678987656787789870987987678767898769876876876",
+    );
+  });
   describe("mulRatio", () => {
     it("equals to uint256.mul().div(1e6)", async () => {
       // per on FullMath.mulDiv() specs, max input without overflow
