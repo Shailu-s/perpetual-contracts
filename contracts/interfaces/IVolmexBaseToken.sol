@@ -9,7 +9,7 @@ interface IVolmexBaseToken {
     function setPriceFeed(address priceFeedArg) external;
     /// @notice Get the current index price
     /// @return indexPrice the current index price
-    function getIndexPrice(uint256 index) external view returns (uint256 indexPrice);
+    function getIndexPrice(uint256 index, uint256 twInterval) external view returns (uint256 indexPrice);
     /// @notice Get the price feed address
     /// @return priceFeed the current price feed
     function getPriceFeed() external view returns (address priceFeed);
