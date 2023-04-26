@@ -20,6 +20,7 @@ abstract contract VolmexBaseToken is IVolmexBaseToken, VirtualToken, BaseTokenSt
 
     /// @dev This function is only used for emergency shutdown, to set priceFeed to an emergencyPriceFeed
     function setPriceFeed(address priceFeedArg) external virtual {
+        _requireVirtualTokenAdmin();
         _priceFeed = priceFeedArg;
         emit PriceFeedChanged(_priceFeed);
     }
