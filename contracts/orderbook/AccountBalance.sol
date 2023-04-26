@@ -147,7 +147,7 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
 
         // Liquidate the entire position if its value is small enough
         // to prevent tiny positions left in the system
-        uint256 positionValueAbs = getTotalPositionValue(trader, baseToken).abs();
+        uint256 positionValueAbs = getTotalPositionValue(trader, baseToken, IPositioningConfig(_positioningConfig).getTwapIntervalLiquidation()).abs();
         if (positionValueAbs <= _MIN_PARTIAL_LIQUIDATE_POSITION_VALUE) {
             return positionSize;
         }
@@ -192,7 +192,7 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
             if (baseBalance < 0) {
                 // baseDebtValue = baseDebt * indexPrice
                 // baseDebtValue = baseBalance.mulDiv(_getIndexPrice(baseToken).toInt256(), 1e18);
-                baseDebtValue = (baseBalance * _getIndexPrice(baseToken).toInt256()) / _ORACLE_BASE;
+                baseDebtValue = (baseBalance * _getIndexPrice(baseToken, IPositioningConfig(_positioningConfig).getTwapInterval()).toInt256()) / _ORACLE_BASE;
             }
             totalBaseDebtValue = totalBaseDebtValue + baseDebtValue;
             // we can't calculate totalQuoteDebtValue until we have totalQuoteBalance
@@ -209,7 +209,7 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
         uint256 tokenLen = _baseTokensMap[trader].length;
         for (uint256 i = 0; i < tokenLen; i++) {
             address baseToken = _baseTokensMap[trader][i];
-            totalPositionValue = totalPositionValue + getTotalPositionValue(trader, baseToken);
+            totalPositionValue = totalPositionValue + getTotalPositionValue(trader, baseToken, IPositioningConfig(_positioningConfig).getTwapInterval());
         }
 
         int256 netQuoteBalance = _getNetQuoteBalance(trader);
@@ -220,8 +220,8 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
     }
 
     /// @dev this function is used to fetch index price of base token
-    function getIndexPrice(address baseToken) external view returns (uint256 indexPrice) {
-        indexPrice = _getIndexPrice(baseToken);
+    function getIndexPrice(address baseToken, uint256 twInterval) external view returns (uint256 indexPrice) {
+        indexPrice = _getIndexPrice(baseToken, twInterval);
     }
 
     /// @inheritdoc IAccountBalance
@@ -236,11 +236,11 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
     }
 
     /// @inheritdoc IAccountBalance
-    function getTotalPositionValue(address trader, address baseToken) public view override returns (int256) {
+    function getTotalPositionValue(address trader, address baseToken, uint256 twInterval) public view override returns (int256) {
         int256 positionSize = getPositionSize(trader, baseToken);
         if (positionSize == 0) return 0;
 
-        uint256 indexTwap = _getIndexPrice(baseToken);
+        uint256 indexTwap = _getIndexPrice(baseToken, twInterval);
         // both positionSize & indexTwap are in 10^18 already
         // overflow inspection:
         // only overflow when position value in USD(18 decimals) > 2^255 / 10^18
@@ -255,7 +255,7 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
         for (uint256 i = 0; i < tokenLen; i++) {
             address baseToken = tokens[i];
             // will not use negative value in this case
-            uint256 positionValue = getTotalPositionValue(trader, baseToken).abs();
+            uint256 positionValue = getTotalPositionValue(trader, baseToken, IPositioningConfig(_positioningConfig).getTwapInterval()).abs();
             totalPositionValue = totalPositionValue + positionValue;
         }
         return totalPositionValue;
@@ -320,8 +320,8 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
         }
     }
 
-    function _getIndexPrice(address baseToken) internal view returns (uint256) {
-        return IVolmexBaseToken(baseToken).getIndexPrice(_underlyingPriceIndex);
+    function _getIndexPrice(address baseToken, uint256 twInterval) internal view returns (uint256) {
+        return IVolmexBaseToken(baseToken).getIndexPrice(_underlyingPriceIndex, twInterval);
     }
 
     /// @return netQuoteBalance = quote.balance

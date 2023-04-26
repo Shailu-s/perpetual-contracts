@@ -99,7 +99,7 @@ interface IAccountBalance {
     /// @param trader The address of trader
     /// @param baseToken The address of baseToken
     /// @return totalPositionValue Total position value of trader's baseToken market
-    function getTotalPositionValue(address trader, address baseToken) external view returns (int256);
+    function getTotalPositionValue(address trader, address baseToken, uint256 twInterval) external view returns (int256);
     /// @notice Get all market position abs value of trader
     /// @param trader The address of trader
     /// @return totalAbsPositionValue Sum up positions value of every market
