@@ -6,8 +6,7 @@ import { IVolmexBaseToken } from "../interfaces/IVolmexBaseToken.sol";
 import { VirtualToken } from "./VirtualToken.sol";
 import { BaseTokenStorageV1 } from "../storage/BaseTokenStorage.sol";
 
-// never inherit any new stateful contract. never change the orders of parent stateful contracts
-abstract contract VolmexBaseToken is IVolmexBaseToken, VirtualToken, BaseTokenStorageV1 {
+contract VolmexBaseToken is IVolmexBaseToken, VirtualToken, BaseTokenStorageV1 {
     function initialize(
         string memory nameArg,
         string memory symbolArg,
