@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity =0.8.18;
 
-import { SafeMathUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/math/SafeMathUpgradeable.sol";
 import { IIndexPrice } from "../../interfaces/IIndexPrice.sol";
 import { VirtualToken } from "../VirtualToken.sol";
 import { BaseTokenStorageV1 } from "../../storage/BaseTokenStorage.sol";
@@ -9,9 +8,6 @@ import { IVolmexBaseToken } from "../../interfaces/IVolmexBaseToken.sol";
 
 // never inherit any new stateful contract. never change the orders of parent stateful contracts
 abstract contract ParentToken is IVolmexBaseToken, IIndexPrice, VirtualToken, BaseTokenStorageV1 {
-    using SafeMathUpgradeable for uint256;
-    using SafeMathUpgradeable for uint8;
-
     function initialize(
         string memory nameArg,
         string memory symbolArg,
