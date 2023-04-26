@@ -3046,6 +3046,7 @@ describe("Liquidation test in Positioning", function () {
         const positionsize = await accountBalance1.getTotalPositionValue(
           account1.address,
           orderLeft.makeAsset.virtualToken,
+          28800
         );
         const positionSizeAbs = await accountBalance1.getTotalAbsPositionValue(account1.address);
         const accountValue = await vaultController.getAccountValue(account1.address);
@@ -3130,6 +3131,7 @@ describe("Liquidation test in Positioning", function () {
         const positionsize = await accountBalance1.getTotalPositionValue(
           account1.address,
           orderLeft.makeAsset.virtualToken,
+          28800
         );
         const positionSizeAbs = await accountBalance1.getTotalAbsPositionValue(account1.address);
         const accountValue = await vaultController.getAccountValue(account1.address);
@@ -3339,6 +3341,7 @@ describe("Liquidation test in Positioning", function () {
         const positionsize = await accountBalance1.getTotalPositionValue(
           account1.address,
           orderLeft.makeAsset.virtualToken,
+          28800
         );
         const positionsizeAbs = await accountBalance1.getTotalAbsPositionValue(account1.address);
 
