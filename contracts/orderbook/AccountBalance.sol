@@ -10,7 +10,7 @@ import { LibSafeCastUint } from "../libs/LibSafeCastUint.sol";
 import { LibSafeCastInt } from "../libs/LibSafeCastInt.sol";
 
 import { IAccountBalance } from "../interfaces/IAccountBalance.sol";
-import { IIndexPrice } from "../interfaces/IIndexPrice.sol";
+import { IVolmexBaseToken } from "../interfaces/IVolmexBaseToken.sol";
 import { IPositioningConfig } from "../interfaces/IPositioningConfig.sol";
 import { IVirtualToken } from "../interfaces/IVirtualToken.sol";
 
@@ -321,7 +321,7 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
     }
 
     function _getIndexPrice(address baseToken) internal view returns (uint256) {
-        return IIndexPrice(baseToken).getIndexPrice(_underlyingPriceIndex);
+        return IVolmexBaseToken(baseToken).getIndexPrice(_underlyingPriceIndex);
     }
 
     /// @return netQuoteBalance = quote.balance

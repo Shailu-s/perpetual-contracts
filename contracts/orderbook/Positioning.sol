@@ -15,7 +15,7 @@ import { LibSafeCastUint } from "../libs/LibSafeCastUint.sol";
 import { LibSignature } from "../libs/LibSignature.sol";
 
 import { IAccountBalance } from "../interfaces/IAccountBalance.sol";
-import { IIndexPrice } from "../interfaces/IIndexPrice.sol";
+import { IVolmexBaseToken } from "../interfaces/IVolmexBaseToken.sol";
 import { IMatchingEngine } from "../interfaces/IMatchingEngine.sol";
 import { IMarketRegistry } from "../interfaces/IMarketRegistry.sol";
 import { IPositioning } from "../interfaces/IPositioning.sol";
@@ -574,7 +574,7 @@ contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, 
     }
 
     function _getIndexPrice(address baseToken) internal view returns (uint256) {
-        return IIndexPrice(baseToken).getIndexPrice(_underlyingPriceIndex);
+        return IVolmexBaseToken(baseToken).getIndexPrice(_underlyingPriceIndex);
     }
 
     function _getTakerOpenNotional(address trader, address baseToken) internal view returns (int256) {
