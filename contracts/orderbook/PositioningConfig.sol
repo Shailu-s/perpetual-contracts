@@ -33,6 +33,7 @@ contract PositioningConfig is IPositioningConfig, PositioningConfigStorageV1, Ac
         _partialLiquidationRatio = 0.1e6; // partial liquidation ratio, 10% in decimal 6
         _maxFundingRate = 0.0073e6; // max funding rate, 0.73% in decimal 6
         _twapInterval = 28800;
+        _twapIntervalLiquidation = 3600; // 1 hour only for position size value when liquidation
         _settlementTokenBalanceCap = 0;
         markPriceOracle = markPriceOracleArg;
         _grantRole(POSITIONING_CONFIG_ADMIN, _msgSender());
@@ -60,6 +61,13 @@ contract PositioningConfig is IPositioningConfig, PositioningConfigStorageV1, Ac
         _twapInterval = twapIntervalArg;
         markPriceOracle.setMarkSmInterval(twapIntervalArg);
         emit TwapIntervalChanged(twapIntervalArg);
+    }
+
+    function setTwapIntervalLiquidation(uint32 twapInterval) external {
+        _requirePositioningConfigAdmin();
+        // PC_ITIL: invalid twapInterval in liquidation
+        require(twapInterval != 0, "PC_ITIL");
+        _twapIntervalLiquidation = twapInterval;
     }
 
     function setMaxMarketsPerAccount(uint8 maxMarketsPerAccountArg) external {
@@ -142,6 +150,10 @@ contract PositioningConfig is IPositioningConfig, PositioningConfigStorageV1, Ac
     /// @inheritdoc IPositioningConfig
     function getTwapInterval() external view override returns (uint32) {
         return _twapInterval;
+    }
+
+    function getTwapIntervalLiquidation() external view override returns (uint256) {
+        return _twapIntervalLiquidation;
     }
 
     /// @inheritdoc IPositioningConfig

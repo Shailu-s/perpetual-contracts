@@ -20,6 +20,9 @@ interface IPositioningConfig {
     /// @return twapInterval TwapInterval for funding and prices (mark & index) calculations
     function getTwapInterval() external view returns (uint32 twapInterval);
 
+    /// @return twapInterval TwapInterval for funding and prices (mark & index) calculations when liquidation
+    function getTwapIntervalLiquidation() external view returns (uint256 twapInterval);
+
     /// @return settlementTokenBalanceCap Max value of settlement token balance
     function getSettlementTokenBalanceCap() external view returns (uint256 settlementTokenBalanceCap);
 
