@@ -234,8 +234,8 @@ contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, 
     }
 
     /// @dev this function is used to fetch index price of base token
-    function getIndexPrice(address baseToken) external view returns (uint256 indexPrice) {
-        indexPrice = _getIndexPrice(baseToken);
+    function getIndexPrice(address baseToken, uint256 twInterval) external view returns (uint256 indexPrice) {
+        indexPrice = _getIndexPrice(baseToken, twInterval);
     }
 
     /// @dev this function is used to know the trader is liquidateable
@@ -568,13 +568,13 @@ contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, 
         }
 
         int256 liquidatedPositionSize = positionSizeToBeLiquidated.neg256();
-        int256 liquidatedPositionNotional = positionSizeToBeLiquidated.mulDiv(_getIndexPrice(baseToken).toInt256(), _ORACLE_BASE);
+        int256 liquidatedPositionNotional = positionSizeToBeLiquidated.mulDiv(_getIndexPrice(baseToken, IPositioningConfig(_positioningConfig).getTwapIntervalLiquidation()).toInt256(), _ORACLE_BASE);
 
         return (liquidatedPositionSize, liquidatedPositionNotional);
     }
 
-    function _getIndexPrice(address baseToken) internal view returns (uint256) {
-        return IVolmexBaseToken(baseToken).getIndexPrice(_underlyingPriceIndex);
+    function _getIndexPrice(address baseToken, uint256 twInterval) internal view returns (uint256) {
+        return IVolmexBaseToken(baseToken).getIndexPrice(_underlyingPriceIndex, twInterval);
     }
 
     function _getTakerOpenNotional(address trader, address baseToken) internal view returns (int256) {
