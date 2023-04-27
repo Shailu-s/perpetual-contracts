@@ -6,6 +6,7 @@ import { IPositioningConfig } from "../interfaces/IPositioningConfig.sol";
 import { PositioningConfigStorageV1 } from "../storage/PositioningConfigStorage.sol";
 import { IMarkPriceOracle } from "../interfaces/IMarkPriceOracle.sol";
 import { IPositioning } from "../interfaces/IPositioning.sol";
+import { IAccountBalance } from "../interfaces/IAccountBalance.sol";
 
 // never inherit any new stateful contract. never change the orders of parent stateful contracts
 contract PositioningConfig is IPositioningConfig, PositioningConfigStorageV1, AccessControlUpgradeable {
@@ -62,6 +63,7 @@ contract PositioningConfig is IPositioningConfig, PositioningConfigStorageV1, Ac
         _twapInterval = twapIntervalArg;
         markPriceOracle.setMarkSmInterval(twapIntervalArg);
         positioning.setSmInterval(twapIntervalArg);
+        accountBalance.setSmInterval(twapIntervalArg);
         emit TwapIntervalChanged(twapIntervalArg);
     }
 
@@ -71,6 +73,7 @@ contract PositioningConfig is IPositioningConfig, PositioningConfigStorageV1, Ac
         require(twapInterval != 0, "PC_ITIL");
         _twapIntervalLiquidation = twapInterval;
         positioning.setSmIntervalLiquidation(twapInterval);
+        accountBalance.setSmIntervalLiquidation(twapInterval);
     }
 
     function setMaxMarketsPerAccount(uint8 maxMarketsPerAccountArg) external {
@@ -123,6 +126,11 @@ contract PositioningConfig is IPositioningConfig, PositioningConfigStorageV1, Ac
     function setPositioning(IPositioning positioningArg) external {
         _requirePositioningConfigAdmin();
         positioning = positioningArg;
+    }
+
+    function setAccountBalance(IAccountBalance accountBalanceArg) external {
+        _requirePositioningConfigAdmin();
+        accountBalance = accountBalanceArg;
     }
 
     /// @inheritdoc IPositioningConfig
