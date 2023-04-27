@@ -580,7 +580,7 @@ contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, 
         }
 
         int256 liquidatedPositionSize = positionSizeToBeLiquidated.neg256();
-        int256 liquidatedPositionNotional = positionSizeToBeLiquidated.mulDiv(_getIndexPrice(baseToken, IPositioningConfig(_positioningConfig).getTwapIntervalLiquidation()).toInt256(), _ORACLE_BASE);
+        int256 liquidatedPositionNotional = positionSizeToBeLiquidated.mulDiv(_getIndexPrice(baseToken, _smIntervalLiquidation).toInt256(), _ORACLE_BASE);
 
         return (liquidatedPositionSize, liquidatedPositionNotional);
     }
