@@ -38,6 +38,8 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
 
         _positioningConfig = positioningConfigArg;
         _underlyingPriceIndex = 0;
+        _smInterval = 28800;
+        _smIntervalLiquidation = 3600;
         _grantRole(SM_INTERVAL_ROLE, positioningConfigArg);
         _grantRole(ACCOUNT_BALANCE_ADMIN, _msgSender());
     }
@@ -51,6 +53,16 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
         _requireAccountBalanceAdmin();
         _underlyingPriceIndex = underlyingIndex;
         emit UnderlyingPriceIndexSet(underlyingIndex);
+    }
+
+    function setSmInterval(uint256 smInterval) external virtual {
+        _requireSmIntervalRole();
+        _smInterval = smInterval;
+    }
+
+    function setSmIntervalLiquidation(uint256 smIntervalLiquidation) external virtual {
+        _requireSmIntervalRole();
+        _smIntervalLiquidation = smIntervalLiquidation;
     }
 
     /// @inheritdoc IAccountBalance

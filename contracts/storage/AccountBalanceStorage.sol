@@ -14,6 +14,8 @@ abstract contract AccountBalanceStorageV1 {
     bytes32 public constant SM_INTERVAL_ROLE = keccak256("SM_INTERVAL_ROLE");
     address internal _positioningConfig;
     address internal _orderBook;
+    uint256 internal _smInterval;
+    uint256 internal _smIntervalLiquidation;
     // trader => owedRealizedPnl
     mapping(address => int256) internal _owedRealizedPnlMap;
     // base token registry of each trader
