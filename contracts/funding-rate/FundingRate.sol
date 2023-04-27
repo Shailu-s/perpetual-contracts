@@ -124,8 +124,8 @@ contract FundingRate is IFundingRate, BlockContext, PositioningCallee, FundingRa
         } else if (timestamp - lastSettledTimestamp > _fundingPeriod) {
             //when funding period is over
             uint256 fundingLatestTimestamp = lastSettledTimestamp + ((timestamp - lastSettledTimestamp) / _fundingPeriod) * _fundingPeriod;
-            markTwap = IMarkPriceOracle(_markPriceOracleArg).getCustomMarkSma(_underlyingPriceIndex, lastSettledTimestamp, fundingLatestTimestamp);
-            indexTwap = IIndexPriceOracle(_indexPriceOracleArg).getCustomIndexSma(_underlyingPriceIndex, lastSettledTimestamp, fundingLatestTimestamp);
+            (markTwap,) = IMarkPriceOracle(_markPriceOracleArg).getCustomEpochPrice(_underlyingPriceIndex, fundingLatestTimestamp);
+            (indexTwap,) = IIndexPriceOracle(_indexPriceOracleArg).getCustomEpochPrice(_underlyingPriceIndex, fundingLatestTimestamp);
             // deltaTwPremium = (markTwap - indexTwap) * (now - lastSettledTimestamp)
             int256 deltaTwap = _getDeltaTwap(markTwap, indexTwap);
             int256 deltaTwPremiumX96 = deltaTwap * (fundingLatestTimestamp - lastSettledTimestamp).toInt256();
