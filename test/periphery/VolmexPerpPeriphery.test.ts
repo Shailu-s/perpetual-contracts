@@ -760,7 +760,7 @@ describe("VolmexPerpPeriphery", function () {
         Asset(volmexBaseToken.address, two.toString()),
         Asset(virtualToken.address, two.toString()),
         0,
-        (1e8).toString(),
+        (60e6).toString(),
         true,
       );
 
@@ -771,7 +771,7 @@ describe("VolmexPerpPeriphery", function () {
         Asset(virtualToken.address, two.toString()),
         Asset(volmexBaseToken.address, two.toString()),
         1,
-        (1e6).toString(),
+        (60e6).toString(),
         false,
       );
 
