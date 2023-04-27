@@ -11,6 +11,7 @@ abstract contract AccountBalanceStorageV1 {
     uint256 internal constant _DUST = 10 wei;
     bytes32 public constant ACCOUNT_BALANCE_ADMIN = keccak256("ACCOUNT_BALANCE_ADMIN");
     bytes32 public constant CAN_SETTLE_REALIZED_PNL = keccak256("CAN_SETTLE_REALIZED_PNL");
+    bytes32 public constant SM_INTERVAL_ROLE = keccak256("SM_INTERVAL_ROLE");
     address internal _positioningConfig;
     address internal _orderBook;
     // trader => owedRealizedPnl

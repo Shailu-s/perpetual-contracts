@@ -38,6 +38,7 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
 
         _positioningConfig = positioningConfigArg;
         _underlyingPriceIndex = 0;
+        _grantRole(SM_INTERVAL_ROLE, positioningConfigArg);
         _grantRole(ACCOUNT_BALANCE_ADMIN, _msgSender());
     }
 
@@ -337,6 +338,10 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
 
     function _requireAccountBalanceAdmin() internal view {
         require(hasRole(ACCOUNT_BALANCE_ADMIN, _msgSender()), "AccountBalance: Not admin");
+    }
+
+    function _requireSmIntervalRole() internal view {
+        require(hasRole(SM_INTERVAL_ROLE, _msgSender()), "AccountBalance: Not sm interval role");
     }
 
     function _hasBaseToken(address[] memory baseTokens, address baseToken) internal pure returns (bool) {
