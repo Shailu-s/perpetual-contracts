@@ -205,7 +205,7 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
             if (baseBalance < 0) {
                 // baseDebtValue = baseDebt * indexPrice
                 // baseDebtValue = baseBalance.mulDiv(_getIndexPrice(baseToken).toInt256(), 1e18);
-                baseDebtValue = (baseBalance * _getIndexPrice(baseToken, _smInterval).toInt256()) / _ORACLE_BASE;
+                baseDebtValue = (baseBalance * _getIndexPrice(baseToken, _smIntervalLiquidation).toInt256()) / _ORACLE_BASE;
             }
             totalBaseDebtValue = totalBaseDebtValue + baseDebtValue;
             // we can't calculate totalQuoteDebtValue until we have totalQuoteBalance
@@ -222,7 +222,7 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
         uint256 tokenLen = _baseTokensMap[trader].length;
         for (uint256 i = 0; i < tokenLen; i++) {
             address baseToken = _baseTokensMap[trader][i];
-            totalPositionValue = totalPositionValue + getTotalPositionValue(trader, baseToken, _smInterval);
+            totalPositionValue = totalPositionValue + getTotalPositionValue(trader, baseToken, _smIntervalLiquidation);
         }
 
         int256 netQuoteBalance = _getNetQuoteBalance(trader);
@@ -268,7 +268,7 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
         for (uint256 i = 0; i < tokenLen; i++) {
             address baseToken = tokens[i];
             // will not use negative value in this case
-            uint256 positionValue = getTotalPositionValue(trader, baseToken, _smInterval).abs();
+            uint256 positionValue = getTotalPositionValue(trader, baseToken, _smIntervalLiquidation).abs();
             totalPositionValue = totalPositionValue + positionValue;
         }
         return totalPositionValue;
