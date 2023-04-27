@@ -125,6 +125,8 @@ const positioning = async () => {
   await accountBalance.deployed();
   console.log(accountBalance.address);
   await (await perpView.setAccount(accountBalance.address)).wait();
+  console.log("Set accounts - positioning config ...");
+  await (await positioningConfig.setAccountBalance(accountBalance.address)).wait()
 
   console.log("Deploying Vault Controller ...");
   const vaultController = await upgrades.deployProxy(VaultController, [
