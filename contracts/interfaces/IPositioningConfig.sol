@@ -18,7 +18,7 @@ interface IPositioningConfig {
     function getPartialCloseRatio() external view returns (uint24 partialCloseRatio);
 
     /// @return twapInterval TwapInterval for funding and prices (mark & index) calculations
-    function getTwapInterval() external view returns (uint32 twapInterval);
+    function getTwapInterval() external view returns (uint256 twapInterval);
 
     /// @return twapInterval TwapInterval for funding and prices (mark & index) calculations when liquidation
     function getTwapIntervalLiquidation() external view returns (uint256 twapInterval);

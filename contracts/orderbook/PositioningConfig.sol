@@ -5,6 +5,7 @@ import "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol"
 import { IPositioningConfig } from "../interfaces/IPositioningConfig.sol";
 import { PositioningConfigStorageV1 } from "../storage/PositioningConfigStorage.sol";
 import { IMarkPriceOracle } from "../interfaces/IMarkPriceOracle.sol";
+import { IPositioning } from "../interfaces/IPositioning.sol";
 
 // never inherit any new stateful contract. never change the orders of parent stateful contracts
 contract PositioningConfig is IPositioningConfig, PositioningConfigStorageV1, AccessControlUpgradeable {
@@ -60,6 +61,7 @@ contract PositioningConfig is IPositioningConfig, PositioningConfigStorageV1, Ac
         require(twapIntervalArg != 0, "PC_ITI");
         _twapInterval = twapIntervalArg;
         markPriceOracle.setMarkSmInterval(twapIntervalArg);
+        positioning.setSmInterval(twapIntervalArg);
         emit TwapIntervalChanged(twapIntervalArg);
     }
 
@@ -68,6 +70,7 @@ contract PositioningConfig is IPositioningConfig, PositioningConfigStorageV1, Ac
         // PC_ITIL: invalid twapInterval in liquidation
         require(twapInterval != 0, "PC_ITIL");
         _twapIntervalLiquidation = twapInterval;
+        positioning.setSmIntervalLiquidation(twapInterval);
     }
 
     function setMaxMarketsPerAccount(uint8 maxMarketsPerAccountArg) external {
@@ -117,6 +120,11 @@ contract PositioningConfig is IPositioningConfig, PositioningConfigStorageV1, Ac
         markPriceOracle = markPriceOracleArg;
     }
 
+    function setPositioning(IPositioning positioningArg) external {
+        _requirePositioningConfigAdmin();
+        positioning = positioningArg;
+    }
+
     /// @inheritdoc IPositioningConfig
     function getMaxMarketsPerAccount() external view override returns (uint8) {
         return _maxMarketsPerAccount;
@@ -148,7 +156,7 @@ contract PositioningConfig is IPositioningConfig, PositioningConfigStorageV1, Ac
     }
 
     /// @inheritdoc IPositioningConfig
-    function getTwapInterval() external view override returns (uint32) {
+    function getTwapInterval() external view override returns (uint256) {
         return _twapInterval;
     }
 
