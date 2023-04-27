@@ -1,16 +1,14 @@
-import { expect, util } from "chai";
+import { expect } from "chai";
 import { ethers, upgrades } from "hardhat";
-import { FakeContract, smock } from "@defi-wonderland/smock";
 import { BigNumber } from "ethers";
 import { getCurrentTimestamp } from "../../coverage/temp/isolated-pools/scenario/src/Utils";
 const { Order, Asset, sign, encodeAddress } = require("../order");
-import { utils } from "ethers";
-const { expectRevert, time } = require("@openzeppelin/test-helpers");
+const { time } = require("@openzeppelin/test-helpers");
 interface Observation {
   timestamp: number;
   price: number;
 }
-const getCustomUnderlyingTwap = (
+const getCustomUnderlyingSma = (
   observations: Array<Observation>,
   startTime: number,
   endTime: number,
@@ -152,11 +150,13 @@ describe("Custom Cumulative Price", function () {
 
     markPriceOracle = await upgrades.deployProxy(
       MarkPriceOracle,
-      [[70000000], [volmexBaseToken.address], [proofHash], owner.address],
+      [[70000000], [volmexBaseToken.address], owner.address],
       {
         initializer: "initialize",
       },
     );
+    await markPriceOracle.deployed();
+    await (await indexPriceOracle.grantInitialTimestampRole(markPriceOracle.address)).wait();
     positioningConfig = await upgrades.deployProxy(PositioningConfig, [markPriceOracle.address]);
     matchingEngine = await upgrades.deployProxy(MatchingEngine, [
       owner.address,
@@ -187,7 +187,6 @@ describe("Custom Cumulative Price", function () {
       accountBalance1.address,
       USDC.address,
       vaultController.address,
-      false,
     ]);
     await vault.deployed();
     await (await perpView.incrementVaultIndex()).wait();
@@ -232,7 +231,7 @@ describe("Custom Cumulative Price", function () {
     await vault.connect(owner).setVaultController(vaultController.address);
     await vaultController.registerVault(vault.address, USDC.address);
     await vaultController.connect(owner).setPositioning(positioning.address);
-    await markPriceOracle.grantTwapIntervalRole(positioningConfig.address);
+    await markPriceOracle.grantSmaIntervalRole(positioningConfig.address);
     await positioningConfig.connect(owner).setMaxMarketsPerAccount(5);
     await positioningConfig
       .connect(owner)
@@ -327,13 +326,16 @@ describe("Custom Cumulative Price", function () {
   });
   describe("Custom window ", async () => {
     this.beforeEach(async () => {
-      firstTimestamp = getCurrentTimestamp();
+      const blockNumBefore = await ethers.provider.getBlockNumber();
+      const blockBefore = await ethers.provider.getBlock(blockNumBefore);
+      const timestampBefore = blockBefore.timestamp;
+      firstTimestamp = timestampBefore;
       secondTimestamp = firstTimestamp + interval;
       thirdTimestamp = secondTimestamp + interval;
       for (index = 0; index < 96; index++) {
         // add obeservation in every 5 minutes
         await time.increase(300);
-        const tx = await markPriceOracle.addObservation(70000000, 0, proofHash);
+        const tx = await markPriceOracle.addObservation(70000000, 0);
         const { events } = await tx.wait();
 
         let data;
@@ -355,7 +357,7 @@ describe("Custom Cumulative Price", function () {
       for (index = 0; index < 96; index++) {
         // add obeservation in every 5 minutes
         await time.increase(300);
-        const tx = await markPriceOracle.addObservation(75000000, 0, proofHash);
+        const tx = await markPriceOracle.addObservation(75000000, 0);
         const { events } = await tx.wait();
         let data;
         events.forEach((log: any) => {
@@ -375,19 +377,19 @@ describe("Custom Cumulative Price", function () {
       }
     });
     it("should return cumulative price between first time stamp and second and third", async () => {
-      const cumulativePrice1 = await markPriceOracle.getCustomUnderlyingTwap(
+      const cumulativePrice1 = await markPriceOracle.getCustomUnderlyingSma(
         0,
         firstTimestamp + 300,
         secondTimestamp,
       );
-      const price = getCustomUnderlyingTwap(observations, firstTimestamp, secondTimestamp);
+      const price = getCustomUnderlyingSma(observations, firstTimestamp, secondTimestamp);
       expect(parseInt(cumulativePrice1)).to.equal(price);
-      const cumulativePrice2 = await markPriceOracle.getCustomUnderlyingTwap(
+      const cumulativePrice2 = await markPriceOracle.getCustomUnderlyingSma(
         0,
         secondTimestamp + 300,
         thirdTimestamp,
       );
-      const price1 = getCustomUnderlyingTwap(observations, secondTimestamp + 300, thirdTimestamp);
+      const price1 = getCustomUnderlyingSma(observations, secondTimestamp + 300, thirdTimestamp);
       expect(parseInt(cumulativePrice2)).to.equal(price1);
     });
   });

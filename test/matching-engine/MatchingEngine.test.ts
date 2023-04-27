@@ -104,16 +104,17 @@ describe("MatchingEngine", function () {
 
     markPriceOracle = await upgrades.deployProxy(
       MarkPriceOracle,
-      [[1000000], [volmexBaseToken.address], [proofHash], owner.address],
+      [[1000000], [volmexBaseToken.address], owner.address],
       {
         initializer: "initialize",
       },
     );
     await markPriceOracle.deployed();
+    await (await indexPriceOracle.grantInitialTimestampRole(markPriceOracle.address)).wait();
     await volmexBaseToken.setPriceFeed(indexPriceOracle.address);
     positioningConfig = await upgrades.deployProxy(PositioningConfig, [markPriceOracle.address]);
     await positioningConfig.deployed();
-    await markPriceOracle.grantTwapIntervalRole(positioningConfig.address);
+    await markPriceOracle.grantSmaIntervalRole(positioningConfig.address);
     accountBalance = await upgrades.deployProxy(AccountBalance, [positioningConfig.address]);
     await accountBalance.deployed();
     vaultController = await upgrades.deployProxy(VaultController, [
@@ -170,7 +171,6 @@ describe("MatchingEngine", function () {
       accountBalance.address,
       virtualToken.address,
       accountBalance.address,
-      false,
     ]);
     await (await virtualToken.setMintBurnRole(owner.address)).wait();
     await virtualToken.mint(account1.address, ten.toString());
@@ -292,6 +292,16 @@ describe("MatchingEngine", function () {
     it("MatchingEngine deployed confirm", async () => {
       let receipt = await matchingEngine.deployed();
       expect(receipt.confirmations).not.equal(0);
+    });
+    it("MatchingEngineshould fail to initialze again", async () => {
+      await expect(
+        matchingEngine.initialize(owner.address, markPriceOracle.address),
+      ).to.be.revertedWith("Initializable: contract is already initialized");
+    });
+    it("should fail to initialize transfer manager again", async () => {
+      await expect(
+        transferManagerTest.transferManager_init(erc20TransferProxy.address, owner.address),
+      ).to.be.revertedWith("Initializable: contract is already initialized");
     });
   });
 
@@ -483,6 +493,274 @@ describe("MatchingEngine", function () {
 
         await expect(matchingEngine.matchOrders(orderLeft, orderRight)).to.be.revertedWith(
           "V_PERP_M: nothing to fill",
+        );
+      });
+      it("Should match orders when when orderRight is profitable", async () => {
+        // price = 100
+        const orderLeft = Order(
+          ORDER,
+          deadline,
+          account1.address,
+          Asset(virtualToken.address, "100000000000000000000"), //100
+          Asset(volmexBaseToken.address, "1000000000000000000"), //1
+          1,
+          0,
+          false,
+        );
+
+        // price = 0.5
+        const orderRight = Order(
+          STOP_LOSS_LIMIT_ORDER,
+          deadline,
+          account2.address,
+          Asset(volmexBaseToken.address, "20000000000000000000"), //20
+          Asset(virtualToken.address, "10000000000000000000"), //10
+          2,
+          0,
+          true,
+        );
+
+        // price = 100
+        await expect(matchingEngine.matchOrders(orderLeft, orderRight)) //10,0.1
+          .to.emit(matchingEngine, "Matched")
+          .to.emit(matchingEngine, "OrdersFilled")
+          .withArgs(
+            [account1.address, account2.address],
+            [1, 2],
+            ["10000000000000000000", "100000000000000000"],
+          );
+      });
+      it("Should partial match orderLeft and full match order right", async () => {
+        // price = 0.1
+        const orderLeft = Order(
+          ORDER,
+          deadline,
+          account1.address,
+          Asset(volmexBaseToken.address, "100000000000000000000"), //100
+          Asset(virtualToken.address, "10000000000000000000"), //10
+          1,
+          0,
+          true,
+        );
+
+        // price = 0.5
+        const orderRight = Order(
+          STOP_LOSS_LIMIT_ORDER,
+          deadline,
+          account2.address,
+          Asset(virtualToken.address, "10000000000000000000"), //10
+          Asset(volmexBaseToken.address, "20000000000000000000"), //20
+          2,
+          0,
+          false,
+        );
+        // price = 0.1
+        await expect(matchingEngine.matchOrders(orderLeft, orderRight)) //20,2  10000000000000000000
+          .to.emit(matchingEngine, "Matched")
+          .to.emit(matchingEngine, "OrdersFilled")
+          .withArgs(
+            [account1.address, account2.address],
+            [1, 2],
+            ["20000000000000000000", "2000000000000000000"],
+          );
+      });
+      it("Should match orders when when orderLeft is profitable", async () => {
+        // price = 2
+        const orderLeft = Order(
+          ORDER,
+          deadline,
+          account2.address,
+          Asset(volmexBaseToken.address, "10000000000000000000"), //10
+          Asset(virtualToken.address, "20000000000000000000"), //20
+          2,
+          0,
+          true,
+        );
+
+        // price = 10
+        const orderRight = Order(
+          ORDER,
+          deadline,
+          account1.address,
+          Asset(virtualToken.address, "1000000000000000000000"), //1000
+          Asset(volmexBaseToken.address, "100000000000000000000"), //100
+          1,
+          0,
+          false,
+        );
+        // price = 2
+        await expect(matchingEngine.matchOrders(orderLeft, orderRight)) //10,20
+          .to.emit(matchingEngine, "Matched")
+          .to.emit(matchingEngine, "OrdersFilled")
+          .withArgs(
+            [account2.address, account1.address],
+            [2, 1],
+            ["10000000000000000000", "20000000000000000000"],
+          );
+      });
+      it("Should match orders continuesly orderright unitl not filled", async () => {
+        // price = 0.1
+        const orderLeft = Order(
+          ORDER,
+          deadline,
+          account2.address,
+          Asset(volmexBaseToken.address, "1000000000000000000000"), //1000
+          Asset(virtualToken.address, "100000000000000000000"), //100
+          2,
+          0,
+          true,
+        );
+        // price = 0.2
+        const orderLeft1 = Order(
+          ORDER,
+          deadline,
+          account2.address,
+          Asset(volmexBaseToken.address, "100000000000000000000"), //100
+          Asset(virtualToken.address, "20000000000000000000"), //20
+          3,
+          0,
+          true,
+        );
+
+        // price = 0.2
+        const orderRight = Order(
+          ORDER,
+          deadline,
+          account1.address,
+          Asset(virtualToken.address, "20000000000000000000"), //20
+          Asset(volmexBaseToken.address, "100000000000000000000"), //100
+          1,
+          0,
+          false,
+        );
+        // price = 0.1
+        await expect(matchingEngine.matchOrders(orderLeft, orderRight)) //100,10
+          .to.emit(matchingEngine, "OrdersFilled")
+          .withArgs(
+            [account2.address, account1.address],
+            [2, 1],
+            ["100000000000000000000", "10000000000000000000"],
+          );
+
+        // price = 0.2
+        await expect(matchingEngine.matchOrders(orderLeft1, orderRight)) //50,10
+          .to.emit(matchingEngine, "OrdersFilled")
+          .withArgs(
+            [account2.address, account1.address],
+            [3, 1],
+            ["50000000000000000000", "20000000000000000000"],
+          );
+      });
+      it("Should match orders with equal price", async () => {
+        const orderLeft = Order(
+          ORDER,
+          deadline,
+          account1.address,
+          Asset(virtualToken.address, "10000000000000000000"), //10
+          Asset(volmexBaseToken.address, "20000000000000000000"), //20
+          1,
+          0,
+          false,
+        );
+
+        const orderRight = Order(
+          ORDER,
+          deadline,
+          account2.address,
+          Asset(volmexBaseToken.address, "20000000000000000000"), //20
+          Asset(virtualToken.address, "10000000000000000000"), //10
+          2,
+          0,
+          true,
+        );
+        await expect(matchingEngine.matchOrders(orderLeft, orderRight)) // 10,20
+          .to.emit(matchingEngine, "Matched")
+          .to.emit(matchingEngine, "OrdersFilled")
+          .withArgs(
+            [account1.address, account2.address],
+            [1, 2],
+            ["10000000000000000000", "20000000000000000000"],
+          );
+      });
+      it("Should fail to match orders when basetoken is 0", async () => {
+        //This testcase was created to demonstrate that basetoken Should never be given as 0.
+        const orderLeft = Order(
+          ORDER,
+          deadline,
+          account1.address,
+          Asset(volmexBaseToken.address, "0"), //0
+          Asset(virtualToken.address, "100000000000000000000"), //1
+          1,
+          0,
+          true,
+        );
+
+        const orderRight = Order(
+          STOP_LOSS_LIMIT_ORDER,
+          deadline,
+          account2.address,
+          Asset(virtualToken.address, "20000000000000000000"), //20
+          Asset(volmexBaseToken.address, "10000000000000000000"), //10
+          2,
+          0,
+          false,
+        );
+        await expect(matchingEngine.matchOrders(orderLeft, orderRight)).to.be.revertedWith(
+          "division by zero",
+        );
+      });
+      it("Should fail to match orders when basetoken is 1", async () => {
+        //This testcase was created to demonstrate that basetoken Should never be given as 1.
+        const orderLeft = Order(
+          ORDER,
+          deadline,
+          account1.address,
+          Asset(virtualToken.address, "100000000000000000000"), //100
+          Asset(volmexBaseToken.address, "1"), //1
+          1,
+          0,
+          false,
+        );
+
+        const orderRight = Order(
+          STOP_LOSS_LIMIT_ORDER,
+          deadline,
+          account2.address,
+          Asset(volmexBaseToken.address, "20000000000000000000"), //20
+          Asset(virtualToken.address, "10000000000000000000"), //10
+          2,
+          0,
+          true,
+        );
+        await expect(matchingEngine.matchOrders(orderLeft, orderRight)).to.be.revertedWith(
+          "rounding error",
+        );
+      });
+      it("Should fail to match orders if buy order price is less than required for sell order ", async () => {
+        // Price of sell order is 100 and price of buy order is lesser than 100. i.e 5000 /51.Hence it Should not match.
+        const orderLeft = Order(
+          ORDER,
+          deadline,
+          account1.address,
+          Asset(virtualToken.address, "5000000000000000000000"), //5000
+          Asset(volmexBaseToken.address, "51000000000000000000"), //51
+          1,
+          0,
+          false,
+        );
+
+        const orderRight = Order(
+          STOP_LOSS_LIMIT_ORDER,
+          deadline,
+          account2.address,
+          Asset(volmexBaseToken.address, "50000000000000000000"), //50
+          Asset(virtualToken.address, "5000000000000000000000"), //5000
+          2,
+          0,
+          true,
+        );
+        await expect(matchingEngine.matchOrders(orderLeft, orderRight)).to.be.revertedWith(
+          "V_PERP_M: fillRight: unable to fill",
         );
       });
       it(" should fail if trader for both the orders in same", async () => {
@@ -681,12 +959,386 @@ describe("MatchingEngine", function () {
       });
     });
   });
+  describe("Test on the basis of prices:", function () {
+    let sellOrder;
+    let stopLossOrder;
+    let takeProfitOrder;
+    beforeEach(async () => {
+      // Here, we'll develop test scenarios for matching orders purchases based on cost. Let's suppose that the Oracle returned a mark price of 100.
+      // The greatest deviation will be assumed to be plus or minus 30%. Therefore, the lowest price may be 70 and the highest price may be 100.      // Lets create a sell order with the price 70. It
 
+      //  Create a market sell order with price 70. It Should match with every order price higher than it.
+      sellOrder = Order(
+        ORDER,
+        deadline,
+        account2.address,
+        Asset(volmexBaseToken.address, "10000000000000000000"), //10
+        Asset(virtualToken.address, "700000000000000000000"), //700
+        3,
+        0,
+        true,
+      );
+
+      stopLossOrder = Order(
+        ORDER,
+        deadline,
+        account2.address,
+        Asset(volmexBaseToken.address, "10000000000000000000"), //10
+        Asset(virtualToken.address, "700000000000000000000"), //700
+        3,
+        0,
+        true,
+      );
+
+      takeProfitOrder = Order(
+        ORDER,
+        deadline,
+        account2.address,
+        Asset(volmexBaseToken.address, "10000000000000000000"), //10
+        Asset(virtualToken.address, "700000000000000000000"), //700
+        3,
+        0,
+        true,
+      );
+    });
+    describe("Market orders match", function () {
+      it("Should match orders with price more than 70", async () => {
+        // price = 71
+        const buyOrder = Order(
+          ORDER,
+          deadline,
+          account1.address,
+          Asset(virtualToken.address, "710000000000000000000"), //710
+          Asset(volmexBaseToken.address, "10000000000000000000"), //10
+          2,
+          0,
+          false,
+        );
+
+        await expect(matchingEngine.matchOrders(buyOrder, sellOrder))
+          .to.emit(matchingEngine, "Matched")
+          .to.emit(matchingEngine, "OrdersFilled")
+          .withArgs(
+            [account1.address, account2.address],
+            [2, 3],
+            ["700000000000000000000", "9859154929577464788"],
+          );
+      });
+
+      it("Should match orders with highest price", async () => {
+        // price = 130
+        const buyOrder = Order(
+          ORDER,
+          deadline,
+          account1.address,
+          Asset(virtualToken.address, "1300000000000000000000"), //1300
+          Asset(volmexBaseToken.address, "10000000000000000000"), //10
+          2,
+          0,
+          false,
+        );
+
+        await expect(matchingEngine.matchOrders(buyOrder, sellOrder))
+          .to.emit(matchingEngine, "Matched")
+          .to.emit(matchingEngine, "OrdersFilled")
+          .withArgs(
+            [account1.address, account2.address],
+            [2, 3],
+            ["700000000000000000000", "5384615384615384615"],
+          );
+      });
+      it("Should not match orders with lower price than 70", async () => {
+        // price = 69
+        const buyOrder = Order(
+          ORDER,
+          deadline,
+          account1.address,
+          Asset(virtualToken.address, "690000000000000000000"), //690
+          Asset(volmexBaseToken.address, "10000000000000000000"), //10
+          2,
+          0,
+          false,
+        );
+
+        await expect(matchingEngine.matchOrders(buyOrder, sellOrder)).to.be.revertedWith(
+          "V_PERP_M: fillLeft: unable to fill",
+        );
+      });
+      it("Should match stop loss with market order of price more than 70", async () => {
+        // price = 71
+        const buyOrder = Order(
+          ORDER,
+          deadline,
+          account1.address,
+          Asset(virtualToken.address, "710000000000000000000"), //710
+          Asset(volmexBaseToken.address, "10000000000000000000"), //10
+          2,
+          0,
+          false,
+        );
+
+        await expect(matchingEngine.matchOrders(buyOrder, stopLossOrder))
+          .to.emit(matchingEngine, "Matched")
+          .to.emit(matchingEngine, "OrdersFilled")
+          .withArgs(
+            [account1.address, account2.address],
+            [2, 3],
+            ["700000000000000000000", "9859154929577464788"],
+          );
+      });
+      it("Should match take profit with market order of price more than 70", async () => {
+        // price = 71
+        const buyOrder = Order(
+          ORDER,
+          deadline,
+          account1.address,
+          Asset(virtualToken.address, "710000000000000000000"), //710
+          Asset(volmexBaseToken.address, "10000000000000000000"), //10
+          2,
+          0,
+          false,
+        );
+
+        await expect(matchingEngine.matchOrders(buyOrder, takeProfitOrder))
+          .to.emit(matchingEngine, "Matched")
+          .to.emit(matchingEngine, "OrdersFilled")
+          .withArgs(
+            [account1.address, account2.address],
+            [2, 3],
+            ["700000000000000000000", "9859154929577464788"],
+          );
+      });
+    });
+
+    describe("Stop loss limit orders match", function () {
+      it("Should match with market orders with price more than 70", async () => {
+        // price = 71
+        const buyOrder = Order(
+          STOP_LOSS_LIMIT_ORDER,
+          deadline,
+          account1.address,
+          Asset(virtualToken.address, "710000000000000000000"), //710
+          Asset(volmexBaseToken.address, "10000000000000000000"), //10
+          2,
+          0,
+          false,
+        );
+
+        await expect(matchingEngine.matchOrders(buyOrder, sellOrder))
+          .to.emit(matchingEngine, "Matched")
+          .to.emit(matchingEngine, "OrdersFilled")
+          .withArgs(
+            [account1.address, account2.address],
+            [2, 3],
+            ["700000000000000000000", "9859154929577464788"],
+          );
+      });
+
+      it("Should match orders with highest price", async () => {
+        // price = 130
+        const buyOrder = Order(
+          STOP_LOSS_LIMIT_ORDER,
+          deadline,
+          account1.address,
+          Asset(virtualToken.address, "1300000000000000000000"), //1300
+          Asset(volmexBaseToken.address, "10000000000000000000"), //10
+          2,
+          0,
+          false,
+        );
+
+        await expect(matchingEngine.matchOrders(buyOrder, sellOrder))
+          .to.emit(matchingEngine, "Matched")
+          .to.emit(matchingEngine, "OrdersFilled")
+          .withArgs(
+            [account1.address, account2.address],
+            [2, 3],
+            ["700000000000000000000", "5384615384615384615"],
+          );
+      });
+      it("Should not match orders with lower price than 70", async () => {
+        // price = 69
+        const buyOrder = Order(
+          STOP_LOSS_LIMIT_ORDER,
+          deadline,
+          account1.address,
+          Asset(virtualToken.address, "690000000000000000000"), //690
+          Asset(volmexBaseToken.address, "10000000000000000000"), //10
+          2,
+          0,
+          false,
+        );
+
+        await expect(matchingEngine.matchOrders(buyOrder, sellOrder)).to.be.revertedWith(
+          "V_PERP_M: fillLeft: unable to fill",
+        );
+      });
+
+      it("Should match stop loss with stop loss order of price more than 70", async () => {
+        // price = 71
+        const buyOrder = Order(
+          ORDER,
+          STOP_LOSS_LIMIT_ORDER,
+          account1.address,
+          Asset(virtualToken.address, "710000000000000000000"), //710
+          Asset(volmexBaseToken.address, "10000000000000000000"), //10
+          2,
+          0,
+          false,
+        );
+
+        await expect(matchingEngine.matchOrders(buyOrder, stopLossOrder))
+          .to.emit(matchingEngine, "Matched")
+          .to.emit(matchingEngine, "OrdersFilled")
+          .withArgs(
+            [account1.address, account2.address],
+            [2, 3],
+            ["700000000000000000000", "9859154929577464788"],
+          );
+      });
+      it("Should match stop loss with take profit order of price more than 70", async () => {
+        // price = 71
+        const buyOrder = Order(
+          ORDER,
+          STOP_LOSS_LIMIT_ORDER,
+          account1.address,
+          Asset(virtualToken.address, "710000000000000000000"), //710
+          Asset(volmexBaseToken.address, "10000000000000000000"), //10
+          2,
+          0,
+          false,
+        );
+
+        await expect(matchingEngine.matchOrders(buyOrder, takeProfitOrder))
+          .to.emit(matchingEngine, "Matched")
+          .to.emit(matchingEngine, "OrdersFilled")
+          .withArgs(
+            [account1.address, account2.address],
+            [2, 3],
+            ["700000000000000000000", "9859154929577464788"],
+          );
+      });
+    });
+
+    describe("Take profit limit orders match", function () {
+      it("Should match orders with price more than 70", async () => {
+        // price = 71
+        const buyOrder = Order(
+          TAKE_PROFIT_LIMIT_ORDER,
+          deadline,
+          account1.address,
+          Asset(virtualToken.address, "710000000000000000000"), //710
+          Asset(volmexBaseToken.address, "10000000000000000000"), //10
+          2,
+          0,
+          false,
+        );
+
+        await expect(matchingEngine.matchOrders(buyOrder, sellOrder))
+          .to.emit(matchingEngine, "Matched")
+          .to.emit(matchingEngine, "OrdersFilled")
+          .withArgs(
+            [account1.address, account2.address],
+            [2, 3],
+            ["700000000000000000000", "9859154929577464788"],
+          );
+      });
+
+      it("Should match orders with highest price", async () => {
+        // price = 130
+        const buyOrder = Order(
+          TAKE_PROFIT_LIMIT_ORDER,
+          deadline,
+          account1.address,
+          Asset(virtualToken.address, "1300000000000000000000"), //1300
+          Asset(volmexBaseToken.address, "10000000000000000000"), //10
+          2,
+          0,
+          false,
+        );
+
+        await expect(matchingEngine.matchOrders(buyOrder, sellOrder))
+          .to.emit(matchingEngine, "Matched")
+          .to.emit(matchingEngine, "OrdersFilled")
+          .withArgs(
+            [account1.address, account2.address],
+            [2, 3],
+            ["700000000000000000000", "5384615384615384615"],
+          );
+      });
+      it("Should not match orders with lower price than 70", async () => {
+        // price = 69
+        const buyOrder = Order(
+          TAKE_PROFIT_LIMIT_ORDER,
+          deadline,
+          account1.address,
+          Asset(virtualToken.address, "690000000000000000000"), //690
+          Asset(volmexBaseToken.address, "10000000000000000000"), //10
+          2,
+          0,
+          false,
+        );
+
+        await expect(matchingEngine.matchOrders(buyOrder, sellOrder)).to.be.revertedWith(
+          "V_PERP_M: fillLeft: unable to fill",
+        );
+      });
+      it("Should match take profit with stop loss order of price more than 70", async () => {
+        // price = 71
+        const buyOrder = Order(
+          ORDER,
+          TAKE_PROFIT_LIMIT_ORDER,
+          account1.address,
+          Asset(virtualToken.address, "710000000000000000000"), //710
+          Asset(volmexBaseToken.address, "10000000000000000000"), //10
+          2,
+          0,
+          false,
+        );
+
+        await expect(matchingEngine.matchOrders(buyOrder, stopLossOrder))
+          .to.emit(matchingEngine, "Matched")
+          .to.emit(matchingEngine, "OrdersFilled")
+          .withArgs(
+            [account1.address, account2.address],
+            [2, 3],
+            ["700000000000000000000", "9859154929577464788"],
+          );
+      });
+      it("Should match take profit with take profit order of price more than 70", async () => {
+        // price = 71
+        const buyOrder = Order(
+          ORDER,
+          TAKE_PROFIT_LIMIT_ORDER,
+          account1.address,
+          Asset(virtualToken.address, "710000000000000000000"), //710
+          Asset(volmexBaseToken.address, "10000000000000000000"), //10
+          2,
+          0,
+          false,
+        );
+
+        await expect(matchingEngine.matchOrders(buyOrder, takeProfitOrder))
+          .to.emit(matchingEngine, "Matched")
+          .to.emit(matchingEngine, "OrdersFilled")
+          .withArgs(
+            [account1.address, account2.address],
+            [2, 3],
+            ["700000000000000000000", "9859154929577464788"],
+          );
+      });
+    });
+  });
   describe("TransferManager:", function () {
     it("should set transfer proxy & emit event with proxy address", async () => {
       await expect(transferManagerTest.setTransferProxy(erc20TransferProxy.address))
         .to.emit(transferManagerTest, "ProxyChanged")
         .withArgs(erc20TransferProxy.address);
+    });
+    it("should fail set transfer proxy & emit event with proxy address", async () => {
+      await expect(
+        transferManagerTest.connect(account3).setTransferProxy(erc20TransferProxy.address),
+      ).to.be.revertedWith("TransferExecutor: Not admin");
     });
 
     it("should call do transfer with fee > 0", async () => {
@@ -796,6 +1448,17 @@ describe("MatchingEngine", function () {
       await expect(
         matchingEngine.connect(account1).grantMatchOrders(account1.address),
       ).to.be.revertedWith("MatchingEngineCore: Not admin");
+    });
+  });
+  describe("transfer payout else condition", async () => {
+    it("should pass with 0 amount", async () => {
+      await transferManagerTest.transferPayouts(
+        account1.address,
+        0,
+        owner.address,
+        account2.address,
+        vault.address,
+      );
     });
   });
 

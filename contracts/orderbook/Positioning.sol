@@ -13,7 +13,6 @@ import { LibPerpMath } from "../libs/LibPerpMath.sol";
 import { LibSafeCastInt } from "../libs/LibSafeCastInt.sol";
 import { LibSafeCastUint } from "../libs/LibSafeCastUint.sol";
 import { LibSignature } from "../libs/LibSignature.sol";
-import { EncodeDecode } from "../libs/EncodeDecode.sol";
 
 import { IAccountBalance } from "../interfaces/IAccountBalance.sol";
 import { IIndexPrice } from "../interfaces/IIndexPrice.sol";
@@ -37,7 +36,6 @@ contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, 
     using LibPerpMath for uint256;
     using LibPerpMath for int256;
     using LibSignature for bytes32;
-    using EncodeDecode for bytes;
 
     /// @dev this function is public for testing
     // solhint-disable-next-line func-order
@@ -350,8 +348,9 @@ contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, 
             IAccountBalance(_accountBalance).modifyOwedRealizedPnl(trader, fundingPayment.neg256(), baseToken);
             emit FundingPaymentSettled(trader, baseToken, fundingPayment);
         }
-
-        IAccountBalance(_accountBalance).updateTwPremiumGrowthGlobal(trader, baseToken, globalTwPremiumGrowth);
+        if (globalTwPremiumGrowth != 0) {
+            IAccountBalance(_accountBalance).updateTwPremiumGrowthGlobal(trader, baseToken, globalTwPremiumGrowth);
+        }
     }
 
     /// @dev Add given amount to PnL of the address provided
@@ -431,33 +430,18 @@ contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, 
             _requireEnoughFreeCollateral(orderRight.trader);
         }
 
-        uint256 orderIndexPrice = _getIndexPrice(baseToken);
         _updateTokenAmount(orderLeft.trader, baseToken);
         _updateTokenAmount(orderRight.trader, baseToken);
 
         emit PositionChanged(
-            orderLeft.trader,
+            [orderLeft.trader, orderRight.trader],
             baseToken,
-            internalData.leftExchangedPositionSize,
-            internalData.leftExchangedPositionNotional,
-            orderFees.orderLeftFee,
-            orderIndexPrice,
-            orderLeft.orderType,
-            orderLeft.isShort
+            [internalData.leftExchangedPositionSize, internalData.rightExchangedPositionSize],
+            [internalData.leftExchangedPositionNotional, internalData.rightExchangedPositionNotional],
+            [orderFees.orderLeftFee, orderFees.orderRightFee],
+            [orderLeft.orderType, orderRight.orderType],
+            [orderLeft.isShort, orderRight.isShort]
         );
-
-        emit PositionChanged(
-            orderRight.trader,
-            baseToken,
-            internalData.rightExchangedPositionSize,
-            internalData.rightExchangedPositionNotional,
-            orderFees.orderRightFee,
-            orderIndexPrice,
-            orderRight.orderType,
-            orderRight.isShort
-        );
-
-        return internalData;
     }
 
     function _updateTokenAmount(address trader, address baseToken) internal {
@@ -466,12 +450,16 @@ contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, 
         address quoteToken = IMarketRegistry(_marketRegistry).getQuoteToken();
         if (position > 0) {
             uint256 currentBalance = IVirtualToken(baseToken).balanceOf(trader);
-            IVirtualToken(baseToken).burn(trader, currentBalance);
+            if (currentBalance != 0) {
+                IVirtualToken(baseToken).burn(trader, currentBalance);
+            }
             IVirtualToken(baseToken).mint(trader, uint256(position));
         }
         if (notional > 0) {
             uint256 currentBalance = IVirtualToken(quoteToken).balanceOf(trader);
-            IVirtualToken(quoteToken).burn(trader, currentBalance);
+            if (currentBalance != 0) {
+                IVirtualToken(quoteToken).burn(trader, currentBalance);
+            }
             IVirtualToken(quoteToken).mint(trader, uint256(notional));
         }
     }
@@ -646,10 +634,6 @@ contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, 
 
     function _msgSender() internal view override(OwnerPausable, ContextUpgradeable) returns (address) {
         return super._msgSender();
-    }
-
-    function _msgData() internal view virtual override(ContextUpgradeable) returns (bytes calldata) {
-        return msg.data;
     }
 
     function _requirePositioningAdmin() internal view {

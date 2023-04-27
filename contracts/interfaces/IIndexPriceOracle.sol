@@ -4,26 +4,24 @@ pragma solidity =0.8.18;
 
 interface IIndexPriceOracle {
     // Getter  methods
-    function latestRoundData(uint256 _twInterval, uint256 _index) external view returns (uint256 answer, uint256 lastUpdateTimestamp);
+    function latestRoundData(uint256 _smInterval, uint256 _index) external view returns (uint256 answer, uint256 lastUpdateTimestamp);
 
-    function getIndexTwap(uint256 _twInterval, uint256 _index)
+    function getIndexSma(uint256 _smInterval, uint256 _index)
         external
         view
         returns (
-            uint256 volatilityTokenTwap,
-            uint256 iVolatilityTokenTwap,
+            uint256 volatilityTokenSma,
+            uint256 iVolatilityTokenSma,
             uint256 lastUpdateTimestamp
         );
 
     function volatilityCapRatioByIndex(uint256 _index) external view returns (uint256);
 
-    function getLastTwap(uint256 _twInterval, uint256 _index) external view returns (uint256 priceCumulative);
-
     function indexByBaseToken(address _baseToken) external view returns (uint256 index);
 
     function baseTokenByIndex(uint256 _index) external view returns (address baseToken);
 
-    function getCustomIndexTwap(
+    function getCustomIndexSma(
         uint256 _index,
         uint256 _startTimestamp,
         uint256 _endTimestamp
@@ -32,6 +30,9 @@ interface IIndexPriceOracle {
     function getIndexCount() external view returns (uint256);
 
     function getLastPrice(uint256 _index) external view returns (uint256 underlyingLastPrice);
+    function getLastEpochPrice(uint256 _index) external view returns (uint256 price, uint256 timestamp);
+    function getLastUpdatedTimestamp(uint256 _index) external view returns (uint256 lastUpdatedTimestamp);
+
 
     function addObservation(
         uint256 _underlyingPrice,
@@ -47,4 +48,7 @@ interface IIndexPriceOracle {
     ) external;
 
     function setObservationAdder(address _adder) external;
+    function setInitialTimestamp(uint256 _timestamp) external;
+    function setIndexSmInterval(uint256 _smInterval) external;
+    function grantInitialTimestampRole(address _account) external;
 }

@@ -11,7 +11,7 @@ import "@openzeppelin/hardhat-defender";
 import "@nomiclabs/hardhat-etherscan";
 import { HardhatUserConfig } from "hardhat/config";
 import "solidity-coverage";
-import 'hardhat-docgen';
+import "hardhat-docgen";
 import { config as dotEnvConfig } from "dotenv";
 dotEnvConfig();
 
@@ -32,9 +32,9 @@ const config: HardhatUserConfig = {
         },
       },
       {
-        version: "0.5.1"
-      }
-    ]
+        version: "0.5.1",
+      },
+    ],
   },
   networks: {
     hardhat: {
@@ -70,16 +70,8 @@ const config: HardhatUserConfig = {
       throwOnTransactionFailures: true,
       loggingEnabled: true,
       gasMultiplier: 1.5,
-      // timeout: 36000000,
-    },
-    "base-goerli": {
-      url: `https://spring-spring-needle.base-goerli.discover.quiknode.pro/${process.env.BASE_GOERLI_QUICKNODE_API_KEY}/`,
-      accounts: [`0x${process.env.PRIVATE_KEY}`],
-      throwOnTransactionFailures: true,
-      loggingEnabled: true,
-      gasMultiplier: 1,
       timeout: 36000000,
-    }
+    },
   },
   contractSizer: {
     alphaSort: true,
@@ -100,10 +92,10 @@ const config: HardhatUserConfig = {
     apiSecret: process.env.DEFENDER_TEAM_API_SECRET_KEY,
   },
   docgen: {
-    path: './docs',
+    path: "./docs",
     clear: true,
     runOnCompile: true,
-  }
+  },
 };
 
 export default config;

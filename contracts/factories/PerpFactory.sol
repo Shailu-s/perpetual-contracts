@@ -122,7 +122,6 @@ contract PerpFactory is Initializable, IPerpFactory, AccessControlUpgradeable {
      */
     function cloneVault(
         address _token,
-        bool _isEthVault,
         address _positioningConfig,
         address _accountBalance,
         address _vaultImplementation,
@@ -134,7 +133,7 @@ contract PerpFactory is Initializable, IPerpFactory, AccessControlUpgradeable {
 
         bytes32 salt = keccak256(abi.encodePacked(_token, perpViewRegistry.vaultIndexCount()));
         vault = IVault(Clones.cloneDeterministic(_vaultImplementation, salt));
-        vault.initialize(_positioningConfig, _accountBalance, _token, address(vaultController), _isEthVault);
+        vault.initialize(_positioningConfig, _accountBalance, _token, address(vaultController));
 
         vaultController.registerVault(address(vault), _token);
         perpViewRegistry.incrementVaultIndex();

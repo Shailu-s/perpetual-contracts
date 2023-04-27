@@ -67,11 +67,12 @@ describe("Vault", function () {
 
     markPriceOracle = await upgrades.deployProxy(
       MarkPriceOracle,
-      [[100000], [alice.address], [proofHash], owner.address],
+      [[100000], [alice.address], owner.address],
       {
         initializer: "initialize",
       },
     );
+    await markPriceOracle.deployed();
     const positioningConfigFactory = await ethers.getContractFactory("PositioningConfig");
     positioningConfig = await upgrades.deployProxy(positioningConfigFactory, [
       markPriceOracle.address,
@@ -93,21 +94,12 @@ describe("Vault", function () {
       accountBalance.address,
       USDC.address,
       vaultController.address,
-      false,
     ]);
     DAIVault = await upgrades.deployProxy(vaultFactory, [
       positioningConfig.address,
       accountBalance.address,
       DAI.address,
       vaultController.address,
-      false,
-    ]);
-    ethVault = await upgrades.deployProxy(vaultFactory, [
-      positioningConfig.address,
-      accountBalance.address,
-      ETH.address,
-      vaultController.address,
-      true,
     ]);
 
     await markPriceOracle.deployed();
@@ -135,28 +127,10 @@ describe("Vault", function () {
         initializer: "initialize",
       },
     );
-
-    ethPositioning = await upgrades.deployProxy(
-      Positioning,
-      [
-        positioningConfig.address,
-        vaultController.address,
-        accountBalance.address,
-        matchingEngine.address,
-        markPriceOracle.address,
-        indexPriceOracle.address,
-        1,
-        [owner.address, alice.address],
-      ],
-      {
-        initializer: "initialize",
-      },
-    );
-
+    console.log(vault.address);
     await vaultController.connect(owner).setPositioning(positioning.address);
     await vaultController.registerVault(vault.address, USDC.address);
     await vaultController.registerVault(DAIVault.address, DAI.address);
-    await vaultController.registerVault(ethVault.address, ETH.address);
 
     const amount = parseUnits("100000000000000000000", await USDC.decimals());
     await USDC.mint(alice.address, amount);
@@ -173,20 +147,7 @@ describe("Vault", function () {
 
     await DAI.mint(owner.address, daiAmount);
 
-    const ethAmount = parseUnits("1000", await ETH.decimals());
-    await ETH.mint(alice.address, ethAmount);
-    await ETH.connect(alice).approve(ethVault.address, ethAmount);
-
     volmexPerpPeriphery = await upgrades.deployProxy(VolmexPerpPeriphery, [
-      perpViewFake.address,
-      markPriceOracle.address,
-      indexPriceOracle.address,
-      [vault.address, vault.address],
-      owner.address,
-      relayer.address,
-    ]);
-
-    volmexPerpPeripheryEth = await upgrades.deployProxy(VolmexPerpPeriphery, [
       perpViewFake.address,
       markPriceOracle.address,
       indexPriceOracle.address,
@@ -196,6 +157,22 @@ describe("Vault", function () {
     ]);
   });
   describe("deployment", function () {
+    it("should fail to deploy vault", async () => {
+      const tokenFactory = await ethers.getContractFactory("TestERC20");
+
+      const USDC1 = await tokenFactory.deploy();
+      USDC = await USDC1.deployed();
+      await USDC.__TestERC20_init("TestUSDC", "USDC", 20);
+      vaultFactory = await ethers.getContractFactory("Vault");
+      await expect(
+        upgrades.deployProxy(vaultFactory, [
+          positioningConfig.address,
+          accountBalance.address,
+          USDC.address,
+          vaultController.address,
+        ]),
+      ).to.be.revertedWith("V_ISTD");
+    });
     it("should fail to deploy because  positioning config address was not contract", async () => {
       await expect(
         upgrades.deployProxy(vaultFactory, [
@@ -203,7 +180,6 @@ describe("Vault", function () {
           accountBalance.address,
           USDC.address,
           vaultController.address,
-          false,
         ]),
       ).to.be.revertedWith("V_CHCNC");
     });
@@ -214,7 +190,6 @@ describe("Vault", function () {
           alice.address,
           USDC.address,
           vaultController.address,
-          false,
         ]),
       ).to.be.revertedWith("V_ABNC");
     });
@@ -225,7 +200,6 @@ describe("Vault", function () {
           accountBalance.address,
           USDC.address,
           vaultController.address,
-          false,
         ),
       ).to.be.revertedWith("Initializable: contract is already initialized");
     });
@@ -266,6 +240,7 @@ describe("Vault", function () {
         "100000000000000000000",
       );
     });
+
     it("Negative Test For desposit from vault after setting token balance cap ", async () => {
       await positioningConfig.setSettlementTokenBalanceCap("5000000000000000000");
       const USDCVaultAddress = await vaultController.getVault(USDC.address);
@@ -388,47 +363,362 @@ describe("Vault", function () {
         ),
       ).to.be.revertedWith("V_GTSTBC");
     });
-    it("Negative Test For desposit from vault", async () => {
-      await positioningConfig.setSettlementTokenBalanceCap(10000);
-
-      const USDCVaultAddress = await vaultController.getVault(ETH.address);
-
-      const USDCVaultContract = await vaultFactory.attach(USDCVaultAddress);
-      await ETH.connect(alice).approve(ETH.address, 10000);
-      await ETH.connect(alice).approve(volmexPerpPeriphery.address, 10000);
-
-      // Check if it is reverted or not with given reason
-      await expect(
-        vaultController
-          .connect(alice)
-          .deposit(volmexPerpPeriphery.address, ETH.address, alice.address, 10000, {
-            value: 9000,
-          }),
-      ).to.be.revertedWith("V_ANE");
-    });
-
-    it("should fail to deposit if user tries to perform transaction with value != 0 in a non eth vault ", async () => {
-      const amount = parseUnits("100", await USDC.decimals());
-
-      await positioningConfig.setSettlementTokenBalanceCap(amount);
-
-      const USDCVaultAddress = await vaultController.getVault(USDC.address);
-
-      const USDCVaultContract = await vaultFactory.attach(USDCVaultAddress);
-      await USDC.connect(alice).approve(USDCVaultAddress, amount);
-      await USDC.connect(alice).approve(volmexPerpPeriphery.address, amount);
-
-      // check event has been sent
-      await expect(
-        vaultController
-          .connect(alice)
-          .deposit(volmexPerpPeriphery.address, USDC.address, alice.address, amount, {
-            value: 45,
-          }),
-      ).to.be.revertedWith("V_ANA");
-    });
   });
   describe("Withdraw", function () {
+    it("shoud not allow with draw when contract is paused", async () => {
+      const amount = parseUnits("2000000000000000000", await USDC.decimals());
+      await positioningConfig.setSettlementTokenBalanceCap(
+        parseUnits("5000000000000000000", await USDC.decimals()),
+      );
+      const USDCVaultAddress = await vaultController.getVault(USDC.address);
+      const USDCVaultContract = await vaultFactory.attach(USDCVaultAddress);
+      await USDC.approve(USDCVaultAddress, amount);
+      await USDC.approve(volmexPerpPeriphery.address, amount);
+
+      await USDC.connect(bob).approve(USDCVaultAddress, amount);
+      await USDC.connect(bob).approve(volmexPerpPeriphery.address, amount);
+      await USDC.connect(cole).approve(USDCVaultAddress, amount);
+      await USDC.connect(cole).approve(volmexPerpPeriphery.address, amount);
+
+      await expect(
+        vaultController.deposit(volmexPerpPeriphery.address, USDC.address, owner.address, amount),
+      )
+        .to.emit(USDCVaultContract, "Deposited")
+        .withArgs(USDC.address, owner.address, amount);
+
+      // // increase vault balance
+      expect(await USDC.balanceOf(USDCVaultAddress)).to.eq(amount);
+
+      await expect(
+        vaultController
+          .connect(bob)
+          .deposit(volmexPerpPeriphery.address, USDC.address, bob.address, amount),
+      )
+        .to.emit(USDCVaultContract, "Deposited")
+        .withArgs(USDC.address, bob.address, amount);
+      // // increase vault balance
+      const amount2 = parseUnits("4000000000000000000", await USDC.decimals());
+      expect(await USDC.balanceOf(USDCVaultAddress)).to.eq(amount2);
+      // Withdraw by alice
+      await vault.pause();
+      await accountBalance.grantSettleRealizedPnlRole(vaultController.address);
+      await expect(
+        vaultController.withdraw(
+          USDC.address,
+          owner.address,
+          parseUnits("1000000000000000000", await USDC.decimals()),
+        ),
+      ).to.be.revertedWith("Pausable: paused");
+    });
+    it("shoud not allow whitdraw when reentered", async () => {
+      VolmexPerpPeriphery = await ethers.getContractFactory("VolmexPerpPeriphery");
+      [owner, alice, relayer, bob, cole] = await ethers.getSigners();
+      IndexPriceOracle = await ethers.getContractFactory("IndexPriceOracle");
+      MarkPriceOracle = await ethers.getContractFactory("MarkPriceOracle");
+      MatchingEngine = await ethers.getContractFactory("MatchingEngineTest");
+      perpViewFake = await smock.fake("VolmexPerpView");
+
+      const tokenFactory = await ethers.getContractFactory("TestERC20");
+      const USDC1 = await tokenFactory.deploy();
+      USDC = await USDC1.deployed();
+      await USDC.__TestERC20_init("TestUSDC", "USDC", 6);
+
+      const tokenFactory2 = await ethers.getContractFactory("TestERC20");
+      const Dai = await tokenFactory2.deploy();
+      DAI = await Dai.deployed();
+      await DAI.__TestERC20_init("TestDai", "DAI", 18);
+
+      const tokenFactory3 = await ethers.getContractFactory("TestERC20");
+      const eth = await tokenFactory3.deploy();
+      ETH = await eth.deployed();
+      await eth.__TestERC20_init("TestETH", "ETH", 18);
+      indexPriceOracle = await upgrades.deployProxy(
+        IndexPriceOracle,
+        [owner.address, [100000], [alice.address], [proofHash], [capRatio]],
+        {
+          initializer: "initialize",
+        },
+      );
+      await indexPriceOracle.deployed();
+
+      markPriceOracle = await upgrades.deployProxy(
+        MarkPriceOracle,
+        [[100000], [alice.address], owner.address],
+        {
+          initializer: "initialize",
+        },
+      );
+      await markPriceOracle.deployed();
+      const positioningConfigFactory = await ethers.getContractFactory("PositioningConfig");
+      positioningConfig = await upgrades.deployProxy(positioningConfigFactory, [
+        markPriceOracle.address,
+      ]);
+      const accountBalanceFactory = await ethers.getContractFactory("AccountBalance");
+      accountBalance = await upgrades.deployProxy(accountBalanceFactory, [
+        positioningConfig.address,
+      ]);
+
+      const vaultContractFactory = await ethers.getContractFactory("VaultController");
+      vaultController = await upgrades.deployProxy(vaultContractFactory, [
+        positioningConfig.address,
+        accountBalance.address,
+      ]);
+
+      vaultFactory = await ethers.getContractFactory("Vault");
+      vault = await upgrades.deployProxy(vaultFactory, [
+        positioningConfig.address,
+        accountBalance.address,
+        USDC.address,
+        vaultController.address,
+      ]);
+      DAIVault = await upgrades.deployProxy(vaultFactory, [
+        positioningConfig.address,
+        accountBalance.address,
+        DAI.address,
+        vaultController.address,
+      ]);
+
+      await markPriceOracle.deployed();
+      matchingEngine = await upgrades.deployProxy(
+        MatchingEngine,
+        [owner.address, markPriceOracle.address],
+        {
+          initializer: "__MatchingEngineTest_init",
+        },
+      );
+      Positioning = await ethers.getContractFactory("PositioningTest");
+      positioning = await upgrades.deployProxy(
+        Positioning,
+        [
+          positioningConfig.address,
+          vaultController.address,
+          accountBalance.address,
+          matchingEngine.address,
+          markPriceOracle.address,
+          indexPriceOracle.address,
+          0,
+          [owner.address, alice.address],
+        ],
+        {
+          initializer: "initialize",
+        },
+      );
+      await vaultController.connect(owner).setPositioning(positioning.address);
+      await vaultController.registerVault(vault.address, USDC.address);
+      await vaultController.registerVault(DAIVault.address, DAI.address);
+
+      const amount = parseUnits("100000000000000000000", await USDC.decimals());
+      await USDC.mint(alice.address, amount);
+      await USDC.mint(bob.address, amount);
+      await USDC.mint(cole.address, amount);
+      await USDC.connect(alice).approve(vault.address, amount);
+      await USDC.connect(bob).approve(vault.address, amount);
+      await USDC.connect(cole).approve(vault.address, amount);
+      await USDC.mint(owner.address, amount);
+
+      const daiAmount = parseUnits("1000", await DAI.decimals());
+      await DAI.mint(alice.address, daiAmount);
+      await DAI.connect(alice).approve(DAIVault.address, daiAmount);
+
+      await DAI.mint(owner.address, daiAmount);
+
+      volmexPerpPeriphery = await upgrades.deployProxy(VolmexPerpPeriphery, [
+        perpViewFake.address,
+        markPriceOracle.address,
+        indexPriceOracle.address,
+        [vault.address, vault.address],
+        owner.address,
+        relayer.address,
+      ]);
+      await positioningConfig.setSettlementTokenBalanceCap(
+        parseUnits("5000000000000000000000000000000000000000000000", await USDC.decimals()),
+      );
+      const USDCVaultAddress = await vaultController.getVault(USDC.address);
+      const USDCVaultContract = await vaultFactory.attach(USDCVaultAddress);
+      await USDC.approve(USDCVaultAddress, amount);
+      await USDC.approve(volmexPerpPeriphery.address, amount);
+
+      await USDC.connect(bob).approve(USDCVaultAddress, amount);
+      await USDC.connect(bob).approve(volmexPerpPeriphery.address, amount);
+      await USDC.connect(cole).approve(USDCVaultAddress, amount);
+      await USDC.connect(cole).approve(volmexPerpPeriphery.address, amount);
+
+      await expect(
+        vaultController
+          .connect(bob)
+          .deposit(volmexPerpPeriphery.address, USDC.address, bob.address, amount),
+      )
+        .to.emit(USDCVaultContract, "Deposited")
+        .withArgs(USDC.address, bob.address, amount);
+      // // increase vault balance
+      const devilERC20 = await ethers.getContractFactory("DevilTestERC20");
+      const devil = await devilERC20.deploy();
+      await devil.deployed();
+      await devil.__TestERC20_init("TestUSDC", "USDC", 6);
+      await vault.setSettlementToken(devil.address);
+      const amount2 = parseUnits("4000000000000000000", await devil.decimals());
+      const VaultController1 = await ethers.getContractFactory("VaultControllerTest");
+      console.log(vault.address);
+      console.log(owner.address);
+      const vaultController1 = await VaultController1.deploy();
+      await vaultController1.deployed();
+      await vault.setVaultController(vaultController1.address);
+      await expect(
+        vaultController1.withdraw("1000000000000", owner.address, vault.address),
+      ).to.be.revertedWith("ReentrancyGuard: reentrant call'");
+    });
+
+    it("shoud not allow  deposit when reentered", async () => {
+      VolmexPerpPeriphery = await ethers.getContractFactory("VolmexPerpPeriphery");
+      [owner, alice, relayer, bob, cole] = await ethers.getSigners();
+      IndexPriceOracle = await ethers.getContractFactory("IndexPriceOracle");
+      MarkPriceOracle = await ethers.getContractFactory("MarkPriceOracle");
+      MatchingEngine = await ethers.getContractFactory("MatchingEngineTest");
+      perpViewFake = await smock.fake("VolmexPerpView");
+
+      const tokenFactory = await ethers.getContractFactory("TestERC20");
+      const USDC1 = await tokenFactory.deploy();
+      USDC = await USDC1.deployed();
+      await USDC.__TestERC20_init("TestUSDC", "USDC", 6);
+
+      const tokenFactory2 = await ethers.getContractFactory("TestERC20");
+      const Dai = await tokenFactory2.deploy();
+      DAI = await Dai.deployed();
+      await DAI.__TestERC20_init("TestDai", "DAI", 18);
+
+      const tokenFactory3 = await ethers.getContractFactory("TestERC20");
+      const eth = await tokenFactory3.deploy();
+      ETH = await eth.deployed();
+      await eth.__TestERC20_init("TestETH", "ETH", 18);
+      indexPriceOracle = await upgrades.deployProxy(
+        IndexPriceOracle,
+        [owner.address, [100000], [alice.address], [proofHash], [capRatio]],
+        {
+          initializer: "initialize",
+        },
+      );
+      await indexPriceOracle.deployed();
+
+      markPriceOracle = await upgrades.deployProxy(
+        MarkPriceOracle,
+        [[100000], [alice.address], owner.address],
+        {
+          initializer: "initialize",
+        },
+      );
+      await markPriceOracle.deployed();
+      const positioningConfigFactory = await ethers.getContractFactory("PositioningConfig");
+      positioningConfig = await upgrades.deployProxy(positioningConfigFactory, [
+        markPriceOracle.address,
+      ]);
+      const accountBalanceFactory = await ethers.getContractFactory("AccountBalance");
+      accountBalance = await upgrades.deployProxy(accountBalanceFactory, [
+        positioningConfig.address,
+      ]);
+
+      const vaultContractFactory = await ethers.getContractFactory("VaultController");
+      vaultController = await upgrades.deployProxy(vaultContractFactory, [
+        positioningConfig.address,
+        accountBalance.address,
+      ]);
+
+      vaultFactory = await ethers.getContractFactory("Vault");
+      vault = await upgrades.deployProxy(vaultFactory, [
+        positioningConfig.address,
+        accountBalance.address,
+        USDC.address,
+        vaultController.address,
+      ]);
+      DAIVault = await upgrades.deployProxy(vaultFactory, [
+        positioningConfig.address,
+        accountBalance.address,
+        DAI.address,
+        vaultController.address,
+      ]);
+
+      await markPriceOracle.deployed();
+      matchingEngine = await upgrades.deployProxy(
+        MatchingEngine,
+        [owner.address, markPriceOracle.address],
+        {
+          initializer: "__MatchingEngineTest_init",
+        },
+      );
+      Positioning = await ethers.getContractFactory("PositioningTest");
+      positioning = await upgrades.deployProxy(
+        Positioning,
+        [
+          positioningConfig.address,
+          vaultController.address,
+          accountBalance.address,
+          matchingEngine.address,
+          markPriceOracle.address,
+          indexPriceOracle.address,
+          0,
+          [owner.address, alice.address],
+        ],
+        {
+          initializer: "initialize",
+        },
+      );
+      await vaultController.connect(owner).setPositioning(positioning.address);
+      await vaultController.registerVault(vault.address, USDC.address);
+      await vaultController.registerVault(DAIVault.address, DAI.address);
+
+      const amount = parseUnits("100000000000000000000", await USDC.decimals());
+      await USDC.mint(alice.address, amount);
+      await USDC.mint(bob.address, amount);
+      await USDC.mint(cole.address, amount);
+      await USDC.connect(alice).approve(vault.address, amount);
+      await USDC.connect(bob).approve(vault.address, amount);
+      await USDC.connect(cole).approve(vault.address, amount);
+      await USDC.mint(owner.address, amount);
+
+      const daiAmount = parseUnits("1000", await DAI.decimals());
+      await DAI.mint(alice.address, daiAmount);
+      await DAI.connect(alice).approve(DAIVault.address, daiAmount);
+
+      await DAI.mint(owner.address, daiAmount);
+
+      volmexPerpPeriphery = await upgrades.deployProxy(VolmexPerpPeriphery, [
+        perpViewFake.address,
+        markPriceOracle.address,
+        indexPriceOracle.address,
+        [vault.address, vault.address],
+        owner.address,
+        relayer.address,
+      ]);
+      await positioningConfig.setSettlementTokenBalanceCap(
+        parseUnits("5000000000000000000000000000000000000000000000", await USDC.decimals()),
+      );
+      const USDCVaultAddress = await vaultController.getVault(USDC.address);
+      const USDCVaultContract = await vaultFactory.attach(USDCVaultAddress);
+      await USDC.approve(USDCVaultAddress, amount);
+      await USDC.approve(volmexPerpPeriphery.address, amount);
+
+      await USDC.connect(bob).approve(USDCVaultAddress, amount);
+      await USDC.connect(bob).approve(volmexPerpPeriphery.address, amount);
+      await USDC.connect(cole).approve(USDCVaultAddress, amount);
+      await USDC.connect(cole).approve(volmexPerpPeriphery.address, amount);
+      const devilERC20 = await ethers.getContractFactory("DevilTestERC20");
+      const devil = await devilERC20.deploy();
+      await devil.deployed();
+      await devil.__TestERC20_init("TestUSDC", "USDC", 6);
+      await vault.setSettlementToken(devil.address);
+      const amount2 = parseUnits("4000000000000000000", await devil.decimals());
+      const VaultController1 = await ethers.getContractFactory("VaultControllerTest");
+      console.log(vault.address);
+      console.log(owner.address);
+      const vaultController1 = await VaultController1.deploy();
+      await vaultController1.deployed();
+      await vault.setVaultController(vaultController1.address);
+      await expect(
+        vaultController1
+          .connect(bob)
+          .deposit(volmexPerpPeriphery.address, bob.address, amount, vault.address),
+      ).to.be.revertedWith("ReentrancyGuard: reentrant call");
+    });
+
     it("should not allow user to withdraw from vault if vault balance is empty", async () => {
       const amount = parseUnits("100", await USDC.decimals());
       await positioningConfig.setSettlementTokenBalanceCap(amount);
@@ -436,15 +726,6 @@ describe("Vault", function () {
 
       await expect(
         vaultController.connect(alice).withdraw(USDC.address, alice.address, amount),
-      ).to.be.revertedWith("V_NEFC");
-    });
-    it("should not allow user to withdraw from ETH vault if vault balance is empty", async () => {
-      const amount = parseUnits("100", await ETH.decimals());
-      await positioningConfig.setSettlementTokenBalanceCap(amount);
-      await accountBalance.grantSettleRealizedPnlRole(vaultController.address);
-
-      await expect(
-        vaultController.connect(alice).withdraw(ETH.address, alice.address, amount),
       ).to.be.revertedWith("V_NEFC");
     });
 
@@ -477,40 +758,6 @@ describe("Vault", function () {
       // update sender's balance
       expect(await vaultController.getBalanceByToken(alice.address, USDC.address)).to.eq(
         "100000000000000000000000000000000000000",
-      );
-    });
-
-    it("should allow user to deposit collateral to ETH vault", async () => {
-      const provider = waffle.provider;
-      const userBalance = await provider.getBalance(alice.address);
-
-      const amount = parseUnits("100", await ETH.decimals());
-
-      await positioningConfig.setSettlementTokenBalanceCap(userBalance);
-
-      const ethVaultAddress = await vaultController.getVault(ETH.address);
-
-      const ethVaultContract = await vaultFactory.attach(ethVaultAddress);
-      await ETH.connect(alice).approve(ethVaultAddress, amount);
-      await ETH.connect(alice).approve(volmexPerpPeripheryEth.address, amount);
-
-      // Deposit max amount equal to balance of the user
-      await expect(
-        vaultController
-          .connect(alice)
-          .deposit(volmexPerpPeripheryEth.address, ETH.address, alice.address, amount, {
-            value: amount.toString(),
-          }),
-      )
-        .to.emit(ethVaultContract, "Deposited")
-        .withArgs(ETH.address, alice.address, amount);
-
-      // Vault balance should increase
-      expect((await provider.getBalance(ethVaultAddress)).toString()).to.eq(amount.toString());
-
-      // update sender's balance
-      expect(await vaultController.getBalanceByToken(alice.address, ETH.address)).to.eq(
-        amount.toString(),
       );
     });
 
@@ -634,6 +881,152 @@ describe("Vault", function () {
       // Debt increases on vault
       expect(await vault.getTotalDebt()).to.eq(parseUnits("100", await USDC.decimals()));
     });
+    it("Negative Test for transferFundToVault", async () => {
+      VolmexPerpPeriphery = await ethers.getContractFactory("VolmexPerpPeriphery");
+      const [owner, alice, relayer, bob, cole] = await ethers.getSigners();
+      IndexPriceOracle = await ethers.getContractFactory("IndexPriceOracle");
+      MarkPriceOracle = await ethers.getContractFactory("MarkPriceOracle");
+      MatchingEngine = await ethers.getContractFactory("MatchingEngineTest");
+      perpViewFake = await smock.fake("VolmexPerpView");
+
+      const tokenFactory = await ethers.getContractFactory("TestERC20");
+      const USDC1 = await tokenFactory.deploy();
+      USDC = await USDC1.deployed();
+      await USDC.__TestERC20_init("TestUSDC", "USDC", 6);
+
+      const tokenFactory2 = await ethers.getContractFactory("TestERC20");
+      const Dai = await tokenFactory2.deploy();
+      DAI = await Dai.deployed();
+      await DAI.__TestERC20_init("TestDai", "DAI", 18);
+
+      const tokenFactory3 = await ethers.getContractFactory("TestERC20");
+      const eth = await tokenFactory3.deploy();
+      ETH = await eth.deployed();
+      await eth.__TestERC20_init("TestETH", "ETH", 18);
+      indexPriceOracle = await upgrades.deployProxy(
+        IndexPriceOracle,
+        [owner.address, [100000], [alice.address], [proofHash], [capRatio]],
+        {
+          initializer: "initialize",
+        },
+      );
+      await indexPriceOracle.deployed();
+
+      markPriceOracle = await upgrades.deployProxy(
+        MarkPriceOracle,
+        [[100000], [alice.address], owner.address],
+        {
+          initializer: "initialize",
+        },
+      );
+      await markPriceOracle.deployed();
+      const positioningConfigFactory = await ethers.getContractFactory("PositioningConfig");
+      positioningConfig = await upgrades.deployProxy(positioningConfigFactory, [
+        markPriceOracle.address,
+      ]);
+      const accountBalanceFactory = await ethers.getContractFactory("AccountBalance");
+      accountBalance = await upgrades.deployProxy(accountBalanceFactory, [
+        positioningConfig.address,
+      ]);
+
+      const vaultContractFactory = await ethers.getContractFactory("VaultController");
+      vaultController = await upgrades.deployProxy(vaultContractFactory, [
+        positioningConfig.address,
+        accountBalance.address,
+      ]);
+
+      vaultFactory = await ethers.getContractFactory("Vault");
+      vault = await upgrades.deployProxy(vaultFactory, [
+        positioningConfig.address,
+        accountBalance.address,
+        USDC.address,
+        vaultController.address,
+      ]);
+      DAIVault = await upgrades.deployProxy(vaultFactory, [
+        positioningConfig.address,
+        accountBalance.address,
+        DAI.address,
+        vaultController.address,
+      ]);
+
+      await markPriceOracle.deployed();
+      matchingEngine = await upgrades.deployProxy(
+        MatchingEngine,
+        [owner.address, markPriceOracle.address],
+        {
+          initializer: "__MatchingEngineTest_init",
+        },
+      );
+      Positioning = await ethers.getContractFactory("PositioningTest");
+      positioning = await upgrades.deployProxy(
+        Positioning,
+        [
+          positioningConfig.address,
+          vaultController.address,
+          accountBalance.address,
+          matchingEngine.address,
+          markPriceOracle.address,
+          indexPriceOracle.address,
+          0,
+          [owner.address, alice.address],
+        ],
+        {
+          initializer: "initialize",
+        },
+      );
+      await vaultController.connect(owner).setPositioning(positioning.address);
+      await vaultController.registerVault(vault.address, USDC.address);
+      await vaultController.registerVault(DAIVault.address, DAI.address);
+
+      const amount = parseUnits("100000000000000000000", await USDC.decimals());
+      await USDC.mint(alice.address, amount);
+      await USDC.mint(bob.address, amount);
+      await USDC.mint(cole.address, amount);
+      await USDC.connect(alice).approve(vault.address, amount);
+      await USDC.connect(bob).approve(vault.address, amount);
+      await USDC.connect(cole).approve(vault.address, amount);
+      await USDC.mint(owner.address, amount);
+
+      const daiAmount = parseUnits("1000", await DAI.decimals());
+      await DAI.mint(alice.address, daiAmount);
+      await DAI.connect(alice).approve(DAIVault.address, daiAmount);
+
+      await DAI.mint(owner.address, daiAmount);
+
+      volmexPerpPeriphery = await upgrades.deployProxy(VolmexPerpPeriphery, [
+        perpViewFake.address,
+        markPriceOracle.address,
+        indexPriceOracle.address,
+        [vault.address, vault.address],
+        owner.address,
+        relayer.address,
+      ]);
+      await positioningConfig.setSettlementTokenBalanceCap(
+        parseUnits("5000000000000000000000000000000000000000000000", await USDC.decimals()),
+      );
+      const USDCVaultAddress = await vaultController.getVault(USDC.address);
+      const USDCVaultContract = await vaultFactory.attach(USDCVaultAddress);
+      await USDC.approve(USDCVaultAddress, amount);
+      await USDC.approve(volmexPerpPeriphery.address, amount);
+
+      await USDC.connect(bob).approve(USDCVaultAddress, amount);
+      await USDC.connect(bob).approve(volmexPerpPeriphery.address, amount);
+      await USDC.connect(cole).approve(USDCVaultAddress, amount);
+      await USDC.connect(cole).approve(volmexPerpPeriphery.address, amount);
+      const devilERC20 = await ethers.getContractFactory("VaultTestERC20");
+      const devil = await devilERC20.deploy();
+      await devil.deployed();
+      await devil.__TestERC20_init("TestUSDC", "USDC", 6);
+      await vault.setSettlementToken(devil.address);
+      const amount2 = parseUnits("4000000000000000000", await devil.decimals());
+
+      await USDC.connect(owner).approve(vault.address, amount);
+
+      // send fund to vault
+      await expect(
+        vault.connect(owner).transferFundToVault(devil.address, amount),
+      ).to.be.revertedWith("ReentrancyGuard: reentrant call");
+    });
 
     it("Force error, not called by owner", async () => {
       const [owner, alice] = await ethers.getSigners();
@@ -663,7 +1056,7 @@ describe("Vault", function () {
       await USDC.connect(owner).approve(vault.address, amount);
       await vault.pause();
       // caller not owner
-      await expect(vault.transferFundToVault(ETH.address, amount)).to.be.revertedWith(
+      await expect(vault.transferFundToVault(USDC.address, amount)).to.be.revertedWith(
         "Pausable: paused",
       );
     });
@@ -736,6 +1129,89 @@ describe("Vault", function () {
       // Debt decreases on vault
       expect(await vault.getTotalDebt()).to.eq(parseUnits("0", await USDC.decimals()));
     });
+    it("Negative Test for debt repayment", async () => {
+      const [owner, alice] = await ethers.getSigners();
+
+      const amount = parseUnits("100", await USDC.decimals());
+      await USDC.connect(owner).approve(vault.address, amount);
+
+      // send fund to vault
+      await expect(vault.connect(owner).transferFundToVault(USDC.address, amount))
+        .to.emit(vault, "BorrowFund")
+        .withArgs(owner.address, amount);
+
+      // Debt increases on vault
+      const devilERC20 = await ethers.getContractFactory("VaultTestERC20");
+      const devil = await devilERC20.deploy();
+      await devil.deployed();
+      await devil.__TestERC20_init("TestUSDC", "USDC", 6);
+      await vault.setSettlementToken(devil.address);
+      // Repay debt
+      await expect(
+        vault.connect(owner).repayDebtToOwner(devil.address, amount),
+      ).to.be.revertedWith("ReentrancyGuard: reentrant call");
+    });
+    it("Positive Test for debt repayment", async () => {
+      const [owner, alice] = await ethers.getSigners();
+
+      const amount = parseUnits("100", await USDC.decimals());
+      await USDC.connect(owner).approve(vault.address, amount);
+
+      // send fund to vault
+      await expect(vault.connect(owner).transferFundToVault(USDC.address, amount))
+        .to.emit(vault, "BorrowFund")
+        .withArgs(owner.address, amount);
+
+      // Debt increases on vault
+      expect(await vault.getTotalDebt()).to.eq(parseUnits("100", await USDC.decimals()));
+
+      // Repay debt
+      await expect(vault.connect(owner).repayDebtToOwner(USDC.address, amount))
+        .to.emit(vault, "DebtRepayed")
+        .withArgs(owner.address, amount);
+
+      // Debt decreases on vault
+      expect(await vault.getTotalDebt()).to.eq(parseUnits("0", await USDC.decimals()));
+    });
+    it("Negative Test for debt repayment", async () => {
+      const [owner, alice] = await ethers.getSigners();
+
+      const amount = parseUnits("100", await USDC.decimals());
+      await USDC.connect(owner).approve(vault.address, amount);
+
+      // send fund to vault
+      await expect(vault.connect(owner).transferFundToVault(USDC.address, amount))
+        .to.emit(vault, "BorrowFund")
+        .withArgs(owner.address, amount);
+
+      // Debt increases on vault
+      expect(await vault.getTotalDebt()).to.eq(parseUnits("100", await USDC.decimals()));
+
+      // Repay debt
+      await expect(
+        vault.connect(owner).repayDebtToOwner(owner.address, amount),
+      ).to.be.revertedWith("V_OST");
+    });
+    it("Negative Test for debt repayment", async () => {
+      const [owner, alice] = await ethers.getSigners();
+
+      const amount = parseUnits("100", await USDC.decimals());
+      await USDC.connect(owner).approve(vault.address, amount);
+
+      // send fund to vault
+      await expect(vault.connect(owner).transferFundToVault(USDC.address, amount))
+        .to.emit(vault, "BorrowFund")
+        .withArgs(owner.address, amount);
+
+      // Debt increases on vault
+      expect(await vault.getTotalDebt()).to.eq(parseUnits("100", await USDC.decimals()));
+
+      //do not  Repay debt
+      await vault.pause();
+      await expect(vault.connect(owner).repayDebtToOwner(USDC.address, amount)).to.be.revertedWith(
+        "Pausable: paused",
+      );
+    });
 
     it("Force error, not called by owner", async () => {
       const [owner, alice] = await ethers.getSigners();
@@ -773,10 +1249,6 @@ describe("Vault", function () {
 
     it("Tests for getAccountBalance", async function () {
       expect(await vault.getAccountBalance()).to.be.equal(accountBalance.address);
-    });
-
-    it("should get type of vault", async () => {
-      expect(await vault.isEthVault()).to.be.equal(false);
     });
   });
 

@@ -4,6 +4,7 @@ import { smock } from "@defi-wonderland/smock";
 import { parseUnits, zeroPad } from "ethers/lib/utils";
 const { Order, Asset, sign, encodeAddress } = require("../order");
 import { BigNumber } from "ethers";
+import { time } from "@nomicfoundation/hardhat-network-helpers";
 
 describe("VolmexPerpPeriphery", function () {
   let MatchingEngine;
@@ -121,21 +122,17 @@ describe("VolmexPerpPeriphery", function () {
 
     markPriceOracle = await upgrades.deployProxy(
       MarkPriceOracle,
-      [[60000000], [volmexBaseToken.address], [proofHash], owner.address],
+      [[60000000], [volmexBaseToken.address], owner.address],
       {
         initializer: "initialize",
       },
     );
     await markPriceOracle.deployed();
+    await (await indexPriceOracle.grantInitialTimestampRole(markPriceOracle.address)).wait();
 
     positioningConfig = await upgrades.deployProxy(PositioningConfig, [markPriceOracle.address]);
 
-    USDC = await TestERC20.deploy(
-      "100000000000000000000000",
-      "Tether USD",
-      "USDT",
-      6
-    );
+    USDC = await TestERC20.deploy("100000000000000000000000", "Tether USD", "USDT", 6);
     await USDC.deployed();
 
     matchingEngine = await upgrades.deployProxy(MatchingEngine, [
@@ -163,7 +160,6 @@ describe("VolmexPerpPeriphery", function () {
       accountBalance1.address,
       USDC.address,
       vaultController.address,
-      false,
     ]);
     await vault.deployed();
     await (await perpView.incrementVaultIndex()).wait();
@@ -205,7 +201,7 @@ describe("VolmexPerpPeriphery", function () {
     await vault.connect(owner).setVaultController(vaultController.address);
     await vaultController.registerVault(vault.address, USDC.address);
     await vaultController.connect(owner).setPositioning(positioning.address);
-    await markPriceOracle.grantTwapIntervalRole(positioningConfig.address);
+    await markPriceOracle.grantSmaIntervalRole(positioningConfig.address);
     await positioningConfig.connect(owner).setTwapInterval(28800);
     await positioningConfig.connect(owner).setMaxMarketsPerAccount(5);
     await positioningConfig
@@ -306,7 +302,7 @@ describe("VolmexPerpPeriphery", function () {
         );
         const receipt = await tx.wait();
         let txDataBefore = {
-          "Mark price": (await markPriceOracle.getMarkTwap("3600", 0)).toString(),
+          "Mark price": (await markPriceOracle.getMarkSma("3600", 0)).toString(),
           "Alice position": (
             await accountBalance1.getPositionSize(alice.address, volmexBaseToken.address)
           ).toString(),
@@ -357,7 +353,7 @@ describe("VolmexPerpPeriphery", function () {
           );
           const receipt = await tx.wait();
           txDataBefore = {
-            "Mark price": (await markPriceOracle.getMarkTwap("3600", 0)).toString(),
+            "Mark price": (await markPriceOracle.getMarkSma("3600", 0)).toString(),
             "Alice position": (
               await accountBalance1.getPositionSize(alice.address, volmexBaseToken.address)
             ).toString(),
@@ -418,6 +414,90 @@ describe("VolmexPerpPeriphery", function () {
         ).to.emit(positioning, "PositionChanged");
       }
     });
+
+    it("Open position when not whitelisted", async () => {
+      let salt = 250;
+      let txBefore = [];
+      await volmexPerpPeriphery.toggleTraderWhitelistEnabled();
+      for (let index = 0; index < 10; index++) {
+        let orderLeft = Order(
+          ORDER,
+          deadline,
+          alice.address,
+          Asset(volmexBaseToken.address, baseAmount),
+          Asset(volmexQuoteToken.address, quoteAmount),
+          salt,
+          0,
+          true,
+        );
+
+        let orderRight = Order(
+          ORDER,
+          deadline,
+          bob.address,
+          Asset(volmexQuoteToken.address, quoteAmount),
+          Asset(volmexBaseToken.address, baseAmount),
+          salt++,
+          0,
+          false,
+        );
+
+        const signatureLeft = await getSignature(orderLeft, alice.address);
+        const signatureRight = await getSignature(orderRight, bob.address);
+
+        await expect(
+          volmexPerpPeriphery.openPosition(
+            0,
+            orderLeft,
+            signatureLeft,
+            orderRight,
+            signatureRight,
+            liquidator,
+          ),
+        ).to.emit(positioning, "PositionChanged");
+      }
+    });
+    it("should not Open position trader is not when not whitelisted", async () => {
+      let salt = 250;
+      let txBefore = [];
+      for (let index = 0; index < 10; index++) {
+        let orderLeft = Order(
+          ORDER,
+          deadline,
+          alice.address,
+          Asset(volmexBaseToken.address, baseAmount),
+          Asset(volmexQuoteToken.address, quoteAmount),
+          salt,
+          0,
+          true,
+        );
+
+        let orderRight = Order(
+          ORDER,
+          deadline,
+          bob.address,
+          Asset(volmexQuoteToken.address, quoteAmount),
+          Asset(volmexBaseToken.address, baseAmount),
+          salt++,
+          0,
+          false,
+        );
+
+        const signatureLeft = await getSignature(orderLeft, alice.address);
+        const signatureRight = await getSignature(orderRight, bob.address);
+
+        await expect(
+          volmexPerpPeriphery.openPosition(
+            0,
+            orderLeft,
+            signatureLeft,
+            orderRight,
+            signatureRight,
+            liquidator,
+          ),
+        ).to.be.revertedWith("Periphery: trader not whitelisted");
+      }
+    });
   });
 
   describe("VolmexPerpPeriphery deployment", async () => {
@@ -444,6 +524,18 @@ describe("VolmexPerpPeriphery", function () {
           owner.address, // replace with relayer address
         ]),
       ).to.be.revertedWith("VolmexPerpPeriphery: Admin can't be address(0)");
+    });
+    it("should fail to deploy VolmexPerpPeriphery when perp view address is zero", async () => {
+      await expect(
+        upgrades.deployProxy(VolmexPerpPeriphery, [
+          ZERO_ADDR,
+          markPriceOracle.address,
+          indexPriceOracle.address,
+          [vault.address, vault.address],
+          owner.address,
+          owner.address, // replace with relayer address
+        ]),
+      ).to.be.revertedWith("VolmexPerpPeriphery: zero address");
     });
     it("should fail to initialize again", async () => {
       await expect(
@@ -506,6 +598,11 @@ describe("VolmexPerpPeriphery", function () {
         volmexPerpPeriphery.connect(account2).toggleTraderWhitelistEnabled(),
       ).to.be.revertedWith("Periphery: Not admin");
     });
+    it("should fail to white list trader ", async () => {
+      await expect(
+        volmexPerpPeriphery.connect(account2).whitelistTrader(account2.address, true),
+      ).to.be.revertedWith("VolmexPerpPeriphery: Not whitelister");
+    });
   });
 
   describe("Add a vault to white list", function () {
@@ -515,7 +612,6 @@ describe("VolmexPerpPeriphery", function () {
         accountBalance1.address,
         USDC.address,
         accountBalance1.address,
-        false,
       ]);
       expect(await volmexPerpPeriphery.whitelistVault(vault1.address, true))
         .to.emit(volmexPerpPeriphery, "VaultWhitelisted")
@@ -588,6 +684,327 @@ describe("VolmexPerpPeriphery", function () {
       expect(receipt.confirmations).not.equal(0);
     });
 
+    it("should fail to add order due to expired deadline", async () => {
+      await await USDC.transfer(account1.address, "100000000000");
+      await await USDC.transfer(account2.address, "100000000000");
+      await USDC.connect(account1).approve(volmexPerpPeriphery.address, "100000000000");
+      await USDC.connect(account2).approve(volmexPerpPeriphery.address, "100000000000");
+      (
+        await volmexPerpPeriphery.connect(account1).depositToVault(0, USDC.address, "100000000000")
+      ).wait();
+      (
+        await volmexPerpPeriphery.connect(account2).depositToVault(0, USDC.address, "100000000000")
+      ).wait();
+      await volmexPerpPeriphery.whitelistTrader(account1.address, true);
+      await volmexPerpPeriphery.whitelistTrader(account2.address, true);
+      const timestamp = await time.latest();
+      const orderLeft = Order(
+        STOP_LOSS_MARK_PRICE,
+        timestamp - 9,
+        account1.address,
+        Asset(volmexBaseToken.address, two.toString()),
+        Asset(virtualToken.address, two.toString()),
+        1,
+        (1e8).toString(),
+        true,
+      );
+
+      const orderRight = Order(
+        STOP_LOSS_MARK_PRICE,
+        deadline,
+        account2.address,
+        Asset(virtualToken.address, two.toString()),
+        Asset(volmexBaseToken.address, two.toString()),
+        1,
+        (1e6).toString(),
+        false,
+      );
+
+      const signatureLeftLimitOrder = await getSignature(orderLeft, account1.address);
+      const signatureRightLimitOrder = await getSignature(orderRight, account2.address);
+
+      await matchingEngine.grantMatchOrders(positioning.address);
+
+      await expect(
+        volmexPerpPeriphery.openPosition(
+          0,
+          orderLeft,
+          signatureLeftLimitOrder,
+          orderRight,
+          signatureRightLimitOrder,
+          owner.address,
+        ),
+      ).to.be.revertedWith("V_PERP_M: Order deadline validation failed");
+    });
+
+    it("should fail when order trader is ZERO", async () => {
+      await await USDC.transfer(account1.address, "100000000000");
+      await volmexPerpPeriphery.setRelayer(account1.address);
+      await await USDC.transfer(account2.address, "100000000000");
+      await USDC.connect(account1).approve(volmexPerpPeriphery.address, "100000000000");
+      await USDC.connect(account2).approve(volmexPerpPeriphery.address, "100000000000");
+      (
+        await volmexPerpPeriphery.connect(account1).depositToVault(0, USDC.address, "100000000000")
+      ).wait();
+      (
+        await volmexPerpPeriphery.connect(account2).depositToVault(0, USDC.address, "100000000000")
+      ).wait();
+      await volmexPerpPeriphery.whitelistTrader(account1.address, true);
+      await volmexPerpPeriphery.whitelistTrader(account2.address, true);
+      await volmexPerpPeriphery.whitelistTrader(ZERO_ADDR, true);
+      const timestamp = await time.latest();
+      const orderLeft = Order(
+        STOP_LOSS_MARK_PRICE,
+        deadline,
+        ZERO_ADDR,
+        Asset(volmexBaseToken.address, two.toString()),
+        Asset(virtualToken.address, two.toString()),
+        0,
+        (1e8).toString(),
+        true,
+      );
+
+      const orderRight = Order(
+        STOP_LOSS_MARK_PRICE,
+        deadline,
+        account2.address,
+        Asset(virtualToken.address, two.toString()),
+        Asset(volmexBaseToken.address, two.toString()),
+        1,
+        (1e6).toString(),
+        false,
+      );
+
+      const signatureLeftLimitOrder = await getSignature(orderLeft, account1.address);
+      const signatureRightLimitOrder = await getSignature(orderRight, account2.address);
+
+      await matchingEngine.grantMatchOrders(positioning.address);
+
+      await expect(
+        volmexPerpPeriphery
+          .connect(account1)
+          .openPosition(
+            0,
+            orderLeft,
+            signatureLeftLimitOrder,
+            orderRight,
+            signatureRightLimitOrder,
+            owner.address,
+          ),
+      ).to.be.revertedWith("P_NEFCI");
+    });
+    it("should fail when order trader is ZERO and no trader ", async () => {
+      await await USDC.transfer(account1.address, "100000000000");
+      await volmexPerpPeriphery.setRelayer(account1.address);
+      await await USDC.transfer(account2.address, "100000000000");
+      await USDC.connect(account1).approve(volmexPerpPeriphery.address, "100000000000");
+      await USDC.connect(account2).approve(volmexPerpPeriphery.address, "100000000000");
+      (
+        await volmexPerpPeriphery.connect(account1).depositToVault(0, USDC.address, "100000000000")
+      ).wait();
+      (
+        await volmexPerpPeriphery.connect(account2).depositToVault(0, USDC.address, "100000000000")
+      ).wait();
+      await volmexPerpPeriphery.whitelistTrader(account1.address, true);
+      await volmexPerpPeriphery.whitelistTrader(account2.address, true);
+      await volmexPerpPeriphery.whitelistTrader(ZERO_ADDR, true);
+      const timestamp = await time.latest();
+      const orderLeft = Order(
+        STOP_LOSS_MARK_PRICE,
+        deadline,
+        ZERO_ADDR,
+        Asset(volmexBaseToken.address, two.toString()),
+        Asset(virtualToken.address, two.toString()),
+        1,
+        (1e8).toString(),
+        true,
+      );
+
+      const orderRight = Order(
+        STOP_LOSS_MARK_PRICE,
+        deadline,
+        account2.address,
+        Asset(virtualToken.address, two.toString()),
+        Asset(volmexBaseToken.address, two.toString()),
+        1,
+        (1e6).toString(),
+        false,
+      );
+
+      const signatureLeftLimitOrder = await getSignature(orderLeft, account1.address);
+      const signatureRightLimitOrder = await getSignature(orderRight, account2.address);
+
+      await matchingEngine.grantMatchOrders(positioning.address);
+      console.log(signatureLeftLimitOrder);
+      await expect(
+        volmexPerpPeriphery
+          .connect(account1)
+          .openPosition(
+            0,
+            orderLeft,
+            "0x0000000000000000000000000000000000000000000000000000000000000000",
+            orderRight,
+            signatureRightLimitOrder,
+            owner.address,
+          ),
+      ).to.be.revertedWith("V_PERP_M: no trader");
+    });
+    it("should fail to add order due same make and take asset as base token", async () => {
+      await await USDC.transfer(account1.address, "100000000000");
+      await await USDC.transfer(account2.address, "100000000000");
+      await USDC.connect(account1).approve(volmexPerpPeriphery.address, "100000000000");
+      await USDC.connect(account2).approve(volmexPerpPeriphery.address, "100000000000");
+      (
+        await volmexPerpPeriphery.connect(account1).depositToVault(0, USDC.address, "100000000000")
+      ).wait();
+      (
+        await volmexPerpPeriphery.connect(account2).depositToVault(0, USDC.address, "100000000000")
+      ).wait();
+      await volmexPerpPeriphery.whitelistTrader(account1.address, true);
+      await volmexPerpPeriphery.whitelistTrader(account2.address, true);
+      const orderLeft = Order(
+        STOP_LOSS_MARK_PRICE,
+        deadline,
+        account1.address,
+        Asset(volmexBaseToken.address, two.toString()),
+        Asset(volmexBaseToken.address, two.toString()),
+        1,
+        (1e8).toString(),
+        true,
+      );
+
+      const orderRight = Order(
+        STOP_LOSS_MARK_PRICE,
+        deadline,
+        account2.address,
+        Asset(virtualToken.address, two.toString()),
+        Asset(volmexBaseToken.address, two.toString()),
+        1,
+        (1e6).toString(),
+        false,
+      );
+
+      const signatureLeftLimitOrder = await getSignature(orderLeft, account1.address);
+      const signatureRightLimitOrder = await getSignature(orderRight, account2.address);
+
+      await matchingEngine.grantMatchOrders(positioning.address);
+
+      await expect(
+        volmexPerpPeriphery.openPosition(
+          0,
+          orderLeft,
+          signatureLeftLimitOrder,
+          orderRight,
+          signatureRightLimitOrder,
+          owner.address,
+        ),
+      ).to.be.revertedWith("Both makeAsset & takeAsset can't be baseTokens");
+    });
+    it("should fail to add order due to different signer", async () => {
+      await await USDC.transfer(account1.address, "100000000000");
+      await await USDC.transfer(account2.address, "100000000000");
+      await USDC.connect(account1).approve(volmexPerpPeriphery.address, "100000000000");
+      await USDC.connect(account2).approve(volmexPerpPeriphery.address, "100000000000");
+      (
+        await volmexPerpPeriphery.connect(account1).depositToVault(0, USDC.address, "100000000000")
+      ).wait();
+      (
+        await volmexPerpPeriphery.connect(account2).depositToVault(0, USDC.address, "100000000000")
+      ).wait();
+      await volmexPerpPeriphery.whitelistTrader(account1.address, true);
+      await volmexPerpPeriphery.whitelistTrader(account2.address, true);
+      const orderLeft = Order(
+        STOP_LOSS_MARK_PRICE,
+        deadline,
+        account1.address,
+        Asset(volmexBaseToken.address, two.toString()),
+        Asset(virtualToken.address, two.toString()),
+        1,
+        (1e8).toString(),
+        true,
+      );
+
+      const orderRight = Order(
+        STOP_LOSS_MARK_PRICE,
+        deadline,
+        account2.address,
+        Asset(virtualToken.address, two.toString()),
+        Asset(volmexBaseToken.address, two.toString()),
+        1,
+        (1e6).toString(),
+        false,
+      );
+
+      const signatureLeftLimitOrder = await getSignature(orderLeft, account2.address);
+      const signatureRightLimitOrder = await getSignature(orderRight, account2.address);
+
+      await matchingEngine.grantMatchOrders(positioning.address);
+
+      await expect(
+        volmexPerpPeriphery.openPosition(
+          0,
+          orderLeft,
+          signatureLeftLimitOrder,
+          orderRight,
+          signatureRightLimitOrder,
+          owner.address,
+        ),
+      ).to.be.revertedWith("V_PERP_M: order signature verification error");
+    });
+
+    it("should fail to add order due same short order take asset as base token", async () => {
+      await await USDC.transfer(account1.address, "100000000000");
+      await await USDC.transfer(account2.address, "100000000000");
+      await USDC.connect(account1).approve(volmexPerpPeriphery.address, "100000000000");
+      await USDC.connect(account2).approve(volmexPerpPeriphery.address, "100000000000");
+      (
+        await volmexPerpPeriphery.connect(account1).depositToVault(0, USDC.address, "100000000000")
+      ).wait();
+      (
+        await volmexPerpPeriphery.connect(account2).depositToVault(0, USDC.address, "100000000000")
+      ).wait();
+      await volmexPerpPeriphery.whitelistTrader(account1.address, true);
+      await volmexPerpPeriphery.whitelistTrader(account2.address, true);
+      const orderLeft = Order(
+        STOP_LOSS_MARK_PRICE,
+        deadline,
+        account1.address,
+        Asset(virtualToken.address, two.toString()),
+        Asset(volmexBaseToken.address, two.toString()),
+        1,
+        (1e8).toString(),
+        true,
+      );
+
+      const orderRight = Order(
+        STOP_LOSS_MARK_PRICE,
+        deadline,
+        account2.address,
+        Asset(virtualToken.address, two.toString()),
+        Asset(volmexBaseToken.address, two.toString()),
+        1,
+        (1e6).toString(),
+        false,
+      );
+
+      const signatureLeftLimitOrder = await getSignature(orderLeft, account1.address);
+      const signatureRightLimitOrder = await getSignature(orderRight, account2.address);
+
+      await matchingEngine.grantMatchOrders(positioning.address);
+
+      await expect(
+        volmexPerpPeriphery.openPosition(
+          0,
+          orderLeft,
+          signatureLeftLimitOrder,
+          orderRight,
+          signatureRightLimitOrder,
+          owner.address,
+        ),
+      ).to.be.revertedWith(
+        "Short order can't have takeAsset as a baseToken/Long order can't have makeAsset as baseToken",
+      );
+    });
     it("should fail to add order", async () => {
       const orderLeft = Order(
         STOP_LOSS_MARK_PRICE,
@@ -1016,6 +1433,122 @@ describe("VolmexPerpPeriphery", function () {
           Asset(volmexBaseToken.address, two.toString()),
           1,
           (1e5).toString(),
+          false,
+        );
+        limitOrdersLeft.push(orderLeft);
+        limitOrdersRight.push(orderRight);
+        const signatureLeft = await getSignature(orderLeft, account1.address);
+        const signatureRight = await getSignature(orderRight, account2.address);
+        signaturesLeft.push(signatureLeft);
+        signaturesRight.push(signatureRight);
+        await matchingEngine.grantMatchOrders(positioning.address);
+        await volmexPerpPeriphery.batchOpenPosition(
+          index,
+          limitOrdersLeft,
+          signaturesLeft,
+          limitOrdersRight,
+          signaturesRight,
+          liquidator,
+        );
+      });
+      it("should fill stop loss index price and last price order order in batch", async () => {
+        const limitOrdersLeft = [];
+        const limitOrdersRight = [];
+        const signaturesLeft = [];
+        const signaturesRight = [];
+        await await USDC.transfer(account1.address, "1000000000");
+        await await USDC.transfer(account2.address, "1000000000");
+        await USDC.connect(account1).approve(volmexPerpPeriphery.address, "1000000000");
+        await USDC.connect(account2).approve(volmexPerpPeriphery.address, "1000000000");
+        await volmexPerpPeriphery.whitelistTrader(account1.address, true);
+        await volmexPerpPeriphery.whitelistTrader(account2.address, true);
+        (
+          await volmexPerpPeriphery
+            .connect(account1)
+            .depositToVault(index, USDC.address, "1000000000")
+        ).wait();
+        (
+          await volmexPerpPeriphery
+            .connect(account2)
+            .depositToVault(index, USDC.address, "1000000000")
+        ).wait();
+        const orderLeft = Order(
+          STOP_LOSS_INDEX_PRICE,
+          deadline,
+          account1.address,
+          Asset(volmexBaseToken.address, two.toString()),
+          Asset(virtualToken.address, two.toString()),
+          1,
+          (1e8).toString(),
+          true,
+        );
+
+        const orderRight = Order(
+          STOP_LOSS_LAST_PRICE,
+          deadline,
+          account2.address,
+          Asset(virtualToken.address, two.toString()),
+          Asset(volmexBaseToken.address, two.toString()),
+          1,
+          (1e5).toString(),
+          false,
+        );
+        limitOrdersLeft.push(orderLeft);
+        limitOrdersRight.push(orderRight);
+        const signatureLeft = await getSignature(orderLeft, account1.address);
+        const signatureRight = await getSignature(orderRight, account2.address);
+        signaturesLeft.push(signatureLeft);
+        signaturesRight.push(signatureRight);
+        await matchingEngine.grantMatchOrders(positioning.address);
+        await volmexPerpPeriphery.batchOpenPosition(
+          index,
+          limitOrdersLeft,
+          signaturesLeft,
+          limitOrdersRight,
+          signaturesRight,
+          liquidator,
+        );
+      });
+      it("should fill take profit index price and take profit last price order order in batch", async () => {
+        const limitOrdersLeft = [];
+        const limitOrdersRight = [];
+        const signaturesLeft = [];
+        const signaturesRight = [];
+        await await USDC.transfer(account1.address, "1000000000");
+        await await USDC.transfer(account2.address, "1000000000");
+        await USDC.connect(account1).approve(volmexPerpPeriphery.address, "1000000000");
+        await USDC.connect(account2).approve(volmexPerpPeriphery.address, "1000000000");
+        await volmexPerpPeriphery.whitelistTrader(account1.address, true);
+        await volmexPerpPeriphery.whitelistTrader(account2.address, true);
+        (
+          await volmexPerpPeriphery
+            .connect(account1)
+            .depositToVault(index, USDC.address, "1000000000")
+        ).wait();
+        (
+          await volmexPerpPeriphery
+            .connect(account2)
+            .depositToVault(index, USDC.address, "1000000000")
+        ).wait();
+        const orderLeft = Order(
+          TAKE_PROFIT_INDEX_PRICE,
+          deadline,
+          account1.address,
+          Asset(volmexBaseToken.address, two.toString()),
+          Asset(virtualToken.address, two.toString()),
+          1,
+          (1e5).toString(),
+          true,
+        );
+
+        const orderRight = Order(
+          TAKE_PROFIT_LAST_PRICE,
+          deadline,
+          account2.address,
+          Asset(virtualToken.address, two.toString()),
+          Asset(volmexBaseToken.address, two.toString()),
+          1,
+          (1e8).toString(),
           false,
         );
         limitOrdersLeft.push(orderLeft);
