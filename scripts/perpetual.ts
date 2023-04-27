@@ -166,6 +166,8 @@ const positioning = async () => {
   );
   await positioning.deployed();
   console.log(positioning.address);
+  console.log("Set positioning - positioning config ...");
+  await (await positioningConfig.setPositioning(positioning.address)).wait();
   console.log("Set positioning - accounts ...");
   await (await accountBalance.setPositioning(positioning.address)).wait();
   console.log("Set positioning - mark oracle ...");
