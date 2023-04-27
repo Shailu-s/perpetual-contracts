@@ -10,6 +10,7 @@ abstract contract PositioningStorageV1 {
     uint256 internal constant _FULLY_CLOSED_RATIO = 1e18;
     uint256 internal constant _UINT256_MAX = 2**256 - 1;
     bytes32 public constant POSITIONING_ADMIN = keccak256("POSITIONING_ADMIN");
+    bytes32 public constant SM_INTERVAL_ROLE = keccak256("SM_INTERVAL_ROLE");
     mapping(address => uint256) internal _firstTradedTimestampMap;
     uint8 internal _settlementTokenDecimals;
     address internal _positioningConfig;
@@ -17,6 +18,8 @@ abstract contract PositioningStorageV1 {
     address internal _accountBalance;
     address internal _matchingEngine;
     address internal _marketRegistry;
+    uint256 internal _smInterval;
+    uint256 internal _smIntervalLiquidation;
 
     address public defaultFeeReceiver;
 

@@ -68,11 +68,13 @@ contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, 
         _accountBalance = accountBalanceArg;
         _matchingEngine = matchingEngineArg;
         _underlyingPriceIndex = underlyingPriceIndex;
+        _smInterval = 28800;
+        _smIntervalLiquidation = 3600;
         for (uint256 index = 0; index < 2; index++) {
             isLiquidatorWhitelisted[liquidators[index]] = true;
         }
         isLiquidatorWhitelistEnabled = true;
-
+        _grantRole(SM_INTERVAL_ROLE, positioningConfigArg);
         _grantRole(POSITIONING_ADMIN, _msgSender());
     }
 
@@ -124,6 +126,16 @@ contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, 
         _fundingPeriod = period;
 
         emit FundingPeriodSet(period);
+    }
+
+    function setSmInterval(uint256 smInterval) external virtual {
+        _requireSmIntervalRole();
+        _smInterval = smInterval;
+    }
+
+    function setSmIntervalLiquidation(uint256 smIntervalLiquidation) external virtual {
+        _requireSmIntervalRole();
+        _smIntervalLiquidation = smIntervalLiquidation;
     }
 
     function toggleLiquidatorWhitelist() external {
@@ -638,6 +650,10 @@ contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, 
 
     function _requirePositioningAdmin() internal view {
         require(hasRole(POSITIONING_ADMIN, _msgSender()), "Positioning: Not admin");
+    }
+
+    function _requireSmIntervalRole() internal view {
+        require(hasRole(SM_INTERVAL_ROLE, _msgSender()), "Positioning: Not sm interval role");
     }
 
     function _requireWhitelistLiquidator(address liquidator) internal view {
