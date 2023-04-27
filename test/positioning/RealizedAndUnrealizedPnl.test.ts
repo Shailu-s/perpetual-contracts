@@ -385,6 +385,16 @@ describe("Positioning", function () {
       const realisedPnlTrader1 = pnlTrader1[0];
       expect(realisedPnlTrader2).to.be.equal(realizedPnl[0].add(realizedPnl[3]));
       expect(realisedPnlTrader1).to.be.equal(realizedPnl[1].add(realizedPnl[4]));
+      const freeCollateralTrader1 = await vaultController.getFreeCollateralByRatio(
+        account1.address,
+        1,
+      );
+      expect(freeCollateralTrader1.toString()).to.be.equal("150428333233333333333");
+      const freeCollateralTrader2 = await vaultController.getFreeCollateralByRatio(
+        account2.address,
+        1,
+      );
+      expect(freeCollateralTrader2.toString()).to.be.equal("49211666566666666667");
     });
 
     /* Scenario 3 : After opening a long position and indextwap moves unfavorably, the user’s 
@@ -497,6 +507,16 @@ describe("Positioning", function () {
       const realisedPnlTrader1 = pnlTrader1[0];
       expect(realisedPnlTrader2).to.be.equal(realizedPnl[0].add(realizedPnl[3]));
       expect(realisedPnlTrader1).to.be.equal(realizedPnl[1].add(realizedPnl[4]));
+      const freeCollateralTrader1 = await vaultController.getFreeCollateralByRatio(
+        account1.address,
+        1,
+      );
+      expect(freeCollateralTrader1.toString()).to.be.equal("49494999940000000000");
+      const freeCollateralTrader2 = await vaultController.getFreeCollateralByRatio(
+        account2.address,
+        1,
+      );
+      expect(freeCollateralTrader2.toString()).to.be.equal("150224999940000000000");
     });
   });
   async function getSignature(orderObj, signer) {
