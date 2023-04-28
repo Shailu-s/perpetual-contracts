@@ -6,7 +6,7 @@ import { FundingRate, IndexPriceOracle, MarkPriceOracle } from "../../typechain"
 import { BigNumber } from "ethers";
 const { expectRevert, time } = require("@openzeppelin/test-helpers");
 
-describe("Positioning", function () {
+describe("Realised pnl tests", function () {
   let MatchingEngine;
   let matchingEngine;
   let VirtualToken;
