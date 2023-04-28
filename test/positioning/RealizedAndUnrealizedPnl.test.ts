@@ -240,6 +240,8 @@ describe("Positioning", function () {
 
     await (await markPriceOracle.setPositioning(positioning.address)).wait();
     await (await markPriceOracle.setIndexOracle(indexPriceOracle.address)).wait();
+    await positioningConfig.setPositioning(positioning.address);
+    await positioningConfig.setAccountBalance(accountBalance1.address);
     await positioningConfig.setTwapInterval(28800);
 
     perpViewFake = await smock.fake("VolmexPerpView");
@@ -329,10 +331,7 @@ describe("Positioning", function () {
       for (let i = 0; i < 10; i++) {
         await indexPriceOracle.addObservation([250000000], [0], [proofHash]);
       }
-      await time.increase(18800);
-      for (let i = 0; i < 10; i++) {
-        await indexPriceOracle.addObservation([250000000], [0], [proofHash]);
-      }
+
       pnlTrader1 = await accountBalance1.getPnlAndPendingFee(account1.address);
       unrealisedPnlTrader1 = pnlTrader1[1].toString();
       pnlTrader2 = await accountBalance1.getPnlAndPendingFee(account2.address);
@@ -375,26 +374,27 @@ describe("Positioning", function () {
       const realizedPnl = [];
       events.forEach((log: any) => {
         if (log["topics"][0] == pnlRealisedEventHash) {
-          realizedPnl.push(ethers.utils.defaultAbiCoder.decode(["int256"], log["data"])[0]);
+          realizedPnl.push(
+            ethers.utils.defaultAbiCoder.decode(["int256"], log["data"])[0].toString(),
+          );
         }
       });
-      console.log(realizedPnl);
       pnlTrader1 = await accountBalance1.getPnlAndPendingFee(account1.address);
       pnlTrader2 = await accountBalance1.getPnlAndPendingFee(account2.address);
-      const realisedPnlTrader2 = pnlTrader2[0];
-      const realisedPnlTrader1 = pnlTrader1[0];
-      expect(realisedPnlTrader2).to.be.equal(realizedPnl[0].add(realizedPnl[3]));
-      expect(realisedPnlTrader1).to.be.equal(realizedPnl[1].add(realizedPnl[4]));
+      const realisedPnlTrader2 = pnlTrader2[0].toString();
+      const realisedPnlTrader1 = pnlTrader1[0].toString();
+      expect(realisedPnlTrader2).to.be.equal(realizedPnl[1]);
+      expect(realisedPnlTrader1).to.be.equal(realizedPnl[2]);
       const freeCollateralTrader1 = await vaultController.getFreeCollateralByRatio(
         account1.address,
         1,
       );
-      expect(freeCollateralTrader1.toString()).to.be.equal("150428333233333333333");
+      expect(freeCollateralTrader1.toString()).to.be.equal("149819999900000000000");
       const freeCollateralTrader2 = await vaultController.getFreeCollateralByRatio(
         account2.address,
         1,
       );
-      expect(freeCollateralTrader2.toString()).to.be.equal("49211666566666666667");
+      expect(freeCollateralTrader2.toString()).to.be.equal("49819999900000000000");
     });
 
     /* Scenario 3 : After opening a long position and indextwap moves unfavorably, the user’s 
@@ -450,10 +450,6 @@ describe("Positioning", function () {
       for (let i = 0; i < 10; i++) {
         await indexPriceOracle.addObservation([150000000], [0], [proofHash]);
       }
-      await time.increase(18800);
-      for (let i = 0; i < 10; i++) {
-        await indexPriceOracle.addObservation([150000000], [0], [proofHash]);
-      }
 
       pnlTrader1 = await accountBalance1.getPnlAndPendingFee(account1.address);
       unrealisedPnlTrader1 = pnlTrader1[1].toString();
@@ -497,26 +493,27 @@ describe("Positioning", function () {
       const realizedPnl = [];
       events.forEach((log: any) => {
         if (log["topics"][0] == pnlRealisedEventHash) {
-          realizedPnl.push(ethers.utils.defaultAbiCoder.decode(["int256"], log["data"])[0]);
+          realizedPnl.push(
+            ethers.utils.defaultAbiCoder.decode(["int256"], log["data"])[0].toString(),
+          );
         }
       });
-      console.log(realizedPnl);
       pnlTrader1 = await accountBalance1.getPnlAndPendingFee(account1.address);
       pnlTrader2 = await accountBalance1.getPnlAndPendingFee(account2.address);
-      const realisedPnlTrader2 = pnlTrader2[0];
-      const realisedPnlTrader1 = pnlTrader1[0];
-      expect(realisedPnlTrader2).to.be.equal(realizedPnl[0].add(realizedPnl[3]));
-      expect(realisedPnlTrader1).to.be.equal(realizedPnl[1].add(realizedPnl[4]));
+      const realisedPnlTrader2 = pnlTrader2[0].toString();
+      const realisedPnlTrader1 = pnlTrader1[0].toString();
+      expect(realisedPnlTrader2).to.be.equal(realizedPnl[1]);
+      expect(realisedPnlTrader1).to.be.equal(realizedPnl[2]);
       const freeCollateralTrader1 = await vaultController.getFreeCollateralByRatio(
         account1.address,
         1,
       );
-      expect(freeCollateralTrader1.toString()).to.be.equal("49494999940000000000");
+      expect(freeCollateralTrader1.toString()).to.be.equal("49859999940000000000");
       const freeCollateralTrader2 = await vaultController.getFreeCollateralByRatio(
         account2.address,
         1,
       );
-      expect(freeCollateralTrader2.toString()).to.be.equal("150224999940000000000");
+      expect(freeCollateralTrader2.toString()).to.be.equal("149859999940000000000");
     });
   });
   async function getSignature(orderObj, signer) {
