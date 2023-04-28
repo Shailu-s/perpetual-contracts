@@ -48,6 +48,7 @@ contract VaultController is ReentrancyGuardUpgradeable, OwnerPausable, VaultCont
         address from,
         uint256 amount
     ) external override whenNotPaused nonReentrant {
+        require(!IPositioning(_positioning).isStaleIndexOracle(), "VC_SIP"); // stale index price
         address _vault = getVault(token);
         // vault of token is not available
         require(_vault != address(0), "VC_VOTNA");
@@ -69,6 +70,7 @@ contract VaultController is ReentrancyGuardUpgradeable, OwnerPausable, VaultCont
         address to,
         uint256 amount
     ) external override whenNotPaused nonReentrant {
+        require(!IPositioning(_positioning).isStaleIndexOracle(), "VC_SIP"); // stale index price
         // the full process of withdrawal:
         // 1. settle funding payment to owedRealizedPnl
         // 2. collect fee to owedRealizedPnl
