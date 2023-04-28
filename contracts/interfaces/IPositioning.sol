@@ -136,4 +136,5 @@ interface IPositioning is IFundingRate {
     /// @notice Get AccountBalance address
     /// @return accountBalance `AccountBalance` address
     function getAccountBalance() external view returns (address accountBalance);
+    function isStaleIndexOracle() external view returns (bool);
 }
