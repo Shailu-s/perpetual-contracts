@@ -217,7 +217,8 @@ describe("VolmexPerpPeriphery", function () {
     await (await markPriceOracle.setIndexOracle(indexPriceOracle.address)).wait();
 
     await markPriceOracle.setObservationAdder(matchingEngine.address);
-
+    await positioningConfig.connect(owner).setPositioning(positioning.address);
+    await positioningConfig.connect(owner).setAccountBalance(accountBalance1.address);
     volmexPerpPeriphery = await upgrades.deployProxy(VolmexPerpPeriphery, [
       perpView.address,
       markPriceOracle.address,

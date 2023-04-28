@@ -223,7 +223,8 @@ describe("Positioning", function () {
     await matchingEngine.grantMatchOrders(positioning.address);
 
     await accountBalance1.connect(owner).setPositioning(positioning.address);
-
+    await positioningConfig.connect(owner).setPositioning(positioning.address);
+    await positioningConfig.connect(owner).setAccountBalance(accountBalance1.address);
     await vault.connect(owner).setPositioning(positioning.address);
     await vault.connect(owner).setVaultController(vaultController.address);
     await vaultController.registerVault(vault.address, virtualToken.address);
@@ -233,7 +234,8 @@ describe("Positioning", function () {
     await positioningConfig
       .connect(owner)
       .setSettlementTokenBalanceCap(convert("100000000000000000000000000"));
-
+    await positioning.setPositioning(positioning.address);
+    await positioning.setPositioning(accountBalance1.address);
     await positioning.connect(owner).setMarketRegistry(marketRegistry.address);
     await positioning.connect(owner).setDefaultFeeReceiver(owner.address);
     await positioning.connect(owner).setPositioning(positioning.address);
@@ -415,6 +417,18 @@ describe("Positioning", function () {
       await expect(
         positioning.connect(account1).setDefaultFeeReceiver(account1.address),
       ).to.be.revertedWith("Ownable: caller is not the owner");
+    });
+  });
+  describe("  set twInterval for liquidation", async () => {
+    it("should set tw interwal for liquidation", async () => {
+      await positioningConfig.setTwapIntervalLiquidation(5000);
+      const twIntervalliquidation = await positioningConfig.getTwapIntervalLiquidation();
+      expect(twIntervalliquidation.toString()).to.be.equal("5000");
+    });
+    it("should fail to set tw interwal for liquidation", async () => {
+      await expect(
+        positioningConfig.connect(account1).setTwapIntervalLiquidation(5000),
+      ).to.revertedWith("PositioningConfig: Not admin");
     });
   });
   describe("setIndexPriceOracle", async () => {
@@ -3046,6 +3060,7 @@ describe("Liquidation test in Positioning", function () {
         const positionsize = await accountBalance1.getTotalPositionValue(
           account1.address,
           orderLeft.makeAsset.virtualToken,
+          28800,
         );
         const positionSizeAbs = await accountBalance1.getTotalAbsPositionValue(account1.address);
         const accountValue = await vaultController.getAccountValue(account1.address);
@@ -3130,6 +3145,7 @@ describe("Liquidation test in Positioning", function () {
         const positionsize = await accountBalance1.getTotalPositionValue(
           account1.address,
           orderLeft.makeAsset.virtualToken,
+          28800,
         );
         const positionSizeAbs = await accountBalance1.getTotalAbsPositionValue(account1.address);
         const accountValue = await vaultController.getAccountValue(account1.address);
@@ -3339,6 +3355,7 @@ describe("Liquidation test in Positioning", function () {
         const positionsize = await accountBalance1.getTotalPositionValue(
           account1.address,
           orderLeft.makeAsset.virtualToken,
+          28800,
         );
         const positionsizeAbs = await accountBalance1.getTotalAbsPositionValue(account1.address);
 
