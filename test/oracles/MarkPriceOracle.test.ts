@@ -200,7 +200,8 @@ describe("MarkPriceOracle", function () {
     await vault.connect(owner).setVaultController(vaultController.address);
     await vaultController.registerVault(vault.address, USDC.address);
     await vaultController.connect(owner).setPositioning(positioning.address);
-
+    await positioningConfig.connect(owner).setPositioning(positioning.address);
+    await positioningConfig.connect(owner).setAccountBalance(accountBalance1.address);
     await positioningConfig.connect(owner).setMaxMarketsPerAccount(5);
     await positioningConfig
       .connect(owner)
@@ -305,32 +306,36 @@ describe("MarkPriceOracle", function () {
     it("Should set epoch interval", async () => {
       await (await markPriceOracle.setMarkEpochInterval(14400)).wait();
       expect((await markPriceOracle.epochInterval()).toString()).equal("14400");
-    })
+    });
 
     it("Should get last mark price", async () => {
       expect((await markPriceOracle.getLastMarkPrice(0)).toString()).equal("60000000");
-    })
+    });
 
     it("Should get custom epoch price", async () => {
-      expect((await markPriceOracle.getCustomEpochPrice(0, (await time.latest()).toString()))[0].toString()).equal("60000000");
-    })
+      expect(
+        (
+          await markPriceOracle.getCustomEpochPrice(0, (await time.latest()).toString())
+        )[0].toString(),
+      ).equal("60000000");
+    });
 
     it("Should get current index count", async () => {
       expect((await markPriceOracle.getIndexCount()).toString()).equal("1");
-    })
+    });
 
     it("Should get last updated timestamp", async () => {
       const timestamp = (Number(await time.latest()) - 1).toString();
       expect((await markPriceOracle.getLastUpdatedTimestamp(0)).toString()).equal(timestamp);
-    })
+    });
 
     it("Should try set sm interval", async () => {
       await expectRevert(
         markPriceOracle.setMarkSmInterval(14400),
-        "MarkPriceOracle: not sma interval role"
-      )
-    })
-  })
+        "MarkPriceOracle: not sma interval role",
+      );
+    });
+  });
 
   describe("Deployment", function () {
     it("Should deploy successfully", async () => {
@@ -485,10 +490,7 @@ describe("MarkPriceOracle", function () {
 
     it("Should fail to  add multiple observations because 0 address of a token", async () => {
       await expect(
-        markPriceOracle.addAssets(
-          [10000000, 20000000],
-          [volmexBaseToken.address, ZERO_ADDR],
-        ),
+        markPriceOracle.addAssets([10000000, 20000000], [volmexBaseToken.address, ZERO_ADDR]),
       ).to.be.revertedWith("MarkPriceOracle: Asset address can't be 0");
     });
     it("should fail to set Matching engine as admin assecc is not provided", async () => {

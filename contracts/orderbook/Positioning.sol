@@ -15,7 +15,7 @@ import { LibSafeCastUint } from "../libs/LibSafeCastUint.sol";
 import { LibSignature } from "../libs/LibSignature.sol";
 
 import { IAccountBalance } from "../interfaces/IAccountBalance.sol";
-import { IIndexPrice } from "../interfaces/IIndexPrice.sol";
+import { IVolmexBaseToken } from "../interfaces/IVolmexBaseToken.sol";
 import { IMatchingEngine } from "../interfaces/IMatchingEngine.sol";
 import { IMarketRegistry } from "../interfaces/IMarketRegistry.sol";
 import { IPositioning } from "../interfaces/IPositioning.sol";
@@ -68,11 +68,13 @@ contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, 
         _accountBalance = accountBalanceArg;
         _matchingEngine = matchingEngineArg;
         _underlyingPriceIndex = underlyingPriceIndex;
+        _smInterval = 28800;
+        _smIntervalLiquidation = 3600;
         for (uint256 index = 0; index < 2; index++) {
             isLiquidatorWhitelisted[liquidators[index]] = true;
         }
         isLiquidatorWhitelistEnabled = true;
-
+        _grantRole(SM_INTERVAL_ROLE, positioningConfigArg);
         _grantRole(POSITIONING_ADMIN, _msgSender());
     }
 
@@ -124,6 +126,16 @@ contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, 
         _fundingPeriod = period;
 
         emit FundingPeriodSet(period);
+    }
+
+    function setSmInterval(uint256 smInterval) external virtual {
+        _requireSmIntervalRole();
+        _smInterval = smInterval;
+    }
+
+    function setSmIntervalLiquidation(uint256 smIntervalLiquidation) external virtual {
+        _requireSmIntervalRole();
+        _smIntervalLiquidation = smIntervalLiquidation;
     }
 
     function toggleLiquidatorWhitelist() external {
@@ -234,8 +246,8 @@ contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, 
     }
 
     /// @dev this function is used to fetch index price of base token
-    function getIndexPrice(address baseToken) external view returns (uint256 indexPrice) {
-        indexPrice = _getIndexPrice(baseToken);
+    function getIndexPrice(address baseToken, uint256 twInterval) external view returns (uint256 indexPrice) {
+        indexPrice = _getIndexPrice(baseToken, twInterval);
     }
 
     /// @dev this function is used to know the trader is liquidateable
@@ -568,13 +580,13 @@ contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, 
         }
 
         int256 liquidatedPositionSize = positionSizeToBeLiquidated.neg256();
-        int256 liquidatedPositionNotional = positionSizeToBeLiquidated.mulDiv(_getIndexPrice(baseToken).toInt256(), _ORACLE_BASE);
+        int256 liquidatedPositionNotional = positionSizeToBeLiquidated.mulDiv(_getIndexPrice(baseToken, _smIntervalLiquidation).toInt256(), _ORACLE_BASE);
 
         return (liquidatedPositionSize, liquidatedPositionNotional);
     }
 
-    function _getIndexPrice(address baseToken) internal view returns (uint256) {
-        return IIndexPrice(baseToken).getIndexPrice(_underlyingPriceIndex);
+    function _getIndexPrice(address baseToken, uint256 twInterval) internal view returns (uint256) {
+        return IVolmexBaseToken(baseToken).getIndexPrice(_underlyingPriceIndex, twInterval);
     }
 
     function _getTakerOpenNotional(address trader, address baseToken) internal view returns (int256) {
@@ -638,6 +650,10 @@ contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, 
 
     function _requirePositioningAdmin() internal view {
         require(hasRole(POSITIONING_ADMIN, _msgSender()), "Positioning: Not admin");
+    }
+
+    function _requireSmIntervalRole() internal view {
+        require(hasRole(SM_INTERVAL_ROLE, _msgSender()), "Positioning: Not sm interval role");
     }
 
     function _requireWhitelistLiquidator(address liquidator) internal view {
