@@ -224,13 +224,13 @@ contract MarkPriceOracle is AccessControlUpgradeable {
      * @param _index Index of the observation, the index base token mapping
      */
     function getLastPrice(uint256 _index) public view returns (uint256 underlyingLastPrice) {
-        MarkPriceObservation[] memory observations = observationsByIndex[_index];
+        MarkPriceObservation[] storage observations = observationsByIndex[_index];
         uint256 index = observations.length - 1;
         underlyingLastPrice = observations[index].underlyingPrice;
     }
 
     function getLastMarkPrice(uint256 _index) external view returns (uint256 underlyingLastPrice) {
-        MarkPriceObservation[] memory observations = observationsByIndex[_index];
+        MarkPriceObservation[] storage observations = observationsByIndex[_index];
         uint256 index = observations.length - 1;
         underlyingLastPrice = observations[index].markPrice;
     }
@@ -346,7 +346,7 @@ contract MarkPriceOracle is AccessControlUpgradeable {
         uint256 _endTimestamp,
         bool _isMarkSmaRequired
     ) internal view returns (uint256 priceCumulative, uint256 lastTimestamp) {
-        MarkPriceObservation[] memory observations = observationsByIndex[_index];
+        MarkPriceObservation[] storage observations = observationsByIndex[_index];
         uint256 index = observations.length;
         lastTimestamp = observations[index - 1].timestamp;
         _endTimestamp = lastTimestamp < _endTimestamp ? lastTimestamp : _endTimestamp;

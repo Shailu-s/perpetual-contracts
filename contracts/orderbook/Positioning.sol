@@ -22,6 +22,7 @@ import { IPositioning } from "../interfaces/IPositioning.sol";
 import { IPositioningConfig } from "../interfaces/IPositioningConfig.sol";
 import { IVirtualToken } from "../interfaces/IVirtualToken.sol";
 import { IVaultController } from "../interfaces/IVaultController.sol";
+import { IIndexPriceOracle } from "../interfaces/IIndexPriceOracle.sol";
 
 import { BlockContext } from "../helpers/BlockContext.sol";
 import { FundingRate } from "../funding-rate/FundingRate.sol";
@@ -70,6 +71,7 @@ contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, 
         _underlyingPriceIndex = underlyingPriceIndex;
         _smInterval = 28800;
         _smIntervalLiquidation = 3600;
+        indexPriceAllowedInterval = 1800;
         for (uint256 index = 0; index < 2; index++) {
             isLiquidatorWhitelisted[liquidators[index]] = true;
         }
@@ -138,6 +140,11 @@ contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, 
         _smIntervalLiquidation = smIntervalLiquidation;
     }
 
+    function setIndexOracleInterval(uint256 _interval) external virtual {
+        _requirePositioningAdmin();
+        indexPriceAllowedInterval = _interval;
+    }
+
     function toggleLiquidatorWhitelist() external {
         _requirePositioningAdmin();
         isLiquidatorWhitelistEnabled = !isLiquidatorWhitelistEnabled;
@@ -149,12 +156,14 @@ contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, 
         address baseToken,
         int256 positionSize
     ) external override whenNotPaused nonReentrant {
+        require(!isStaleIndexOracle(), "P_SIP"); // stale index price
         _liquidate(trader, baseToken, positionSize);
     }
 
     ///Note for Auditor: Check full position liquidation even when partial was needed
     /// @inheritdoc IPositioning
     function liquidateFullPosition(address trader, address baseToken) external override whenNotPaused nonReentrant {
+        require(!isStaleIndexOracle(), "P_SIP"); // stale index price
         // positionSizeToBeLiquidated = 0 means liquidating as much as possible
         _liquidate(trader, baseToken, 0);
     }
@@ -169,6 +178,7 @@ contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, 
         bytes memory signatureRight,
         bytes memory liquidator
     ) external override whenNotPaused nonReentrant {
+        require(!isStaleIndexOracle(), "P_SIP"); // stale index price
         _validateFull(orderLeft, signatureLeft);
         _validateFull(orderRight, signatureRight);
 
@@ -258,6 +268,12 @@ contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, 
     /// @dev Used to fetch account value of a trader
     function getAccountValue(address trader) external view returns (int256 accountValue) {
         accountValue = _getAccountValue(trader);
+    }
+
+    /// @dev Used to check for stale index oracle
+    function isStaleIndexOracle() public view returns (bool) {
+        uint256 lastUpdatedTimestamp = IIndexPriceOracle(_indexPriceOracleArg).getLastUpdatedTimestamp(_underlyingPriceIndex);
+        return block.timestamp - lastUpdatedTimestamp >= indexPriceAllowedInterval;
     }
 
     /// @inheritdoc IPositioning
