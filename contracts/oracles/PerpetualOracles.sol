@@ -71,6 +71,56 @@ contract PerpetualOracles is AccessControlUpgradeable {
         emit ObservationAdderSet(_adder);
     }
 
+    function addMarkObservation(uint256 _index, uint256 _price) external virtual {
+        _requireAddMarkObservationRole();
+        require(_price != 0, "PerpOracle: zero price");
+        _pushOrderPrice(_index, _price);
+        // TODO: Add mark price calculation and set it
+    }
+
+    function _pushOrderPrice(
+        uint256 _index,
+        uint256 _price
+    ) internal  {
+        MarkObservation[] storage observations = markObservations[_index];
+        observations.push(MarkObservation({ timestamp: block.timestamp, lastPrice: _price}));
+        if (observations.length == 2) {
+            initialTimestamp = block.timestamp;
+        }
+    }
+
+    // TODO: Add for index epoch as well
+    function _saveEpoch(uint256 _index, uint256 _price) internal {
+        uint256 currentTimestamp = block.timestamp;
+        PriceEpochs[] memory priceEpochs = markEpochs[_index];
+        uint256 currentEpochIndex = priceEpochs.length;
+        if ((currentTimestamp - initialTimestamp) / smInterval > currentEpochIndex || currentEpochIndex == 0) {
+            if (currentEpochIndex != 0 && (currentTimestamp - priceEpochs[currentEpochIndex - 1].timestamp) / smInterval == 0) {
+                _updatePriceEpoch(_index, currentEpochIndex - 1, priceEpochs[currentEpochIndex - 1].price, _price, priceEpochs[currentEpochIndex - 1].timestamp, true);
+            } else {
+                PriceEpochs[] storage priceEpoch = markEpochs[_index];
+                priceEpoch.push(PriceEpochs({ price: _price, timestamp: currentTimestamp }));
+                cardinality = 1;
+            }
+        } else {
+            _updatePriceEpoch(_index, currentEpochIndex - 1, priceEpochs[currentEpochIndex - 1].price, _price, priceEpochs[currentEpochIndex - 1].timestamp, true);
+        }
+    }
+
+    function _updatePriceEpoch(
+        uint256 _index,
+        uint256 _epochIndex,
+        uint256 _previousPrice,
+        uint256 _price,
+        uint256 _timestamp,
+        bool isMark
+    ) private {
+        uint256 actualPrice = (_previousPrice * cardinality + _price) / (cardinality + 1);
+        PriceEpochs[] storage priceEpoch = isMark ? markEpochs[_index] : indexEpochs[_index];
+        priceEpoch[_epochIndex] = PriceEpochs({ price: actualPrice, timestamp: _timestamp });
+        ++cardinality;
+    }
+
     function _requireOracleAdmin() internal view {
         require(hasRole(PRICE_ORACLE_ADMIN, _msgSender()), "PerpOracle: not admin");
     }
