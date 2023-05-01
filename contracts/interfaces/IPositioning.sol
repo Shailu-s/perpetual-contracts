@@ -86,6 +86,8 @@ interface IPositioning is IFundingRate {
     /// @notice Update funding rate inteval
     /// @param period should be the funding settlement period
     function setFundingPeriod(uint256 period) external;
+    function setSmInterval(uint256 smInterval) external;
+    function setSmIntervalLiquidation(uint256 smIntervalLiquidation) external;
     /// @notice If true, allows only whitelisted liquidators, else everyone can be liquidator
     function toggleLiquidatorWhitelist() external;
     /// @notice Trader can call `openPosition` to long/short on baseToken market
@@ -134,4 +136,5 @@ interface IPositioning is IFundingRate {
     /// @notice Get AccountBalance address
     /// @return accountBalance `AccountBalance` address
     function getAccountBalance() external view returns (address accountBalance);
+    function isStaleIndexOracle() external view returns (bool);
 }

@@ -26,6 +26,7 @@ interface IMarkPriceOracle {
         uint256 _endTimestamp
     ) external view returns (uint256 priceCumulative);
     function getLastMarkPrice(uint256 _index) external view returns (uint256 underlyingLastPrice);
+    function getCustomEpochPrice(uint256 _index, uint256 _epochTimestamp) external view returns (uint256 price, uint256 timestamp);
 
     function getCustomUnderlyingSma(
         uint256 _index,

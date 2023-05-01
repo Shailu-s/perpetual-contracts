@@ -124,7 +124,7 @@ contract IndexPriceOracle is AccessControlUpgradeable, ERC165StorageUpgradeable 
      */
     function latestRoundData(uint256 _smInterval, uint256 _index) external view virtual returns (uint256 answer, uint256 lastUpdateTimestamp) {
         uint256 startTimestamp = block.timestamp - _smInterval;
-        (answer, lastUpdateTimestamp) = _getCustomIndexSma(_index, startTimestamp, block.timestamp);
+        (answer, lastUpdateTimestamp) = _getCustomEpochPrice(_index, startTimestamp);
         answer *= 100;
     }
 
