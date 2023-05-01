@@ -499,6 +499,123 @@ describe("VolmexPerpPeriphery", function () {
         ).to.be.revertedWith("Periphery: trader not whitelisted");
       }
     });
+
+    it("Open position", async () => {
+      await expect(volmexPerpPeriphery.whitelistTrader(alice.address, true)).to.emit(
+        volmexPerpPeriphery,
+        "TraderWhitelisted",
+      );
+      await expect(volmexPerpPeriphery.whitelistTrader(bob.address, true)).to.emit(
+        volmexPerpPeriphery,
+        "TraderWhitelisted",
+      );
+
+      let salt = 250;
+      let txBefore = [];
+      for (let index = 0; index < 10; index++) {
+        let orderLeft = Order(
+          ORDER,
+          deadline,
+          alice.address,
+          Asset(volmexBaseToken.address, baseAmount),
+          Asset(volmexQuoteToken.address, quoteAmount),
+          salt,
+          0,
+          true,
+        );
+
+        let orderRight = Order(
+          ORDER,
+          deadline,
+          bob.address,
+          Asset(volmexQuoteToken.address, quoteAmount),
+          Asset(volmexBaseToken.address, baseAmount),
+          salt++,
+          0,
+          false,
+        );
+
+        const signatureLeft = await getSignature(orderLeft, alice.address);
+        const signatureRight = await getSignature(orderRight, bob.address);
+        const tx = await volmexPerpPeriphery.openPosition(
+          0,
+          orderLeft,
+          signatureLeft,
+          orderRight,
+          signatureRight,
+          liquidator,
+        );
+        const receipt = await tx.wait();
+        let txDataBefore = {
+          "Mark price": (await markPriceOracle.getMarkSma("3600", 0)).toString(),
+          "Alice position": (
+            await accountBalance1.getPositionSize(alice.address, volmexBaseToken.address)
+          ).toString(),
+          "Alice owed and un realized pnl": (
+            await accountBalance1.getPnlAndPendingFee(alice.address)
+          ).toString(),
+          "Bob position": (
+            await accountBalance1.getPositionSize(bob.address, volmexBaseToken.address)
+          ).toString(),
+          "Bob owed and un realized pnl": (
+            await accountBalance1.getPnlAndPendingFee(bob.address)
+          ).toString(),
+        };
+        txBefore.push(txDataBefore);
+        if (index == 9) {
+          let orderLeft = Order(
+            ORDER,
+            deadline,
+            alice.address,
+            Asset(volmexQuoteToken.address, "1000000000000000000000"),
+            Asset(volmexBaseToken.address, "500000000000000000000"),
+            salt++,
+            0,
+            false,
+          );
+
+          let orderRight = Order(
+            ORDER,
+            deadline,
+            bob.address,
+            Asset(volmexBaseToken.address, "500000000000000000000"),
+            Asset(volmexQuoteToken.address, "1000000000000000000000"),
+            salt++,
+            0,
+            true,
+          );
+
+          const signatureLeft = await getSignature(orderLeft, alice.address);
+          const signatureRight = await getSignature(orderRight, bob.address);
+
+          const tx = await volmexPerpPeriphery.openPosition(
+            0,
+            orderLeft,
+            signatureLeft,
+            orderRight,
+            signatureRight,
+            liquidator,
+          );
+          const receipt = await tx.wait();
+          txDataBefore = {
+            "Mark price": (await markPriceOracle.getMarkSma("3600", 0)).toString(),
+            "Alice position": (
+              await accountBalance1.getPositionSize(alice.address, volmexBaseToken.address)
+            ).toString(),
+            "Alice owed and un realized pnl": (
+              await accountBalance1.getPnlAndPendingFee(alice.address)
+            ).toString(),
+            "Bob position": (
+              await accountBalance1.getPositionSize(bob.address, volmexBaseToken.address)
+            ).toString(),
+            "Bob owed and un realized pnl": (
+              await accountBalance1.getPnlAndPendingFee(bob.address)
+            ).toString(),
+          };
+          txBefore.push(txDataBefore);
+        }
+      }
+    });
   });
 
   describe("VolmexPerpPeriphery deployment", async () => {
@@ -761,7 +878,7 @@ describe("VolmexPerpPeriphery", function () {
         Asset(volmexBaseToken.address, two.toString()),
         Asset(virtualToken.address, two.toString()),
         0,
-        (1e8).toString(),
+        (60e6).toString(),
         true,
       );
 
@@ -772,7 +889,7 @@ describe("VolmexPerpPeriphery", function () {
         Asset(virtualToken.address, two.toString()),
         Asset(volmexBaseToken.address, two.toString()),
         1,
-        (1e6).toString(),
+        (60e6).toString(),
         false,
       );
 
