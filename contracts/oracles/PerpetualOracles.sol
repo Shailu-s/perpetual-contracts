@@ -39,7 +39,7 @@ contract PerpetualOracles is AccessControlUpgradeable {
     mapping(uint256 => MarkObservation[]) public markObservations;
     mapping(uint256 => PriceEpochs[]) public indexEpochs;
     mapping(uint256 => PriceEpochs[]) public markEpochs;
-    mapping(uint256 => uint256) public lastMarkPrice;
+    mapping(uint256 => uint256) public lastMarkPrices;
     uint256 public smInterval;
     uint256 public initialTimestamp;
     uint256 public markCardinality;
@@ -106,7 +106,7 @@ contract PerpetualOracles is AccessControlUpgradeable {
         require(_price != 0, "PerpOracle: zero price");
         _pushMarkOrderPrice(_index, _price);
         uint256 markPrice = _getMarkPrice(baseTokenByIndex[_index], _index).abs();
-        lastMarkPrice[_index] = markPrice;
+        lastMarkPrices[_index] = markPrice;
         _saveMarkEpoch(_index, _price);
         emit MarkObservationAdded(_index, _price, markPrice, block.timestamp);
     }
@@ -122,10 +122,44 @@ contract PerpetualOracles is AccessControlUpgradeable {
         emit IndexObservationAdded(_indexes, _prices, block.timestamp);
     }
 
-    function getLastIndexPrice(uint256 _index) public view returns (uint256 underlyingLastPrice) {
+    function getLastPriceOfIndex(uint256 _index) public view returns (uint256 underlyingLastPrice) {
         IndexObservation[] memory observations = indexObservations[_index];
         uint256 index = observations.length - 1;
         underlyingLastPrice = observations[index].underlyingPrice;
+    }
+
+    function getLastIndexEpochPrice(uint256 _index) external view returns (uint256 price, uint256 timestamp) {
+        (price, timestamp) = _getCustomEpochPrice(_index, block.timestamp, false);
+    }
+
+    function getCustomIndexEpochPrice(uint256 _index, uint256 _epochTimestamp) external view returns (uint256 price, uint256 timestamp) {
+        (price, timestamp) = _getCustomEpochPrice(_index, _epochTimestamp, false);
+    }
+
+    function latestRoundData(uint256 _smInterval, uint256 _index) external view virtual returns (uint256 answer, uint256 lastUpdateTimestamp) {
+        uint256 startTimestamp = block.timestamp - _smInterval;
+        (answer, lastUpdateTimestamp) = _getCustomEpochPrice(_index, startTimestamp, false);
+        answer *= 100;
+    }
+
+    function getLastUpdatedTimestamp(uint256 _index, bool isMark) external view returns (uint256 lastUpdatedTimestamp) {
+        if (isMark) {
+            MarkObservation[] memory observations = markObservations[_index];
+            lastUpdatedTimestamp = observations[observations.length - 1].timestamp;
+        } else {
+            IndexObservation[] memory observations = indexObservations[_index];
+            lastUpdatedTimestamp = observations[observations.length - 1].timestamp;
+        }
+    }
+
+    function getIndexObservation(uint256 _index, bool isMark) external view returns (uint256 length) {
+        if (isMark) {
+            MarkObservation[] memory observations = markObservations[_index];
+            length = observations.length;
+        } else {
+            IndexObservation[] memory observations = indexObservations[_index];
+            length = observations.length;
+        }
     }
 
     function getLastPriceOfMark(uint256 _index) public view returns (uint256 underlyingLastPrice) {
@@ -134,9 +168,29 @@ contract PerpetualOracles is AccessControlUpgradeable {
         underlyingLastPrice = observations[index].lastPrice;
     }
 
-    function getLastMarkSma(uint256 _index, uint256 _smInterval) public view returns (uint256 priceCumulative) {
+    function getLastSmaOfMark(uint256 _index, uint256 _smInterval) public view returns (uint256 priceCumulative) {
         uint256 startTimestamp = block.timestamp - _smInterval;
         (priceCumulative, ) = _getCustomSma(_index, startTimestamp, block.timestamp);
+    }
+
+    function getLastMarkPrice(uint256 _index) external view returns (uint256 lastMarkPrice) {
+        lastMarkPrice = lastMarkPrices[_index];
+    }
+
+    function getCustomUnderlyingSma(
+        uint256 _index,
+        uint256 _startTimestamp,
+        uint256 _endTimestamp
+    ) external view returns (uint256 priceCumulative) {
+        (priceCumulative, ) = _getCustomSma(_index, _startTimestamp, _endTimestamp);
+    }
+
+    function getLastMarkEpochPrice(uint256 _index) external view returns (uint256 price, uint256 timestamp) {
+        (price, timestamp) = _getCustomEpochPrice(_index, block.timestamp, true);
+    }
+
+    function getCustomMarkEpochPrice(uint256 _index, uint256 _epochTimestamp) external view returns (uint256 price, uint256 timestamp) {
+        (price, timestamp) = _getCustomEpochPrice(_index, _epochTimestamp, true);
     }
 
     function _pushMarkOrderPrice(uint256 _index, uint256 _price) internal {
@@ -191,15 +245,22 @@ contract PerpetualOracles is AccessControlUpgradeable {
         }
     }
 
+    function _updatePriceEpoch(uint256 _index, uint256 _epochIndex, uint256 _previousPrice, uint256 _price, uint256 _timestamp, bool isMark) private {
+        PriceEpochs[] storage priceEpoch = isMark ? markEpochs[_index] : indexEpochs[_index];
+        uint256 cardinality = isMark ? markCardinality : indexCardinality;
+        uint256 actualPrice = (_previousPrice * cardinality + _price) / (cardinality + 1);
+        priceEpoch[_epochIndex] = PriceEpochs({ price: actualPrice, timestamp: _timestamp });
+    }
+
     function _getMarkPrice(address _baseToken, uint256 _index) internal view returns (int256 markPrice) {
         int256 lastFundingRate = positioning.getLastFundingRate(_baseToken);
         uint256 nextFunding = positioning.getNextFunding(_baseToken);
 
         int256[3] memory prices;
-        int256 indexPrice = getLastIndexPrice(_index).toInt256();
+        int256 indexPrice = getLastPriceOfIndex(_index).toInt256();
         // Note: Check for actual precision and data type
         prices[0] = indexPrice * (1 + lastFundingRate * (nextFunding.toInt256() / fundingPeriod.toInt256()));
-        uint256 markSma = getLastMarkSma(_index, 300); // TODO: add var for hardcode 300
+        uint256 markSma = getLastSmaOfMark(_index, 300); // TODO: add var for hardcode 300
         prices[1] = markSma.toInt256();
         prices[2] = getLastPriceOfMark(_index).toInt256();
         markPrice = prices[0].median(prices[1], prices[2]);
@@ -223,11 +284,16 @@ contract PerpetualOracles is AccessControlUpgradeable {
         priceCumulative = priceCumulative / priceCount;
     }
 
-    function _updatePriceEpoch(uint256 _index, uint256 _epochIndex, uint256 _previousPrice, uint256 _price, uint256 _timestamp, bool isMark) private {
-        PriceEpochs[] storage priceEpoch = isMark ? markEpochs[_index] : indexEpochs[_index];
-        uint256 cardinality = isMark ? markCardinality : indexCardinality;
-        uint256 actualPrice = (_previousPrice * cardinality + _price) / (cardinality + 1);
-        priceEpoch[_epochIndex] = PriceEpochs({ price: actualPrice, timestamp: _timestamp });
+    function _getCustomEpochPrice(uint256 _index, uint256 _epochTimestamp, bool isMark) internal view returns (uint256 price, uint256 timestamp) {
+        PriceEpochs[] memory priceEpochs = isMark ? markEpochs[_index] : indexEpochs[_index];
+        uint256 currentEpochIndex = priceEpochs.length;
+        if (currentEpochIndex != 0) {
+            for (; currentEpochIndex != 0 && priceEpochs[currentEpochIndex - 1].timestamp >= _epochTimestamp; currentEpochIndex--) {}
+            price = priceEpochs[currentEpochIndex].price;
+            timestamp = priceEpochs[currentEpochIndex].timestamp;
+        } else {
+            return (0, 0);
+        }
     }
 
     function _requireOracleAdmin() internal view {
