@@ -22,7 +22,7 @@ import { IPositioning } from "../interfaces/IPositioning.sol";
 import { IPositioningConfig } from "../interfaces/IPositioningConfig.sol";
 import { IVirtualToken } from "../interfaces/IVirtualToken.sol";
 import { IVaultController } from "../interfaces/IVaultController.sol";
-import { IIndexPriceOracle } from "../interfaces/IIndexPriceOracle.sol";
+import { IPerpetualOracle } from "../interfaces/IPerpetualOracle.sol";
 
 import { BlockContext } from "../helpers/BlockContext.sol";
 import { FundingRate } from "../funding-rate/FundingRate.sol";
@@ -45,8 +45,7 @@ contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, 
         address vaultControllerArg,
         address accountBalanceArg,
         address matchingEngineArg,
-        address markPriceArg,
-        address indexPriceArg,
+        address perpetualOracleArg,
         uint256 underlyingPriceIndex,
         address[2] calldata liquidators
     ) external initializer {
@@ -61,7 +60,7 @@ contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, 
 
         __ReentrancyGuard_init();
         __OwnerPausable_init();
-        __FundingRate_init(markPriceArg, indexPriceArg);
+        __FundingRate_init(perpetualOracleArg);
         __OrderValidator_init_unchained();
 
         _positioningConfig = positioningConfigArg;
@@ -104,12 +103,11 @@ contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, 
         emit DefaultFeeReceiverChanged(defaultFeeReceiver);
     }
 
-    function setIndexPriceOracle(address indexPriceOracle) external {
+    function setPerpetualOracle(address perpetualOracleArg) external {
         _requirePositioningAdmin();
         // P_AZ: Index price oracle is address zero
-        require(indexPriceOracle != address(0), "P_AZ");
-        _indexPriceOracleArg = indexPriceOracle;
-        emit IndexPriceSet(indexPriceOracle);
+        require(perpetualOracleArg != address(0), "P_AZ");
+        _perpetualOracleArg = perpetualOracleArg;
     }
 
     /// @inheritdoc IPositioning
@@ -272,7 +270,7 @@ contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, 
 
     /// @dev Used to check for stale index oracle
     function isStaleIndexOracle() public view returns (bool) {
-        uint256 lastUpdatedTimestamp = IIndexPriceOracle(_indexPriceOracleArg).getLastUpdatedTimestamp(_underlyingPriceIndex);
+        uint256 lastUpdatedTimestamp = IPerpetualOracle(_perpetualOracleArg).getLastUpdatedTimestamp(_underlyingPriceIndex, false);
         return block.timestamp - lastUpdatedTimestamp >= indexPriceAllowedInterval;
     }
 

@@ -70,11 +70,10 @@ interface IPositioning is IFundingRate {
     event TrustedForwarderChanged(address indexed forwarder);
     /// @notice Emitted when liquidator is whitelisted or removed
     event LiquidatorWhitelisted(address indexed liquidator, bool isWhitelist);
-    event IndexPriceSet(address indexed indexPriceOracle);
     event FundingPeriodSet(uint256 fundingInterval);
 
     /// @dev this function is public for testing
-    function initialize(address positioningConfigArg, address vaultControllerArg, address accountBalanceArg, address matchingEngineArg, address markPriceArg, address indexPriceArg, uint256 underlyingPriceIndex, address[2] calldata liquidators) external;
+    function initialize(address positioningConfigArg, address vaultControllerArg, address accountBalanceArg, address matchingEngineArg, address perpetualOracleArg, uint256 underlyingPriceIndex, address[2] calldata liquidators) external;
     /// @notice Settle all markets fundingPayment to owedRealized Pnl
     /// @param trader The address of trader
     function settleAllFunding(address trader) external;

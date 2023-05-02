@@ -8,9 +8,8 @@ import { LibSafeCastUint } from "../libs/LibSafeCastUint.sol";
 import { LibPerpMath } from "../libs/LibPerpMath.sol";
 
 import { IAccountBalance } from "../interfaces/IAccountBalance.sol";
-import { IIndexPriceOracle } from "../interfaces/IIndexPriceOracle.sol";
+import { IPerpetualOracle } from "../interfaces/IPerpetualOracle.sol";
 import { IFundingRate } from "../interfaces/IFundingRate.sol";
-import { IMarkPriceOracle } from "../interfaces/IMarkPriceOracle.sol";
 import { IPositioningConfig } from "../interfaces/IPositioningConfig.sol";
 
 import { BlockContext } from "../helpers/BlockContext.sol";
@@ -69,10 +68,9 @@ contract FundingRate is IFundingRate, BlockContext, PositioningCallee, FundingRa
         fundingPeriod = _fundingPeriod;
     }
 
-    function __FundingRate_init(address markPriceOracleArg, address indexPriceOracleArg) internal onlyInitializing {
+    function __FundingRate_init(address perpetualOracleArg) internal onlyInitializing {
         __PositioningCallee_init();
-        _markPriceOracleArg = markPriceOracleArg;
-        _indexPriceOracleArg = indexPriceOracleArg;
+        _perpetualOracleArg = perpetualOracleArg;
         _fundingPeriod = 8 hours; // this should be the time when funding should be settled
     }
 
@@ -119,13 +117,13 @@ contract FundingRate is IFundingRate, BlockContext, PositioningCallee, FundingRa
         uint256 lastSettledTimestamp = _lastSettledTimestampMap[baseToken];
         globalTwPremium = _globalFundingGrowthMap[baseToken];
         if (lastSettledTimestamp == 0) {
-            markTwap = IMarkPriceOracle(_markPriceOracleArg).getMarkSma(twapInterval, _underlyingPriceIndex);
-            indexTwap = IIndexPriceOracle(_indexPriceOracleArg).getLastPrice(_underlyingPriceIndex);
+            markTwap = IPerpetualOracle(_perpetualOracleArg).getLastSmaOfMark(_underlyingPriceIndex, twapInterval);
+            indexTwap = IPerpetualOracle(_perpetualOracleArg).getLastPriceOfIndex(_underlyingPriceIndex);
         } else if (timestamp - lastSettledTimestamp > _fundingPeriod) {
             //when funding period is over
             uint256 fundingLatestTimestamp = lastSettledTimestamp + ((timestamp - lastSettledTimestamp) / _fundingPeriod) * _fundingPeriod;
-            (markTwap,) = IMarkPriceOracle(_markPriceOracleArg).getCustomEpochPrice(_underlyingPriceIndex, fundingLatestTimestamp);
-            (indexTwap,) = IIndexPriceOracle(_indexPriceOracleArg).getCustomEpochPrice(_underlyingPriceIndex, fundingLatestTimestamp);
+            (markTwap,) = IPerpetualOracle(_perpetualOracleArg).getCustomMarkEpochPrice(_underlyingPriceIndex, fundingLatestTimestamp);
+            (indexTwap,) = IPerpetualOracle(_perpetualOracleArg).getCustomIndexEpochPrice(_underlyingPriceIndex, fundingLatestTimestamp);
             int256 deltaTwap = _getDeltaTwap(markTwap, indexTwap);
             int256 deltaTwPremiumX96 = deltaTwap * (fundingLatestTimestamp - lastSettledTimestamp).toInt256();
             globalTwPremium += deltaTwPremiumX96;

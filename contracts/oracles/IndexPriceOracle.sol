@@ -212,7 +212,7 @@ contract IndexPriceOracle is AccessControlUpgradeable, ERC165StorageUpgradeable 
      * @param _index Index of the observation, the index base token mapping
      */
     function getLastPrice(uint256 _index) public view returns (uint256 underlyingLastPrice) {
-        IndexObservation[] memory observations = observationsByIndex[_index];
+        IndexObservation[] storage observations = observationsByIndex[_index];
         uint256 index = observations.length - 1;
         underlyingLastPrice = observations[index].underlyingPrice;
     }
@@ -225,16 +225,16 @@ contract IndexPriceOracle is AccessControlUpgradeable, ERC165StorageUpgradeable 
     }
 
     function getLastUpdatedTimestamp(uint256 _index) external view returns (uint256 lastUpdatedTimestamp) {
-        IndexObservation[] memory observations = observationsByIndex[_index];
+        IndexObservation[] storage observations = observationsByIndex[_index];
         lastUpdatedTimestamp = observations[observations.length - 1].timestamp;
     }
 
     function getIndexObservation(uint256 _index) external view returns (uint256 length) {
-        IndexObservation[] memory observations = observationsByIndex[_index];
+        IndexObservation[] storage observations = observationsByIndex[_index];
         length = observations.length;
     }
     function getIndexPriceByEpoch(uint256 _index) external view returns (uint256 length) {
-        IndexPriceByEpoch[] memory epochs = indexPriceAtEpochs[_index];
+        IndexPriceByEpoch[] storage epochs = indexPriceAtEpochs[_index];
         length = epochs.length;
     }
 
@@ -307,7 +307,7 @@ contract IndexPriceOracle is AccessControlUpgradeable, ERC165StorageUpgradeable 
     }
 
     function _getCustomEpochPrice(uint256 _index, uint256 _epochTimestamp) internal view returns (uint256 price, uint256 timestamp) {
-        IndexPriceByEpoch[] memory indexPriceByEpoch = indexPriceAtEpochs[_index];
+        IndexPriceByEpoch[] storage indexPriceByEpoch = indexPriceAtEpochs[_index];
         uint256 currentEpochIndex = indexPriceByEpoch.length;
         if (currentEpochIndex != 0) {
             for (; currentEpochIndex != 0 && indexPriceByEpoch[currentEpochIndex - 1].timestamp >= _epochTimestamp; currentEpochIndex--) {}
@@ -323,7 +323,7 @@ contract IndexPriceOracle is AccessControlUpgradeable, ERC165StorageUpgradeable 
         uint256 _startTimestamp,
         uint256 _endTimestamp
     ) internal view returns (uint256 priceCumulative, uint256 lastUpdatedTimestamp) {
-        IndexObservation[] memory observations = observationsByIndex[_index];
+        IndexObservation[] storage observations = observationsByIndex[_index];
         uint256 index = observations.length;
         lastUpdatedTimestamp = observations[index - 1].timestamp;
         _endTimestamp = lastUpdatedTimestamp < _endTimestamp ? lastUpdatedTimestamp : _endTimestamp;

@@ -431,14 +431,14 @@ describe("Positioning", function () {
       ).to.revertedWith("PositioningConfig: Not admin");
     });
   });
-  describe("setIndexPriceOracle", async () => {
+  describe("setPerpetualOracle", async () => {
     it("should set index price oracle ", async () => {
-      expect(await positioning.connect(owner).setIndexPriceOracle(indexPriceOracle.address))
+      expect(await positioning.connect(owner).setPerpetualOracle(indexPriceOracle.address))
         .to.emit(positioning, "IndexPriceSet")
         .withArgs(indexPriceOracle.address);
     });
     it("should fail to set  index price oracle ", async () => {
-      await expect(positioning.connect(owner).setIndexPriceOracle(ZERO_ADDR)).to.be.revertedWith(
+      await expect(positioning.connect(owner).setPerpetualOracle(ZERO_ADDR)).to.be.revertedWith(
         "P_AZ",
       );
     });
