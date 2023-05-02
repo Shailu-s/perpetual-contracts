@@ -6,7 +6,7 @@ import "contracts/oracles/MarkPriceOracle.sol";
 contract ExchangeTest {
     MarkPriceOracle public markPriceOracle;
 
-    function setMarkPriceOracle(MarkPriceOracle _markPriceOracle) external {
+    function setPerpetualOracle(MarkPriceOracle _markPriceOracle) external {
         markPriceOracle = _markPriceOracle;
     }
 

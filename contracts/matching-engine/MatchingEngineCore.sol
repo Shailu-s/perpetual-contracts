@@ -6,7 +6,7 @@ import { PausableUpgradeable } from "@openzeppelin/contracts-upgradeable/securit
 import "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 
 import "../libs/LibFill.sol";
-import "../interfaces/IMarkPriceOracle.sol";
+import "../interfaces/IPerpetualOracle.sol";
 import "./AssetMatcher.sol";
 
 abstract contract MatchingEngineCore is PausableUpgradeable, AssetMatcher, AccessControlUpgradeable {
@@ -17,7 +17,7 @@ abstract contract MatchingEngineCore is PausableUpgradeable, AssetMatcher, Acces
     // match orders role, used in matching engine by Positioning
     bytes32 public constant CAN_MATCH_ORDERS = keccak256("CAN_MATCH_ORDERS");
     // Interfaced address of mark price oracle
-    IMarkPriceOracle public markPriceOracle;
+    IPerpetualOracle public perpetualOracle;
     // min salt of maker
     mapping(address => uint256) public makerMinSalt;
     //state of the orders
@@ -124,9 +124,9 @@ abstract contract MatchingEngineCore is PausableUpgradeable, AssetMatcher, Acces
         uint256 baseValue,
         address baseToken
     ) internal {
-        uint256 cumulativePrice = ((quoteValue * _ORACLE_BASE) / baseValue);
-        uint256 index = markPriceOracle.indexByBaseToken(baseToken);
-        markPriceOracle.addObservation(cumulativePrice, index);
+        uint256 price = ((quoteValue * _ORACLE_BASE) / baseValue);
+        uint256 index = perpetualOracle.indexByBaseToken(baseToken);
+        perpetualOracle.addMarkObservation(index, price);
     }
 
     /**
