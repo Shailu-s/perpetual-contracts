@@ -4,7 +4,14 @@ pragma solidity =0.8.18;
 
 import { AccessControlUpgradeable } from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 
+import { IPositioning } from "../interfaces/IPositioning.sol";
+import { LibSafeCastUint } from "../libs/LibSafeCastUint.sol";
+import { LibPerpMath } from "../libs/LibPerpMath.sol";
+
 contract PerpetualOracles is AccessControlUpgradeable {
+    using LibSafeCastUint for uint256;
+    using LibPerpMath for int256;
+
     struct IndexObservation {
         uint256 timestamp;
         uint256 underlyingPrice;
@@ -31,11 +38,13 @@ contract PerpetualOracles is AccessControlUpgradeable {
     mapping(uint256 => MarkObservation[]) public markObservations;
     mapping(uint256 => PriceEpochs[]) public indexEpochs;
     mapping(uint256 => PriceEpochs[]) public markEpochs;
+    mapping (uint256 => uint256) public lastMarkPrice;
     uint256 public smInterval;
     uint256 public initialTimestamp;
     uint256 public markCardinality;
     uint256 public indexCardinality;
     uint256 public fundingPeriod;
+    IPositioning public positioning;
 
     event ObservationAdderSet(address indexed matchingEngine);
     event IndexObservationAdded(uint256[] index, uint256[] underlyingPrice, uint256 timestamp);
@@ -59,6 +68,11 @@ contract PerpetualOracles is AccessControlUpgradeable {
         fundingPeriod = 8 hours;
         _grantRole(PRICE_ORACLE_ADMIN, _admin);
         _setRoleAdmin(PRICE_ORACLE_ADMIN, PRICE_ORACLE_ADMIN);
+    }
+
+    function setPositioning(IPositioning _positioning) external virtual {
+        _requireOracleAdmin();
+        positioning = _positioning;
     }
 
     function setMarkObservationAdder(address _adder) external virtual {
@@ -90,8 +104,8 @@ contract PerpetualOracles is AccessControlUpgradeable {
         _requireAddMarkObservationRole();
         require(_price != 0, "PerpOracle: zero price");
         _pushMarkOrderPrice(_index, _price);
-        uint256 markPrice;
-        // TODO: Add mark price calculation and set it
+        uint256 markPrice = _getMarkPrice(baseTokenByIndex[_index], _index).abs();
+        lastMarkPrice[_index] = markPrice;
         _saveMarkEpoch(_index, _price);
         emit MarkObservationAdded(_index, _price, markPrice, block.timestamp);
     }
@@ -107,10 +121,27 @@ contract PerpetualOracles is AccessControlUpgradeable {
         emit IndexObservationAdded(_indexes, _prices, block.timestamp);
     }
 
+    function getLastIndexPrice(uint256 _index) public view returns (uint256 underlyingLastPrice) {
+        IndexObservation[] memory observations = indexObservations[_index];
+        uint256 index = observations.length - 1;
+        underlyingLastPrice = observations[index].underlyingPrice;
+    }
+
+    function getLastPriceOfMark(uint256 _index) public view returns (uint256 underlyingLastPrice) {
+        MarkObservation[] storage observations = markObservations[_index];
+        uint256 index = observations.length - 1;
+        underlyingLastPrice = observations[index].lastPrice;
+    }
+
+    function getLastMarkSma(uint256 _index, uint256 _smInterval) public view returns (uint256 priceCumulative) {
+        uint256 startTimestamp = block.timestamp - _smInterval;
+        (priceCumulative, ) = _getCustomSma(_index, startTimestamp, block.timestamp);
+    }
+
     function _pushMarkOrderPrice(
         uint256 _index,
         uint256 _price
-    ) internal  {
+    ) internal {
         MarkObservation[] storage observations = markObservations[_index];
         observations.push(MarkObservation({ timestamp: block.timestamp, lastPrice: _price}));
         if (observations.length == 2) {
@@ -164,6 +195,42 @@ contract PerpetualOracles is AccessControlUpgradeable {
             _updatePriceEpoch(_index, currentEpochIndex - 1, priceEpochs[currentEpochIndex - 1].price, _price, priceEpochs[currentEpochIndex - 1].timestamp, false);
             ++indexCardinality;
         }
+    }
+
+    function _getMarkPrice(address _baseToken, uint256 _index) internal view returns (int256 markPrice) {
+        int256 lastFundingRate = positioning.getLastFundingRate(_baseToken);
+        uint256 nextFunding = positioning.getNextFunding(_baseToken);
+
+        int256[3] memory prices;
+        int256 indexPrice = getLastIndexPrice(_index).toInt256();
+        // Note: Check for actual precision and data type
+        prices[0] = indexPrice * (1 + lastFundingRate * (nextFunding.toInt256() / fundingPeriod.toInt256()));
+        uint256 markSma = getLastMarkSma(_index, 300); // TODO: add var for hardcode 300
+        prices[1] = markSma.toInt256();
+        prices[2] = getLastPriceOfMark(_index).toInt256();
+        markPrice = prices[0].median(prices[1], prices[2]);
+    }
+
+    function _getCustomSma(
+        uint256 _index,
+        uint256 _startTimestamp,
+        uint256 _endTimestamp
+    ) internal view returns (uint256 priceCumulative, uint256 lastTimestamp) {
+        MarkObservation[] storage observations = markObservations[_index];
+        uint256 index = observations.length;
+        lastTimestamp = observations[index - 1].timestamp;
+        _endTimestamp = lastTimestamp < _endTimestamp ? lastTimestamp : _endTimestamp;
+        if (lastTimestamp < _startTimestamp) {
+            _startTimestamp = observations[0].timestamp + (((lastTimestamp - observations[0].timestamp) / smInterval) * smInterval);
+        }
+        uint256 priceCount;
+        for (; index != 0 && observations[index - 1].timestamp >= _startTimestamp; index--) {
+            if (observations[index - 1].timestamp <= _endTimestamp) {
+                priceCumulative += observations[index - 1].lastPrice;
+                priceCount++;
+            }
+        }
+        priceCumulative = priceCumulative / priceCount;
     }
 
     function _updatePriceEpoch(
