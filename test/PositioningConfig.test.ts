@@ -72,7 +72,7 @@ describe("PositioningConfig", function () {
         },
       );
       await markPriceOracle1.deployed();
-      await positioningConfig.setMarkPriceOracle(markPriceOracle1.address);
+      await positioningConfig.setPerpetualOracle(markPriceOracle1.address);
       const markPriceOracle = await positioningConfig.markPriceOracle();
       expect(markPriceOracle).to.be.equal(markPriceOracle1.address);
     });

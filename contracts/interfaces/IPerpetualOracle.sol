@@ -16,7 +16,9 @@ interface IPerpetualOracle {
     function setMarkObservationAdder(address _adder) external;
     function setIndexObservationAdder(address _adder) external;
     function grantFundingPeriodRole(address _account) external;
+    function grantSmaIntervalRole(address _positioningConfig) external;
     function setFundingPeriod(uint256 _period) external;
+    function setMarkSmInterval(uint256 _markSmInterval) external;
     function addMarkObservation(uint256 _index, uint256 _price) external;
     function addIndexObservation(uint256[] memory _indexes, uint256[] memory _prices, bytes32[] memory _proofHashes) external;
 
@@ -35,5 +37,5 @@ interface IPerpetualOracle {
     ) external view returns (uint256 priceCumulative);
     function getLastMarkEpochPrice(uint256 _index) external view returns (uint256 price, uint256 timestamp);
     function getCustomMarkEpochPrice(uint256 _index, uint256 _epochTimestamp) external view returns (uint256 price, uint256 timestamp);
-    
+    function indexByBaseToken(address _baseToken) external view returns (uint256 index);
 }
