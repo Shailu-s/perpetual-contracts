@@ -22,7 +22,7 @@ contract PerpetualOracles is AccessControlUpgradeable {
     bytes32 public constant PRICE_ORACLE_ADMIN = keccak256("PRICE_ORACLE_ADMIN");
     bytes32 public constant ADD_MARK_OBSERVATION_ROLE = keccak256("ADD_MARK_OBSERVATION_ROLE");
     bytes32 public constant ADD_INDEX_OBSERVATION_ROLE = keccak256("ADD_INDEX_OBSERVATION_ROLE");
-    bytes32 public constant INITIAL_TIMESTAMP_ROLE = keccak256("INITIAL_TIMESTAMP_ROLE");
+    bytes32 public constant FUNDING_PERIOD_ROLE = keccak256("FUNDING_PERIOD_ROLE");
 
     uint256 internal _indexCount;
     mapping(uint256 => address) public baseTokenByIndex;
@@ -35,6 +35,7 @@ contract PerpetualOracles is AccessControlUpgradeable {
     uint256 public initialTimestamp;
     uint256 public markCardinality;
     uint256 public indexCardinality;
+    uint256 public fundingPeriod;
 
     event ObservationAdderSet(address indexed matchingEngine);
     event IndexObservationAdded(uint256[] index, uint256[] underlyingPrice, uint256 timestamp);
@@ -55,22 +56,34 @@ contract PerpetualOracles is AccessControlUpgradeable {
             indexObservations[indexCount].push(IndexObservation({timestamp: block.timestamp, underlyingPrice: _indexPrices[indexCount], proofHash: _proofHashes[indexCount]}));
         }
         _indexCount = indexCount; // = 2
+        fundingPeriod = 8 hours;
         _grantRole(PRICE_ORACLE_ADMIN, _admin);
         _setRoleAdmin(PRICE_ORACLE_ADMIN, PRICE_ORACLE_ADMIN);
     }
 
-    function setMarkObservationAdder(address _adder) external {
+    function setMarkObservationAdder(address _adder) external virtual {
         _requireOracleAdmin();
         require(_adder != address(0), "PerpOracle: zero address");
         _grantRole(ADD_MARK_OBSERVATION_ROLE, _adder);
         emit ObservationAdderSet(_adder);
     }
 
-    function setIndexObservationAdder(address _adder) external {
+    function setIndexObservationAdder(address _adder) external virtual {
         _requireOracleAdmin();
         require(_adder != address(0), "PerpOracle: zero address");
         _grantRole(ADD_INDEX_OBSERVATION_ROLE, _adder);
         emit ObservationAdderSet(_adder);
+    }
+
+    function grantFundingPeriodRole(address _account) external virtual {
+        _requireOracleAdmin();
+        require(_account != address(0), "PerpOracle: zero address");
+        _grantRole(FUNDING_PERIOD_ROLE, _account);
+    }
+
+    function setFundingPeriod(uint256 _period) external virtual {
+        _requireFundingPeriodRole();
+        fundingPeriod = _period;
     }
 
     function addMarkObservation(uint256 _index, uint256 _price) external virtual {
@@ -179,7 +192,7 @@ contract PerpetualOracles is AccessControlUpgradeable {
         require(hasRole(ADD_INDEX_OBSERVATION_ROLE, _msgSender()), "PerpOracle: not index observation adder");
     }
 
-    function _requireInitialTimestampRole() internal view {
-        require(hasRole(INITIAL_TIMESTAMP_ROLE, _msgSender()), "PerpOracle: not first interval adder");
+    function _requireFundingPeriodRole() internal view {
+        require(hasRole(FUNDING_PERIOD_ROLE, _msgSender()), "PerpOracle: not funding period role");
     }
 }
