@@ -739,13 +739,13 @@ describe("VolmexPerpPeriphery", function () {
 
   describe("Set MarkPriceOracle", async () => {
     it("should set MarkPriceOracle", async () => {
-      let receipt = await volmexPerpPeriphery.setMarkPriceOracle(markPriceOracle.address);
+      let receipt = await volmexPerpPeriphery.setPerpetualOracle(markPriceOracle.address);
       expect(receipt.confirmations).not.equal(0);
     });
 
     it("should fail to set MarkPriceOracle if not admin", async () => {
       await expect(
-        volmexPerpPeriphery.connect(account2).setMarkPriceOracle(markPriceOracle.address),
+        volmexPerpPeriphery.connect(account2).setPerpetualOracle(markPriceOracle.address),
       ).to.be.revertedWith("Periphery: Not admin");
     });
   });

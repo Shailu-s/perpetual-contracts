@@ -5,8 +5,7 @@ import { AccessControlUpgradeable } from "@openzeppelin/contracts-upgradeable/ac
 import { SafeERC20Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 
 import { LibOrder } from "../libs/LibOrder.sol";
-import { IMarkPriceOracle } from "../interfaces/IMarkPriceOracle.sol";
-import { IIndexPriceOracle } from "../interfaces/IIndexPriceOracle.sol";
+import { IPerpetualOracle } from "../interfaces/IPerpetualOracle.sol";
 import { IPositioning } from "../interfaces/IPositioning.sol";
 import { IVaultController } from "../interfaces/IVaultController.sol";
 import { IVolmexPerpPeriphery, IERC20Upgradeable, IVirtualToken } from "../interfaces/IVolmexPerpPeriphery.sol";
@@ -32,10 +31,8 @@ contract VolmexPerpPeriphery is AccessControlUpgradeable, IVolmexPerpPeriphery {
     // Boolean flag to enable / disable whitelisted traders
     bool public isTraderWhitelistEnabled;
 
-    // Used to fetch base token price according to market
-    IMarkPriceOracle public markPriceOracle;
-    // Used to fetch base volatility token index price
-    IIndexPriceOracle public indexPriceOracle;
+    // Used to fetch market and index prices
+    IPerpetualOracle public perpetualOracle;
     // Stores the address of VolmexPerpView contract
     IVolmexPerpView public perpView;
 
@@ -50,8 +47,7 @@ contract VolmexPerpPeriphery is AccessControlUpgradeable, IVolmexPerpPeriphery {
      */
     function initialize(
         IVolmexPerpView _perpView,
-        IMarkPriceOracle _markPriceOracle,
-        IIndexPriceOracle _indexPriceOracle,
+        IPerpetualOracle _perpetualOracle,
         address[2] memory _vaults,
         address _owner,
         address _relayer
@@ -59,8 +55,7 @@ contract VolmexPerpPeriphery is AccessControlUpgradeable, IVolmexPerpPeriphery {
         require(_owner != address(0), "VolmexPerpPeriphery: Admin can't be address(0)");
         require(_relayer != address(0), "VolmexPerpPeriphery: Relayer can't be address(0)");
         require(address(_perpView) != address(0), "VolmexPerpPeriphery: zero address");
-        markPriceOracle = _markPriceOracle;
-        indexPriceOracle = _indexPriceOracle;
+        perpetualOracle = _perpetualOracle;
         perpView = _perpView;
 
         for (uint256 i = 0; i < 2; i++) {
@@ -74,9 +69,9 @@ contract VolmexPerpPeriphery is AccessControlUpgradeable, IVolmexPerpPeriphery {
         _setRoleAdmin(RELAYER_MULTISIG, RELAYER_MULTISIG);
     }
 
-    function setMarkPriceOracle(IMarkPriceOracle _markPriceOracle) external {
+    function setPerpetualOracle(IPerpetualOracle _perpetualOracle) external {
         _requireVolmexPerpPeripheryAdmin();
-        markPriceOracle = _markPriceOracle;
+        perpetualOracle = _perpetualOracle;
     }
 
     function setRelayer(address _relayer) external {
@@ -238,13 +233,13 @@ contract VolmexPerpPeriphery is AccessControlUpgradeable, IVolmexPerpPeriphery {
         address baseToken = IVirtualToken(makeAsset).isBase() ? makeAsset : takeAsset;
 
         // TODO: change to index, mark and mark's latest price
-        uint256 _index = markPriceOracle.indexByBaseToken(baseToken);
+        uint256 _index = perpetualOracle.indexByBaseToken(baseToken);
         if (_order.orderType == LibOrder.STOP_LOSS_MARK_PRICE || _order.orderType == LibOrder.TAKE_PROFIT_MARK_PRICE) {
-            price = markPriceOracle.getLastMarkPrice(_index);
+            price = perpetualOracle.getLastMarkPrice(_index);
         } else if (_order.orderType == LibOrder.STOP_LOSS_INDEX_PRICE || _order.orderType == LibOrder.TAKE_PROFIT_INDEX_PRICE) {
-            price = indexPriceOracle.getLastPrice(_index);
+            price = perpetualOracle.getLastPriceOfIndex(_index);
         } else {
-            price = markPriceOracle.getLastPrice(_index);
+            price = perpetualOracle.getLastPriceOfMark(_index);
         }
     }
 
