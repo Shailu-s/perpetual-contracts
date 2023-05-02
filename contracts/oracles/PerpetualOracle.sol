@@ -37,6 +37,7 @@ contract PerpetualOracle is AccessControlUpgradeable {
     bytes32 public constant ADD_MARK_OBSERVATION_ROLE = keccak256("ADD_MARK_OBSERVATION_ROLE");
     bytes32 public constant ADD_INDEX_OBSERVATION_ROLE = keccak256("ADD_INDEX_OBSERVATION_ROLE");
     bytes32 public constant FUNDING_PERIOD_ROLE = keccak256("FUNDING_PERIOD_ROLE");
+    bytes32 public constant SMA_INTERVAL_ROLE = keccak256("SMA_INTERVAL_ROLE");
 
     uint256 internal _indexCount;
 
@@ -52,6 +53,7 @@ contract PerpetualOracle is AccessControlUpgradeable {
     mapping(uint256 => uint256) public lastPriceTotalObservation;
     mapping(uint256 => uint256) public indexTotalObservation;
     uint256 public smInterval;
+    uint256 public markSmInterval;
     uint256 public initialTimestamp;
     uint256 public fundingPeriod;
     IPositioning public positioning;
@@ -79,6 +81,7 @@ contract PerpetualOracle is AccessControlUpgradeable {
         _indexCount = indexCount; // = 2
         fundingPeriod = 8 hours;
         smInterval = 8 hours;
+        markSmInterval = 300;
         _grantRole(PRICE_ORACLE_ADMIN, _admin);
         _setRoleAdmin(PRICE_ORACLE_ADMIN, PRICE_ORACLE_ADMIN);
     }
@@ -108,9 +111,19 @@ contract PerpetualOracle is AccessControlUpgradeable {
         _grantRole(FUNDING_PERIOD_ROLE, _account);
     }
 
+    function grantSmaIntervalRole(address _positioningConfig) external virtual {
+        _requireOracleAdmin();
+        _grantRole(SMA_INTERVAL_ROLE, _positioningConfig);
+    }
+
     function setFundingPeriod(uint256 _period) external virtual {
         _requireFundingPeriodRole();
         fundingPeriod = _period;
+    }
+
+    function setMarkSmInterval(uint256 _markSmInterval) external virtual {
+        _requireSmaIntervalRole();
+        markSmInterval = _markSmInterval;
     }
 
     function addMarkObservation(uint256 _index, uint256 _price) external virtual {
@@ -258,7 +271,7 @@ contract PerpetualOracle is AccessControlUpgradeable {
         int256 indexPrice = getLastPriceOfIndex(_index).toInt256();
         // Note: Check for actual precision and data type
         prices[0] = indexPrice * (1 + lastFundingRate * (nextFunding.toInt256() / fundingPeriod.toInt256()));
-        uint256 markSma = getLastSmaOfMark(_index, 300); // TODO: add var for hardcode 300
+        uint256 markSma = getLastSmaOfMark(_index, markSmInterval);
         prices[1] = markSma.toInt256();
         prices[2] = getLastPriceOfMark(_index).toInt256();
         markPrice = prices[0].median(prices[1], prices[2]);
@@ -333,6 +346,10 @@ contract PerpetualOracle is AccessControlUpgradeable {
 
     function _requireFundingPeriodRole() internal view {
         require(hasRole(FUNDING_PERIOD_ROLE, _msgSender()), "PerpOracle: not funding period role");
+    }
+
+    function _requireSmaIntervalRole() internal view {
+        require(hasRole(SMA_INTERVAL_ROLE, _msgSender()), "MarkPriceOracle: not sma interval role");
     }
 
     function findUpperBound(uint256 _index, uint256 _timestamp, bool _isMark) private view returns (uint256) {
