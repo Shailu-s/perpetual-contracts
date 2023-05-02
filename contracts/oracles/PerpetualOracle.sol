@@ -136,7 +136,7 @@ contract PerpetualOracle is AccessControlUpgradeable {
 
     function getLastPriceOfIndex(uint256 _index) public view returns (uint256 underlyingLastPrice) {
         IndexObservation[65535] memory observations = indexObservations[_index];
-        uint256 currentIndex = getCurrentIndex(_index, false);
+        uint256 currentIndex = _getCurrentIndex(_index, false);
         underlyingLastPrice = observations[currentIndex].underlyingPrice;
     }
 
@@ -157,18 +157,18 @@ contract PerpetualOracle is AccessControlUpgradeable {
     function getLastUpdatedTimestamp(uint256 _index, bool isMark) external view returns (uint256 lastUpdatedTimestamp) {
         if (isMark) {
             LastPriceObservation[65535] memory observations = lastPriceObservation[_index];
-            uint256 currentIndex = getCurrentIndex(_index, true);
+            uint256 currentIndex = _getCurrentIndex(_index, true);
             lastUpdatedTimestamp = observations[currentIndex].timestamp;
         } else {
             IndexObservation[65535] memory observations = indexObservations[_index];
-            uint256 currentIndex = getCurrentIndex(_index, false);
+            uint256 currentIndex = _getCurrentIndex(_index, false);
             lastUpdatedTimestamp = observations[currentIndex].timestamp;
         }
     }
 
     function getLastPriceOfMark(uint256 _index) public view returns (uint256 underlyingLastPrice) {
         LastPriceObservation[65535] storage observations = lastPriceObservation[_index];
-        uint256 currentIndex = getCurrentIndex(_index, true);
+        uint256 currentIndex = _getCurrentIndex(_index, true);
         underlyingLastPrice = observations[currentIndex].lastPrice;
     }
 
@@ -304,7 +304,7 @@ contract PerpetualOracle is AccessControlUpgradeable {
         }
     }
 
-    function getCurrentIndex(uint256 _index, bool _isMark) internal view returns (uint256 currentIndex) {
+    function _getCurrentIndex(uint256 _index, bool _isMark) internal view returns (uint256 currentIndex) {
         uint256 nextIndex;
         uint256 totalObservations;
         if (_isMark) {
