@@ -32,13 +32,14 @@ contract PerpetualOracles is AccessControlUpgradeable {
     bytes32 public constant FUNDING_PERIOD_ROLE = keccak256("FUNDING_PERIOD_ROLE");
 
     uint256 internal _indexCount;
+
     mapping(uint256 => address) public baseTokenByIndex;
     mapping(address => uint256) public indexByBaseToken;
     mapping(uint256 => IndexObservation[]) public indexObservations;
     mapping(uint256 => MarkObservation[]) public markObservations;
     mapping(uint256 => PriceEpochs[]) public indexEpochs;
     mapping(uint256 => PriceEpochs[]) public markEpochs;
-    mapping (uint256 => uint256) public lastMarkPrice;
+    mapping(uint256 => uint256) public lastMarkPrice;
     uint256 public smInterval;
     uint256 public initialTimestamp;
     uint256 public markCardinality;
@@ -61,8 +62,8 @@ contract PerpetualOracles is AccessControlUpgradeable {
         for (; indexCount < 2; ++indexCount) {
             baseTokenByIndex[indexCount] = _baseToken[indexCount];
             indexByBaseToken[_baseToken[indexCount]] = indexCount;
-            markObservations[indexCount].push(MarkObservation({timestamp: block.timestamp, lastPrice: _markPrices[indexCount]}));
-            indexObservations[indexCount].push(IndexObservation({timestamp: block.timestamp, underlyingPrice: _indexPrices[indexCount], proofHash: _proofHashes[indexCount]}));
+            markObservations[indexCount].push(MarkObservation({ timestamp: block.timestamp, lastPrice: _markPrices[indexCount] }));
+            indexObservations[indexCount].push(IndexObservation({ timestamp: block.timestamp, underlyingPrice: _indexPrices[indexCount], proofHash: _proofHashes[indexCount] }));
         }
         _indexCount = indexCount; // = 2
         fundingPeriod = 8 hours;
@@ -138,22 +139,15 @@ contract PerpetualOracles is AccessControlUpgradeable {
         (priceCumulative, ) = _getCustomSma(_index, startTimestamp, block.timestamp);
     }
 
-    function _pushMarkOrderPrice(
-        uint256 _index,
-        uint256 _price
-    ) internal {
+    function _pushMarkOrderPrice(uint256 _index, uint256 _price) internal {
         MarkObservation[] storage observations = markObservations[_index];
-        observations.push(MarkObservation({ timestamp: block.timestamp, lastPrice: _price}));
+        observations.push(MarkObservation({ timestamp: block.timestamp, lastPrice: _price }));
         if (observations.length == 2) {
             initialTimestamp = block.timestamp;
         }
     }
 
-    function _pushIndexOrderPrice(
-        uint256 _index,
-        uint256 _underlyingPrice,
-        bytes32 _proofHash
-    ) internal {
+    function _pushIndexOrderPrice(uint256 _index, uint256 _underlyingPrice, bytes32 _proofHash) internal {
         IndexObservation[] storage observations = indexObservations[_index];
         observations.push(IndexObservation({ timestamp: block.timestamp, underlyingPrice: _underlyingPrice, proofHash: _proofHash }));
     }
@@ -211,11 +205,7 @@ contract PerpetualOracles is AccessControlUpgradeable {
         markPrice = prices[0].median(prices[1], prices[2]);
     }
 
-    function _getCustomSma(
-        uint256 _index,
-        uint256 _startTimestamp,
-        uint256 _endTimestamp
-    ) internal view returns (uint256 priceCumulative, uint256 lastTimestamp) {
+    function _getCustomSma(uint256 _index, uint256 _startTimestamp, uint256 _endTimestamp) internal view returns (uint256 priceCumulative, uint256 lastTimestamp) {
         MarkObservation[] storage observations = markObservations[_index];
         uint256 index = observations.length;
         lastTimestamp = observations[index - 1].timestamp;
@@ -233,14 +223,7 @@ contract PerpetualOracles is AccessControlUpgradeable {
         priceCumulative = priceCumulative / priceCount;
     }
 
-    function _updatePriceEpoch(
-        uint256 _index,
-        uint256 _epochIndex,
-        uint256 _previousPrice,
-        uint256 _price,
-        uint256 _timestamp,
-        bool isMark
-    ) private {
+    function _updatePriceEpoch(uint256 _index, uint256 _epochIndex, uint256 _previousPrice, uint256 _price, uint256 _timestamp, bool isMark) private {
         PriceEpochs[] storage priceEpoch = isMark ? markEpochs[_index] : indexEpochs[_index];
         uint256 cardinality = isMark ? markCardinality : indexCardinality;
         uint256 actualPrice = (_previousPrice * cardinality + _price) / (cardinality + 1);
