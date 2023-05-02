@@ -222,6 +222,44 @@ contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, 
         return true;
     }
 
+    function _getOrderValidate(LibOrder.Order memory order) internal view returns (bool) {
+        if (order.trader == address(0)){
+            return false;
+        }
+        if (order.salt == 0){
+            return false;
+        }
+        if (order.salt < makerMinSalt[_msgSender()]){
+            return false;
+        }
+        bytes32 orderHashKey = LibOrder.hashKey(order);
+        uint256 fills = IMatchingEngine(_matchingEngine).fills(orderHashKey);
+
+        // order is cancelled, os there's nothing to fill
+        if (fills > order.makeAsset.value){
+            return false;
+        }
+        if (order.deadline < block.timestamp){
+            return false;
+        }
+
+        uint24 imRatio = IPositioningConfig(_positioningConfig).getImRatio();
+        if (int256(order.isShort ? order.takeAsset.value : order.makeAsset.value) > (_getFreeCollateralByRatio(order.trader, imRatio) * 1e6) / uint256(imRatio).toInt256()){
+            return false;
+        }
+        return true;
+    }
+
+    function batchOrderValidate(LibOrder.Order[] memory order) external view returns (bool[] memory) {
+        uint256 ordersLength = order.length;
+        bool[] memory _result = new bool[](ordersLength);
+        for (uint256 orderIndex = 0; orderIndex < ordersLength; orderIndex++) {
+            bool valid = _getOrderValidate(order[orderIndex]);
+            _result[orderIndex] = valid;
+        }
+        return _result;
+    }
+
     ///@dev this function calculates total pending funding payment of a trader
     function getAllPendingFundingPayment(address trader) external view virtual override returns (int256 pendingFundingPayment) {
         address[] memory baseTokens = IAccountBalance(_accountBalance).getBaseTokens(trader);
