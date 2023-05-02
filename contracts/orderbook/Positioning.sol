@@ -203,24 +203,6 @@ contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, 
         return _accountBalance;
     }
 
-    function getOrderValidate(LibOrder.Order memory order) external view returns (bool) {
-        require(order.trader != address(0), "V_PERP_M: order verification failed");
-        require(order.salt != 0, "V_PERP_M: 0 salt can't be used");
-        require(order.salt >= makerMinSalt[_msgSender()], "V_PERP_M: order salt lower");
-        bytes32 orderHashKey = LibOrder.hashKey(order);
-        uint256 fills = IMatchingEngine(_matchingEngine).fills(orderHashKey);
-        // order is cancelled, os there's nothing to fill
-        require(fills < order.makeAsset.value, "V_PERP_M: Nothing to fill");
-        LibOrder.validate(order);
-
-        uint24 imRatio = IPositioningConfig(_positioningConfig).getImRatio();
-
-        require(
-            int256(order.isShort ? order.takeAsset.value : order.makeAsset.value) < (_getFreeCollateralByRatio(order.trader, imRatio) * 1e6) / uint256(imRatio).toInt256(),
-            "V_PERP_NEFC"
-        );
-        return true;
-    }
 
     function _getOrderValidate(LibOrder.Order memory order) internal view returns (bool) {
         if (order.trader == address(0)){
@@ -259,7 +241,10 @@ contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, 
         }
         return _result;
     }
-
+    
+    function getOrderValidate(LibOrder.Order memory order) external view returns (bool) {
+       return _getOrderValidate(order);
+    }
     ///@dev this function calculates total pending funding payment of a trader
     function getAllPendingFundingPayment(address trader) external view virtual override returns (int256 pendingFundingPayment) {
         address[] memory baseTokens = IAccountBalance(_accountBalance).getBaseTokens(trader);
