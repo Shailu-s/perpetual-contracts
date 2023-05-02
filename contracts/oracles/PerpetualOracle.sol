@@ -267,16 +267,23 @@ contract PerpetualOracle is AccessControlUpgradeable {
     function _getCustomSma(uint256 _index, uint256 _startTimestamp, uint256 _endTimestamp) internal view returns (uint256 priceCumulative, uint256 lastTimestamp) {
         LastPriceObservation[65535] storage observations = lastPriceObservation[_index];
         uint256 totalObservations = lastPriceTotalObservation[_index];
-        uint256 nextIndex = totalObservations < _MAX_ALLOWED_OBSERVATIONS ? totalObservations : totalObservations % _MAX_ALLOWED_OBSERVATIONS;
-        nextIndex = nextIndex != 0 ? nextIndex : _MAX_ALLOWED_OBSERVATIONS - 1;
-        lastTimestamp = observations[nextIndex - 1].timestamp;
+        uint256 currentIndex;
+        uint256 startIndex;
+        if (totalObservations < _MAX_ALLOWED_OBSERVATIONS) {
+            currentIndex = totalObservations != 0 ? totalObservations - 1 : _MAX_ALLOWED_OBSERVATIONS - 1;
+        } else {
+            uint256 remainder = totalObservations % _MAX_ALLOWED_OBSERVATIONS;
+            currentIndex = remainder != 0 ? remainder - 1 : _MAX_ALLOWED_OBSERVATIONS - 1;
+            startIndex = remainder;
+        }
+        lastTimestamp = observations[currentIndex].timestamp;
         _endTimestamp = lastTimestamp < _endTimestamp ? lastTimestamp : _endTimestamp;
         if (lastTimestamp < _startTimestamp) {
             _startTimestamp = observations[0].timestamp + (((lastTimestamp - observations[0].timestamp) / smInterval) * smInterval);
         }
         uint256 priceCount;
-        uint256 index = nextIndex - 1;
-        for (; observations[index].timestamp >= _startTimestamp; --index) {
+        uint256 index = currentIndex;
+        for (; index !=0 && observations[index].timestamp >= _startTimestamp; --index) {
             if (observations[index].timestamp <= _endTimestamp) {
                 priceCumulative += observations[index].lastPrice;
                 priceCount++;
