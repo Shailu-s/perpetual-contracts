@@ -33,10 +33,12 @@ contract PerpetualOracles is AccessControlUpgradeable {
     mapping(uint256 => PriceEpochs[]) public markEpochs;
     uint256 public smInterval;
     uint256 public initialTimestamp;
-    uint256 public cardinality;
+    uint256 public markCardinality;
+    uint256 public indexCardinality;
 
     event ObservationAdderSet(address indexed matchingEngine);
-    event ObservationAdded(uint256[] index, uint256[] underlyingPrice, uint256 timestamp);
+    event IndexObservationAdded(uint256[] index, uint256[] underlyingPrice, uint256 timestamp);
+    event MarkObservationAdded(uint256 indexed index, uint256 lastPrice, uint256 markPrice, uint256 timestamp);
 
     function perpetualOraclesInit(
         address[2] calldata _baseToken,
@@ -74,11 +76,25 @@ contract PerpetualOracles is AccessControlUpgradeable {
     function addMarkObservation(uint256 _index, uint256 _price) external virtual {
         _requireAddMarkObservationRole();
         require(_price != 0, "PerpOracle: zero price");
-        _pushOrderPrice(_index, _price);
+        _pushMarkOrderPrice(_index, _price);
+        uint256 markPrice;
         // TODO: Add mark price calculation and set it
+        _saveMarkEpoch(_index, _price);
+        emit MarkObservationAdded(_index, _price, markPrice, block.timestamp);
     }
 
-    function _pushOrderPrice(
+    function addIndexObservation(uint256[] memory _indexes, uint256[] memory _prices, bytes32[] memory _proofHashes) external virtual {
+        _requireAddIndexObservationRole();
+        uint256 numberOfPrices = _prices.length;
+        for (uint256 index; index < numberOfPrices; ++index) {
+            require(_prices[index] != 0, "PerpOracle: zero price");
+            _pushIndexOrderPrice(_indexes[index], _prices[index], _proofHashes[index]);
+            _saveIndexEpoch(_indexes[index], _prices[index]);
+        }
+        emit IndexObservationAdded(_indexes, _prices, block.timestamp);
+    }
+
+    function _pushMarkOrderPrice(
         uint256 _index,
         uint256 _price
     ) internal  {
@@ -89,21 +105,51 @@ contract PerpetualOracles is AccessControlUpgradeable {
         }
     }
 
+    function _pushIndexOrderPrice(
+        uint256 _index,
+        uint256 _underlyingPrice,
+        bytes32 _proofHash
+    ) internal {
+        IndexObservation[] storage observations = indexObservations[_index];
+        observations.push(IndexObservation({ timestamp: block.timestamp, underlyingPrice: _underlyingPrice, proofHash: _proofHash }));
+    }
+
     // TODO: Add for index epoch as well
-    function _saveEpoch(uint256 _index, uint256 _price) internal {
+    function _saveMarkEpoch(uint256 _index, uint256 _price) internal {
         uint256 currentTimestamp = block.timestamp;
         PriceEpochs[] memory priceEpochs = markEpochs[_index];
         uint256 currentEpochIndex = priceEpochs.length;
         if ((currentTimestamp - initialTimestamp) / smInterval > currentEpochIndex || currentEpochIndex == 0) {
             if (currentEpochIndex != 0 && (currentTimestamp - priceEpochs[currentEpochIndex - 1].timestamp) / smInterval == 0) {
                 _updatePriceEpoch(_index, currentEpochIndex - 1, priceEpochs[currentEpochIndex - 1].price, _price, priceEpochs[currentEpochIndex - 1].timestamp, true);
+                ++markCardinality;
             } else {
                 PriceEpochs[] storage priceEpoch = markEpochs[_index];
                 priceEpoch.push(PriceEpochs({ price: _price, timestamp: currentTimestamp }));
-                cardinality = 1;
+                markCardinality = 1;
             }
         } else {
             _updatePriceEpoch(_index, currentEpochIndex - 1, priceEpochs[currentEpochIndex - 1].price, _price, priceEpochs[currentEpochIndex - 1].timestamp, true);
+            ++markCardinality;
+        }
+    }
+
+    function _saveIndexEpoch(uint256 _index, uint256 _price) internal {
+        uint256 currentTimestamp = block.timestamp;
+        PriceEpochs[] memory priceEpochs = indexEpochs[_index];
+        uint256 currentEpochIndex = priceEpochs.length;
+        if ((currentTimestamp - initialTimestamp) / smInterval > currentEpochIndex || currentEpochIndex == 0) {
+            if (currentEpochIndex != 0 && (currentTimestamp - priceEpochs[currentEpochIndex - 1].timestamp) / smInterval == 0) {
+                _updatePriceEpoch(_index, currentEpochIndex - 1, priceEpochs[currentEpochIndex - 1].price, _price, priceEpochs[currentEpochIndex - 1].timestamp, false);
+                ++indexCardinality;
+            } else {
+                PriceEpochs[] storage priceEpoch = indexEpochs[_index];
+                priceEpoch.push(PriceEpochs({ price: _price, timestamp: currentTimestamp }));
+                indexCardinality = 1;
+            }
+        } else {
+            _updatePriceEpoch(_index, currentEpochIndex - 1, priceEpochs[currentEpochIndex - 1].price, _price, priceEpochs[currentEpochIndex - 1].timestamp, false);
+            ++indexCardinality;
         }
     }
 
@@ -115,10 +161,10 @@ contract PerpetualOracles is AccessControlUpgradeable {
         uint256 _timestamp,
         bool isMark
     ) private {
-        uint256 actualPrice = (_previousPrice * cardinality + _price) / (cardinality + 1);
         PriceEpochs[] storage priceEpoch = isMark ? markEpochs[_index] : indexEpochs[_index];
+        uint256 cardinality = isMark ? markCardinality : indexCardinality;
+        uint256 actualPrice = (_previousPrice * cardinality + _price) / (cardinality + 1);
         priceEpoch[_epochIndex] = PriceEpochs({ price: actualPrice, timestamp: _timestamp });
-        ++cardinality;
     }
 
     function _requireOracleAdmin() internal view {
