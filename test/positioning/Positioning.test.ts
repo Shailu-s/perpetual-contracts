@@ -628,6 +628,64 @@ describe("Positioning", function () {
         );
       });
 
+      it(" should validate batch orders", async () => {
+
+        await matchingEngine.grantMatchOrders(positioning.address);
+
+        await virtualToken.mint(account1.address, convert("1000"));
+
+        await virtualToken.connect(account1).approve(vault.address, convert("1000"));
+        await virtualToken.connect(account1).approve(volmexPerpPeriphery.address, convert("1000"));
+        await vaultController
+          .connect(account1)
+          .deposit(
+            volmexPerpPeriphery.address,
+            virtualToken.address,
+            account1.address,
+            convert("1000"),
+          );
+
+
+        let orderLeftLeverage = Order(
+          ORDER,
+          deadline,
+          ZERO_ADDR,
+          Asset(virtualToken.address, convert("2000")),
+          Asset(volmexBaseToken.address, convert("20")),
+          2,
+          0,
+          false,
+        );
+
+        let orderLeftLeverage1 = Order(
+          ORDER,
+          deadline,
+          ZERO_ADDR,
+          Asset(virtualToken.address, convert("2000")),
+          Asset(volmexBaseToken.address, convert("20")),
+          2,
+          0,
+          false,
+        );
+
+        let orderLeftLeverage3 = Order(
+          ORDER,
+          deadline,
+          account1.address,
+          Asset(virtualToken.address, convert("2000")),
+          Asset(volmexBaseToken.address, convert("20")),
+          1,
+          0,
+          false,
+        );
+        let orderArray = [orderLeftLeverage, orderLeftLeverage1, orderLeftLeverage3]
+
+        let result = await positioning.batchOrderValidate(orderArray)
+        expect(result[0]).to.be.equal(false)
+        expect(result[1]).to.be.equal(false)
+        expect(result[2]).to.be.equal(true)
+      });
+
       it("should fail with re entrancy gaurd", async () => {
         // const txn = await markPriceOracle.getLastSma(10000000, 0);
         matchingEngine = await upgrades.deployProxy(
