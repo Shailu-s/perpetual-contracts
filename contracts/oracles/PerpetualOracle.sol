@@ -9,7 +9,7 @@ import { IPositioning } from "../interfaces/IPositioning.sol";
 import { LibSafeCastUint } from "../libs/LibSafeCastUint.sol";
 import { LibPerpMath } from "../libs/LibPerpMath.sol";
 
-contract PerpetualOracles is AccessControlUpgradeable {
+contract PerpetualOracle is AccessControlUpgradeable {
     using LibSafeCastUint for uint256;
     using LibPerpMath for int256;
 
