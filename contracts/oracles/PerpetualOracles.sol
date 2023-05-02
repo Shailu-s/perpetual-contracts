@@ -27,10 +27,10 @@ contract PerpetualOracles is AccessControlUpgradeable {
         uint256 timestamp;
     }
     struct Head {
-        uint256 epoch;
-        uint256 epochCardinality;
-        uint256 cardinality;
-        uint256 observation;
+        uint256 epoch; // current running epoch under max allowed epochs
+        uint256 epochCardinality; // number of elements in current epoch
+        uint256 cardinality; // total number of epochs added
+        uint256 observationIndex; // current index of observation of last addition to observations
     }
 
     uint256 private constant _MAX_ALLOWED_EPOCHS = 1095;
@@ -40,12 +40,13 @@ contract PerpetualOracles is AccessControlUpgradeable {
     bytes32 public constant ADD_INDEX_OBSERVATION_ROLE = keccak256("ADD_INDEX_OBSERVATION_ROLE");
     bytes32 public constant FUNDING_PERIOD_ROLE = keccak256("FUNDING_PERIOD_ROLE");
 
+    bool private _isInitialTimestampSet;
     uint256 internal _indexCount;
 
     mapping(uint256 => address) public baseTokenByIndex;
     mapping(address => uint256) public indexByBaseToken;
-    mapping(uint256 => IndexObservation[]) public indexObservations;
-    mapping(uint256 => MarkObservation[]) public markObservations;
+    mapping(uint256 => IndexObservation[65535]) public indexObservations;
+    mapping(uint256 => MarkObservation[65535]) public markObservations;
     mapping(uint256 => PriceEpochs[1094]) public indexEpochs;
     mapping(uint256 => PriceEpochs[1094]) public markEpochs;
     mapping(uint256 => uint256) public lastMarkPrices;
@@ -71,8 +72,8 @@ contract PerpetualOracles is AccessControlUpgradeable {
         for (; indexCount < 2; ++indexCount) {
             baseTokenByIndex[indexCount] = _baseToken[indexCount];
             indexByBaseToken[_baseToken[indexCount]] = indexCount;
-            markObservations[indexCount].push(MarkObservation({ timestamp: block.timestamp, lastPrice: _markPrices[indexCount] }));
-            indexObservations[indexCount].push(IndexObservation({ timestamp: block.timestamp, underlyingPrice: _indexPrices[indexCount], proofHash: _proofHashes[indexCount] }));
+            markObservations[indexCount][0] = MarkObservation({ timestamp: block.timestamp, lastPrice: _markPrices[indexCount] });
+            indexObservations[indexCount][0] = IndexObservation({ timestamp: block.timestamp, underlyingPrice: _indexPrices[indexCount], proofHash: _proofHashes[indexCount] });
         }
         _indexCount = indexCount; // = 2
         fundingPeriod = 8 hours;
@@ -133,9 +134,9 @@ contract PerpetualOracles is AccessControlUpgradeable {
     }
 
     function getLastPriceOfIndex(uint256 _index) public view returns (uint256 underlyingLastPrice) {
-        IndexObservation[] memory observations = indexObservations[_index];
-        uint256 index = observations.length - 1;
-        underlyingLastPrice = observations[index].underlyingPrice;
+        IndexObservation[65535] memory observations = indexObservations[_index];
+        Head memory head = markHead[_index];
+        underlyingLastPrice = observations[head.observationIndex].underlyingPrice;
     }
 
     function getLastIndexEpochPrice(uint256 _index) external view returns (uint256 price, uint256 timestamp) {
@@ -154,28 +155,20 @@ contract PerpetualOracles is AccessControlUpgradeable {
 
     function getLastUpdatedTimestamp(uint256 _index, bool isMark) external view returns (uint256 lastUpdatedTimestamp) {
         if (isMark) {
-            MarkObservation[] memory observations = markObservations[_index];
-            lastUpdatedTimestamp = observations[observations.length - 1].timestamp;
+            MarkObservation[65535] memory observations = markObservations[_index];
+            Head memory head = markHead[_index];
+            lastUpdatedTimestamp = observations[head.observationIndex].timestamp;
         } else {
-            IndexObservation[] memory observations = indexObservations[_index];
-            lastUpdatedTimestamp = observations[observations.length - 1].timestamp;
-        }
-    }
-
-    function getIndexObservation(uint256 _index, bool isMark) external view returns (uint256 length) {
-        if (isMark) {
-            MarkObservation[] memory observations = markObservations[_index];
-            length = observations.length;
-        } else {
-            IndexObservation[] memory observations = indexObservations[_index];
-            length = observations.length;
+            IndexObservation[65535] memory observations = indexObservations[_index];
+            Head memory head = indexHead[_index];
+            lastUpdatedTimestamp = observations[head.observationIndex].timestamp;
         }
     }
 
     function getLastPriceOfMark(uint256 _index) public view returns (uint256 underlyingLastPrice) {
-        MarkObservation[] storage observations = markObservations[_index];
-        uint256 index = observations.length - 1;
-        underlyingLastPrice = observations[index].lastPrice;
+        MarkObservation[65535] storage observations = markObservations[_index];
+        Head storage head = markHead[_index];
+        underlyingLastPrice = observations[head.observationIndex].lastPrice;
     }
 
     function getLastSmaOfMark(uint256 _index, uint256 _smInterval) public view returns (uint256 priceCumulative) {
@@ -204,16 +197,22 @@ contract PerpetualOracles is AccessControlUpgradeable {
     }
 
     function _pushMarkOrderPrice(uint256 _index, uint256 _price) internal {
-        MarkObservation[] storage observations = markObservations[_index];
-        observations.push(MarkObservation({ timestamp: block.timestamp, lastPrice: _price }));
-        if (observations.length == 2) {
+        MarkObservation[65535] storage observations = markObservations[_index];
+        Head storage head = markHead[_index];
+        head.observationIndex = head.observationIndex + 1 > _MAX_ALLOWED_OBSERVATIONS ? 0 : head.observationIndex + 1;
+        observations[head.observationIndex] = MarkObservation({ timestamp: block.timestamp, lastPrice: _price });
+
+        if (!_isInitialTimestampSet) {
             initialTimestamp = block.timestamp;
+            _isInitialTimestampSet = true;
         }
     }
 
     function _pushIndexOrderPrice(uint256 _index, uint256 _underlyingPrice, bytes32 _proofHash) internal {
-        IndexObservation[] storage observations = indexObservations[_index];
-        observations.push(IndexObservation({ timestamp: block.timestamp, underlyingPrice: _underlyingPrice, proofHash: _proofHash }));
+        IndexObservation[65535] storage observations = indexObservations[_index];
+        Head storage head = indexHead[_index];
+        head.observationIndex = head.observationIndex + 1 > _MAX_ALLOWED_OBSERVATIONS ? 0 : head.observationIndex + 1;
+        observations[head.observationIndex] = IndexObservation({ timestamp: block.timestamp, underlyingPrice: _underlyingPrice, proofHash: _proofHash });
     }
 
     function _saveEpoch(uint256 _index, uint256 _price, bool isMark) internal {
@@ -257,17 +256,18 @@ contract PerpetualOracles is AccessControlUpgradeable {
     }
 
     function _getCustomSma(uint256 _index, uint256 _startTimestamp, uint256 _endTimestamp) internal view returns (uint256 priceCumulative, uint256 lastTimestamp) {
-        MarkObservation[] storage observations = markObservations[_index];
-        uint256 index = observations.length;
-        lastTimestamp = observations[index - 1].timestamp;
+        MarkObservation[65535] storage observations = markObservations[_index];
+        Head storage head = markHead[_index];
+        lastTimestamp = observations[head.observationIndex].timestamp;
         _endTimestamp = lastTimestamp < _endTimestamp ? lastTimestamp : _endTimestamp;
         if (lastTimestamp < _startTimestamp) {
             _startTimestamp = observations[0].timestamp + (((lastTimestamp - observations[0].timestamp) / smInterval) * smInterval);
         }
         uint256 priceCount;
-        for (; index != 0 && observations[index - 1].timestamp >= _startTimestamp; index--) {
-            if (observations[index - 1].timestamp <= _endTimestamp) {
-                priceCumulative += observations[index - 1].lastPrice;
+        uint256 index = head.observationIndex;
+        for (; observations[index].timestamp >= _startTimestamp; --index) {
+            if (observations[index].timestamp <= _endTimestamp) {
+                priceCumulative += observations[index].lastPrice;
                 priceCount++;
             }
         }
