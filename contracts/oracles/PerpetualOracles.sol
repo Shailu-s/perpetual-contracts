@@ -18,7 +18,7 @@ contract PerpetualOracles is AccessControlUpgradeable {
         uint256 underlyingPrice;
         bytes32 proofHash;
     }
-    struct MarkObservation {
+    struct LastPriceObservation {
         uint256 timestamp;
         uint256 lastPrice;
     }
@@ -45,7 +45,7 @@ contract PerpetualOracles is AccessControlUpgradeable {
     mapping(uint256 => address) public baseTokenByIndex;
     mapping(address => uint256) public indexByBaseToken;
     mapping(uint256 => IndexObservation[65535]) public indexObservations;
-    mapping(uint256 => MarkObservation[65535]) public markObservations;
+    mapping(uint256 => LastPriceObservation[65535]) public lastPriceObservation;
     mapping(uint256 => PriceEpochs[1094]) public indexEpochs;
     mapping(uint256 => PriceEpochs[1094]) public markEpochs;
     mapping(uint256 => uint256) public lastMarkPrices;
@@ -71,7 +71,7 @@ contract PerpetualOracles is AccessControlUpgradeable {
         for (; indexCount < 2; ++indexCount) {
             baseTokenByIndex[indexCount] = _baseToken[indexCount];
             indexByBaseToken[_baseToken[indexCount]] = indexCount;
-            markObservations[indexCount][0] = MarkObservation({ timestamp: block.timestamp, lastPrice: _markPrices[indexCount] });
+            lastPriceObservation[indexCount][0] = LastPriceObservation({ timestamp: block.timestamp, lastPrice: _markPrices[indexCount] });
             indexObservations[indexCount][0] = IndexObservation({ timestamp: block.timestamp, underlyingPrice: _indexPrices[indexCount], proofHash: _proofHashes[indexCount] });
         }
         _indexCount = indexCount; // = 2
@@ -154,7 +154,7 @@ contract PerpetualOracles is AccessControlUpgradeable {
 
     function getLastUpdatedTimestamp(uint256 _index, bool isMark) external view returns (uint256 lastUpdatedTimestamp) {
         if (isMark) {
-            MarkObservation[65535] memory observations = markObservations[_index];
+            LastPriceObservation[65535] memory observations = lastPriceObservation[_index];
             EpochInfo memory head = markEpochInfo[_index];
             lastUpdatedTimestamp = observations[head.observationIndex].timestamp;
         } else {
@@ -165,7 +165,7 @@ contract PerpetualOracles is AccessControlUpgradeable {
     }
 
     function getLastPriceOfMark(uint256 _index) public view returns (uint256 underlyingLastPrice) {
-        MarkObservation[65535] storage observations = markObservations[_index];
+        LastPriceObservation[65535] storage observations = lastPriceObservation[_index];
         EpochInfo storage head = markEpochInfo[_index];
         underlyingLastPrice = observations[head.observationIndex].lastPrice;
     }
@@ -196,10 +196,10 @@ contract PerpetualOracles is AccessControlUpgradeable {
     }
 
     function _pushMarkOrderPrice(uint256 _index, uint256 _price) internal {
-        MarkObservation[65535] storage observations = markObservations[_index];
+        LastPriceObservation[65535] storage observations = lastPriceObservation[_index];
         EpochInfo storage head = markEpochInfo[_index];
         head.observationIndex = head.observationIndex + 1 > _MAX_ALLOWED_OBSERVATIONS ? 0 : head.observationIndex + 1;
-        observations[head.observationIndex] = MarkObservation({ timestamp: block.timestamp, lastPrice: _price });
+        observations[head.observationIndex] = LastPriceObservation({ timestamp: block.timestamp, lastPrice: _price });
 
         if (!_isInitialTimestampSet) {
             initialTimestamp = block.timestamp;
@@ -262,7 +262,7 @@ contract PerpetualOracles is AccessControlUpgradeable {
     }
 
     function _getCustomSma(uint256 _index, uint256 _startTimestamp, uint256 _endTimestamp) internal view returns (uint256 priceCumulative, uint256 lastTimestamp) {
-        MarkObservation[65535] storage observations = markObservations[_index];
+        LastPriceObservation[65535] storage observations = lastPriceObservation[_index];
         EpochInfo storage head = markEpochInfo[_index];
         lastTimestamp = observations[head.observationIndex].timestamp;
         _endTimestamp = lastTimestamp < _endTimestamp ? lastTimestamp : _endTimestamp;
