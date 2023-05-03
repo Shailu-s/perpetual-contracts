@@ -174,7 +174,7 @@ contract PerpetualOracle is AccessControlUpgradeable, IPerpetualOracle {
         (price) = _getEpochSMA(_index, _startTimestamp, _endTimestamp, false);
     }
 
-    function getMarkEpochSMA(
+    function getLastEpochSMA(
         uint256 _index,
         uint256 _startTimestamp,
         uint256 _endTimestamp
