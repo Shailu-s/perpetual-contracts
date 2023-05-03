@@ -1384,6 +1384,12 @@ describe("VolmexPerpPeriphery", function () {
 
         const signatureRight = await getSignature(orderRight, account2.address);
         signaturesRight.push(signatureRight);
+        let orderArray = [orderLeft, orderRight]
+
+        let result = await volmexPerpPeriphery.batchOrderValidate(orderArray,index)
+        expect(result[0]).to.be.equal(true)
+        expect(result[1]).to.be.equal(true)
+
         await volmexPerpPeriphery.batchOpenPosition(
           index,
           ordersLeft,
@@ -1392,6 +1398,63 @@ describe("VolmexPerpPeriphery", function () {
           signaturesRight,
           liquidator,
         );
+      });
+      it("should batch validate orders", async () => {
+        await matchingEngine.grantMatchOrders(positioning.address);
+        await await USDC.transfer(account1.address, "1000000000");
+        await await USDC.transfer(account2.address, "1000000000");
+        await USDC.connect(account1).approve(volmexPerpPeriphery.address, "1000000000");
+        await USDC.connect(account2).approve(volmexPerpPeriphery.address, "1000000000");
+        await volmexPerpPeriphery.whitelistTrader(account1.address, true);
+        await volmexPerpPeriphery.whitelistTrader(account2.address, true);
+        (
+          await volmexPerpPeriphery
+            .connect(account1)
+            .depositToVault(index, USDC.address, "1000000000")
+        ).wait();
+        (
+          await volmexPerpPeriphery
+            .connect(account2)
+            .depositToVault(index, USDC.address, "1000000000")
+        ).wait();
+        const orderLeft = Order(
+          ORDER,
+          deadline,
+          account1.address,
+          Asset(volmexBaseToken.address, two.toString()),
+          Asset(virtualToken.address, two.toString()),
+          1,
+          (1e6).toString(),
+          true,
+        );
+        const orderRight = Order(
+          ORDER,
+          deadline,
+          account2.address,
+          Asset(virtualToken.address, two.toString()),
+          Asset(volmexBaseToken.address, two.toString()),
+          2,
+          (1e6).toString(),
+          false,
+        );
+
+        const orderInvalid = Order(
+          ORDER,
+          deadline,
+          account2.address,
+          Asset(virtualToken.address, two.toString()),
+          Asset(volmexBaseToken.address, two.toString()),
+          0,
+          (1e6).toString(),
+          false,
+        );
+    
+        let orderArray = [orderLeft, orderRight, orderInvalid]
+
+        let result = await volmexPerpPeriphery.batchOrderValidate(orderArray,index)
+        expect(result[0]).to.be.equal(true)
+        expect(result[1]).to.be.equal(true)
+        expect(result[2]).to.be.equal(false)
       });
       it(" should fill limit order in batch", async () => {
         const limitOrdersLeft = [];

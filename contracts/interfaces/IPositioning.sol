@@ -134,4 +134,7 @@ interface IPositioning is IFundingRate {
     /// @notice Get AccountBalance address
     /// @return accountBalance `AccountBalance` address
     function getAccountBalance() external view returns (address accountBalance);
+    /// @notice Check if order is valid
+    /// @param order order
+    function getOrderValidate(LibOrder.Order memory order) external view returns (bool);
 }
