@@ -189,7 +189,7 @@ describe("Liquidation test in Positioning", function () {
       positioningConfig.address,
       accountBalance1.address,
     ]);
-
+    console.log(accountBalance1.address);
     positioning = await upgrades.deployProxy(
       Positioning,
       [
@@ -206,6 +206,8 @@ describe("Liquidation test in Positioning", function () {
         initializer: "initialize",
       },
     );
+    await positioning.deployed();
+    console.log(positioning.address);
     await (await volmexBaseToken.setMintBurnRole(positioning.address)).wait();
     await (await volmexBaseToken1.setMintBurnRole(positioning.address)).wait();
     await (await virtualToken.setMintBurnRole(positioning.address)).wait();
@@ -229,12 +231,15 @@ describe("Liquidation test in Positioning", function () {
 
     await accountBalance1.connect(owner).setPositioning(positioning.address);
 
+    await positioningConfig.connect(owner).setPositioning(positioning.address);
+    await positioningConfig.connet(owner).setAccountBalance(accountBalance1.address);
     await vault.connect(owner).setPositioning(positioning.address);
     await vault.connect(owner).setVaultController(vaultController.address);
     await vaultController.registerVault(vault.address, virtualToken.address);
     await vaultController.connect(owner).setPositioning(positioning.address);
 
     await positioningConfig.connect(owner).setMaxMarketsPerAccount(5);
+    await positioningConfig.setTwapIntervalLiquidation(3600);
     await positioningConfig.connect(owner).setSettlementTokenBalanceCap(hundred.toString());
 
     await positioning.connect(owner).setMarketRegistry(marketRegistry.address);
@@ -630,6 +635,7 @@ describe("Liquidation test in Positioning", function () {
         const positionsize = await accountBalance1.getTotalPositionValue(
           account1.address,
           orderLeft.makeAsset.virtualToken,
+          28800,
         );
         const positionSizeAbs = await accountBalance1.getTotalAbsPositionValue(account1.address);
         const accountValue = await vaultController.getAccountValue(account1.address);
@@ -714,6 +720,7 @@ describe("Liquidation test in Positioning", function () {
         const positionsize = await accountBalance1.getTotalPositionValue(
           account1.address,
           orderLeft.makeAsset.virtualToken,
+          28800,
         );
         const positionSizeAbs = await accountBalance1.getTotalAbsPositionValue(account1.address);
         const accountValue = await vaultController.getAccountValue(account1.address);
@@ -976,6 +983,7 @@ describe("Liquidation test in Positioning", function () {
         const positionsize = await accountBalance1.getTotalPositionValue(
           account1.address,
           orderLeft.makeAsset.virtualToken,
+          28800,
         );
         const positionsizeAbs = await accountBalance1.getTotalAbsPositionValue(account1.address);
 

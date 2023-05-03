@@ -5,6 +5,8 @@ import "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol"
 import { IPositioningConfig } from "../interfaces/IPositioningConfig.sol";
 import { PositioningConfigStorageV1 } from "../storage/PositioningConfigStorage.sol";
 import { IMarkPriceOracle } from "../interfaces/IMarkPriceOracle.sol";
+import { IPositioning } from "../interfaces/IPositioning.sol";
+import { IAccountBalance } from "../interfaces/IAccountBalance.sol";
 
 // never inherit any new stateful contract. never change the orders of parent stateful contracts
 contract PositioningConfig is IPositioningConfig, PositioningConfigStorageV1, AccessControlUpgradeable {
@@ -33,6 +35,7 @@ contract PositioningConfig is IPositioningConfig, PositioningConfigStorageV1, Ac
         _partialLiquidationRatio = 0.1e6; // partial liquidation ratio, 10% in decimal 6
         _maxFundingRate = 0.0073e6; // max funding rate, 0.73% in decimal 6
         _twapInterval = 28800;
+        _twapIntervalLiquidation = 3600; // 1 hour only for position size value when liquidation
         _settlementTokenBalanceCap = 0;
         markPriceOracle = markPriceOracleArg;
         _grantRole(POSITIONING_CONFIG_ADMIN, _msgSender());
@@ -59,7 +62,18 @@ contract PositioningConfig is IPositioningConfig, PositioningConfigStorageV1, Ac
         require(twapIntervalArg != 0, "PC_ITI");
         _twapInterval = twapIntervalArg;
         markPriceOracle.setMarkSmInterval(twapIntervalArg);
+        positioning.setSmInterval(twapIntervalArg);
+        accountBalance.setSmInterval(twapIntervalArg);
         emit TwapIntervalChanged(twapIntervalArg);
+    }
+
+    function setTwapIntervalLiquidation(uint32 twapInterval) external {
+        _requirePositioningConfigAdmin();
+        // PC_ITIL: invalid twapInterval in liquidation
+        require(twapInterval != 0, "PC_ITIL");
+        _twapIntervalLiquidation = twapInterval;
+        positioning.setSmIntervalLiquidation(twapInterval);
+        accountBalance.setSmIntervalLiquidation(twapInterval);
     }
 
     function setMaxMarketsPerAccount(uint8 maxMarketsPerAccountArg) external {
@@ -109,6 +123,16 @@ contract PositioningConfig is IPositioningConfig, PositioningConfigStorageV1, Ac
         markPriceOracle = markPriceOracleArg;
     }
 
+    function setPositioning(IPositioning positioningArg) external {
+        _requirePositioningConfigAdmin();
+        positioning = positioningArg;
+    }
+
+    function setAccountBalance(IAccountBalance accountBalanceArg) external {
+        _requirePositioningConfigAdmin();
+        accountBalance = accountBalanceArg;
+    }
+
     /// @inheritdoc IPositioningConfig
     function getMaxMarketsPerAccount() external view override returns (uint8) {
         return _maxMarketsPerAccount;
@@ -140,8 +164,12 @@ contract PositioningConfig is IPositioningConfig, PositioningConfigStorageV1, Ac
     }
 
     /// @inheritdoc IPositioningConfig
-    function getTwapInterval() external view override returns (uint32) {
+    function getTwapInterval() external view override returns (uint256) {
         return _twapInterval;
+    }
+
+    function getTwapIntervalLiquidation() external view override returns (uint256) {
+        return _twapIntervalLiquidation;
     }
 
     /// @inheritdoc IPositioningConfig
