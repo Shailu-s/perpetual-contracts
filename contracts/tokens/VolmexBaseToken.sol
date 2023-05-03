@@ -26,7 +26,7 @@ contract VolmexBaseToken is IVolmexBaseToken, VirtualToken, BaseTokenStorageV1 {
 
     /// @dev Get price of underlying asset with sma interval
     function getIndexPrice(uint256 index, uint256 _twInterval) external view returns (uint256 answer) {
-        (answer, ) = IPerpetualOracle(_priceFeed).getLatestIndexSMA(_twInterval, index);
+        (answer) = IPerpetualOracle(_priceFeed).lastestLastPriceSMA(_twInterval, index);
     }
 
     /// @inheritdoc IVolmexBaseToken

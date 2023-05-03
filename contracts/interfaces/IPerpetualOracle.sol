@@ -24,7 +24,7 @@ interface IPerpetualOracle {
     event IndexObservationAdded(uint256[] index, uint256[] underlyingPrice, uint256 timestamp);
     event MarkObservationAdded(uint256 indexed index, uint256 lastPrice, uint256 markPrice, uint256 timestamp);
 
-    function perpetual_Oracles_Init(
+    function __Perpetual_Oracles_Init(
         address[2] calldata _baseToken,
         uint256[2] calldata _markPrices,
         uint256[2] calldata _indexPrices,
@@ -46,31 +46,33 @@ interface IPerpetualOracle {
 
     function setMarkSmInterval(uint256 _markSmInterval) external;
 
-    function addMarkObservation(uint256 _index, uint256 _price) external;
+    function addMarkObservations(uint256 _index, uint256 _price) external;
 
-    function addIndexObservation(
+    function addIndexObservations(
         uint256[] memory _indexes,
         uint256[] memory _prices,
         bytes32[] memory _proofHashes
     ) external;
 
-    function getLatestIndexPrice(uint256 _index) external view returns (uint256 latestIndexPrice);
+    function latestIndexPrice(uint256 _index) external view returns (uint256 latestIndexPrice);
 
-    function getLatestMarkPrice(uint256 index) external view returns (uint256 price);
+    function latestMarkPrice(uint256 index) external view returns (uint256 latestMarkPrice);
 
-    function getCustomIndexEpochPrice(
+    function latestLastPrice(uint256 _index) external view returns (uint256 latestLastPrice);
+
+    function getIndexEpochSMA(
         uint256 _index,
         uint256 _startTimestamp,
         uint256 _endTimestamp
     ) external view returns (uint256 price);
 
-    function getLatestIndexSMA(uint256 _smInterval, uint256 _index) external view returns (uint256 answer, uint256 lastUpdateTimestamp);
+    function latestIndexSMA(uint256 _smInterval, uint256 _index) external view returns (uint256 answer, uint256 lastUpdateTimestamp);
 
-    function getLastUpdatedTimestamp(uint256 _index, bool isMark) external view returns (uint256 lastUpdatedTimestamp);
+    function lastestTimestamp(uint256 _index, bool isMark) external view returns (uint256 lastUpdatedTimestamp);
 
-    function getLastestLastPriceSMA(uint256 _index, uint256 _smInterval) external view returns (uint256 priceCumulative);
+    function lastestLastPriceSMA(uint256 _index, uint256 _smInterval) external view returns (uint256 priceCumulative);
 
-    function getCustomMarkEpochPrice(
+    function getMarkEpochSMA(
         uint256 _index,
         uint256 _startTimestamp,
         uint256 _endTimestamp
