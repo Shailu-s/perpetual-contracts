@@ -102,7 +102,7 @@ contract PerpetualOracle is AccessControlUpgradeable, IPerpetualOracle {
         markSmInterval = _markSmInterval;
     }
 
-    function addMarkObservations(uint256 _index, uint256 _price) external virtual {
+    function addMarkObservation(uint256 _index, uint256 _price) external virtual {
         _requireAddMarkObservationRole();
         require(_price != 0, "PerpOracle: zero price");
         _pushLastPrice(_index, _price);

@@ -46,7 +46,7 @@ interface IPerpetualOracle {
 
     function setMarkSmInterval(uint256 _markSmInterval) external;
 
-    function addMarkObservations(uint256 _index, uint256 _price) external;
+    function addMarkObservation(uint256 _index, uint256 _price) external;
 
     function addIndexObservations(
         uint256[] memory _indexes,
