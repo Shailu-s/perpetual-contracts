@@ -184,8 +184,7 @@ contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, 
 
         // short = selling base token
         address baseToken = orderLeft.isShort ? orderLeft.makeAsset.virtualToken : orderLeft.takeAsset.virtualToken;
-        // V_PERP: Basetoken not registered at market = V_PBRM
-        require(IMarketRegistry(_marketRegistry).checkBaseToken(baseToken), "V_PBRM");
+        require(IMarketRegistry(_marketRegistry).checkBaseToken(baseToken), "V_PBRM"); // V_PERP: Basetoken not registered at market = V_PBRM
 
         // register base token for account balance calculations
         IAccountBalance(_accountBalance).registerBaseToken(orderLeft.trader, baseToken);
@@ -226,16 +225,12 @@ contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, 
     }
 
     function getOrderValidate(LibOrder.Order memory order) external view returns (bool) {
-        // V_PERP_M: order verification failed
-        require(order.trader != address(0), "V_PERP_OVF");
-        // V_PERP_M: 0 salt can't be used
-        require(order.salt != 0, "V_PERP_0S");
-        // V_PERP_M: order salt lower
-        require(order.salt >= makerMinSalt[_msgSender()], "V_PERP_LS");
+        require(order.trader != address(0), "V_PERP_OVF"); // V_PERP_M: order verification failed
+        require(order.salt != 0, "V_PERP_0S"); //V_PERP_M: 0 salt can't be used
+        require(order.salt >= makerMinSalt[_msgSender()], "V_PERP_LS"); // V_PERP_M: order salt lower
         bytes32 orderHashKey = LibOrder.hashKey(order);
         uint256 fills = IMatchingEngine(_matchingEngine).fills(orderHashKey);
-        // order is cancelled, os there's nothing to fill
-        require(fills < order.makeAsset.value, "V_PERP_NF");
+        require(fills < order.makeAsset.value, "V_PERP_NF"); //V_PERP_NF:  nothing to fill
         LibOrder.validate(order);
 
         uint24 imRatio = IPositioningConfig(_positioningConfig).getImRatio();
@@ -669,7 +664,7 @@ contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, 
     }
 
     function _requirePositioningAdmin() internal view {
-        require(hasRole(POSITIONING_ADMIN, _msgSender()), "P_NA");
+        require(hasRole(POSITIONING_ADMIN, _msgSender()), "P_NA"); // Positioning: Not admin
     }
 
     function _requireSmIntervalRole() internal view {
@@ -677,7 +672,7 @@ contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, 
     }
 
     function _requireWhitelistLiquidator(address liquidator) internal view {
-        require(isLiquidatorWhitelisted[liquidator], "P_LW");
+        require(isLiquidatorWhitelisted[liquidator], "P_LW"); // Positioning: liquidator not whitelisted
     }
 
     function _getPnlToBeRealized(InternalRealizePnlParams memory params) internal pure returns (int256) {
@@ -687,9 +682,11 @@ contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, 
         int256 pnlToBeRealized;
         // if closedRatio <= 1, it's reducing or closing a position; else, it's opening a larger reverse position
         if (closedRatio <= _FULLY_CLOSED_RATIO) {
-            pnlToBeRealized = params.quote + params.takerOpenNotional.mulDiv(closedRatio.toInt256(), _FULLY_CLOSED_RATIO);
+            int256 reducedOpenNotional = params.takerOpenNotional.mulDiv(closedRatio.toInt256(), _FULLY_CLOSED_RATIO);
+            pnlToBeRealized = params.quote + reducedOpenNotional;
         } else {
-            pnlToBeRealized = params.takerOpenNotional + params.quote.mulDiv(int256(_FULLY_CLOSED_RATIO), closedRatio);
+            int256 closedPositionNotional = params.quote.mulDiv(int256(_FULLY_CLOSED_RATIO), closedRatio);
+            pnlToBeRealized = params.takerOpenNotional + closedPositionNotional;
         }
 
         return pnlToBeRealized;

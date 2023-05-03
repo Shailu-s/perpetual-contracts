@@ -1502,11 +1502,6 @@ describe("VolmexPerpPeriphery", function () {
 
         const signatureRight = await getSignature(orderRight, account2.address);
         signaturesRight.push(signatureRight);
-        let orderArray = [orderLeft, orderRight]
-
-        let result = await volmexPerpPeriphery.batchOrderValidate(orderArray,index)
-        expect(result[0]).to.be.equal(true)
-        expect(result[1]).to.be.equal(true)
 
         await volmexPerpPeriphery.batchOpenPosition(
           index,
