@@ -23,10 +23,10 @@ contract PerpetualOracle is IPerpetualOracle, AccessControlUpgradeable {
 
     mapping(uint256 => address) public baseTokenByIndex;
     mapping(address => uint256) public indexByBaseToken;
-    mapping(uint256 => IndexObservation[_MAX_ALLOWED_OBSERVATIONS - 1]) public indexObservations; // since index will we max allowed observations - 1
-    mapping(uint256 => LastPriceObservation[_MAX_ALLOWED_OBSERVATIONS - 1]) public lastPriceObservations;
-    mapping(uint256 => PriceEpochs[_MAX_ALLOWED_EPOCHS - 1]) public indexEpochs;
-    mapping(uint256 => PriceEpochs[_MAX_ALLOWED_EPOCHS - 1]) public markEpochs;
+    mapping(uint256 => IndexObservation[_MAX_ALLOWED_OBSERVATIONS - 1]) public indexObservations; // since index  is started from zero
+    mapping(uint256 => LastPriceObservation[_MAX_ALLOWED_OBSERVATIONS - 1]) public lastPriceObservations; // since index  is started from zero
+    mapping(uint256 => PriceEpochs[_MAX_ALLOWED_EPOCHS - 1]) public indexEpochs; // since index  is started from zero
+    mapping(uint256 => PriceEpochs[_MAX_ALLOWED_EPOCHS - 1]) public markEpochs; // since index  is started from zero
     mapping(uint256 => uint256) public lastestMarkPrice;
     mapping(uint256 => uint256) public lastPriceTotalObservations;
     mapping(uint256 => uint256) public indexTotalObservations;
