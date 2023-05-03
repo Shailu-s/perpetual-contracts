@@ -5,7 +5,26 @@ pragma solidity =0.8.18;
 import { IPositioning } from "./IPositioning.sol";
 
 interface IPerpetualOracle {
-    function perpetualOraclesInit(
+    struct IndexObservation {
+        uint256 timestamp;
+        uint256 underlyingPrice;
+        bytes32 proofHash;
+    }
+    struct LastPriceObservation {
+        uint256 timestamp;
+        uint256 lastPrice;
+    }
+    struct PriceEpochs {
+        uint256 price;
+        uint256 timestamp;
+        uint256 cardinality; // number of elements in current epoch
+    }
+
+    event ObservationAdderSet(address indexed matchingEngine);
+    event IndexObservationAdded(uint256[] index, uint256[] underlyingPrice, uint256 timestamp);
+    event MarkObservationAdded(uint256 indexed index, uint256 lastPrice, uint256 markPrice, uint256 timestamp);
+
+    function perpetual_Oracles_Init(
         address[2] calldata _baseToken,
         uint256[2] calldata _markPrices,
         uint256[2] calldata _indexPrices,
@@ -35,9 +54,9 @@ interface IPerpetualOracle {
         bytes32[] memory _proofHashes
     ) external;
 
-    function getLastestIndexPrice(uint256 _index) external view returns (uint256 underlyingLastPrice);
+    function getLatestIndexPrice(uint256 _index) external view returns (uint256 latestIndexPrice);
 
-    function getLastestIndexEpoch(uint256 _index) external view returns (uint256 price, uint256 timestamp);
+    function getLatestMarkPrice(uint256 index) external view returns (uint256 price);
 
     function getCustomIndexEpochPrice(
         uint256 _index,
@@ -45,23 +64,11 @@ interface IPerpetualOracle {
         uint256 _endTimestamp
     ) external view returns (uint256 price);
 
-    function latestRoundData(uint256 _smInterval, uint256 _index) external view returns (uint256 answer, uint256 lastUpdateTimestamp);
+    function getLatestIndexSMA(uint256 _smInterval, uint256 _index) external view returns (uint256 answer, uint256 lastUpdateTimestamp);
 
     function getLastUpdatedTimestamp(uint256 _index, bool isMark) external view returns (uint256 lastUpdatedTimestamp);
 
-    function getLastestMarkPrice(uint256 _index) external view returns (uint256 underlyingLastPrice);
-
-    function getLastPriceSma(uint256 _index, uint256 _smInterval) external view returns (uint256 priceCumulative);
-
-    function getLastMarkPrice(uint256 _index) external view returns (uint256 lastMarkPrice);
-
-    function getCustomUnderlyingSma(
-        uint256 _index,
-        uint256 _startTimestamp,
-        uint256 _endTimestamp
-    ) external view returns (uint256 priceCumulative);
-
-    function getLastMarkEpochPrice(uint256 _index) external view returns (uint256 price, uint256 timestamp);
+    function getLastestLastPriceSMA(uint256 _index, uint256 _smInterval) external view returns (uint256 priceCumulative);
 
     function getCustomMarkEpochPrice(
         uint256 _index,

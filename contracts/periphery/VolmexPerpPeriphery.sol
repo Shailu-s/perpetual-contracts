@@ -213,6 +213,7 @@ contract VolmexPerpPeriphery is AccessControlUpgradeable, IVolmexPerpPeriphery {
                 result = triggeredPrice <= _limitOrder.limitOrderTriggerPrice;
             } else {
                 // Buy Stop Limit Order Trigger Price Not Matched
+
                 result = triggeredPrice >= _limitOrder.limitOrderTriggerPrice;
             }
         } else if (_checkLimitOrderType(_limitOrder.orderType, false)) {
@@ -235,11 +236,11 @@ contract VolmexPerpPeriphery is AccessControlUpgradeable, IVolmexPerpPeriphery {
         // TODO: change to index, mark and mark's latest price
         uint256 _index = perpetualOracle.indexByBaseToken(baseToken);
         if (_order.orderType == LibOrder.STOP_LOSS_MARK_PRICE || _order.orderType == LibOrder.TAKE_PROFIT_MARK_PRICE) {
-            price = perpetualOracle.getLastMarkPrice(_index);
+            price = perpetualOracle.getLatestMarkPrice(_index);
         } else if (_order.orderType == LibOrder.STOP_LOSS_INDEX_PRICE || _order.orderType == LibOrder.TAKE_PROFIT_INDEX_PRICE) {
-            price = perpetualOracle.getLastPriceOfIndex(_index);
+            price = perpetualOracle.getLatestIndexPrice(_index);
         } else {
-            price = perpetualOracle.getLastPriceOfMark(_index);
+            price = perpetualOracle.getLatestMarkPrice(_index);
         }
     }
 

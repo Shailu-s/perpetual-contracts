@@ -1,16 +1,16 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity =0.8.18;
 
-import "contracts/oracles/MarkPriceOracle.sol";
+import "contracts/oracles/PerpetualOracle.sol";
 
 contract ExchangeTest {
-    MarkPriceOracle public markPriceOracle;
+    PerpetualOracle public perpetualOracle;
 
-    function setPerpetualOracle(MarkPriceOracle _markPriceOracle) external {
-        markPriceOracle = _markPriceOracle;
+    function setPerpetualOracle(PerpetualOracle _perpetualOracle) external {
+        perpetualOracle = _perpetualOracle;
     }
 
     function addObservation(uint256 _priceCumulative, uint256 _index) external {
-        markPriceOracle.addObservation(_priceCumulative, _index);
+        perpetualOracle.addMarkObservation(_priceCumulative, _index);
     }
 }
