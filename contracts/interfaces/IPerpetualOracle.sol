@@ -49,9 +49,9 @@ interface IPerpetualOracle {
 
     function getLastUpdatedTimestamp(uint256 _index, bool isMark) external view returns (uint256 lastUpdatedTimestamp);
 
-    function getLastPriceOfMark(uint256 _index) external view returns (uint256 underlyingLastPrice);
+    function getLastestMarkPrice(uint256 _index) external view returns (uint256 underlyingLastPrice);
 
-    function getLastMarkPriceSma(uint256 _index, uint256 _smInterval) external view returns (uint256 priceCumulative);
+    function getLastPriceSma(uint256 _index, uint256 _smInterval) external view returns (uint256 priceCumulative);
 
     function getLastMarkPrice(uint256 _index) external view returns (uint256 lastMarkPrice);
 
