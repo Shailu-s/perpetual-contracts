@@ -24,7 +24,7 @@ interface IPerpetualOracle {
     event IndexObservationAdded(uint256[] index, uint256[] underlyingPrice, uint256 timestamp);
     event MarkObservationAdded(uint256 indexed index, uint256 lastPrice, uint256 markPrice, uint256 timestamp);
 
-    function __Perpetual_Oracles_Init(
+    function __PerpetualOracle_init(
         address[2] calldata _baseToken,
         uint256[2] calldata _markPrices,
         uint256[2] calldata _indexPrices,
