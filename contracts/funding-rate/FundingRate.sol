@@ -137,7 +137,7 @@ contract FundingRate is IFundingRate, BlockContext, PositioningCallee, FundingRa
 
     function _getDeltaTwap(uint256 markTwap, uint256 indexTwap) internal view virtual returns (int256 deltaTwap) {
         uint24 maxFundingRate = IPositioningConfig(_positioningConfig).getMaxFundingRate();
-        uint256 maxDeltaTwap = indexTwap.mulRatio(maxFundingRate);
+        uint256 maxDeltaTwap = indexTwap.mulRatio(maxFundingRate) * 3; // max funding rate comes out to be 7300 but ont diving by 3 due to calulation maxDelta twap * 28800/86400 so we need to multiply it by 3 here only
         uint256 absDeltaTwap;
         if (markTwap > indexTwap) {
             absDeltaTwap = markTwap - indexTwap;
