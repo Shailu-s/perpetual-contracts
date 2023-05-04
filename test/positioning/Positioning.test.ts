@@ -584,10 +584,9 @@ describe("Positioning", function () {
           0,
           false,
         );
-        await expect(positioning.getOrderValidate(orderLeftLeverage)).to.revertedWith(
-          "V_PERP_M: order verification failed",
-        );
-        orderLeftLeverage = Order(
+        let result = await positioning.getOrderValidate(orderLeftLeverage)
+        await expect(result).to.be.equal(false)
+        let orderLeftLeverage1 = Order(
           ORDER,
           deadline,
           account1.address,
@@ -597,9 +596,8 @@ describe("Positioning", function () {
           0,
           false,
         );
-        await expect(positioning.getOrderValidate(orderLeftLeverage)).to.revertedWith(
-          "V_PERP_M: 0 salt can't be used",
-        );
+        result = await positioning.getOrderValidate(orderLeftLeverage1)
+        await expect(result).to.be.equal(false)
       });
 
       it("should use order validation before opening position ", async () => {
@@ -1980,10 +1978,10 @@ describe("Positioning", function () {
           0,
           false,
         );
-
-        await expect(
-          positioning.connect(account1).getOrderValidate(orderLeftLeverage),
-        ).to.be.revertedWith("V_PERP_NEFC");
+          let result = await positioning.connect(account1).getOrderValidate(orderLeftLeverage)
+        expect(
+          result
+        ).to.be.equal(false);
       });
       it("should not use validate order after opening position ", async () => {
         // const txn = await markPriceOracle.getLastSma(10000000, 0);
@@ -2067,10 +2065,10 @@ describe("Positioning", function () {
           account2.address,
           orderLeft.takeAsset.virtualToken,
         );
-
+          let result = await positioning.connect(account1).getOrderValidate(orderLeftLeverage)
         await expect(
-          positioning.connect(account1).getOrderValidate(orderLeftLeverage),
-        ).to.be.revertedWith("V_PERP_M: Nothing to fill");
+          result
+        ).to.be.equal(false);
       });
 
       it("failure for wrong basetoken given", async () => {

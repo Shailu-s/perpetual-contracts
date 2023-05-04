@@ -138,7 +138,7 @@ contract VolmexPerpPeriphery is AccessControlUpgradeable, IVolmexPerpPeriphery {
         LibOrder.Order[] memory _ordersLeft,
         bytes[] memory _signaturesLeft,
         LibOrder.Order[] memory _ordersRight,
-        bytes[] memory _signaturesRight,
+      bytes[] memory _signaturesRight,
         bytes memory liquidator
     ) external {
         require(_ordersLeft.length == _ordersRight.length, "Periphery: mismatch orders");
@@ -184,6 +184,22 @@ contract VolmexPerpPeriphery is AccessControlUpgradeable, IVolmexPerpPeriphery {
         if (_orderRight.orderType != LibOrder.ORDER) require(_verifyTriggerPrice(_orderRight), "Periphery: right order price verification failed");
         IPositioning positioning = perpView.positionings(_index);
         positioning.openPosition(_orderLeft, _signatureLeft, _orderRight, _signatureRight, liquidator);
+    }
+
+    function batchOrderValidate(LibOrder.Order[] memory order, uint256 _index) external view returns (bool[] memory) {
+        uint256 ordersLength = order.length;
+        bool[] memory _result = new bool[](ordersLength);
+        bool valid;
+        IPositioning positioning = perpView.positionings(_index);
+        for (uint256 orderIndex = 0; orderIndex < ordersLength; orderIndex++) {
+            try positioning.getOrderValidate(order[orderIndex]) {
+                valid = true;
+            } catch {
+                valid = false;
+            }
+            _result[orderIndex] = valid;
+        }
+        return _result;
     }
 
     function _requireVolmexPerpPeripheryAdmin() internal view {
