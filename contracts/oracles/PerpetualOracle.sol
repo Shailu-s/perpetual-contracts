@@ -276,10 +276,7 @@ contract PerpetualOracle is AccessControlUpgradeable, IPerpetualOracle {
         uint256 startIndex;
         (currentIndex, startIndex) = getCurrentAndStartIndex(_MAX_ALLOWED_OBSERVATIONS, totalObservations);
         lastTimestamp = observations[currentIndex].timestamp;
-        _endTimestamp = lastTimestamp < _endTimestamp ? lastTimestamp : _endTimestamp;
-        if (lastTimestamp < _startTimestamp) {
-            _startTimestamp = observations[0].timestamp + (((lastTimestamp - observations[0].timestamp) / smInterval) * smInterval);
-        }
+        (_endTimestamp, _startTimestamp) = getEndAndStartTimestamps(lastTimestamp, _endTimestamp, _startTimestamp, observations[0].timestamp);
         uint256 priceCount;
         uint256 index = totalObservations < _MAX_ALLOWED_OBSERVATIONS ? currentIndex : startIndex;
         for (; observations[index].timestamp >= _startTimestamp; index = index == 0 ? _MAX_ALLOWED_OBSERVATIONS - 1 : index - 1) {
@@ -306,10 +303,8 @@ contract PerpetualOracle is AccessControlUpgradeable, IPerpetualOracle {
         uint256 startIndex;
         (currentIndex, startIndex) = getCurrentAndStartIndex(_MAX_ALLOWED_OBSERVATIONS, totalObservations);
         lastTimestamp = observations[currentIndex].timestamp;
-        _endTimestamp = lastTimestamp < _endTimestamp ? lastTimestamp : _endTimestamp;
-        if (lastTimestamp < _startTimestamp) {
-            _startTimestamp = observations[0].timestamp + (((lastTimestamp - observations[0].timestamp) / smInterval) * smInterval);
-        }
+        (_endTimestamp, _startTimestamp) = getEndAndStartTimestamps(lastTimestamp, _endTimestamp, _startTimestamp, observations[0].timestamp);
+
         uint256 priceCount;
         uint256 index = totalObservations < _MAX_ALLOWED_OBSERVATIONS ? currentIndex : startIndex;
         for (; observations[index].timestamp >= _startTimestamp; index = index == 0 ? _MAX_ALLOWED_OBSERVATIONS - 1 : index - 1) {
@@ -339,10 +334,7 @@ contract PerpetualOracle is AccessControlUpgradeable, IPerpetualOracle {
         if (totalEpochs != 0) {
             (currentIndex, startIndex) = getCurrentAndStartIndex(_MAX_ALLOWED_EPOCHS, totalEpochs);
             uint256 lastTimestamp = priceEpochs[currentIndex].timestamp;
-            _endTimestamp = lastTimestamp < _endTimestamp ? lastTimestamp : _endTimestamp;
-            if (lastTimestamp < _startTimestamp) {
-                _startTimestamp = priceEpochs[0].timestamp + (((lastTimestamp - priceEpochs[0].timestamp) / smInterval) * smInterval);
-            }
+            (_endTimestamp, _startTimestamp) = getEndAndStartTimestamps(lastTimestamp, _endTimestamp, _startTimestamp, priceEpochs[0].timestamp);
             uint256 priceCount;
             uint256 index = totalEpochs < _MAX_ALLOWED_EPOCHS ? currentIndex : startIndex;
             for (; priceEpochs[index].timestamp >= _startTimestamp; index = index == 0 ? _MAX_ALLOWED_OBSERVATIONS - 1 : index - 1) {
@@ -381,6 +373,18 @@ contract PerpetualOracle is AccessControlUpgradeable, IPerpetualOracle {
             uint256 remainder = _totalObservations % _maxAllowedDataPoints;
             currentIndex = remainder != 0 ? remainder - 1 : _maxAllowedDataPoints - 1;
             startIndex = remainder;
+        }
+    }
+
+    function getEndAndStartTimestamps(
+        uint256 _lastTimestamp,
+        uint256 _endtTimestamp,
+        uint256 _startTimestamp,
+        uint256 _initialTimestamp
+    ) internal view returns (uint256 endTimestamp, uint256 startTimestamp) {
+        endTimestamp = _lastTimestamp < _endtTimestamp ? _lastTimestamp : _endtTimestamp;
+        if (_lastTimestamp < _startTimestamp) {
+            startTimestamp = _initialTimestamp + (((_lastTimestamp - _initialTimestamp) / smInterval) * smInterval);
         }
     }
 
