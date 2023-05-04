@@ -22,14 +22,14 @@ describe("Liquidation test in Positioning", function () {
   let vaultController;
   let AccountBalance;
   let accountBalance;
-  let MarkPriceOracle;
-  let markPriceOracle;
+  let PerpetuaOracle;
+  let perpetualOracle;
   let VolmexBaseToken;
   let volmexBaseToken;
   let volmexBaseToken1;
   let VolmexPerpPeriphery;
   let volmexPerpPeriphery;
-
+  let Perppetual;
   let transferManagerTest;
   let accountBalance1;
   let MarketRegistry;
@@ -59,8 +59,7 @@ describe("Liquidation test in Positioning", function () {
 
   this.beforeAll(async () => {
     VolmexPerpPeriphery = await ethers.getContractFactory("VolmexPerpPeriphery");
-    MarkPriceOracle = await ethers.getContractFactory("MarkPriceOracle");
-    IndexPriceOracle = await ethers.getContractFactory("IndexPriceOracle");
+    PerpetuaOracle = await ethers.getContractFactory("PerpetuaOracle");
     // indexPriceOracle = await smock.fake("IndexPriceOracle")
     // indexPriceFake = await smock.fake("IndexPriceOracle")
     // markPriceFake = await smock.fake("IndexPriceOracle")
@@ -113,40 +112,30 @@ describe("Liquidation test in Positioning", function () {
       },
     );
     await volmexBaseToken1.deployed();
-    indexPriceOracle = await upgrades.deployProxy(
-      IndexPriceOracle,
+    perpetualOracle = await upgrades.deployProxy(
+      PerpetualOracle,
       [
-        owner.address,
-        [100000000, 100000000],
         [volmexBaseToken.address, volmexBaseToken1.address],
+        [200000000, 200000000],
+        [200060000, 200060000],
         [proofHash, proofHash],
-        [capRatio, capRatio],
+        owner.address,
       ],
-      {
-        initializer: "initialize",
-      },
+      { initializer: "__PerpetualOracle_init" },
     );
-    await indexPriceOracle.deployed();
-    await volmexBaseToken.setPriceFeed(indexPriceOracle.address);
-    await volmexBaseToken1.setPriceFeed(indexPriceOracle.address);
-    markPriceOracle = await upgrades.deployProxy(
-      MarkPriceOracle,
-      [[100000000, 100000000], [volmexBaseToken.address, volmexBaseToken1.address], owner.address],
-      {
-        initializer: "initialize",
-      },
-    );
-    await markPriceOracle.deployed();
-    await (await indexPriceOracle.grantInitialTimestampRole(markPriceOracle.address)).wait();
-    await indexPriceOracle.setObservationAdder(owner.address);
+
+    await volmexBaseToken.setPriceFeed(perpetualOracle.address);
+    await volmexBaseToken1.setPriceFeed(perpetualOracle.address);
+
+    await perpetualOracle.setIndexObservationAdder(owner.address);
     for (let i = 0; i < 10; i++) {
-      await indexPriceOracle.addObservation([100000000], [0], [proofHash]);
+      await perpetualOracle.addIndexObservations([0], [100000000], [proofHash]);
       await time.increase(300);
     }
 
     erc1271Test = await ERC1271Test.deploy();
 
-    positioningConfig = await upgrades.deployProxy(PositioningConfig, [markPriceOracle.address]);
+    positioningConfig = await upgrades.deployProxy(PositioningConfig, [perpetualOracle.address]);
     await positioningConfig.deployed();
 
     accountBalance = await upgrades.deployProxy(AccountBalance, [positioningConfig.address]);
@@ -158,13 +147,13 @@ describe("Liquidation test in Positioning", function () {
 
     matchingEngine = await upgrades.deployProxy(
       MatchingEngine,
-      [owner.address, markPriceOracle.address],
+      [owner.address, perpetualOracle.address],
       {
         initializer: "__MatchingEngineTest_init",
       },
     );
 
-    await markPriceOracle.setObservationAdder(matchingEngine.address);
+    await perpetualOracle.setMarkObservationAdder(matchingEngine.address);
 
     virtualToken = await upgrades.deployProxy(VirtualToken, ["VirtualToken", "VTK", false], {
       initializer: "initialize",
@@ -192,8 +181,7 @@ describe("Liquidation test in Positioning", function () {
         vaultController.address,
         accountBalance1.address,
         matchingEngine.address,
-        markPriceOracle.address,
-        indexPriceOracle.address,
+        perpetualOracle.address,
         0,
         [owner.address, account2.address],
       ],
