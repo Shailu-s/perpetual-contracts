@@ -385,6 +385,8 @@ contract PerpetualOracle is AccessControlUpgradeable, IPerpetualOracle {
         endTimestamp = _lastTimestamp < _endtTimestamp ? _lastTimestamp : _endtTimestamp;
         if (_lastTimestamp < _startTimestamp) {
             startTimestamp = _initialTimestamp + (((_lastTimestamp - _initialTimestamp) / smInterval) * smInterval);
+        } else {
+            startTimestamp = _startTimestamp;
         }
     }
 
