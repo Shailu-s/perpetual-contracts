@@ -21,10 +21,8 @@ describe("VolmexPerpPeriphery", function () {
   let VaultController;
   let vaultController;
   let AccountBalance;
-  let MarkPriceOracle;
-  let markPriceOracle;
-  let IndexPriceOracle;
-  let indexPriceOracle;
+  let PerpetualOracle;
+  let perpetualOracle;
   let VolmexBaseToken;
   let volmexBaseToken;
   let VolmexQuoteToken;
@@ -59,8 +57,7 @@ describe("VolmexPerpPeriphery", function () {
   const capRatio = "250";
   this.beforeAll(async () => {
     VolmexPerpPeriphery = await ethers.getContractFactory("VolmexPerpPeriphery");
-    MarkPriceOracle = await ethers.getContractFactory("MarkPriceOracle");
-    IndexPriceOracle = await ethers.getContractFactory("IndexPriceOracle");
+    PerpetualOracle = await ethers.getContractFactory("PerpetualOracle");
     MatchingEngine = await ethers.getContractFactory("MatchingEngine");
     VirtualToken = await ethers.getContractFactory("VirtualTokenTest");
     ERC20TransferProxyTest = await ethers.getContractFactory("ERC20TransferProxyTest");
@@ -98,14 +95,18 @@ describe("VolmexPerpPeriphery", function () {
     await volmexBaseToken.deployed();
     await (await perpView.setBaseToken(volmexBaseToken.address)).wait();
 
-    indexPriceOracle = await upgrades.deployProxy(
-      IndexPriceOracle,
-      [owner.address, [70000000], [volmexBaseToken.address], [proofHash], [capRatio]],
-      {
-        initializer: "initialize",
-      },
+    perpetualOracle = await upgrades.deployProxy(
+      PerpetualOracle,
+      [
+        [volmexBaseToken.address, volmexBaseToken.address],
+        [10000000, 10000000],
+        [10000000, 10000000],
+        [proofHash, proofHash],
+        owner.address,
+      ],
+      { initializer: "__Perpetual_Oracles_Init" },
     );
-    await volmexBaseToken.setPriceFeed(indexPriceOracle.address);
+    await volmexBaseToken.setPriceFeed(perpetualOracle.address);
     volmexQuoteToken = await upgrades.deployProxy(
       VolmexQuoteToken,
       [
@@ -120,24 +121,14 @@ describe("VolmexPerpPeriphery", function () {
     await volmexQuoteToken.deployed();
     await (await perpView.setQuoteToken(volmexQuoteToken.address)).wait();
 
-    markPriceOracle = await upgrades.deployProxy(
-      MarkPriceOracle,
-      [[60000000], [volmexBaseToken.address], owner.address],
-      {
-        initializer: "initialize",
-      },
-    );
-    await markPriceOracle.deployed();
-    await (await indexPriceOracle.grantInitialTimestampRole(markPriceOracle.address)).wait();
-
-    positioningConfig = await upgrades.deployProxy(PositioningConfig, [markPriceOracle.address]);
+    positioningConfig = await upgrades.deployProxy(PositioningConfig, [perpetualOracle.address]);
 
     USDC = await TestERC20.deploy("100000000000000000000000", "Tether USD", "USDT", 6);
     await USDC.deployed();
 
     matchingEngine = await upgrades.deployProxy(MatchingEngine, [
       owner.address,
-      markPriceOracle.address,
+      perpetualOracle.address,
     ]);
 
     virtualToken = await upgrades.deployProxy(VirtualToken, ["VirtualToken", "VTK", false], {
@@ -174,8 +165,7 @@ describe("VolmexPerpPeriphery", function () {
         vaultController.address,
         accountBalance1.address,
         matchingEngine.address,
-        markPriceOracle.address,
-        indexPriceOracle.address,
+        perpetualOracle.address,
         0,
         [owner.address, account1.address],
       ],
@@ -201,7 +191,9 @@ describe("VolmexPerpPeriphery", function () {
     await vault.connect(owner).setVaultController(vaultController.address);
     await vaultController.registerVault(vault.address, USDC.address);
     await vaultController.connect(owner).setPositioning(positioning.address);
-    await markPriceOracle.grantSmaIntervalRole(positioningConfig.address);
+    await perpetualOracle.grantSmaIntervalRole(positioningConfig.address);
+    await positioningConfig.setPositioning(positioning.address);
+    await positioningConfig.setAccountBalance(accountBalance1.address);
     await positioningConfig.connect(owner).setTwapInterval(28800);
     await positioningConfig.connect(owner).setMaxMarketsPerAccount(5);
     await positioningConfig
@@ -213,16 +205,15 @@ describe("VolmexPerpPeriphery", function () {
     await positioning.connect(owner).setPositioning(positioning.address);
 
     await (await matchingEngine.grantMatchOrders(positioning.address)).wait();
-    await (await markPriceOracle.setPositioning(positioning.address)).wait();
-    await (await markPriceOracle.setIndexOracle(indexPriceOracle.address)).wait();
+    await (await perpetualOracle.setPositioning(positioning.address)).wait();
 
-    await markPriceOracle.setObservationAdder(matchingEngine.address);
+    await perpetualOracle.setMarkObservationAdder(matchingEngine.address);
+    await perpetualOracle.setIndexObservationAdder(owner.address);
     await positioningConfig.connect(owner).setPositioning(positioning.address);
     await positioningConfig.connect(owner).setAccountBalance(accountBalance1.address);
     volmexPerpPeriphery = await upgrades.deployProxy(VolmexPerpPeriphery, [
       perpView.address,
-      markPriceOracle.address,
-      indexPriceOracle.address,
+      perpetualOracle.address,
       [vault.address, vault.address],
       owner.address,
       owner.address, // replace with replayer address
@@ -236,6 +227,9 @@ describe("VolmexPerpPeriphery", function () {
     let quoteAmount = "100000000000000"; //100
     this.beforeEach(async () => {
       // transfer balances
+      for (let i = 0; i < 10; i++) {
+        await perpetualOracle.addIndexObservations([0], [70000000], [proofHash]);
+      }
       await (await USDC.connect(owner).transfer(alice.address, depositAmount)).wait();
       await (await USDC.connect(owner).transfer(bob.address, depositAmount)).wait();
 
@@ -303,7 +297,7 @@ describe("VolmexPerpPeriphery", function () {
         );
         const receipt = await tx.wait();
         let txDataBefore = {
-          "Mark price": (await markPriceOracle.getMarkSma("3600", 0)).toString(),
+          "Mark price": (await perpetualOracle.lastestLastPriceSMA(0, "3600")).toString(),
           "Alice position": (
             await accountBalance1.getPositionSize(alice.address, volmexBaseToken.address)
           ).toString(),
@@ -354,7 +348,7 @@ describe("VolmexPerpPeriphery", function () {
           );
           const receipt = await tx.wait();
           txDataBefore = {
-            "Mark price": (await markPriceOracle.getMarkSma("3600", 0)).toString(),
+            "Mark price": (await perpetualOracle.lastestLastPriceSMA(0, "3600")).toString(),
             "Alice position": (
               await accountBalance1.getPositionSize(alice.address, volmexBaseToken.address)
             ).toString(),
@@ -547,7 +541,7 @@ describe("VolmexPerpPeriphery", function () {
         );
         const receipt = await tx.wait();
         let txDataBefore = {
-          "Mark price": (await markPriceOracle.getMarkSma("3600", 0)).toString(),
+          "Mark price": (await perpetualOracle.lastestLastPriceSMA(0, "3600")).toString(),
           "Alice position": (
             await accountBalance1.getPositionSize(alice.address, volmexBaseToken.address)
           ).toString(),
@@ -598,7 +592,7 @@ describe("VolmexPerpPeriphery", function () {
           );
           const receipt = await tx.wait();
           txDataBefore = {
-            "Mark price": (await markPriceOracle.getMarkSma("3600", 0)).toString(),
+            "Mark price": (await perpetualOracle.lastestLastPriceSMA(0, "3600")).toString(),
             "Alice position": (
               await accountBalance1.getPositionSize(alice.address, volmexBaseToken.address)
             ).toString(),
@@ -622,8 +616,7 @@ describe("VolmexPerpPeriphery", function () {
     it("should deploy VolmexPerpPeriphery", async () => {
       volmexPerpPeriphery = await upgrades.deployProxy(VolmexPerpPeriphery, [
         perpView.address,
-        markPriceOracle.address,
-        indexPriceOracle.address,
+        perpetualOracle.address,
         [vault.address, vault.address],
         owner.address,
         owner.address, // replace with relayer address
@@ -635,8 +628,7 @@ describe("VolmexPerpPeriphery", function () {
       await expect(
         upgrades.deployProxy(VolmexPerpPeriphery, [
           perpView.address,
-          markPriceOracle.address,
-          indexPriceOracle.address,
+          perpetualOracle.address,
           [vault.address, vault.address],
           ZERO_ADDR,
           owner.address, // replace with relayer address
@@ -647,8 +639,7 @@ describe("VolmexPerpPeriphery", function () {
       await expect(
         upgrades.deployProxy(VolmexPerpPeriphery, [
           ZERO_ADDR,
-          markPriceOracle.address,
-          indexPriceOracle.address,
+          perpetualOracle.address,
           [vault.address, vault.address],
           owner.address,
           owner.address, // replace with relayer address
@@ -659,8 +650,7 @@ describe("VolmexPerpPeriphery", function () {
       await expect(
         volmexPerpPeriphery.initialize(
           perpView.address,
-          markPriceOracle.address,
-          indexPriceOracle.address,
+          perpetualOracle.address,
           [vault.address, vault.address],
           owner.address,
           owner.address,
@@ -671,8 +661,7 @@ describe("VolmexPerpPeriphery", function () {
       await expect(
         upgrades.deployProxy(VolmexPerpPeriphery, [
           perpView.address,
-          markPriceOracle.address,
-          indexPriceOracle.address,
+          perpetualOracle.address,
           [vault.address, vault.address],
           owner.address,
           ZERO_ADDR, // replace with relayer address
@@ -739,13 +728,13 @@ describe("VolmexPerpPeriphery", function () {
 
   describe("Set MarkPriceOracle", async () => {
     it("should set MarkPriceOracle", async () => {
-      let receipt = await volmexPerpPeriphery.setPerpetualOracle(markPriceOracle.address);
+      let receipt = await volmexPerpPeriphery.setPerpetualOracle(perpetualOracle.address);
       expect(receipt.confirmations).not.equal(0);
     });
 
     it("should fail to set MarkPriceOracle if not admin", async () => {
       await expect(
-        volmexPerpPeriphery.connect(account2).setPerpetualOracle(markPriceOracle.address),
+        volmexPerpPeriphery.connect(account2).setPerpetualOracle(perpetualOracle.address),
       ).to.be.revertedWith("Periphery: Not admin");
     });
   });
@@ -872,7 +861,7 @@ describe("VolmexPerpPeriphery", function () {
       await volmexPerpPeriphery.whitelistTrader(ZERO_ADDR, true);
       const timestamp = await time.latest();
       const orderLeft = Order(
-        STOP_LOSS_MARK_PRICE,
+        ORDER,
         deadline,
         ZERO_ADDR,
         Asset(volmexBaseToken.address, two.toString()),
@@ -883,7 +872,7 @@ describe("VolmexPerpPeriphery", function () {
       );
 
       const orderRight = Order(
-        STOP_LOSS_MARK_PRICE,
+        ORDER,
         deadline,
         account2.address,
         Asset(virtualToken.address, two.toString()),
@@ -1511,7 +1500,7 @@ describe("VolmexPerpPeriphery", function () {
           liquidator,
         );
       });
-      it(" should fill limit order in batch", async () => {
+      it("should fill limit order in batch", async () => {
         const limitOrdersLeft = [];
         const limitOrdersRight = [];
         const signaturesLeft = [];

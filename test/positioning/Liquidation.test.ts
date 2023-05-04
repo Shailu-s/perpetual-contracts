@@ -2,7 +2,6 @@ import { expect } from "chai";
 import { ethers, upgrades } from "hardhat";
 const { Order, Asset, sign, encodeAddress } = require("../order");
 import { FakeContract, smock } from "@defi-wonderland/smock";
-import { FundingRate, IndexPriceOracle, MarkPriceOracle } from "../../typechain";
 import { BigNumber } from "ethers";
 const { expectRevert, time } = require("@openzeppelin/test-helpers");
 describe("Liquidation test in Positioning", function () {
@@ -25,10 +24,6 @@ describe("Liquidation test in Positioning", function () {
   let accountBalance;
   let MarkPriceOracle;
   let markPriceOracle;
-  let IndexPriceOracle;
-  let indexPriceOracle;
-  let markPriceFake: FakeContract<MarkPriceOracle>;
-  let indexPriceFake: FakeContract<IndexPriceOracle>;
   let VolmexBaseToken;
   let volmexBaseToken;
   let volmexBaseToken1;
