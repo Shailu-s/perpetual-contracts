@@ -3,36 +3,16 @@
 pragma solidity =0.8.18;
 
 import { AccessControlUpgradeable } from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
-import { MathUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/math/MathUpgradeable.sol";
-
+import { IPerpetualOracle } from "../interfaces/IPerpetualOracle.sol";
 import { IPositioning } from "../interfaces/IPositioning.sol";
 import { LibSafeCastUint } from "../libs/LibSafeCastUint.sol";
 import { LibPerpMath } from "../libs/LibPerpMath.sol";
 
-contract PerpetualOracle is AccessControlUpgradeable {
+contract PerpetualOracle is AccessControlUpgradeable, IPerpetualOracle {
     using LibSafeCastUint for uint256;
     using LibPerpMath for int256;
-
-    struct IndexObservation {
-        uint256 timestamp;
-        uint256 underlyingPrice;
-        bytes32 proofHash;
-    }
-    struct LastPriceObservation {
-        uint256 timestamp;
-        uint256 lastPrice;
-    }
-    struct PriceEpochs {
-        uint256 price;
-        uint256 timestamp;
-    }
-    struct EpochInfo {
-        uint256 currentCount; // number of elements in current epoch
-        uint256 total; // total number of epochs added
-    }
-
-    uint256 private constant _MAX_ALLOWED_EPOCHS = 1095;
-    uint256 private constant _MAX_ALLOWED_OBSERVATIONS = 65536;
+    uint256 private constant _MAX_ALLOWED_EPOCHS = 1094;
+    uint256 private constant _MAX_ALLOWED_OBSERVATIONS = 65535;
     bytes32 public constant PRICE_ORACLE_ADMIN = keccak256("PRICE_ORACLE_ADMIN");
     bytes32 public constant ADD_MARK_OBSERVATION_ROLE = keccak256("ADD_MARK_OBSERVATION_ROLE");
     bytes32 public constant ADD_INDEX_OBSERVATION_ROLE = keccak256("ADD_INDEX_OBSERVATION_ROLE");
@@ -43,28 +23,24 @@ contract PerpetualOracle is AccessControlUpgradeable {
 
     mapping(uint256 => address) public baseTokenByIndex;
     mapping(address => uint256) public indexByBaseToken;
-    mapping(uint256 => IndexObservation[65535]) public indexObservations;
-    mapping(uint256 => LastPriceObservation[65535]) public lastPriceObservation;
-    mapping(uint256 => PriceEpochs[1094]) public indexEpochs;
-    mapping(uint256 => PriceEpochs[1094]) public markEpochs;
-    mapping(uint256 => uint256) public lastMarkPrices;
-    mapping(uint256 => EpochInfo) public indexEpochInfo;
-    mapping(uint256 => EpochInfo) public markEpochInfo;
-    mapping(uint256 => uint256) public lastPriceTotalObservation;
-    mapping(uint256 => uint256) public indexTotalObservation;
+    mapping(uint256 => IndexObservation[_MAX_ALLOWED_OBSERVATIONS]) public indexObservations; // since index  is started from zero
+    mapping(uint256 => LastPriceObservation[_MAX_ALLOWED_OBSERVATIONS]) public lastPriceObservations; // since index  is started from zero
+    mapping(uint256 => PriceEpochs[_MAX_ALLOWED_EPOCHS]) public indexEpochs; // since index  is started from zero
+    mapping(uint256 => PriceEpochs[_MAX_ALLOWED_EPOCHS]) public markEpochs; // since index  is started from zero
+    mapping(uint256 => uint256) public lastestMarkPrice;
+    mapping(uint256 => uint256) public lastPriceTotalObservations;
+    mapping(uint256 => uint256) public indexTotalObservations;
+    uint256 markPriceEpochCount;
+    uint256 indexPriceEpochCount;
     uint256 public smInterval;
     uint256 public markSmInterval;
     uint256 public initialTimestamp;
     uint256 public fundingPeriod;
     IPositioning public positioning;
 
-    event ObservationAdderSet(address indexed matchingEngine);
-    event IndexObservationAdded(uint256[] index, uint256[] underlyingPrice, uint256 timestamp);
-    event MarkObservationAdded(uint256 indexed index, uint256 lastPrice, uint256 markPrice, uint256 timestamp);
-
-    function perpetualOraclesInit(
+    function __PerpetualOracle_init(
         address[2] calldata _baseToken,
-        uint256[2] calldata _markPrices,
+        uint256[2] calldata _lastPrices,
         uint256[2] calldata _indexPrices,
         bytes32[2] calldata _proofHashes,
         address _admin
@@ -73,10 +49,12 @@ contract PerpetualOracle is AccessControlUpgradeable {
         for (; indexCount < 2; ++indexCount) {
             baseTokenByIndex[indexCount] = _baseToken[indexCount];
             indexByBaseToken[_baseToken[indexCount]] = indexCount;
-            lastPriceObservation[indexCount][0] = LastPriceObservation({ timestamp: block.timestamp, lastPrice: _markPrices[indexCount] });
-            ++lastPriceTotalObservation[indexCount];
+            lastPriceObservations[indexCount][0] = LastPriceObservation({ timestamp: block.timestamp, lastPrice: _lastPrices[indexCount] });
+            lastestMarkPrice[indexCount] = _lastPrices[indexCount];
+            ++lastPriceTotalObservations[indexCount];
+
             indexObservations[indexCount][0] = IndexObservation({ timestamp: block.timestamp, underlyingPrice: _indexPrices[indexCount], proofHash: _proofHashes[indexCount] });
-            ++indexTotalObservation[indexCount];
+            ++indexTotalObservations[indexCount];
         }
         _indexCount = indexCount; // = 2
         fundingPeriod = 8 hours;
@@ -129,207 +107,289 @@ contract PerpetualOracle is AccessControlUpgradeable {
     function addMarkObservation(uint256 _index, uint256 _price) external virtual {
         _requireAddMarkObservationRole();
         require(_price != 0, "PerpOracle: zero price");
-        _pushMarkOrderPrice(_index, _price);
-        uint256 markPrice = _getMarkPrice(baseTokenByIndex[_index], _index).abs();
-        lastMarkPrices[_index] = markPrice;
-        _saveEpoch(_index, _price, true);
-        emit MarkObservationAdded(_index, _price, markPrice, block.timestamp);
+        _pushLastPrice(_index, _price);
+        uint256 _markPrice = _calculateMarkPrice(baseTokenByIndex[_index], _index).abs();
+        lastestMarkPrice[_index] = _markPrice;
+        _saveEpoch(_index, _markPrice, true);
+        emit MarkObservationAdded(_index, _price, _markPrice, block.timestamp);
     }
 
-    function addIndexObservation(uint256[] memory _indexes, uint256[] memory _prices, bytes32[] memory _proofHashes) external virtual {
+    function addIndexObservations(
+        uint256[] memory _indexes,
+        uint256[] memory _prices,
+        bytes32[] memory _proofHashes
+    ) external virtual {
         _requireAddIndexObservationRole();
         uint256 numberOfPrices = _prices.length;
         for (uint256 index; index < numberOfPrices; ++index) {
             require(_prices[index] != 0, "PerpOracle: zero price");
-            _pushIndexOrderPrice(_indexes[index], _prices[index], _proofHashes[index]);
+            _pushIndexPrice(_indexes[index], _prices[index], _proofHashes[index]);
             _saveEpoch(_indexes[index], _prices[index], false);
         }
         emit IndexObservationAdded(_indexes, _prices, block.timestamp);
     }
 
-    function getLastPriceOfIndex(uint256 _index) public view returns (uint256 underlyingLastPrice) {
-        IndexObservation[65535] memory observations = indexObservations[_index];
+    function latestIndexPrice(uint256 _index) public view returns (uint256 latestIndexPrice) {
+        IndexObservation[65535] storage observations = indexObservations[_index];
         uint256 currentIndex = _getCurrentIndex(_index, false);
-        underlyingLastPrice = observations[currentIndex].underlyingPrice;
+        latestIndexPrice = observations[currentIndex].underlyingPrice;
     }
 
-    function getLastIndexEpochPrice(uint256 _index) external view returns (uint256 price, uint256 timestamp) {
-        (price, timestamp) = _getCustomEpochPrice(_index, block.timestamp, false);
-    }
-
-    function getCustomIndexEpochPrice(uint256 _index, uint256 _epochTimestamp) external view returns (uint256 price, uint256 timestamp) {
-        (price, timestamp) = _getCustomEpochPrice(_index, _epochTimestamp, false);
-    }
-
-    function latestRoundData(uint256 _smInterval, uint256 _index) external view virtual returns (uint256 answer, uint256 lastUpdateTimestamp) {
+    function latestIndexSMA(uint256 _smInterval, uint256 _index) external view virtual override returns (uint256 answer, uint256 lastUpdateTimestamp) {
         uint256 startTimestamp = block.timestamp - _smInterval;
-        (answer, lastUpdateTimestamp) = _getCustomEpochPrice(_index, startTimestamp, false);
-        answer *= 100;
+        (answer, lastUpdateTimestamp) = _getIndexSma(_index, startTimestamp, block.timestamp);
     }
 
-    function getLastUpdatedTimestamp(uint256 _index, bool isMark) external view returns (uint256 lastUpdatedTimestamp) {
-        if (isMark) {
-            LastPriceObservation[65535] memory observations = lastPriceObservation[_index];
+    function latestMarkPrice(uint256 _index) public view override returns (uint256 _lastestMarkPrice) {
+        _lastestMarkPrice = lastestMarkPrice[_index];
+    }
+
+    function lastestTimestamp(uint256 _index, bool isLastPrice) external view returns (uint256 lastestTimestamp) {
+        if (isLastPrice) {
+            LastPriceObservation[65535] storage observations = lastPriceObservations[_index];
             uint256 currentIndex = _getCurrentIndex(_index, true);
-            lastUpdatedTimestamp = observations[currentIndex].timestamp;
+            lastestTimestamp = observations[currentIndex].timestamp;
         } else {
-            IndexObservation[65535] memory observations = indexObservations[_index];
             uint256 currentIndex = _getCurrentIndex(_index, false);
-            lastUpdatedTimestamp = observations[currentIndex].timestamp;
+            IndexObservation[65535] storage observations = indexObservations[_index];
+            lastestTimestamp = observations[currentIndex].timestamp;
         }
     }
 
-    function getLastPriceOfMark(uint256 _index) public view returns (uint256 underlyingLastPrice) {
-        LastPriceObservation[65535] storage observations = lastPriceObservation[_index];
-        uint256 currentIndex = _getCurrentIndex(_index, true);
-        underlyingLastPrice = observations[currentIndex].lastPrice;
-    }
-
-    function getLastSmaOfMark(uint256 _index, uint256 _smInterval) public view returns (uint256 priceCumulative) {
+    function lastestLastPriceSMA(uint256 _index, uint256 _smInterval) public view returns (uint256 priceCumulative) {
         uint256 startTimestamp = block.timestamp - _smInterval;
-        (priceCumulative, ) = _getCustomSma(_index, startTimestamp, block.timestamp);
+        (priceCumulative, ) = _getLastPriceSma(_index, startTimestamp, block.timestamp);
     }
 
-    function getLastMarkPrice(uint256 _index) external view returns (uint256 lastMarkPrice) {
-        lastMarkPrice = lastMarkPrices[_index];
+    function latestLastPrice(uint256 _index) external view returns (uint256 lastPrice) {
+        LastPriceObservation[65535] storage observations = lastPriceObservations[_index];
+        uint256 currentIndex = _getCurrentIndex(_index, true);
+        lastPrice = observations[currentIndex].lastPrice;
     }
 
-    function getCustomUnderlyingSma(
+    function getIndexEpochSMA(
         uint256 _index,
         uint256 _startTimestamp,
         uint256 _endTimestamp
-    ) external view returns (uint256 priceCumulative) {
-        (priceCumulative, ) = _getCustomSma(_index, _startTimestamp, _endTimestamp);
+    ) external view returns (uint256 price) {
+        (price) = _getEpochSMA(_index, _startTimestamp, _endTimestamp, false);
     }
 
-    function getLastMarkEpochPrice(uint256 _index) external view returns (uint256 price, uint256 timestamp) {
-        (price, timestamp) = _getCustomEpochPrice(_index, block.timestamp, true);
+    function getMarkEpochSMA(
+        uint256 _index,
+        uint256 _startTimestamp,
+        uint256 _endTimestamp
+    ) external view returns (uint256 price) {
+        (price) = _getEpochSMA(_index, _startTimestamp, _endTimestamp, true);
     }
 
-    function getCustomMarkEpochPrice(uint256 _index, uint256 _epochTimestamp) external view returns (uint256 price, uint256 timestamp) {
-        (price, timestamp) = _getCustomEpochPrice(_index, _epochTimestamp, true);
-    }
-
-    function _pushMarkOrderPrice(uint256 _index, uint256 _price) internal {
-        LastPriceObservation[65535] storage observations = lastPriceObservation[_index];
-        uint256 totalObservations = lastPriceTotalObservation[_index];
+    function _pushLastPrice(uint256 _index, uint256 _price) internal {
+        LastPriceObservation[65535] storage observations = lastPriceObservations[_index];
+        uint256 totalObservations = lastPriceTotalObservations[_index];
         uint256 nextIndex = totalObservations < _MAX_ALLOWED_OBSERVATIONS ? totalObservations : totalObservations % _MAX_ALLOWED_OBSERVATIONS;
         observations[nextIndex] = LastPriceObservation({ timestamp: block.timestamp, lastPrice: _price });
-        ++lastPriceTotalObservation[_index];
-
+        ++lastPriceTotalObservations[_index];
         if (totalObservations == 1) {
             initialTimestamp = block.timestamp;
         }
     }
 
-    function _pushIndexOrderPrice(uint256 _index, uint256 _underlyingPrice, bytes32 _proofHash) internal {
+    function _pushIndexPrice(
+        uint256 _index,
+        uint256 _underlyingPrice,
+        bytes32 _proofHash
+    ) internal {
         IndexObservation[65535] storage observations = indexObservations[_index];
-        uint256 totalObservations = indexTotalObservation[_index];
+        uint256 totalObservations = indexTotalObservations[_index];
         uint256 nextIndex = totalObservations < _MAX_ALLOWED_OBSERVATIONS ? totalObservations : totalObservations % _MAX_ALLOWED_OBSERVATIONS;
         observations[nextIndex] = IndexObservation({ timestamp: block.timestamp, underlyingPrice: _underlyingPrice, proofHash: _proofHash });
-        ++indexTotalObservation[_index];
+        ++indexTotalObservations[_index];
     }
 
-    function _saveEpoch(uint256 _index, uint256 _price, bool isMark) internal {
+    function _saveEpoch(
+        uint256 _index,
+        uint256 _price,
+        bool _isLastPrice
+    ) internal {
         uint256 currentTimestamp = block.timestamp;
-        EpochInfo storage epochInfo = isMark ? markEpochInfo[_index] : indexEpochInfo[_index];
-        PriceEpochs[1094] storage priceEpoch = isMark ? markEpochs[_index] : indexEpochs[_index];
+        uint256 totalEpochs = _isLastPrice ? markPriceEpochCount : indexPriceEpochCount;
+        PriceEpochs[1094] storage priceEpoch = _isLastPrice ? markEpochs[_index] : indexEpochs[_index];
         uint256 currentEpochIndex;
-        if (epochInfo.total < _MAX_ALLOWED_EPOCHS) {
-            currentEpochIndex = epochInfo.total != 0 ? epochInfo.total - 1 : 0;
+        if (totalEpochs < _MAX_ALLOWED_EPOCHS) {
+            currentEpochIndex = totalEpochs != 0 ? totalEpochs - 1 : 0;
         } else {
-            currentEpochIndex = epochInfo.total % _MAX_ALLOWED_EPOCHS;
+            currentEpochIndex = totalEpochs % _MAX_ALLOWED_EPOCHS;
             currentEpochIndex = currentEpochIndex != 0 ? currentEpochIndex - 1 : _MAX_ALLOWED_EPOCHS - 1;
         }
 
-        if ((currentTimestamp - initialTimestamp) / smInterval > epochInfo.total || epochInfo.total == 0) {
-            if (epochInfo.total != 0 && (currentTimestamp - priceEpoch[currentEpochIndex].timestamp) / smInterval == 0) {
-                _updatePriceEpoch(currentEpochIndex, priceEpoch[currentEpochIndex].price, _price, priceEpoch[currentEpochIndex].timestamp, epochInfo.currentCount, priceEpoch);
-                ++epochInfo.currentCount;
-            } else {
-                currentEpochIndex = epochInfo.total != 0 ? currentEpochIndex + 1 : 0;
-                priceEpoch[currentEpochIndex] = PriceEpochs({ price: _price, timestamp: currentTimestamp });
-                epochInfo.currentCount = 1;
-                ++epochInfo.total;
-            }
+        if (totalEpochs != 0 || (currentTimestamp - priceEpoch[currentEpochIndex].timestamp) / smInterval == 0) {
+            _updatePriceEpoch(
+                currentEpochIndex,
+                priceEpoch[currentEpochIndex].price,
+                _price,
+                priceEpoch[currentEpochIndex].timestamp,
+                priceEpoch[currentEpochIndex].cardinality,
+                priceEpoch
+            );
         } else {
-            _updatePriceEpoch(currentEpochIndex, priceEpoch[currentEpochIndex].price, _price, priceEpoch[currentEpochIndex].timestamp, epochInfo.currentCount, priceEpoch);
-            ++epochInfo.currentCount;
+            currentEpochIndex = totalEpochs != 0 ? currentEpochIndex + 1 : 0;
+            priceEpoch[currentEpochIndex] = PriceEpochs({ price: _price, timestamp: currentTimestamp, cardinality: 1 });
+            _isLastPrice ? ++markPriceEpochCount : ++indexPriceEpochCount;
         }
     }
 
-    function _updatePriceEpoch(uint256 _epochIndex, uint256 _previousPrice, uint256 _price, uint256 _timestamp, uint256 cardinality, PriceEpochs[1094] storage priceEpoch) private {
+    function _updatePriceEpoch(
+        uint256 _epochIndex,
+        uint256 _previousPrice,
+        uint256 _price,
+        uint256 _timestamp,
+        uint256 cardinality,
+        PriceEpochs[1094] storage priceEpoch
+    ) private {
         uint256 actualPrice = (_previousPrice * cardinality + _price) / (cardinality + 1);
-        priceEpoch[_epochIndex] = PriceEpochs({ price: actualPrice, timestamp: _timestamp });
+        uint256 updatedTimestamp = (_timestamp * cardinality + block.timestamp) / (cardinality + 1);
+        priceEpoch[_epochIndex] = PriceEpochs({ price: actualPrice, timestamp: updatedTimestamp, cardinality: cardinality + 1 });
     }
 
-    function _getMarkPrice(address _baseToken, uint256 _index) internal view returns (int256 markPrice) {
+    function _calculateMarkPrice(address _baseToken, uint256 _index) internal view returns (int256 markPrice) {
         int256 lastFundingRate = positioning.getLastFundingRate(_baseToken);
         uint256 nextFunding = positioning.getNextFunding(_baseToken);
 
         int256[3] memory prices;
-        int256 indexPrice = getLastPriceOfIndex(_index).toInt256();
+        int256 indexPrice = latestIndexPrice(_index).toInt256();
         // Note: Check for actual precision and data type
         prices[0] = indexPrice * (1 + lastFundingRate * (nextFunding.toInt256() / fundingPeriod.toInt256()));
-        uint256 markSma = getLastSmaOfMark(_index, markSmInterval);
-        prices[1] = markSma.toInt256();
-        prices[2] = getLastPriceOfMark(_index).toInt256();
+        uint256 lastPriceSma = lastestLastPriceSMA(_index, markSmInterval);
+        prices[1] = lastPriceSma.toInt256();
+        prices[2] = latestMarkPrice(_index).toInt256();
         markPrice = prices[0].median(prices[1], prices[2]);
     }
 
-    function _getCustomSma(uint256 _index, uint256 _startTimestamp, uint256 _endTimestamp) internal view returns (uint256 priceCumulative, uint256 lastTimestamp) {
-        LastPriceObservation[65535] storage observations = lastPriceObservation[_index];
-        uint256 totalObservations = lastPriceTotalObservation[_index];
+    function _getLastPriceSma(
+        uint256 _index,
+        uint256 _startTimestamp,
+        uint256 _endTimestamp
+    ) internal view returns (uint256 priceCumulative, uint256 lastTimestamp) {
+        LastPriceObservation[65535] storage observations = lastPriceObservations[_index];
+        uint256 totalObservations = lastPriceTotalObservations[_index];
         uint256 currentIndex;
         uint256 startIndex;
-        if (totalObservations < _MAX_ALLOWED_OBSERVATIONS) {
-            currentIndex = totalObservations != 0 ? totalObservations - 1 : _MAX_ALLOWED_OBSERVATIONS - 1;
-        } else {
-            uint256 remainder = totalObservations % _MAX_ALLOWED_OBSERVATIONS;
-            currentIndex = remainder != 0 ? remainder - 1 : _MAX_ALLOWED_OBSERVATIONS - 1;
-            startIndex = remainder;
-        }
+        (currentIndex, startIndex) = getCurrentAndStartIndex(_MAX_ALLOWED_OBSERVATIONS, totalObservations);
         lastTimestamp = observations[currentIndex].timestamp;
-        _endTimestamp = lastTimestamp < _endTimestamp ? lastTimestamp : _endTimestamp;
-        if (lastTimestamp < _startTimestamp) {
-            _startTimestamp = observations[0].timestamp + (((lastTimestamp - observations[0].timestamp) / smInterval) * smInterval);
-        }
+        (_endTimestamp, _startTimestamp) = getEndAndStartTimestamps(lastTimestamp, _endTimestamp, _startTimestamp, observations[0].timestamp);
         uint256 priceCount;
-        uint256 index = currentIndex;
-        for (; index !=0 && observations[index].timestamp >= _startTimestamp; --index) {
+
+        uint256 index = totalObservations < _MAX_ALLOWED_OBSERVATIONS ? currentIndex : startIndex;
+        for (; observations[index].timestamp >= _startTimestamp; index = index == 0 ? _MAX_ALLOWED_OBSERVATIONS - 1 : index - 1) {
+            if (totalObservations > 1 && ((priceCount > 0 && currentIndex == index) || (index == 0 && totalObservations < _MAX_ALLOWED_OBSERVATIONS))) {
+                break;
+            }
             if (observations[index].timestamp <= _endTimestamp) {
                 priceCumulative += observations[index].lastPrice;
                 priceCount++;
             }
         }
+
         priceCumulative = priceCumulative / priceCount;
     }
 
-    function _getCustomEpochPrice(uint256 _index, uint256 _epochTimestamp, bool _isMark) internal view returns (uint256 price, uint256 timestamp) {
-        PriceEpochs[1094] storage priceEpochs = _isMark ? markEpochs[_index] : indexEpochs[_index];
-        EpochInfo storage epochInfo = _isMark ? markEpochInfo[_index] : indexEpochInfo[_index];
-        if (epochInfo.total != 0) {
-            uint256 priceIndex = findUpperBound(_index, _epochTimestamp, _isMark);
-            price = priceEpochs[priceIndex].price;
-            timestamp = priceEpochs[priceIndex].timestamp;
-        } else {
-            return (0, 0);
+    function _getIndexSma(
+        uint256 _index,
+        uint256 _startTimestamp,
+        uint256 _endTimestamp
+    ) internal view returns (uint256 priceCumulative, uint256 lastTimestamp) {
+        IndexObservation[65535] storage observations = indexObservations[_index];
+        uint256 totalObservations = indexTotalObservations[_index];
+        uint256 currentIndex;
+        uint256 startIndex;
+        (currentIndex, startIndex) = getCurrentAndStartIndex(_MAX_ALLOWED_OBSERVATIONS, totalObservations);
+        lastTimestamp = observations[currentIndex].timestamp;
+        (_endTimestamp, _startTimestamp) = getEndAndStartTimestamps(lastTimestamp, _endTimestamp, _startTimestamp, observations[0].timestamp);
+
+        uint256 priceCount;
+        uint256 index = totalObservations < _MAX_ALLOWED_OBSERVATIONS ? currentIndex : startIndex;
+        for (; observations[index].timestamp >= _startTimestamp; index = index == 0 ? _MAX_ALLOWED_OBSERVATIONS - 1 : index - 1) {
+            if (totalObservations > 1 && ((priceCount > 0 && currentIndex == index) || (index == 0 && totalObservations < _MAX_ALLOWED_OBSERVATIONS))) {
+                break;
+            }
+            if (observations[index].timestamp <= _endTimestamp) {
+                priceCumulative += observations[index].underlyingPrice;
+                priceCount++;
+            }
+        }
+
+        priceCumulative = priceCumulative / priceCount;
+    }
+
+    function _getEpochSMA(
+        uint256 _index,
+        uint256 _startTimestamp,
+        uint256 _endTimestamp,
+        bool _isMark
+    ) internal view returns (uint256 price) {
+        PriceEpochs[_MAX_ALLOWED_EPOCHS] storage priceEpochs = _isMark ? markEpochs[_index] : indexEpochs[_index];
+        uint256 totalEpochs = _isMark ? markPriceEpochCount : indexPriceEpochCount;
+        uint256 currentIndex;
+        uint256 startIndex;
+        uint256 priceCumulative;
+
+        if (totalEpochs != 0) {
+            (currentIndex, startIndex) = getCurrentAndStartIndex(_MAX_ALLOWED_EPOCHS, totalEpochs);
+            uint256 lastTimestamp = priceEpochs[currentIndex].timestamp;
+            (_endTimestamp, _startTimestamp) = getEndAndStartTimestamps(lastTimestamp, _endTimestamp, _startTimestamp, priceEpochs[0].timestamp);
+            uint256 priceCount;
+            uint256 index = totalEpochs < _MAX_ALLOWED_EPOCHS ? currentIndex : startIndex;
+            for (; index != 0 && priceEpochs[index].timestamp >= _startTimestamp; --index) {
+                if ((priceCount > 0 && currentIndex == index)) {
+                    break;
+                }
+                if (priceEpochs[index].timestamp <= _endTimestamp) {
+                    priceCumulative += priceEpochs[index].price * priceEpochs[index].cardinality;
+                    priceCount = priceCount + priceEpochs[index].cardinality;
+                }
+            }
+
+            price = priceCount != 0 ? priceCumulative / priceCount : priceEpochs[0].price;
         }
     }
 
-    function _getCurrentIndex(uint256 _index, bool _isMark) internal view returns (uint256 currentIndex) {
+    function _getCurrentIndex(uint256 _index, bool _isLastPrice) internal view returns (uint256 currentIndex) {
         uint256 nextIndex;
         uint256 totalObservations;
-        if (_isMark) {
-            totalObservations = lastPriceTotalObservation[_index];
+        if (_isLastPrice) {
+            totalObservations = lastPriceTotalObservations[_index];
             nextIndex = totalObservations < _MAX_ALLOWED_OBSERVATIONS ? totalObservations : totalObservations % _MAX_ALLOWED_OBSERVATIONS;
             nextIndex = nextIndex != 0 ? nextIndex : _MAX_ALLOWED_OBSERVATIONS - 1;
         } else {
-            totalObservations = indexTotalObservation[_index];
+            totalObservations = indexTotalObservations[_index];
             nextIndex = totalObservations < _MAX_ALLOWED_OBSERVATIONS ? totalObservations : totalObservations % _MAX_ALLOWED_OBSERVATIONS;
             nextIndex = nextIndex != 0 ? nextIndex : _MAX_ALLOWED_OBSERVATIONS - 1;
         }
         currentIndex = nextIndex - 1;
+    }
+
+    function getCurrentAndStartIndex(uint256 _maxAllowedDataPoints, uint256 _totalObservations) internal pure returns (uint256 currentIndex, uint256 startIndex) {
+        if (_totalObservations < _maxAllowedDataPoints) {
+            currentIndex = _totalObservations != 0 ? _totalObservations - 1 : _maxAllowedDataPoints - 1;
+        } else {
+            uint256 remainder = _totalObservations % _maxAllowedDataPoints;
+            currentIndex = remainder != 0 ? remainder - 1 : _maxAllowedDataPoints - 1;
+            startIndex = remainder;
+        }
+    }
+
+    function getEndAndStartTimestamps(
+        uint256 _lastTimestamp,
+        uint256 _endtTimestamp,
+        uint256 _startTimestamp,
+        uint256 _initialTimestamp
+    ) internal view returns (uint256 endTimestamp, uint256 startTimestamp) {
+        endTimestamp = _lastTimestamp < _endtTimestamp ? _lastTimestamp : _endtTimestamp;
+        if (_lastTimestamp < _startTimestamp) {
+            startTimestamp = _initialTimestamp + (((_lastTimestamp - _initialTimestamp) / smInterval) * smInterval);
+        } else {
+            startTimestamp = _startTimestamp;
+        }
     }
 
     function _requireOracleAdmin() internal view {
@@ -350,24 +410,5 @@ contract PerpetualOracle is AccessControlUpgradeable {
 
     function _requireSmaIntervalRole() internal view {
         require(hasRole(SMA_INTERVAL_ROLE, _msgSender()), "MarkPriceOracle: not sma interval role");
-    }
-
-    function findUpperBound(uint256 _index, uint256 _timestamp, bool _isMark) private view returns (uint256) {
-        PriceEpochs[1094] memory priceEpoch = _isMark ? markEpochs[_index] : indexEpochs[_index];
-        uint256 low = 0;
-        uint256 high = 1094;
-        while(low < high) {
-            uint256 mid = MathUpgradeable.average(low, high);
-            if(priceEpoch[mid].timestamp > _timestamp) {
-                high = mid;
-            } else {
-                low = mid + 1;
-            }
-        }
-        if (low > 0 && priceEpoch[low - 1].timestamp == _timestamp) {
-            return low - 1;
-        } else {
-            return low;
-        }
     }
 }

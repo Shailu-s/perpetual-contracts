@@ -270,7 +270,7 @@ contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, 
 
     /// @dev Used to check for stale index oracle
     function isStaleIndexOracle() public view returns (bool) {
-        uint256 lastUpdatedTimestamp = IPerpetualOracle(_perpetualOracleArg).getLastUpdatedTimestamp(_underlyingPriceIndex, false);
+        uint256 lastUpdatedTimestamp = IPerpetualOracle(_perpetualOracleArg).lastestTimestamp(_underlyingPriceIndex, false);
         return block.timestamp - lastUpdatedTimestamp >= indexPriceAllowedInterval;
     }
 

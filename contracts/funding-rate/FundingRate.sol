@@ -117,13 +117,13 @@ contract FundingRate is IFundingRate, BlockContext, PositioningCallee, FundingRa
         uint256 lastSettledTimestamp = _lastSettledTimestampMap[baseToken];
         globalTwPremium = _globalFundingGrowthMap[baseToken];
         if (lastSettledTimestamp == 0) {
-            markTwap = IPerpetualOracle(_perpetualOracleArg).getLastSmaOfMark(_underlyingPriceIndex, twapInterval);
-            indexTwap = IPerpetualOracle(_perpetualOracleArg).getLastPriceOfIndex(_underlyingPriceIndex);
+            markTwap = IPerpetualOracle(_perpetualOracleArg).lastestLastPriceSMA(_underlyingPriceIndex, twapInterval);
+            indexTwap = IPerpetualOracle(_perpetualOracleArg).latestIndexPrice(_underlyingPriceIndex);
         } else if (timestamp - lastSettledTimestamp > _fundingPeriod) {
             //when funding period is over
             uint256 fundingLatestTimestamp = lastSettledTimestamp + ((timestamp - lastSettledTimestamp) / _fundingPeriod) * _fundingPeriod;
-            (markTwap,) = IPerpetualOracle(_perpetualOracleArg).getCustomMarkEpochPrice(_underlyingPriceIndex, fundingLatestTimestamp);
-            (indexTwap,) = IPerpetualOracle(_perpetualOracleArg).getCustomIndexEpochPrice(_underlyingPriceIndex, fundingLatestTimestamp);
+            (markTwap) = IPerpetualOracle(_perpetualOracleArg).getMarkEpochSMA(_underlyingPriceIndex, lastSettledTimestamp, fundingLatestTimestamp);
+            (indexTwap) = IPerpetualOracle(_perpetualOracleArg).getIndexEpochSMA(_underlyingPriceIndex, lastSettledTimestamp, fundingLatestTimestamp);
             int256 deltaTwap = _getDeltaTwap(markTwap, indexTwap);
             int256 deltaTwPremiumX96 = deltaTwap * (fundingLatestTimestamp - lastSettledTimestamp).toInt256();
             globalTwPremium += deltaTwPremiumX96;
