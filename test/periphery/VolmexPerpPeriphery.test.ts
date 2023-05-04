@@ -104,7 +104,7 @@ describe("VolmexPerpPeriphery", function () {
         [proofHash, proofHash],
         owner.address,
       ],
-      { initializer: "__Perpetual_Oracles_Init" },
+      { initializer: "__PerpetualOracle_init" },
     );
     await volmexBaseToken.setPriceFeed(perpetualOracle.address);
     volmexQuoteToken = await upgrades.deployProxy(

@@ -99,7 +99,7 @@ describe("Periodic Funding payment", function () {
         [proofHash, proofHash],
         owner.address,
       ],
-      { initializer: "__Perpetual_Oracles_Init" },
+      { initializer: "__PerpetualOracle_init" },
     );
 
     await volmexBaseToken.setPriceFeed(perpetualOracle.address);
