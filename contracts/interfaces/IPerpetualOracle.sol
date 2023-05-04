@@ -72,7 +72,7 @@ interface IPerpetualOracle {
 
     function lastestLastPriceSMA(uint256 _index, uint256 _smInterval) external view returns (uint256 priceCumulative);
 
-    function getLastEpochSMA(
+    function getMarkEpochSMA(
         uint256 _index,
         uint256 _startTimestamp,
         uint256 _endTimestamp

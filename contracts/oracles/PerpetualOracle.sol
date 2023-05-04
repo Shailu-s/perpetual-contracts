@@ -106,10 +106,10 @@ contract PerpetualOracle is AccessControlUpgradeable, IPerpetualOracle {
         _requireAddMarkObservationRole();
         require(_price != 0, "PerpOracle: zero price");
         _pushLastPrice(_index, _price);
-        uint256 markPrice = _calculateMarkPrice(baseTokenByIndex[_index], _index).abs();
-        lastestMarkPrice[_index] = markPrice;
-        _saveEpoch(_index, _price, true);
-        emit MarkObservationAdded(_index, _price, markPrice, block.timestamp);
+        uint256 _markPrice = _calculateMarkPrice(baseTokenByIndex[_index], _index).abs();
+        lastestMarkPrice[_index] = _markPrice;
+        _saveEpoch(_index, _markPrice, true);
+        emit MarkObservationAdded(_index, _price, _markPrice, block.timestamp);
     }
 
     function addIndexObservations(
@@ -174,7 +174,7 @@ contract PerpetualOracle is AccessControlUpgradeable, IPerpetualOracle {
         (price) = _getEpochSMA(_index, _startTimestamp, _endTimestamp, false);
     }
 
-    function getLastEpochSMA(
+    function getMarkEpochSMA(
         uint256 _index,
         uint256 _startTimestamp,
         uint256 _endTimestamp
@@ -324,10 +324,10 @@ contract PerpetualOracle is AccessControlUpgradeable, IPerpetualOracle {
         uint256 _index,
         uint256 _startTimestamp,
         uint256 _endTimestamp,
-        bool _isLastPrice
+        bool _isMark
     ) internal view returns (uint256 price) {
-        PriceEpochs[_MAX_ALLOWED_EPOCHS - 1] storage priceEpochs = _isLastPrice ? markEpochs[_index] : indexEpochs[_index];
-        uint256 totalEpochs = _isLastPrice ? markPriceEpochCount : indexPriceEpochCount;
+        PriceEpochs[_MAX_ALLOWED_EPOCHS - 1] storage priceEpochs = _isMark ? markEpochs[_index] : indexEpochs[_index];
+        uint256 totalEpochs = _isMark ? markPriceEpochCount : indexPriceEpochCount;
         uint256 currentIndex;
         uint256 startIndex;
         uint256 priceCumulative;
