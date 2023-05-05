@@ -241,15 +241,14 @@ contract PerpetualOracle is AccessControlUpgradeable, IPerpetualOracle {
     function _getLastPriceSma(uint256 _index, uint256 _startTimestamp, uint256 _endTimestamp) internal view returns (uint256 priceCumulative, uint256 lastTimestamp) {
         LastPriceObservation[65535] storage observations = lastPriceObservations[_index];
         uint256 totalObservations = lastPriceTotalObservations[_index];
+        if (totalObservations == 1) {
+            return (observations[0].lastPrice, observations[0].timestamp);
+        }
         uint256 currentIndex;
         uint256 startIndex;
         (currentIndex, startIndex) = _getCurrentAndStartIndex(_MAX_ALLOWED_OBSERVATIONS, totalObservations);
         lastTimestamp = observations[currentIndex].timestamp;
         if (lastTimestamp < _startTimestamp) return (0, 0);
-        if (totalObservations == 1) {
-            priceCumulative = observations[0].lastPrice;
-            return (priceCumulative, lastTimestamp);
-        }
         _endTimestamp = lastTimestamp < _endTimestamp ? lastTimestamp : _endTimestamp;
         uint256 priceCount;
 
@@ -269,15 +268,14 @@ contract PerpetualOracle is AccessControlUpgradeable, IPerpetualOracle {
     function _getIndexSma(uint256 _index, uint256 _startTimestamp, uint256 _endTimestamp) internal view returns (uint256 priceCumulative, uint256 lastTimestamp) {
         IndexObservation[65535] storage observations = indexObservations[_index];
         uint256 totalObservations = indexTotalObservations[_index];
+        if (totalObservations == 1) {
+            return (observations[0].underlyingPrice, observations[0].timestamp);
+        }
         uint256 currentIndex;
         uint256 startIndex;
         (currentIndex, startIndex) = _getCurrentAndStartIndex(_MAX_ALLOWED_OBSERVATIONS, totalObservations);
         lastTimestamp = observations[currentIndex].timestamp;
         if (lastTimestamp < _startTimestamp) return (0, 0);
-        if (totalObservations == 1) {
-            priceCumulative = observations[0].underlyingPrice;
-            return (priceCumulative, lastTimestamp);
-        }
         _endTimestamp = lastTimestamp < _endTimestamp ? lastTimestamp : _endTimestamp;
 
         uint256 priceCount;
@@ -298,11 +296,11 @@ contract PerpetualOracle is AccessControlUpgradeable, IPerpetualOracle {
     function _getEpochSMA(uint256 _index, uint256 _startTimestamp, uint256 _endTimestamp, bool _isMark) internal view returns (uint256 priceCumulative) {
         PriceEpochs[_MAX_ALLOWED_EPOCHS] storage priceEpochs = _isMark ? markEpochs[_index] : indexEpochs[_index];
         uint256 totalEpochs = _isMark ? markPriceEpochCount : indexPriceEpochCount;
-        uint256 currentIndex;
-        uint256 startIndex;
         if (totalEpochs == 0) {
             return _isMark ? latestLastPrice(_index) : 0; // mark or last price should be used instead of zero price
         }
+        uint256 currentIndex;
+        uint256 startIndex;
         (currentIndex, startIndex) = _getCurrentAndStartIndex(_MAX_ALLOWED_EPOCHS, totalEpochs);
         uint256 lastTimestamp = priceEpochs[currentIndex].timestamp;
         if (lastTimestamp < _startTimestamp) {
