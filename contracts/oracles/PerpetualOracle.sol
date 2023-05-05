@@ -361,11 +361,8 @@ contract PerpetualOracle is AccessControlUpgradeable, IPerpetualOracle {
                 priceCount++;
             }
         }
-        if (priceCount != 0) {
-            priceCumulative / priceCount;
-        } else {
-            _isMark ? priceEpochs[currentIndex].price : 0;
-        }
+        priceCumulative = priceCount != 0 ? priceCumulative / priceCount : 0;
+
 
     }
 
