@@ -245,11 +245,11 @@ contract PerpetualOracle is AccessControlUpgradeable, IPerpetualOracle {
         uint256 startIndex;
         (currentIndex, startIndex) = _getCurrentAndStartIndex(_MAX_ALLOWED_OBSERVATIONS, totalObservations);
         lastTimestamp = observations[currentIndex].timestamp;
+        if (lastTimestamp < _startTimestamp) return (0, 0);
         if (totalObservations == 1) {
             priceCumulative = observations[0].lastPrice;
             return (priceCumulative, lastTimestamp);
         }
-        if (lastTimestamp < _startTimestamp) return (0, 0);
         _endTimestamp = lastTimestamp < _endTimestamp ? lastTimestamp : _endTimestamp;
         uint256 priceCount;
 
@@ -273,11 +273,11 @@ contract PerpetualOracle is AccessControlUpgradeable, IPerpetualOracle {
         uint256 startIndex;
         (currentIndex, startIndex) = _getCurrentAndStartIndex(_MAX_ALLOWED_OBSERVATIONS, totalObservations);
         lastTimestamp = observations[currentIndex].timestamp;
+        if (lastTimestamp < _startTimestamp) return (0, 0);
         if (totalObservations == 1) {
             priceCumulative = observations[0].underlyingPrice;
             return (priceCumulative, lastTimestamp);
         }
-        if (lastTimestamp < _startTimestamp) return (0, 0);
         _endTimestamp = lastTimestamp < _endTimestamp ? lastTimestamp : _endTimestamp;
 
         uint256 priceCount;
@@ -316,6 +316,7 @@ contract PerpetualOracle is AccessControlUpgradeable, IPerpetualOracle {
         uint256 priceCount;
         uint256 index = totalEpochs < _MAX_ALLOWED_EPOCHS ? currentIndex : startIndex;
         for (; priceEpochs[index].timestamp >= _startTimestamp; index = index == 0 ? _MAX_ALLOWED_EPOCHS - 1 : index - 1) {
+            // TODO: Move under the logic of for loop to a private method, search in ala methods for redundant part
             if ((priceCount > 0 && currentIndex == index) || (totalEpochs < _MAX_ALLOWED_EPOCHS && index == _MAX_ALLOWED_EPOCHS - 1)) {
                 break;
             }
