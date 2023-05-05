@@ -214,7 +214,7 @@ contract PerpetualOracle is AccessControlUpgradeable, IPerpetualOracle {
             );
         } else {
             currentEpochIndex = totalEpochs != 0 ? currentEpochIndex + 1 : 0;
-            priceEpoch[currentEpochIndex] = PriceEpochs({ price: _price, timestamp: endTimestamp, cardinality: 1 });
+            priceEpoch[currentEpochIndex] = PriceEpochs({ price: _price, timestamp: currentTimestamp, cardinality: 1 });
             _isLastPrice ? ++markPriceEpochCount : ++indexPriceEpochCount;
         }
     }
