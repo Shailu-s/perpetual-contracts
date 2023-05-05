@@ -245,14 +245,13 @@ contract PerpetualOracle is AccessControlUpgradeable, IPerpetualOracle {
             return (observations[0].lastPrice, observations[0].timestamp);
         }
         uint256 currentIndex;
-        uint256 startIndex;
-        (currentIndex, startIndex) = _getCurrentAndStartIndex(_MAX_ALLOWED_OBSERVATIONS, totalObservations);
+        (currentIndex) = _getCurrentAndStartIndex(_MAX_ALLOWED_OBSERVATIONS, totalObservations);
         lastTimestamp = observations[currentIndex].timestamp;
         if (lastTimestamp < _startTimestamp) return (0, 0);
         _endTimestamp = lastTimestamp < _endTimestamp ? lastTimestamp : _endTimestamp;
         uint256 priceCount;
 
-        uint256 index = totalObservations < _MAX_ALLOWED_OBSERVATIONS ? currentIndex : startIndex;
+        uint256 index = currentIndex;
         for (; observations[index].timestamp >= _startTimestamp; index = index == 0 ? _MAX_ALLOWED_OBSERVATIONS - 1 : index - 1) {
             if ((priceCount > 0 && currentIndex == index) || (index == 0 && totalObservations < _MAX_ALLOWED_OBSERVATIONS)) {
                 break;
@@ -272,14 +271,13 @@ contract PerpetualOracle is AccessControlUpgradeable, IPerpetualOracle {
             return (observations[0].underlyingPrice, observations[0].timestamp);
         }
         uint256 currentIndex;
-        uint256 startIndex;
-        (currentIndex, startIndex) = _getCurrentAndStartIndex(_MAX_ALLOWED_OBSERVATIONS, totalObservations);
+        (currentIndex) = _getCurrentAndStartIndex(_MAX_ALLOWED_OBSERVATIONS, totalObservations);
         lastTimestamp = observations[currentIndex].timestamp;
         if (lastTimestamp < _startTimestamp) return (0, 0);
         _endTimestamp = lastTimestamp < _endTimestamp ? lastTimestamp : _endTimestamp;
 
         uint256 priceCount;
-        uint256 index = totalObservations < _MAX_ALLOWED_OBSERVATIONS ? currentIndex : startIndex;
+        uint256 index = currentIndex;
         for (; observations[index].timestamp >= _startTimestamp; index = index == 0 ? _MAX_ALLOWED_OBSERVATIONS - 1 : index - 1) {
             if ((priceCount > 0 && currentIndex == index) || (index == 0 && totalObservations < _MAX_ALLOWED_OBSERVATIONS)) {
                 break;
@@ -300,8 +298,7 @@ contract PerpetualOracle is AccessControlUpgradeable, IPerpetualOracle {
             return _isMark ? latestLastPrice(_index) : 0; // mark or last price should be used instead of zero price
         }
         uint256 currentIndex;
-        uint256 startIndex;
-        (currentIndex, startIndex) = _getCurrentAndStartIndex(_MAX_ALLOWED_EPOCHS, totalEpochs);
+        (currentIndex) = _getCurrentAndStartIndex(_MAX_ALLOWED_EPOCHS, totalEpochs);
         uint256 lastTimestamp = priceEpochs[currentIndex].endTimestamp;
         if (lastTimestamp < _startTimestamp) {
             if (_isMark) {
@@ -312,7 +309,7 @@ contract PerpetualOracle is AccessControlUpgradeable, IPerpetualOracle {
         }
         _endTimestamp = lastTimestamp < _endTimestamp ? lastTimestamp : _endTimestamp;
         uint256 priceCount;
-        uint256 index = totalEpochs < _MAX_ALLOWED_EPOCHS ? currentIndex : startIndex;
+        uint256 index = currentIndex;
         for (; priceEpochs[index].endTimestamp >= _startTimestamp; index = index == 0 ? _MAX_ALLOWED_EPOCHS - 1 : index - 1) {
             // TODO: Move under the logic of for loop to a private method, search in ala methods for redundant part
             if ((priceCount > 0 && currentIndex == index) || (totalEpochs < _MAX_ALLOWED_EPOCHS && index == _MAX_ALLOWED_EPOCHS - 1)) {
@@ -341,13 +338,12 @@ contract PerpetualOracle is AccessControlUpgradeable, IPerpetualOracle {
         currentIndex = nextIndex - 1;
     }
 
-    function _getCurrentAndStartIndex(uint256 _maxAllowedDataPoints, uint256 _totalObservations) private pure returns (uint256 currentIndex, uint256 startIndex) {
+    function _getCurrentAndStartIndex(uint256 _maxAllowedDataPoints, uint256 _totalObservations) private pure returns (uint256 currentIndex) {
         if (_totalObservations < _maxAllowedDataPoints) {
-            currentIndex = _totalObservations != 0 ? _totalObservations - 1 : _maxAllowedDataPoints - 1;
+            currentIndex = _totalObservations - 1;
         } else {
             uint256 remainder = _totalObservations % _maxAllowedDataPoints;
-            currentIndex = remainder != 0 ? remainder - 1 : _maxAllowedDataPoints - 1;
-            startIndex = remainder;
+            currentIndex = remainder != 0 ? remainder - 1 : 0;
         }
     }
 
