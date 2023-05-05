@@ -281,6 +281,7 @@ contract PerpetualOracle is AccessControlUpgradeable, IPerpetualOracle {
             return (priceCumulative, lastTimestamp);
         }
         if (lastTimestamp < _startTimestamp) return (0, 0);
+        _endTimestamp = lastTimestamp < _endTimestamp ? lastTimestamp : _endTimestamp;
         uint256 priceCount;
 
         uint256 index = totalObservations < _MAX_ALLOWED_OBSERVATIONS ? currentIndex : startIndex;
@@ -312,6 +313,7 @@ contract PerpetualOracle is AccessControlUpgradeable, IPerpetualOracle {
             return (priceCumulative, lastTimestamp);
         }
         if (lastTimestamp < _startTimestamp) return (0, 0);
+        _endTimestamp = lastTimestamp < _endTimestamp ? lastTimestamp : _endTimestamp;
 
         uint256 priceCount;
         uint256 index = totalObservations < _MAX_ALLOWED_OBSERVATIONS ? currentIndex : startIndex;
@@ -339,17 +341,18 @@ contract PerpetualOracle is AccessControlUpgradeable, IPerpetualOracle {
         uint256 currentIndex;
         uint256 startIndex;
         if (totalEpochs == 0) {
-            return _isMark ? latestLastPrice(_index) : 0; // mark or last price should be used insttead of zero price
+            return _isMark ? latestLastPrice(_index) : 0; // mark or last price should be used instead of zero price
         }
         (currentIndex, startIndex) = _getCurrentAndStartIndex(_MAX_ALLOWED_EPOCHS, totalEpochs);
         uint256 lastTimestamp = priceEpochs[currentIndex].timestamp;
         if (lastTimestamp < _startTimestamp) {
             if (_isMark) {
-                _startTimestamp = initialTimestamp + (((lastTimestamp - initialTimestamp) / smInterval) * smInterval);
+                _startTimestamp = initialTimestamp + (((lastTimestamp - initialTimestamp) / smInterval) * smInterval); // For mark, it is expected that mark price should not be zero
             } else {
                 return (0);
             }
         }
+        _endTimestamp = lastTimestamp < _endTimestamp ? lastTimestamp : _endTimestamp;
         uint256 priceCount;
         uint256 index = totalEpochs < _MAX_ALLOWED_EPOCHS ? currentIndex : startIndex;
         for (;priceEpochs[index].timestamp >= _startTimestamp; index = index == 0 ? _MAX_ALLOWED_EPOCHS - 1 : index - 1) {
