@@ -301,6 +301,7 @@ contract PerpetualOracle is AccessControlUpgradeable, IPerpetualOracle {
         }
         uint256 currentIndex = _getCurrentAllowedIndex(_MAX_ALLOWED_EPOCHS, totalEpochs);
         uint256 lastTimestamp = priceEpochs[currentIndex].timestamp;
+        if (lastTimestamp == 0) return (0);
         if (lastTimestamp < _startTimestamp) {
             if (_isMark) {
                 _startTimestamp = initialTimestamp + (((lastTimestamp - initialTimestamp) / smInterval) * smInterval); // For mark, it is expected that mark price should not be zero
