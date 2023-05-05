@@ -202,27 +202,26 @@ contract PerpetualOracle is AccessControlUpgradeable, IPerpetualOracle {
             currentEpochIndex = currentEpochIndex != 0 ? currentEpochIndex - 1 : _MAX_ALLOWED_EPOCHS - 1;
         }
 
-        uint256 endTimestamp = initialTimestamp + (((currentTimestamp - initialTimestamp) / smInterval) + 1) * smInterval;
-        if (currentTimestamp <= endTimestamp) {
+        if (currentTimestamp <= priceEpoch[currentEpochIndex].endTimestamp) {
             _updatePriceEpoch(
                 currentEpochIndex,
                 priceEpoch[currentEpochIndex].price,
                 _price,
-                priceEpoch[currentEpochIndex].timestamp,
+                priceEpoch[currentEpochIndex].endTimestamp,
                 priceEpoch[currentEpochIndex].cardinality,
                 priceEpoch
             );
         } else {
+            uint256 endTimestamp = initialTimestamp + (((currentTimestamp - initialTimestamp) / smInterval) + 1) * smInterval;
             currentEpochIndex = totalEpochs != 0 ? currentEpochIndex + 1 : 0;
-            priceEpoch[currentEpochIndex] = PriceEpochs({ price: _price, timestamp: endTimestamp, cardinality: 1 });
+            priceEpoch[currentEpochIndex] = PriceEpochs({ price: _price, endTimestamp: endTimestamp, cardinality: 1 });
             _isLastPrice ? ++markPriceEpochCount : ++indexPriceEpochCount;
         }
     }
 
     function _updatePriceEpoch(uint256 _epochIndex, uint256 _previousPrice, uint256 _price, uint256 _timestamp, uint256 cardinality, PriceEpochs[1094] storage priceEpoch) private {
         uint256 actualPrice = (_previousPrice * cardinality + _price) / (cardinality + 1);
-        uint256 updatedTimestamp = (_timestamp * cardinality + block.timestamp) / (cardinality + 1);
-        priceEpoch[_epochIndex] = PriceEpochs({ price: actualPrice, timestamp: updatedTimestamp, cardinality: cardinality + 1 });
+        priceEpoch[_epochIndex] = PriceEpochs({ price: actualPrice, endTimestamp: _timestamp, cardinality: cardinality + 1 });
     }
 
     function _calculateMarkPrice(address _baseToken, uint256 _index) internal view returns (int256 markPrice) {
@@ -303,7 +302,7 @@ contract PerpetualOracle is AccessControlUpgradeable, IPerpetualOracle {
         uint256 currentIndex;
         uint256 startIndex;
         (currentIndex, startIndex) = _getCurrentAndStartIndex(_MAX_ALLOWED_EPOCHS, totalEpochs);
-        uint256 lastTimestamp = priceEpochs[currentIndex].timestamp;
+        uint256 lastTimestamp = priceEpochs[currentIndex].endTimestamp;
         if (lastTimestamp < _startTimestamp) {
             if (_isMark) {
                 _startTimestamp = initialTimestamp + (((lastTimestamp - initialTimestamp) / smInterval) * smInterval); // For mark, it is expected that mark price should not be zero
@@ -314,12 +313,12 @@ contract PerpetualOracle is AccessControlUpgradeable, IPerpetualOracle {
         _endTimestamp = lastTimestamp < _endTimestamp ? lastTimestamp : _endTimestamp;
         uint256 priceCount;
         uint256 index = totalEpochs < _MAX_ALLOWED_EPOCHS ? currentIndex : startIndex;
-        for (; priceEpochs[index].timestamp >= _startTimestamp; index = index == 0 ? _MAX_ALLOWED_EPOCHS - 1 : index - 1) {
+        for (; priceEpochs[index].endTimestamp >= _startTimestamp; index = index == 0 ? _MAX_ALLOWED_EPOCHS - 1 : index - 1) {
             // TODO: Move under the logic of for loop to a private method, search in ala methods for redundant part
             if ((priceCount > 0 && currentIndex == index) || (totalEpochs < _MAX_ALLOWED_EPOCHS && index == _MAX_ALLOWED_EPOCHS - 1)) {
                 break;
             }
-            if (priceEpochs[index].timestamp <= _endTimestamp) {
+            if (priceEpochs[index].endTimestamp <= _endTimestamp) {
                 priceCumulative += priceEpochs[index].price;
                 priceCount++;
             }
