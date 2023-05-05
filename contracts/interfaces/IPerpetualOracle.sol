@@ -16,7 +16,7 @@ interface IPerpetualOracle {
     }
     struct PriceEpochs {
         uint256 price;
-        uint256 endTimestamp;
+        uint256 timestamp;
         uint256 cardinality; // number of elements in current epoch
     }
 
