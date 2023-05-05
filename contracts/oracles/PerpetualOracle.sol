@@ -202,7 +202,8 @@ contract PerpetualOracle is AccessControlUpgradeable, IPerpetualOracle {
             currentEpochIndex = currentEpochIndex != 0 ? currentEpochIndex - 1 : _MAX_ALLOWED_EPOCHS - 1;
         }
 
-        if ((currentTimestamp - priceEpoch[currentEpochIndex].timestamp) / smInterval == 0) {
+        uint256 endTimestamp = initialTimestamp + (((currentTimestamp - initialTimestamp) / smInterval) + 1) * smInterval;
+        if (currentTimestamp <= endTimestamp) {
             _updatePriceEpoch(
                 currentEpochIndex,
                 priceEpoch[currentEpochIndex].price,
@@ -213,7 +214,7 @@ contract PerpetualOracle is AccessControlUpgradeable, IPerpetualOracle {
             );
         } else {
             currentEpochIndex = totalEpochs != 0 ? currentEpochIndex + 1 : 0;
-            priceEpoch[currentEpochIndex] = PriceEpochs({ price: _price, timestamp: currentTimestamp, cardinality: 1 });
+            priceEpoch[currentEpochIndex] = PriceEpochs({ price: _price, timestamp: endTimestamp, cardinality: 1 });
             _isLastPrice ? ++markPriceEpochCount : ++indexPriceEpochCount;
         }
     }
