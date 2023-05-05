@@ -244,8 +244,7 @@ contract PerpetualOracle is AccessControlUpgradeable, IPerpetualOracle {
         if (totalObservations == 1) {
             return (observations[0].lastPrice, observations[0].timestamp);
         }
-        uint256 currentIndex;
-        currentIndex = _getCurrentAllowedIndex(_MAX_ALLOWED_OBSERVATIONS, totalObservations);
+        uint256 currentIndex = _getCurrentAllowedIndex(_MAX_ALLOWED_OBSERVATIONS, totalObservations);
         lastTimestamp = observations[currentIndex].timestamp;
         if (lastTimestamp < _startTimestamp) return (0, 0);
         _endTimestamp = lastTimestamp < _endTimestamp ? lastTimestamp : _endTimestamp;
@@ -270,8 +269,7 @@ contract PerpetualOracle is AccessControlUpgradeable, IPerpetualOracle {
         if (totalObservations == 1) {
             return (observations[0].underlyingPrice, observations[0].timestamp);
         }
-        uint256 currentIndex;
-        currentIndex = _getCurrentAllowedIndex(_MAX_ALLOWED_OBSERVATIONS, totalObservations);
+        uint256 currentIndex = _getCurrentAllowedIndex(_MAX_ALLOWED_OBSERVATIONS, totalObservations);
         lastTimestamp = observations[currentIndex].timestamp;
         if (lastTimestamp < _startTimestamp) return (0, 0);
         _endTimestamp = lastTimestamp < _endTimestamp ? lastTimestamp : _endTimestamp;
@@ -297,8 +295,7 @@ contract PerpetualOracle is AccessControlUpgradeable, IPerpetualOracle {
         if (totalEpochs == 0) {
             return _isMark ? latestLastPrice(_index) : 0; // mark or last price should be used instead of zero price
         }
-        uint256 currentIndex;
-        currentIndex = _getCurrentAllowedIndex(_MAX_ALLOWED_EPOCHS, totalEpochs);
+        uint256 currentIndex = _getCurrentAllowedIndex(_MAX_ALLOWED_EPOCHS, totalEpochs);
         uint256 lastTimestamp = priceEpochs[currentIndex].endTimestamp;
         if (lastTimestamp < _startTimestamp) {
             if (_isMark) {
