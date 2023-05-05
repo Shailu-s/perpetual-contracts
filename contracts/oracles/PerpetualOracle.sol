@@ -240,6 +240,7 @@ contract PerpetualOracle is AccessControlUpgradeable, IPerpetualOracle {
     }
 
     function _getLastPriceSma(uint256 _index, uint256 _startTimestamp, uint256 _endTimestamp) internal view returns (uint256 priceCumulative, uint256 lastTimestamp) {
+        require(_endTimestamp < _startTimestamp, "PerpOracle: invalid timestamp");
         LastPriceObservation[65535] storage observations = lastPriceObservations[_index];
         uint256 totalObservations = lastPriceTotalObservations[_index];
         if (totalObservations == 1) {
@@ -265,6 +266,7 @@ contract PerpetualOracle is AccessControlUpgradeable, IPerpetualOracle {
     }
 
     function _getIndexSma(uint256 _index, uint256 _startTimestamp, uint256 _endTimestamp) internal view returns (uint256 priceCumulative, uint256 lastTimestamp) {
+        require(_endTimestamp < _startTimestamp, "PerpOracle: invalid timestamp");
         IndexObservation[65535] storage observations = indexObservations[_index];
         uint256 totalObservations = indexTotalObservations[_index];
         if (totalObservations == 1) {
@@ -291,6 +293,7 @@ contract PerpetualOracle is AccessControlUpgradeable, IPerpetualOracle {
     }
 
     function _getEpochSMA(uint256 _index, uint256 _startTimestamp, uint256 _endTimestamp, bool _isMark) internal view returns (uint256 priceCumulative) {
+        require(_endTimestamp < _startTimestamp, "PerpOracle: invalid timestamp");
         PriceEpochs[_MAX_ALLOWED_EPOCHS] storage priceEpochs = _isMark ? markEpochs[_index] : indexEpochs[_index];
         uint256 totalEpochs = _isMark ? markPriceEpochCount : indexPriceEpochCount;
         if (totalEpochs == 0) {
