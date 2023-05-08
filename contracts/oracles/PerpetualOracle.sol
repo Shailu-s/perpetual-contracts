@@ -37,6 +37,8 @@ contract PerpetualOracle is AccessControlUpgradeable, IPerpetualOracle {
     uint256 public initialTimestamp;
     uint256 public fundingPeriod;
     IPositioning public positioning;
+    mapping(uint256 => uint256) public currentIndexEpochEndTimestamp;
+    mapping(uint256 => uint256) public currentMarkEpochEndTimestamp;
 
     function __PerpetualOracle_init(
         address[2] calldata _baseToken,
@@ -120,15 +122,17 @@ contract PerpetualOracle is AccessControlUpgradeable, IPerpetualOracle {
         for (uint256 index; index < numberOfPrices; ++index) {
             require(_prices[index] != 0, "PerpOracle: zero price");
             _pushIndexPrice(_indexes[index], _prices[index], _proofHashes[index]);
-            _saveEpoch(_indexes[index], _prices[index], false);
+            if (initialTimestamp > 0) {
+                _saveEpoch(_indexes[index], _prices[index], false);
+            }
         }
         emit IndexObservationAdded(_indexes, _prices, block.timestamp);
     }
 
-    function latestIndexPrice(uint256 _index) public view returns (uint256 latestIndexPrice) {
+    function latestIndexPrice(uint256 _index) public view returns (uint256 indexPrice) {
         IndexObservation[65535] storage observations = indexObservations[_index];
         uint256 currentIndex = _getCurrentIndex(_index, false);
-        latestIndexPrice = observations[currentIndex].underlyingPrice;
+        indexPrice = observations[currentIndex].underlyingPrice;
     }
 
     function latestIndexSMA(uint256 _smInterval, uint256 _index) external view virtual override returns (uint256 answer, uint256 lastUpdateTimestamp) {
@@ -140,15 +144,15 @@ contract PerpetualOracle is AccessControlUpgradeable, IPerpetualOracle {
         _lastestMarkPrice = lastestMarkPrice[_index];
     }
 
-    function lastestTimestamp(uint256 _index, bool isLastPrice) external view returns (uint256 lastestTimestamp) {
+    function lastestTimestamp(uint256 _index, bool isLastPrice) external view returns (uint256 timestamp) {
         if (isLastPrice) {
             LastPriceObservation[65535] storage observations = lastPriceObservations[_index];
             uint256 currentIndex = _getCurrentIndex(_index, true);
-            lastestTimestamp = observations[currentIndex].timestamp;
+            timestamp = observations[currentIndex].timestamp;
         } else {
             uint256 currentIndex = _getCurrentIndex(_index, false);
             IndexObservation[65535] storage observations = indexObservations[_index];
-            lastestTimestamp = observations[currentIndex].timestamp;
+            timestamp = observations[currentIndex].timestamp;
         }
     }
 
@@ -190,10 +194,11 @@ contract PerpetualOracle is AccessControlUpgradeable, IPerpetualOracle {
         ++indexTotalObservations[_index];
     }
 
-    function _saveEpoch(uint256 _index, uint256 _price, bool _isLastPrice) internal {
+    function _saveEpoch(uint256 _index, uint256 _price, bool _isMark) internal {
         uint256 currentTimestamp = block.timestamp;
-        uint256 totalEpochs = _isLastPrice ? markPriceEpochCount : indexPriceEpochCount;
-        PriceEpochs[1094] storage priceEpoch = _isLastPrice ? markEpochs[_index] : indexEpochs[_index];
+        (uint256 totalEpochs, PriceEpochs[1094] storage priceEpoch, uint256 endTimestamp) = _isMark
+            ? (markPriceEpochCount, markEpochs[_index], currentMarkEpochEndTimestamp[_index])
+            : (indexPriceEpochCount, indexEpochs[_index], currentIndexEpochEndTimestamp[_index]);
         uint256 currentEpochIndex;
         if (totalEpochs < _MAX_ALLOWED_EPOCHS) {
             currentEpochIndex = totalEpochs != 0 ? totalEpochs - 1 : 0;
@@ -202,7 +207,6 @@ contract PerpetualOracle is AccessControlUpgradeable, IPerpetualOracle {
             currentEpochIndex = currentEpochIndex != 0 ? currentEpochIndex - 1 : _MAX_ALLOWED_EPOCHS - 1;
         }
 
-        uint256 endTimestamp = initialTimestamp + (((currentTimestamp - initialTimestamp) / smInterval) + 1) * smInterval;
         if (currentTimestamp <= endTimestamp) {
             _updatePriceEpoch(
                 currentEpochIndex,
@@ -215,7 +219,14 @@ contract PerpetualOracle is AccessControlUpgradeable, IPerpetualOracle {
         } else {
             currentEpochIndex = totalEpochs != 0 ? currentEpochIndex + 1 : 0;
             priceEpoch[currentEpochIndex] = PriceEpochs({ price: _price, timestamp: currentTimestamp, cardinality: 1 });
-            _isLastPrice ? ++markPriceEpochCount : ++indexPriceEpochCount;
+            uint256 epochEndTimestamp = initialTimestamp + (((currentTimestamp - initialTimestamp) / smInterval) + 1) * smInterval;
+            if (_isMark) {
+                ++markPriceEpochCount;
+                currentMarkEpochEndTimestamp[_index] = epochEndTimestamp;
+            } else {
+                ++indexPriceEpochCount;
+                currentIndexEpochEndTimestamp[_index] = epochEndTimestamp;
+            }
         }
     }
 
