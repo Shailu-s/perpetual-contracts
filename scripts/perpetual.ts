@@ -44,12 +44,28 @@ const positioning = async () => {
   console.log(volmexBaseToken.address);
   await (await perpView.setBaseToken(volmexBaseToken.address)).wait();
 
+  const volmexBaseToken2 = await upgrades.deployProxy(
+    VolmexBaseToken,
+    [
+      "Virtual ETH Index Token", // nameArg
+      "VEVIV", // symbolArg,
+      owner.address, // zero address on init
+      true, // isBase
+    ],
+    {
+      initializer: "initialize",
+    },
+  );
+  await volmexBaseToken2.deployed();
+  console.log(volmexBaseToken2.address);
+  await (await perpView.setBaseToken(volmexBaseToken2.address)).wait();
+
   console.log("Deploying Perpetuals oracle ...");
 
   const perpetualOracle = await upgrades.deployProxy(
     PerpetualOracle,
     [
-      [volmexBaseToken.address, volmexBaseToken.address],
+      [volmexBaseToken.address, volmexBaseToken2.address],
       [71000000, 52000000],
       [52000000, 50000000],
       [proofHash, proofHash],
@@ -60,6 +76,10 @@ const positioning = async () => {
 
   await perpetualOracle.deployed();
   await (await volmexBaseToken.setPriceFeed(perpetualOracle.address)).wait();
+  await (await volmexBaseToken2.setPriceFeed(perpetualOracle.address)).wait();
+  if (process.env.INDEX_OBSERVATION_ADDER) {
+    await (await perpetualOracle.setIndexObservationAdder(process.env.INDEX_OBSERVATION_ADDER)).wait();
+  }
 
   console.log("Deploying Quote Token ...");
   const volmexQuoteToken = await upgrades.deployProxy(
