@@ -6,7 +6,7 @@ const { Order, Asset, sign, encodeAddress } = require("./order");
 import { BigNumber } from "ethers";
 import { time } from "@nomicfoundation/hardhat-network-helpers";
 
-describe("Multiple protocols", function () {
+describe.only("Multiple protocols", function () {
   let MatchingEngine;
   let matchingEngine;
   let VirtualToken;
@@ -21,10 +21,8 @@ describe("Multiple protocols", function () {
   let VaultController;
   let vaultController;
   let AccountBalance;
-  let MarkPriceOracle;
-  let markPriceOracle;
-  let IndexPriceOracle;
-  let indexPriceOracle;
+  let PerpetualOracle;
+  let perpetualOracle;
   let EVIV;
   let BVIV;
   let VolmexBaseToken;
@@ -60,8 +58,7 @@ describe("Multiple protocols", function () {
   const capRatio = "250";
   this.beforeAll(async () => {
     VolmexPerpPeriphery = await ethers.getContractFactory("VolmexPerpPeriphery");
-    MarkPriceOracle = await ethers.getContractFactory("MarkPriceOracle");
-    IndexPriceOracle = await ethers.getContractFactory("IndexPriceOracle");
+    PerpetualOracle = await ethers.getContractFactory("PerpetualOracle");
     MatchingEngine = await ethers.getContractFactory("MatchingEngine");
     VirtualToken = await ethers.getContractFactory("VirtualTokenTest");
     ERC20TransferProxyTest = await ethers.getContractFactory("ERC20TransferProxyTest");
@@ -113,21 +110,19 @@ describe("Multiple protocols", function () {
     await (await perpView.setBaseToken(EVIV.address)).wait();
     await (await perpView.setBaseToken(BVIV.address)).wait();
 
-    indexPriceOracle = await upgrades.deployProxy(
-      IndexPriceOracle,
+    perpetualOracle = await upgrades.deployProxy(
+      PerpetualOracle,
       [
-        owner.address,
-        [70000000, 55000000],
         [EVIV.address, BVIV.address],
+        [60000000, 50000000],
+        [70000000, 55000000],
         [proofHash, proofHash],
-        [capRatio, capRatio],
+        owner.address,
       ],
-      {
-        initializer: "initialize",
-      },
+      { initializer: "__PerpetualOracle_init" },
     );
-    await EVIV.setPriceFeed(indexPriceOracle.address);
-    await BVIV.setPriceFeed(indexPriceOracle.address);
+    await EVIV.setPriceFeed(perpetualOracle.address);
+    await BVIV.setPriceFeed(perpetualOracle.address);
     volmexQuoteToken = await upgrades.deployProxy(
       VolmexQuoteToken,
       [
@@ -142,24 +137,14 @@ describe("Multiple protocols", function () {
     await volmexQuoteToken.deployed();
     await (await perpView.setQuoteToken(volmexQuoteToken.address)).wait();
 
-    markPriceOracle = await upgrades.deployProxy(
-      MarkPriceOracle,
-      [[60000000, 50000000], [EVIV.address, BVIV.address], owner.address],
-      {
-        initializer: "initialize",
-      },
-    );
-    await markPriceOracle.deployed();
-    await (await indexPriceOracle.grantInitialTimestampRole(markPriceOracle.address)).wait();
-
-    positioningConfig = await upgrades.deployProxy(PositioningConfig, [markPriceOracle.address]);
+    positioningConfig = await upgrades.deployProxy(PositioningConfig, [perpetualOracle.address]);
 
     USDC = await TestERC20.deploy("100000000000000000000000", "Tether USD", "USDT", 6);
     await USDC.deployed();
 
     matchingEngine = await upgrades.deployProxy(MatchingEngine, [
       owner.address,
-      markPriceOracle.address,
+      perpetualOracle.address,
     ]);
 
     virtualToken = await upgrades.deployProxy(VirtualToken, ["VirtualToken", "VTK", false], {
@@ -196,8 +181,7 @@ describe("Multiple protocols", function () {
         vaultController.address,
         accountBalance1.address,
         matchingEngine.address,
-        markPriceOracle.address,
-        indexPriceOracle.address,
+        perpetualOracle.address,
         0,
         [owner.address, account1.address],
       ],
@@ -226,7 +210,10 @@ describe("Multiple protocols", function () {
     await vault.connect(owner).setVaultController(vaultController.address);
     await vaultController.registerVault(vault.address, USDC.address);
     await vaultController.connect(owner).setPositioning(positioning.address);
-    await markPriceOracle.grantSmaIntervalRole(positioningConfig.address);
+    await perpetualOracle.grantSmaIntervalRole(positioningConfig.address);
+    await perpetualOracle.setPositioning(positioning.address);
+    await positioningConfig.setPositioning(positioning.address);
+    await positioningConfig.setAccountBalance(accountBalance1.address);
     await positioningConfig.connect(owner).setTwapInterval(28800);
     await positioningConfig.connect(owner).setMaxMarketsPerAccount(5);
     await positioningConfig
@@ -238,15 +225,13 @@ describe("Multiple protocols", function () {
     await positioning.connect(owner).setPositioning(positioning.address);
 
     await (await matchingEngine.grantMatchOrders(positioning.address)).wait();
-    await (await markPriceOracle.setPositioning(positioning.address)).wait();
-    await (await markPriceOracle.setIndexOracle(indexPriceOracle.address)).wait();
+    await (await perpetualOracle.setPositioning(positioning.address)).wait();
 
-    await markPriceOracle.setObservationAdder(matchingEngine.address);
+    await perpetualOracle.setMarkObservationAdder(matchingEngine.address);
 
     volmexPerpPeriphery = await upgrades.deployProxy(VolmexPerpPeriphery, [
       perpView.address,
-      markPriceOracle.address,
-      indexPriceOracle.address,
+      perpetualOracle.address,
       [vault.address, vault.address],
       owner.address,
       owner.address, // replace with replayer address
@@ -265,7 +250,7 @@ describe("Multiple protocols", function () {
   });
   describe("trader should be able to trade with both protocols", async () => {
     it("should trade only in EVIV", async () => {
-      const indexPrice = await indexPriceOracle.getLastPrice(0);
+      const indexPrice = await perpetualOracle.latestIndexPrice(0);
       expect(indexPrice.toString()).to.be.equal("70000000");
       const orderLeft = Order(
         ORDER,
@@ -300,7 +285,7 @@ describe("Multiple protocols", function () {
         ),
       ).to.emit(positioning, "PositionChanged");
 
-      const lastMarkPriceAdded = await markPriceOracle.getLastPrice(0);
+      const lastMarkPriceAdded = await perpetualOracle.latestMarkPrice(0);
       expect(lastMarkPriceAdded.toString()).to.be.equal("70000000");
       const traderEVIVSize = await accountBalance1.getPositionSize(account2.address, EVIV.address);
       expect(traderEVIVSize.toString()).to.be.equal("1000000000000000000");
@@ -308,7 +293,7 @@ describe("Multiple protocols", function () {
       expect(traderBVIVSize.toString()).to.be.equal("0");
     });
     it("should trade only in BVIV", async () => {
-      const indexPrice = await indexPriceOracle.getLastPrice(1);
+      const indexPrice = await perpetualOracle.latestIndexPrice(1);
       expect(indexPrice.toString()).to.be.equal("55000000");
       const orderLeft = Order(
         ORDER,
@@ -343,8 +328,8 @@ describe("Multiple protocols", function () {
         ),
       ).to.emit(positioning, "PositionChanged");
 
-      const lastMarkPriceAdded = await markPriceOracle.getLastPrice(1);
-      expect(lastMarkPriceAdded.toString()).to.be.equal("60000000");
+      const lastMarkPriceAdded = await perpetualOracle.latestMarkPrice(1);
+      expect(lastMarkPriceAdded.toString()).to.be.equal("55000000");
       const traderPositionSizeBVIV = await accountBalance1.getPositionSize(
         account2.address,
         BVIV.address,
