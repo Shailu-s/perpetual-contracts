@@ -344,6 +344,10 @@ describe("Liquidation test in Positioning", function () {
           accountValue.toString(),
         );
         expect(liquidatbalePositionSize.toString()).to.be.equal("0");
+        for (let index = 0; index < 10; index++) {
+          await (await perpetualOracle.addIndexObservations([0], [70000000], [proofHash])).wait();
+          await (await perpetualOracle.addIndexObservations([1], [70000000], [proofHash])).wait();
+        }
         console.log(parseInt(await time.latest()));
         await time.increase(60000);
         for (let index = 0; index < 10; index++) {
@@ -573,7 +577,7 @@ describe("Liquidation test in Positioning", function () {
           positioning
             .connect(account1)
             .liquidate(account1.address, volmexBaseToken.address, "-1000000000000000000"),
-        ).to.be.revertedWith("Positioning: liquidator not whitelisted");
+        ).to.be.revertedWith("P_LW");
       });
       it("should liquidate trader when position size / total position size < 1 liquidatable position size > 0  ", async () => {
         let signatureLeft = await getSignature(orderLeft, account1.address);

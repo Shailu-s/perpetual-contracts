@@ -254,22 +254,16 @@ describe("IndexPriceOracle", function () {
       "TraderWhitelisted",
     );
     await perpetualOracle.setMarkObservationAdder(matchingEngine.address);
+    await perpetualOracle.setIndexObservationAdder(owner.address);
   });
   describe("Epoch", () => {
-    it("Should calculate epoch of one price", async () => {
-      await time.increase(epochTimeSeconds * 2);
-      await (await perpetualOracle.addObservation(["76000000"], [0], [proofHash])).wait();
-      await time.increase(epochTimeSeconds);
-      expect((await perpetualOracle.getLastEpochPrice(0))[0].toString()).equal("76000000");
-    });
-
-    it("Should calculate epoch of average values in that epoch", async () => {
+    it("Should calculate average price", async () => {
       await time.increase(epochTimeSeconds * 2);
       let sum = 0;
       let index;
       for (index = 0; index < 10; ++index) {
         await (
-          await perpetualOracle.addIndexObservation(
+          await perpetualOracle.addIndexObservations(
             [0],
             [100000000 + index * 1000000],
             [proofHash],
@@ -278,75 +272,17 @@ describe("IndexPriceOracle", function () {
         sum += 100000000 + index * 1000000;
       }
       const priceCumulative = sum / index;
-      expect(
-        await perpetualOracle.getIndexEpochPrice(
-          0,
-          parseInt(await time.increase(epochTimeSeconds * 2)),
-          parseInt(await time.increase(epochTimeSeconds * 2)) + 28800,
-        ),
-      ).equal(priceCumulative.toString());
-    });
-
-    it("Should skip an epoch and fills the epoch correctly", async () => {
-      await time.increase(epochTimeSeconds * 2);
-      await (await perpetualOracle.addObservation([76000000], [0], [proofHash])).wait();
-      await time.increase(epochTimeSeconds * 2);
-      await (await perpetualOracle.addObservation([86000000], [0], [proofHash])).wait();
-      await time.increase(epochTimeSeconds);
-      const indexLength = await perpetualOracle.getIndexPriceByEpoch(0);
-      expect((await perpetualOracle.getLastEpochPrice(0))[0].toString()).equal("86000000");
-      expect(indexLength.toString()).equal("2");
+      expect((await perpetualOracle.latestIndexSMA(28800, 0)).answer.toString()).equal(
+        priceCumulative.toString(),
+      );
     });
   });
 
   describe("Setters and getters", () => {
-    it("Should set index sm interval", async () => {
-      const receipt = await (await perpetualOracle.setIndexSmInterval(14400)).wait();
-      expect(receipt.confirmations).not.equal(0);
-      expect((await perpetualOracle.indexSmInterval()).toString()).equal("14400");
-    });
-
-    it("Should fetch custom epoch price", async () => {
-      await time.increase(epochTimeSeconds * 2);
-      await (await perpetualOracle.addObservation([76000000], [0], [proofHash])).wait();
+    it("Should fetch lastest index", async () => {
+      await (await perpetualOracle.addIndexObservations([0], [76000000], [proofHash])).wait();
       await time.increase(epochTimeSeconds);
-      expect(
-        (
-          await perpetualOracle.getCustomEpochPrice(0, (await time.latest()).toString())
-        )[0].toString(),
-      ).equal("76000000");
-    });
-
-    it("Should fetch last sma", async () => {
-      await (await perpetualOracle.addObservation([76000000], [0], [proofHash])).wait();
-      await time.increase(epochTimeSeconds);
-      expect((await perpetualOracle.getLastSma(28801, 0)).toString()).equal("76000000");
-    });
-
-    it("Should get current added indices", async () => {
-      expect((await perpetualOracle.getIndexCount()).toString()).equal("1");
-    });
-
-    it("Should get last updated timestamp", async () => {
-      await (await perpetualOracle.addObservation([76000000], [0], [proofHash])).wait();
-      expect((await perpetualOracle.getLastUpdatedTimestamp(0)).toString()).equal(
-        (await time.latest()).toString(),
-      );
-    });
-
-    it("Should get total observations added", async () => {
-      expect((await perpetualOracle.getIndexObservation(0)).toString()).equal("1");
-    });
-
-    it("Should return zero when no epoch is added", async () => {
-      expect((await perpetualOracle.getLastEpochPrice(0))[0].toString()).equal("0");
-    });
-
-    it("Should revert for non role call of initial timestamp", async () => {
-      await expectRevert(
-        perpetualOracle.connect(account1).setInitialTimestamp((await time.latest()).toString()),
-        "IndexPriceOracle: not first interval adder",
-      );
+      expect((await perpetualOracle.latestIndexPrice(0)).toString()).equal("76000000");
     });
   });
 
@@ -355,44 +291,15 @@ describe("IndexPriceOracle", function () {
       const receipt = await perpetualOracle.deployed();
       expect(receipt.confirmations).not.equal(0);
     });
-    it("Should fail to deploy if length of arrays is unequal", async () => {
-      await expect(
-        upgrades.deployProxy(
-          PerpetualOracle,
-          [owner, [10000000, 100000000], [volmexBaseToken.address], [proofHash], [capRatio]],
-          {
-            initializer: "initialize",
-          },
-        ),
-      ).to.be.revertedWith("IndexPriceOracle: Unequal length of prices & assets");
-    });
-
-    it("Should fail to deploy when asset address is 0", async () => {
-      await expect(
-        upgrades.deployProxy(
-          PerpetualOracle,
-          [
-            owner,
-            [10000000],
-            ["0x0000000000000000000000000000000000000000"],
-            [proofHash],
-            [capRatio],
-          ],
-          {
-            initializer: "initialize",
-          },
-        ),
-      ).to.be.revertedWith("IndexPriceOracle: Asset address can't be 0");
-    });
 
     it("Should fail to initialize again ", async () => {
       await expectRevert(
-        perpetualOracle.initialize(
-          owner,
-          [100000],
-          [volmexBaseToken.address],
-          [proofHash],
-          [capRatio],
+        perpetualOracle.__PerpetualOracle_init(
+          [volmexBaseToken.address, volmexBaseToken.address],
+          [60000000, 60000000],
+          [60000000, 60000000],
+          [proofHash, proofHash],
+          owner.address,
         ),
         "Initializable: contract is already initialized",
       );
@@ -401,148 +308,102 @@ describe("IndexPriceOracle", function () {
   describe("Add Observation", async () => {
     it("Should add observation", async () => {
       for (let i = 0; i < 10; i++) {
-        await perpetualOracle.addObservation([10000000], [0], [proofHash]);
+        await perpetualOracle.addIndexObservations([0], [10000000], [proofHash]);
       }
 
-      const txn = await perpetualOracle.getIndexSma(10000, 0);
-      expect(Number(txn.volatilityTokenSma)).equal(15909090);
+      const txn = await perpetualOracle.latestIndexSMA(10000, 0);
+      expect(Number(txn.answer)).equal(10000000);
     });
 
     it("should fail to add observation when cumulative price is zero ", async () => {
-      await expect(perpetualOracle.addObservation([0], [0], [proofHash])).to.be.revertedWith(
-        "IndexPriceOracle: Not zero",
+      await expect(perpetualOracle.addIndexObservations([0], [0], [proofHash])).to.be.revertedWith(
+        "PerpOracle: zero price",
       );
     });
     it("Should fail to add observation when caller is not observation adder", async () => {
       const [owner, account1] = await ethers.getSigners();
       await expect(
-        perpetualOracle.connect(account1).addObservation([1000000], [0], [proofHash]),
-      ).to.be.revertedWith("IndexPriceOracle: not observation adder");
+        perpetualOracle.connect(account1).addIndexObservations([1000000], [0], [proofHash]),
+      ).to.be.revertedWith("PerpOracle: not index observation adder");
     });
 
     it("Should get cumulative price", async () => {
-      await perpetualOracle.addObservation([10000000], [0], [proofHash]);
+      await perpetualOracle.addIndexObservations([0], [10000000], [proofHash]);
 
-      const txn = await perpetualOracle.getIndexSma(10000000, 0);
-      expect(Number(txn.volatilityTokenSma)).equal(42500000);
+      const txn = await perpetualOracle.latestIndexSMA(10000000, 0);
+      expect(Number(txn.answer)).equal(10000000);
     });
-    it("should return true for support interface", async () => {
-      const result = await perpetualOracle.supportsInterface("0x01ffc9a7");
-    });
+
     it("Should latest round data", async () => {
-      await perpetualOracle.addObservation([10000000], [0], [proofHash]);
+      await perpetualOracle.addIndexObservations([0], [10000000], [proofHash]);
       await time.increase(10000);
 
-      const txn = await perpetualOracle.latestRoundData(10000, 0);
-      expect(Number(txn.answer)).equal(1000000000);
-    });
-    it("should  give last epoch price", async () => {
-      await time.increase(28800 * 2);
-
-      for (let i = 0; i < 50; i++) {
-        await perpetualOracle.addObservation([800000000], [0], [proofHash]);
-      }
-
-      const lastEpochPrice = (await perpetualOracle.getLastEpochPrice(0))[0];
-      expect(lastEpochPrice.toString()).to.be.equal("800000000");
-    });
-
-    it("should  give average price last epoch price", async () => {
-      await time.increase(28800 * 2);
-      for (let i = 0; i < 5; i++) {
-        await perpetualOracle.addObservation([800000000], [0], [proofHash]);
-      }
-      for (let i = 0; i < 5; i++) {
-        await perpetualOracle.addObservation([900000000], [0], [proofHash]);
-      }
-
-      const lastEpochPrice = await perpetualOracle.getLastEpochPrice(0);
-      expect(parseInt(lastEpochPrice)).to.be.equal(849999998);
+      const txn = await perpetualOracle.latestIndexSMA(10000, 0);
+      expect(Number(txn.answer)).equal(10000000);
     });
 
     it("Should get cumulative price with time delay", async () => {
       await time.increase(28800 * 2);
       for (let i = 0; i < 9; i++) {
-        await perpetualOracle.addObservation([10000000], [0], [proofHash]);
+        await perpetualOracle.addIndexObservations([0], [10000000], [proofHash]);
         await time.increase(1000);
       }
       const txns = await Promise.all([
-        perpetualOracle.getIndexSma(1000, 0),
-        perpetualOracle.getIndexSma(2000, 0),
-        perpetualOracle.getIndexSma(3000, 0),
-        perpetualOracle.getIndexSma(4000, 0),
-        perpetualOracle.getIndexSma(5000, 0),
-        perpetualOracle.getIndexSma(6000, 0),
-        perpetualOracle.getIndexSma(7000, 0),
-        perpetualOracle.getIndexSma(8000, 0),
-        perpetualOracle.getIndexSma(9000, 0),
-        perpetualOracle.getIndexSma(10000, 0),
-        perpetualOracle.getIndexSma(20000, 0),
+        perpetualOracle.latestIndexSMA(1000, 0),
+        perpetualOracle.latestIndexSMA(2000, 0),
+        perpetualOracle.latestIndexSMA(3000, 0),
+        perpetualOracle.latestIndexSMA(4000, 0),
+        perpetualOracle.latestIndexSMA(5000, 0),
+        perpetualOracle.latestIndexSMA(6000, 0),
+        perpetualOracle.latestIndexSMA(7000, 0),
+        perpetualOracle.latestIndexSMA(8000, 0),
+        perpetualOracle.latestIndexSMA(9000, 0),
+        perpetualOracle.latestIndexSMA(10000, 0),
+        perpetualOracle.latestIndexSMA(20000, 0),
       ]);
       txns.forEach(txn => {
-        expect(Number(txn.volatilityTokenSma)).equal(10000000);
+        expect(Number(txn.answer)).equal(10000000);
       });
     });
 
     it("Should not error when there are no recent datapoints added for cumulative price", async () => {
-      const txn1 = await perpetualOracle.getIndexSma(20000, 0);
-      expect(Number(txn1.volatilityTokenSma)).equal(75000000);
+      const txn1 = await perpetualOracle.latestIndexSMA(20000, 0);
+      expect(Number(txn1.answer)).equal(60000000);
       for (let i = 0; i < 9; i++) {
-        await perpetualOracle.addObservation([10000000], [0], [proofHash]);
+        await perpetualOracle.addIndexObservations([0], [10000000], [proofHash]);
         await time.increase(1000);
       }
       // this covers the case of zero recent datapoints
       await time.increase(100000);
-      const txn2 = await perpetualOracle.getIndexSma(200, 0);
-      expect(Number(txn2.volatilityTokenSma)).equal(16500000);
-      const txn3 = await perpetualOracle.getIndexSma(200000, 0);
-      expect(Number(txn3.volatilityTokenSma)).equal(16500000);
+      const txn2 = await perpetualOracle.latestIndexSMA(200, 0);
+      expect(Number(txn2.answer)).equal(0);
+      const txn3 = await perpetualOracle.latestIndexSMA(200000, 0);
+      expect(Number(txn3.answer)).equal(10000000);
     });
 
     it("Should not error when there are no recent datapoints then more datapoints are added for cumulative price", async () => {
       await time.increase(200001);
-      const txn1 = await perpetualOracle.getIndexSma(20, 0);
-      expect(Number(txn1.volatilityTokenSma)).equal(75000000);
+      const txn1 = await perpetualOracle.latestIndexSMA(20, 0);
+      expect(Number(txn1.answer)).equal(60000000);
 
       for (let i = 0; i < 10; i++) {
-        await perpetualOracle.addObservation([20000000], [0], [proofHash]);
+        await perpetualOracle.addIndexObservations([0], [20000000], [proofHash]);
         await time.increase(1000);
       }
-      const txn2 = await perpetualOracle.getIndexSma(9000, 0);
-      expect(Number(txn2.volatilityTokenSma)).equal(20000000);
+      const txn2 = await perpetualOracle.latestIndexSMA(9000, 0);
+      expect(Number(txn2.answer)).equal(20000000);
     });
 
-    it("Should fail to  add multiple observations because uneuqal length of inputs", async () => {
-      await expect(
-        perpetualOracle.addAssets(
-          [10000000, 20000000],
-          [baseToken.address],
-          [proofHash],
-          [capRatio],
-        ),
-      ).to.be.revertedWith("IndexPriceOracle: Unequal length of prices & assets");
-    });
-
-    it("Should fail to  add multiple observations because 0 address of a token", async () => {
-      await expect(
-        perpetualOracle.addAssets(
-          [10000000, 20000000],
-          [baseToken.address, ZERO_ADDR],
-          [proofHash, proofHash],
-          [capRatio, capRatio],
-        ),
-      ).to.be.revertedWith("IndexPriceOracle: Asset address can't be 0");
-    });
     it("should fail to set Matching engine as admin assecc is not provided", async () => {
       const [owner, account1] = await ethers.getSigners();
       await expect(
-        perpetualOracle.connect(account1).setObservationAdder(account1.address),
-      ).to.be.revertedWith("IndexPriceOracle: not admin");
+        perpetualOracle.connect(account1).setIndexObservationAdder(account1.address),
+      ).to.be.revertedWith("PerpOracle: not admin");
     });
     it("should fail to set Matching engine as admin assecc is not provided", async () => {
       const [owner, account1] = await ethers.getSigners();
-      await expect(perpetualOracle.setObservationAdder(ZERO_ADDR)).to.be.revertedWith(
-        "IndexPriceOracle: zero address",
+      await expect(perpetualOracle.setIndexObservationAdder(ZERO_ADDR)).to.be.revertedWith(
+        "PerpOracle: zero address",
       );
     });
   });
