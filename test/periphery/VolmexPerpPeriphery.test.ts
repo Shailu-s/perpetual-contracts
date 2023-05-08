@@ -1550,13 +1550,13 @@ describe("VolmexPerpPeriphery", function () {
           (1e6).toString(),
           false,
         );
-    
-        let orderArray = [orderLeft, orderRight, orderInvalid]
 
-        let result = await volmexPerpPeriphery.batchOrderValidate(orderArray,index)
-        expect(result[0]).to.be.equal(true)
-        expect(result[1]).to.be.equal(true)
-        expect(result[2]).to.be.equal(false)
+        let orderArray = [orderLeft, orderRight, orderInvalid];
+
+        let result = await volmexPerpPeriphery.batchOrderValidate(orderArray, index);
+        expect(result[0]).to.be.equal(true);
+        expect(result[1]).to.be.equal(true);
+        expect(result[2]).to.be.equal(false);
       });
       it(" should fill limit order in batch", async () => {
         const limitOrdersLeft = [];

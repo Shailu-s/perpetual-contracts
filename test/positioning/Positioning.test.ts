@@ -580,8 +580,8 @@ describe("Positioning", function () {
           0,
           false,
         );
-        let result = await positioning.getOrderValidate(orderLeftLeverage)
-        await expect(result).to.be.equal(false)
+        let result = await positioning.getOrderValidate(orderLeftLeverage);
+        await expect(result).to.be.equal(false);
         let orderLeftLeverage1 = Order(
           ORDER,
           deadline,
@@ -592,8 +592,8 @@ describe("Positioning", function () {
           0,
           false,
         );
-        result = await positioning.getOrderValidate(orderLeftLeverage1)
-        await expect(result).to.be.equal(false)
+        result = await positioning.getOrderValidate(orderLeftLeverage1);
+        await expect(result).to.be.equal(false);
       });
 
       it("should use order validation before opening position ", async () => {
@@ -1959,10 +1959,8 @@ describe("Positioning", function () {
           0,
           false,
         );
-          let result = await positioning.connect(account1).getOrderValidate(orderLeftLeverage)
-        expect(
-          result
-        ).to.be.equal(false);
+        let result = await positioning.connect(account1).getOrderValidate(orderLeftLeverage);
+        expect(result).to.be.equal(false);
       });
       it("should not use validate order after opening position ", async () => {
         await matchingEngine.grantMatchOrders(positioning.address);
@@ -2044,10 +2042,8 @@ describe("Positioning", function () {
           account2.address,
           orderLeft.takeAsset.virtualToken,
         );
-          let result = await positioning.connect(account1).getOrderValidate(orderLeftLeverage)
-        await expect(
-          result
-        ).to.be.equal(false);
+        let result = await positioning.connect(account1).getOrderValidate(orderLeftLeverage);
+        await expect(result).to.be.equal(false);
       });
 
       it("failure for wrong basetoken given", async () => {
@@ -2539,18 +2535,13 @@ describe("Liquidation test in Positioning", function () {
   let vaultController;
   let AccountBalance;
   let accountBalance;
-  let MarkPriceOracle;
-  let markPriceOracle;
-  let IndexPriceOracle;
-  let indexPriceOracle;
-  let markPriceFake: FakeContract<MarkPriceOracle>;
-  let indexPriceFake: FakeContract<IndexPriceOracle>;
   let VolmexBaseToken;
   let volmexBaseToken;
   let volmexBaseToken1;
   let VolmexPerpPeriphery;
   let volmexPerpPeriphery;
-
+  let PerpetualOracle;
+  let perpetualOracle;
   let transferManagerTest;
   let accountBalance1;
   let MarketRegistry;
@@ -2580,8 +2571,8 @@ describe("Liquidation test in Positioning", function () {
 
   this.beforeAll(async () => {
     VolmexPerpPeriphery = await ethers.getContractFactory("VolmexPerpPeriphery");
-    MarkPriceOracle = await ethers.getContractFactory("MarkPriceOracle");
-    IndexPriceOracle = await ethers.getContractFactory("IndexPriceOracle");
+    PerpetualOracle = await ethers.getContractFactory("PerpetualOracle");
+
     // indexPriceOracle = await smock.fake("IndexPriceOracle")
     // indexPriceFake = await smock.fake("IndexPriceOracle")
     // markPriceFake = await smock.fake("IndexPriceOracle")
