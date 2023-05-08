@@ -4,17 +4,26 @@ const ORDER = "0xf555eb98";
 const STOP_LOSS_LIMIT_ORDER = "0xeeaed735";
 const TAKE_PROFIT_LIMIT_ORDER = "0xe0fc7f94";
 const ZERO_ADDR = "0x0000000000000000000000000000000000000000";
-const baseToken = "0x2Cd89960d6dDfAbFbB94aecB8413445d7d3a7208";
-const quoteToken = "0x3B620b9D1A447190C3d77cd6333d8Cc8229a93c0";
-const positioningAddress = "0x930d870A321A740ddA41beD43be034841681eD5c";
-const peripheryAddress = "0x6fB1B380c81e11C3fDf899C1A60Ff2390c496D2C";
+const baseToken = "0xcadEe957FCf2Cf7a98D3603849e5DD1a3f8b9161";
+const quoteToken = "0x9BBe422bA2c07E5Eab4D164d4e0a0922642F3fF8";
+const positioningAddress = "0xdb493c4e935CAE3C52E7c388bCD4BaD12D2575eB";
+const peripheryAddress = "0x9Ea25BF544e70aaA6e19C9fFcf59ef0c89cFDFbb";
 function encodeAddress(account) {
   return web3.eth.abi.encodeParameters(["address"], [account]);
 }
 function Asset(virtualToken, value) {
   return { virtualToken, value };
 }
-function Order(orderType, deadline, trader, makeAsset, takeAsset, salt, limitOrderTriggerPrice, isShort) {
+function Order(
+  orderType,
+  deadline,
+  trader,
+  makeAsset,
+  takeAsset,
+  salt,
+  limitOrderTriggerPrice,
+  isShort,
+) {
   return {
     orderType,
     deadline,
@@ -45,31 +54,27 @@ const Types = {
 async function getSignature() {
   console.log("Signature creation started ...");
   const provider = new ethers.providers.JsonRpcProvider(
-    `https://polygon-mumbai.g.alchemy.com/v2/${process.env.POLYGON_TESTNET_ALCHEMY_API_KEY}`,
+    `https://arb-goerli.g.alchemy.com/v2/${process.env.ARBITRUM_TESTNET_ALCHEMY_API_KEY}`,
   );
   const account1 = new ethers.Wallet(`${process.env.PRIVATE_KEY}`, provider);
   const account2 = new ethers.Wallet(`${process.env.PRIVATE_KEY_1}`, provider);
   const account3 = new ethers.Wallet(`${process.env.PRIVATE_KEY_2}`, provider);
-  const markPriceOracle = await ethers.getContractAt(
-    "MarkPriceOracle",
-    `${process.env.MARK_PRICE_ORACLE}`,
-  );
-  const indexPriceOracle = await ethers.getContractAt(
-    "IndexPriceOracle",
-    `${process.env.INDEX_PRICE_ORACLE}`,
-  );
-  const indexPrice = (await indexPriceOracle.getIndexSma(0))[0];
-  const markPrice = await markPriceOracle.getLastSma("14400", 0);
+  const Periphery = await ethers.getContractFactory("VolmexPerpPeriphery");
+
+  const positioning = await ethers.getContractAt("Positioning", positioningAddress);
+  const periphery = Periphery.attach(peripheryAddress);
+  await periphery.whitelistTrader(account2.address, true);
+  await periphery.whitelistTrader(account3.address, true);
 
   const time = new Date().getTime();
   const deadline = time + 50000000;
   let salt = time;
-  console.log("initial index", indexPrice.toString());
-  console.log("initial mark", markPrice.toString());
+  // console.log("initial index", indexPrice.toString());
+  // console.log("initial mark", markPrice.toString());
 
   const amounts = {
-    base: BN.from("50000000000000000000").mul("1000000").div(indexPrice), // 50
-    quote: BN.from("50000000000000000000"),
+    base: BN.from("10000000000000000000"), // 50
+    quote: BN.from("980000000000000000000"),
   };
   const isShort = false;
 
@@ -104,13 +109,11 @@ async function getSignature() {
   const signatureRight = await account2._signTypedData(domain, Types, orderRight);
   console.log("Signature created !!!");
 
-  const Periphery = await ethers.getContractFactory("VolmexPerpPeriphery");
-  const accountBalance = await ethers.getContractAt(
-    "AccountBalance",
-    `${process.env.ACCOUNT_BALANCE}`,
-  );
-  const positioning = await ethers.getContractAt("Positioning", positioningAddress);
-  const periphery = Periphery.attach(peripheryAddress);
+  // const accountBalance = await ethers.getContractAt(
+  //   "AccountBalance",
+  //   `${process.env.ACCOUNT_BALANCE}`,
+  // );
+
   console.log("Opening position ...");
   const tx = await periphery
     .connect(account1)
@@ -124,18 +127,16 @@ async function getSignature() {
     );
   const receipt = await tx.wait();
   console.log("Tx Hash: ", receipt.transactionHash);
-  console.log("final", (await markPriceOracle.getLastSma("14400", 0)).toString());
+  // console.log("final", (await markPriceOracle.getLastSma("14400", 0)).toString());
 
-  const requiredData = {
-    owedUnRealizedPnl: (await accountBalance.getPnlAndPendingFee(account3.address)).toString(),
-    pendingFundingPayment: (
-      await positioning.getPendingFundingPayment(account3.address, baseToken)
-    ).toString(),
-    positionSize: (
-      await accountBalance.getPositionSize(account3.address, baseToken)
-    ).toString(),
-  };
-  console.log("response: ", requiredData);
+  // const requiredData = {
+  //   owedUnRealizedPnl: (await accountBalance.getPnlAndPendingFee(account3.address)).toString(),
+  //   pendingFundingPayment: (
+  //     await positioning.getPendingFundingPayment(account3.address, baseToken)
+  //   ).toString(),
+  //   positionSize: (await accountBalance.getPositionSize(account3.address, baseToken)).toString(),
+  // };
+  // console.log("response: ", requiredData);
 }
 
 getSignature()
