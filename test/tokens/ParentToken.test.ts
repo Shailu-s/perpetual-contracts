@@ -5,14 +5,14 @@ import { initial } from "lodash";
 describe("ParentToken", function () {
   let VolmexBaseToken;
   let volmexBaseToken;
-  let IndexPriceOracle;
-  let indexPriceOracle;
+  let PerpetualOracle;
+  let perpetualOracle;
   let owner, account1, account2;
   const proofHash = "0x6c00000000000000000000000000000000000000000000000000000000000000";
   const capRatio = "250";
   this.beforeAll(async () => {
     VolmexBaseToken = await ethers.getContractFactory("VolmexBaseToken");
-    IndexPriceOracle = await ethers.getContractFactory("IndexPriceOracle");
+    PerpetualOracle = await ethers.getContractFactory("PerpetualOracle");
   });
   beforeEach(async () => {
     [owner, account1, account2] = await ethers.getSigners();
@@ -24,31 +24,41 @@ describe("ParentToken", function () {
         initializer: "initialize",
       },
     );
-    indexPriceOracle = await upgrades.deployProxy(
-      IndexPriceOracle,
-      [owner.address, [100000], [volmexBaseToken.address], [proofHash], [capRatio]],
-      {
-        initializer: "initialize",
-      },
+    perpetualOracle = await upgrades.deployProxy(
+      PerpetualOracle,
+      [
+        [volmexBaseToken.address, volmexBaseToken.address],
+        [200000000, 200000000],
+        [200000000, 200000000],
+        [proofHash, proofHash],
+        owner.address,
+      ],
+      { initializer: "__PerpetualOracle_init" },
     );
-    await volmexBaseToken.setPriceFeed(indexPriceOracle.address);
+
+    await volmexBaseToken.setPriceFeed(perpetualOracle.address);
   });
   describe("deployment", function () {
     it("should fail to again", async () => {
       await expect(
-        volmexBaseToken.initialize("MyTestToken", "MKT", indexPriceOracle.address, true),
+        volmexBaseToken.initialize("MyTestToken", "MKT", perpetualOracle.address, true),
       ).to.be.revertedWith("Initializable: contract is already initialized");
     });
   });
   describe("setter and getter methods", function () {
     it("Should set price feed", async () => {
       const volmexPriceOracle = await upgrades.deployProxy(
-        IndexPriceOracle,
-        [owner.address, [100000], [volmexBaseToken.address], [proofHash], [capRatio]],
-        {
-          initializer: "initialize",
-        },
+        PerpetualOracle,
+        [
+          [volmexBaseToken.address, volmexBaseToken.address],
+          [200000000, 200000000],
+          [200000000, 200000000],
+          [proofHash, proofHash],
+          owner.address,
+        ],
+        { initializer: "__PerpetualOracle_init" },
       );
+
       expect(await volmexBaseToken.setPriceFeed(volmexPriceOracle.address))
         .to.emit(volmexBaseToken, "PriceFeedChanged")
         .withArgs(volmexPriceOracle.address);

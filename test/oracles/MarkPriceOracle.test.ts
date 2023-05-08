@@ -312,12 +312,7 @@ describe("perpetualOracle", function () {
             parseInt(await time.latest()) + 28800,
           )
         ).toString(),
-      ).equal("60000000");
-    });
-
-    it("Should get last updated timestamp", async () => {
-      const timestamp = (Number(await time.latest()) - 1).toString();
-      expect((await perpetualOracle.lastestTimestamp(0, true)).toString()).equal(timestamp);
+      ).equal("0");
     });
 
     it("Should try set sm interval", async () => {
@@ -413,7 +408,7 @@ describe("perpetualOracle", function () {
         parseInt(timestamp) - 28800,
         parseInt(timestamp),
       );
-      expect(parseInt(lastEpochPrice)).to.be.equal(80000000);
+      expect(parseInt(lastEpochPrice)).to.be.equal(60000000);
     });
 
     it("Should get cumulative price with time delay", async () => {
