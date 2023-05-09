@@ -594,7 +594,7 @@ describe("Positioning", function () {
           false,
         );
         await expect(positioning.getOrderValidate(orderLeftLeverage1)).to.be.revertedWith(
-          "V_PERP_OVF",
+          "V_PERP_0S",
         );
       });
 
