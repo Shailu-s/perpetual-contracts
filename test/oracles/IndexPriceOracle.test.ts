@@ -6,7 +6,7 @@ const { Order, Asset, sign, encodeAddress } = require("../order");
 import { utils } from "ethers";
 const { expectRevert, time } = require("@openzeppelin/test-helpers");
 
-describe("IndexPriceOracle", function () {
+describe("PerpetualOracle - Index Price Oracle", function () {
   let MatchingEngine;
   let matchingEngine;
   let VirtualToken;
