@@ -6,7 +6,7 @@ const { Order, Asset, sign, encodeAddress } = require("./order");
 import { BigNumber } from "ethers";
 import { time } from "@nomicfoundation/hardhat-network-helpers";
 
-describe.only("Multiple protocols", function () {
+describe("Multiple protocols", function () {
   let MatchingEngine;
   let matchingEngine;
   let VirtualToken;
