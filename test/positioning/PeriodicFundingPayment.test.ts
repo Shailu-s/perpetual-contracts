@@ -108,8 +108,8 @@ describe("Periodic Funding payment", function () {
       PerpetualOracle,
       [
         [volmexBaseToken.address, volmexBaseToken1.address],
-        [75000000, 60000000],
-        [58000000, 50000000],
+        [70000000, 60000000],
+        [75000000, 50000000],
         [proofHash, proofHash],
         owner.address,
       ],
