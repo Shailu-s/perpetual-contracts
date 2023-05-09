@@ -22,6 +22,7 @@ describe("Periodic Funding payment", function () {
   let perpetualOracle;
   let VolmexBaseToken;
   let volmexBaseToken;
+  let volmexBaseToken1;
   let VolmexQuoteToken;
   let volmexQuoteToken;
   let VolmexPerpPeriphery;
@@ -89,11 +90,24 @@ describe("Periodic Funding payment", function () {
         initializer: "initialize",
       },
     );
+    volmexBaseToken1 = await upgrades.deployProxy(
+      VolmexBaseToken,
+      [
+        "VolmexBaseToken", // nameArg
+        "VBT", // symbolArg,
+        account1.address, // priceFeedArg
+        true, // isBase
+      ],
+      {
+        initializer: "initialize",
+      },
+    );
     await volmexBaseToken.deployed();
+    console.log(volmexBaseToken.address, volmexBaseToken1.address, " base tokens");
     perpetualOracle = await upgrades.deployProxy(
       PerpetualOracle,
       [
-        [volmexBaseToken.address, volmexBaseToken.address],
+        [volmexBaseToken.address, volmexBaseToken1.address],
         [75000000, 60000000],
         [58000000, 50000000],
         [proofHash, proofHash],
@@ -1343,6 +1357,7 @@ describe("Periodic Funding payment", function () {
     let perpetualOracle;
     let VolmexBaseToken;
     let volmexBaseToken;
+    let volmexBaseToken1;
     let VolmexQuoteToken;
     let volmexQuoteToken;
     let VolmexPerpPeriphery;
@@ -1411,14 +1426,26 @@ describe("Periodic Funding payment", function () {
         },
       );
       await volmexBaseToken.deployed();
-
+      volmexBaseToken1 = await upgrades.deployProxy(
+        VolmexBaseToken,
+        [
+          "VolmexBaseToken", // nameArg
+          "VBT", // symbolArg,
+          account1.address, // priceFeedArg
+          true, // isBase
+        ],
+        {
+          initializer: "initialize",
+        },
+      );
+      await volmexBaseToken1.deployed();
       await (await perpView.setBaseToken(volmexBaseToken.address)).wait();
       perpetualOracle = await upgrades.deployProxy(
         PerpetualOracle,
         [
-          [volmexBaseToken.address, volmexBaseToken.address],
-          [200000000, 200000000],
+          [volmexBaseToken.address, volmexBaseToken1.address],
           [200060000, 200060000],
+          [200000000, 200000000],
           [proofHash, proofHash],
           owner.address,
         ],
@@ -1698,11 +1725,8 @@ describe("Periodic Funding payment", function () {
     // when user opens  position his collateral value  = 1000 - (200.06 *4/100);
     // when user closes position his collateral value  = 1000 - (200.06 *4/100) - (200.06 *4/100) - funding payment;
     it("funding should occur", async () => {
-      await perpetualOracle.setMarkObservationAdder(owner.address);
       await perpetualOracle.setIndexObservationAdder(owner.address);
-      for (let index = 0; index <= 10; index++) {
-        await perpetualOracle.addMarkObservation(0, 200060000);
-      }
+
       for (let index = 0; index <= 10; index++) {
         await perpetualOracle.addIndexObservations([0], [200000000], [proofHash]);
       }
@@ -1773,11 +1797,12 @@ describe("Periodic Funding payment", function () {
       for (let index = 0; index <= 10; index++) {
         await perpetualOracle.addIndexObservations([0], [200000000], [proofHash]);
       }
-      await time.increase(10000);
+      await time.increase(10001);
       for (let index = 0; index <= 10; index++) {
         await perpetualOracle.addIndexObservations([0], [200000000], [proofHash]);
       }
       console.log((await vaultController.getAccountValue(account4.address)).toString());
+
       console.log("close position");
       const orderLeft1 = Order(
         ORDER,
@@ -1814,9 +1839,9 @@ describe("Periodic Funding payment", function () {
         account3.address,
         1,
       );
-      expect(traderCollateral3.toString()).to.be.equal("1001299951919976000000");
+      expect(traderCollateral3.toString()).to.be.equal("999819951919976000000");
       const traderCollateral = await vaultController.getFreeCollateralByRatio(account4.address, 1);
-      expect(traderCollateral.toString()).to.be.equal("999866615919976000000");
+      expect(traderCollateral.toString()).to.be.equal("999859951919976000000");
     });
     // Fees deduction
     // user collateral = 1000
@@ -1946,10 +1971,10 @@ describe("Periodic Funding payment", function () {
         account3.address,
         1,
       );
-      expect(traderCollateral3.toString()).to.be.equal("1002759951919976000000");
+      expect(traderCollateral3.toString()).to.be.equal("999799951919976000000");
       const traderCollateral = await vaultController.getFreeCollateralByRatio(account4.address, 1);
 
-      expect(traderCollateral.toString()).to.be.equal("999866615919976000000");
+      expect(traderCollateral.toString()).to.be.equal("999879951919976000000");
     });
     // Fees deduction
     // user collateral = 1000
@@ -2216,7 +2241,7 @@ describe("Periodic Funding payment", function () {
         liquidator,
       );
       const traderCollateral = await vaultController.getFreeCollateralByRatio(account4.address, 1);
-      expect(traderCollateral.toString()).to.be.equal("999839951919976000000");
+      expect(traderCollateral.toString()).to.be.equal("999850385586642666666");
     });
     // Fees deduction
     // user collateral = 1000
@@ -2351,7 +2376,7 @@ describe("Periodic Funding payment", function () {
         liquidator,
       );
       const traderCollateral = await vaultController.getFreeCollateralByRatio(account4.address, 1);
-      expect(traderCollateral.toString()).to.be.equal("999866615919976000000");
+      expect(traderCollateral.toString()).to.be.equal("999839951919976000000");
     });
 
     it("should reach maximum funding rate", async () => {
