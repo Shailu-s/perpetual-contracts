@@ -66,7 +66,7 @@ describe("ParentToken", function () {
     });
 
     describe("Getters", function () {
-      it.only("Should get index price", async () => {
+      it("Should get index price", async () => {
         expect(await volmexBaseToken.getIndexPrice(0, 3600)).to.eq(200000000);
       });
     });
