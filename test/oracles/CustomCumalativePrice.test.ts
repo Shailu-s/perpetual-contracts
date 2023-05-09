@@ -8,30 +8,6 @@ interface Observation {
   timestamp: number;
   price: number;
 }
-const getCustomUnderlyingSma = (
-  observations: Array<Observation>,
-  startTime: number,
-  endTime: number,
-) => {
-  let priceCumulative = 0;
-  let index = observations.length;
-  let startIndex = 0;
-  let endIndex = 0;
-  for (; index != 0 && index >= startIndex; index--) {
-    if (observations[index - 1].timestamp >= endTime) {
-      endIndex = index - 1;
-    } else if (observations[index - 1].timestamp >= startTime) {
-      startIndex = index - 1;
-    }
-  }
-  index = 0; // re-used to get total observation count
-  for (; startIndex <= endIndex; startIndex++) {
-    priceCumulative += observations[startIndex].price;
-    index++;
-  }
-  priceCumulative = priceCumulative / index;
-  return priceCumulative;
-};
 
 describe("Custom Cumulative Price", function () {
   let MatchingEngine;
@@ -48,10 +24,8 @@ describe("Custom Cumulative Price", function () {
   let VaultController;
   let vaultController;
   let AccountBalance;
-  let MarkPriceOracle;
-  let markPriceOracle;
-  let IndexPriceOracle;
-  let indexPriceOracle;
+  let PerpetualOracle;
+  let perpetualOracle;
   let VolmexBaseToken;
   let volmexBaseToken;
   let VolmexQuoteToken;
@@ -87,8 +61,7 @@ describe("Custom Cumulative Price", function () {
 
   this.beforeAll(async () => {
     VolmexPerpPeriphery = await ethers.getContractFactory("VolmexPerpPeriphery");
-    MarkPriceOracle = await ethers.getContractFactory("MarkPriceOracle");
-    IndexPriceOracle = await ethers.getContractFactory("IndexPriceOracle");
+    PerpetualOracle = await ethers.getContractFactory("PerpetualOracle");
     MatchingEngine = await ethers.getContractFactory("MatchingEngine");
     VirtualToken = await ethers.getContractFactory("VirtualTokenTest");
     ERC20TransferProxyTest = await ethers.getContractFactory("ERC20TransferProxyTest");
@@ -125,15 +98,19 @@ describe("Custom Cumulative Price", function () {
     );
     await volmexBaseToken.deployed();
     await (await perpView.setBaseToken(volmexBaseToken.address)).wait();
-
-    indexPriceOracle = await upgrades.deployProxy(
-      IndexPriceOracle,
-      [owner.address, [75000000], [volmexBaseToken.address], [proofHash], [capRatio]],
-      {
-        initializer: "initialize",
-      },
+    perpetualOracle = await upgrades.deployProxy(
+      PerpetualOracle,
+      [
+        [volmexBaseToken.address, volmexBaseToken.address],
+        [70000000, 70000000],
+        [75000000, 75000000],
+        [proofHash, proofHash],
+        owner.address,
+      ],
+      { initializer: "__PerpetualOracle_init" },
     );
-    await volmexBaseToken.setPriceFeed(indexPriceOracle.address);
+
+    await volmexBaseToken.setPriceFeed(perpetualOracle.address);
     volmexQuoteToken = await upgrades.deployProxy(
       VolmexQuoteToken,
       [
@@ -148,19 +125,10 @@ describe("Custom Cumulative Price", function () {
     await volmexQuoteToken.deployed();
     await (await perpView.setQuoteToken(volmexQuoteToken.address)).wait();
 
-    markPriceOracle = await upgrades.deployProxy(
-      MarkPriceOracle,
-      [[70000000], [volmexBaseToken.address], owner.address],
-      {
-        initializer: "initialize",
-      },
-    );
-    await markPriceOracle.deployed();
-    await (await indexPriceOracle.grantInitialTimestampRole(markPriceOracle.address)).wait();
-    positioningConfig = await upgrades.deployProxy(PositioningConfig, [markPriceOracle.address]);
+    positioningConfig = await upgrades.deployProxy(PositioningConfig, [perpetualOracle.address]);
     matchingEngine = await upgrades.deployProxy(MatchingEngine, [
       owner.address,
-      markPriceOracle.address,
+      perpetualOracle.address,
     ]);
 
     USDC = await TestERC20.deploy();
@@ -201,8 +169,7 @@ describe("Custom Cumulative Price", function () {
         vaultController.address,
         accountBalance1.address,
         matchingEngine.address,
-        markPriceOracle.address,
-        indexPriceOracle.address,
+        perpetualOracle.address,
         0,
         [owner.address, account1.address],
       ],
@@ -212,7 +179,6 @@ describe("Custom Cumulative Price", function () {
     );
     await positioning.deployed();
 
-    await markPriceOracle.deployed();
     await (await perpView.setPositioning(positioning.address)).wait();
 
     await (await perpView.incrementPerpIndex()).wait();
@@ -231,7 +197,7 @@ describe("Custom Cumulative Price", function () {
     await vault.connect(owner).setVaultController(vaultController.address);
     await vaultController.registerVault(vault.address, USDC.address);
     await vaultController.connect(owner).setPositioning(positioning.address);
-    await markPriceOracle.grantSmaIntervalRole(positioningConfig.address);
+    await perpetualOracle.grantSmaIntervalRole(positioningConfig.address);
     await positioningConfig.connect(owner).setMaxMarketsPerAccount(5);
     await positioningConfig
       .connect(owner)
@@ -242,14 +208,14 @@ describe("Custom Cumulative Price", function () {
     await positioning.connect(owner).setPositioning(positioning.address);
 
     await (await matchingEngine.grantMatchOrders(positioning.address)).wait();
-    await markPriceOracle.setPositioning(positioning.address);
-    await markPriceOracle.setIndexOracle(indexPriceOracle.address);
+    await perpetualOracle.setPositioning(positioning.address);
+    await positioningConfig.setPositioning(positioning.address);
+    await positioningConfig.setAccountBalance(accountBalance1.address);
     await positioningConfig.setTwapInterval(28800);
 
     volmexPerpPeriphery = await upgrades.deployProxy(VolmexPerpPeriphery, [
       perpView.address,
-      markPriceOracle.address,
-      indexPriceOracle.address,
+      perpetualOracle.address,
       [vault.address, vault.address],
       owner.address,
       owner.address, // replace with replayer address
@@ -286,7 +252,7 @@ describe("Custom Cumulative Price", function () {
       volmexPerpPeriphery,
       "TraderWhitelisted",
     );
-    await markPriceOracle.setObservationAdder(matchingEngine.address);
+    await perpetualOracle.setMarkObservationAdder(matchingEngine.address);
 
     let salt = 2;
     let orderLeft = Order(
@@ -322,25 +288,19 @@ describe("Custom Cumulative Price", function () {
       signatureRight,
       liquidator,
     );
-    await markPriceOracle.setObservationAdder(owner.address);
+    await perpetualOracle.setMarkObservationAdder(owner.address);
   });
   describe("Custom window ", async () => {
-    this.beforeEach(async () => {
-      const blockNumBefore = await ethers.provider.getBlockNumber();
-      const blockBefore = await ethers.provider.getBlock(blockNumBefore);
-      const timestampBefore = blockBefore.timestamp;
-      firstTimestamp = timestampBefore;
-      secondTimestamp = firstTimestamp + interval;
-      thirdTimestamp = secondTimestamp + interval;
+    it("should return cumulative price between first time stamp and second and third", async () => {
       for (index = 0; index < 96; index++) {
         // add obeservation in every 5 minutes
         await time.increase(300);
-        const tx = await markPriceOracle.addObservation(70000000, 0);
+        const tx = await perpetualOracle.addMarkObservation(0, 70000000);
         const { events } = await tx.wait();
 
         let data;
         events.forEach((log: any) => {
-          if (log["event"] == "ObservationAdded") {
+          if (log["event"] == "MarkObservationAdded") {
             data = log["data"];
           }
         });
@@ -354,14 +314,16 @@ describe("Custom Cumulative Price", function () {
         };
         observations.push(observation);
       }
+      const cumulativePrice1 = await perpetualOracle.lastestLastPriceSMA(0, 28800);
+      expect(parseInt(cumulativePrice1)).to.equal(70000000);
       for (index = 0; index < 96; index++) {
         // add obeservation in every 5 minutes
         await time.increase(300);
-        const tx = await markPriceOracle.addObservation(75000000, 0);
+        const tx = await perpetualOracle.addMarkObservation(0, 75000000);
         const { events } = await tx.wait();
         let data;
         events.forEach((log: any) => {
-          if (log["event"] == "ObservationAdded") {
+          if (log["event"] == "MarkObservationAdded") {
             data = log["data"];
           }
         });
@@ -375,22 +337,8 @@ describe("Custom Cumulative Price", function () {
         };
         observations.push(observation);
       }
-    });
-    it("should return cumulative price between first time stamp and second and third", async () => {
-      const cumulativePrice1 = await markPriceOracle.getCustomUnderlyingSma(
-        0,
-        firstTimestamp + 300,
-        secondTimestamp,
-      );
-      const price = getCustomUnderlyingSma(observations, firstTimestamp, secondTimestamp);
-      expect(parseInt(cumulativePrice1)).to.equal(price);
-      const cumulativePrice2 = await markPriceOracle.getCustomUnderlyingSma(
-        0,
-        secondTimestamp + 300,
-        thirdTimestamp,
-      );
-      const price1 = getCustomUnderlyingSma(observations, secondTimestamp + 300, thirdTimestamp);
-      expect(parseInt(cumulativePrice2)).to.equal(price1);
+      const cumulativePrice2 = await perpetualOracle.lastestLastPriceSMA(0, 28800);
+      expect(parseInt(cumulativePrice2)).to.equal(75000000);
     });
   });
   async function getSignature(orderObj, signer) {
