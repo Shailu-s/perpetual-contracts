@@ -20706,7 +20706,7 @@
             "label": "indexObservations",
             "offset": 0,
             "slot": "154",
-            "type": "t_mapping(t_uint256,t_array(t_struct(IndexObservation)2147_storage)65535_storage)",
+            "type": "t_mapping(t_uint256,t_array(t_struct(IndexObservation)6080_storage)65535_storage)",
             "contract": "PerpetualOracle",
             "src": "contracts/oracles/PerpetualOracle.sol:26"
           },
@@ -20714,7 +20714,7 @@
             "label": "lastPriceObservations",
             "offset": 0,
             "slot": "155",
-            "type": "t_mapping(t_uint256,t_array(t_struct(LastPriceObservation)2152_storage)65535_storage)",
+            "type": "t_mapping(t_uint256,t_array(t_struct(LastPriceObservation)6085_storage)65535_storage)",
             "contract": "PerpetualOracle",
             "src": "contracts/oracles/PerpetualOracle.sol:27"
           },
@@ -20722,7 +20722,7 @@
             "label": "indexEpochs",
             "offset": 0,
             "slot": "156",
-            "type": "t_mapping(t_uint256,t_array(t_struct(PriceEpochs)2159_storage)1094_storage)",
+            "type": "t_mapping(t_uint256,t_array(t_struct(PriceEpochs)6092_storage)1094_storage)",
             "contract": "PerpetualOracle",
             "src": "contracts/oracles/PerpetualOracle.sol:28"
           },
@@ -20730,7 +20730,7 @@
             "label": "markEpochs",
             "offset": 0,
             "slot": "157",
-            "type": "t_mapping(t_uint256,t_array(t_struct(PriceEpochs)2159_storage)1094_storage)",
+            "type": "t_mapping(t_uint256,t_array(t_struct(PriceEpochs)6092_storage)1094_storage)",
             "contract": "PerpetualOracle",
             "src": "contracts/oracles/PerpetualOracle.sol:29"
           },
@@ -20810,7 +20810,7 @@
             "label": "positioning",
             "offset": 0,
             "slot": "167",
-            "type": "t_contract(IPositioning)2617",
+            "type": "t_contract(IPositioning)6550",
             "contract": "PerpetualOracle",
             "src": "contracts/oracles/PerpetualOracle.sol:39"
           }
@@ -20820,15 +20820,15 @@
             "label": "address",
             "numberOfBytes": "20"
           },
-          "t_array(t_struct(IndexObservation)2147_storage)65535_storage": {
+          "t_array(t_struct(IndexObservation)6080_storage)65535_storage": {
             "label": "struct IPerpetualOracle.IndexObservation[65535]",
             "numberOfBytes": "6291360"
           },
-          "t_array(t_struct(LastPriceObservation)2152_storage)65535_storage": {
+          "t_array(t_struct(LastPriceObservation)6085_storage)65535_storage": {
             "label": "struct IPerpetualOracle.LastPriceObservation[65535]",
             "numberOfBytes": "4194240"
           },
-          "t_array(t_struct(PriceEpochs)2159_storage)1094_storage": {
+          "t_array(t_struct(PriceEpochs)6092_storage)1094_storage": {
             "label": "struct IPerpetualOracle.PriceEpochs[1094]",
             "numberOfBytes": "105024"
           },
@@ -20848,7 +20848,7 @@
             "label": "bytes32",
             "numberOfBytes": "32"
           },
-          "t_contract(IPositioning)2617": {
+          "t_contract(IPositioning)6550": {
             "label": "contract IPositioning",
             "numberOfBytes": "20"
           },
@@ -20868,15 +20868,15 @@
             "label": "mapping(uint256 => address)",
             "numberOfBytes": "32"
           },
-          "t_mapping(t_uint256,t_array(t_struct(IndexObservation)2147_storage)65535_storage)": {
+          "t_mapping(t_uint256,t_array(t_struct(IndexObservation)6080_storage)65535_storage)": {
             "label": "mapping(uint256 => struct IPerpetualOracle.IndexObservation[65535])",
             "numberOfBytes": "32"
           },
-          "t_mapping(t_uint256,t_array(t_struct(LastPriceObservation)2152_storage)65535_storage)": {
+          "t_mapping(t_uint256,t_array(t_struct(LastPriceObservation)6085_storage)65535_storage)": {
             "label": "mapping(uint256 => struct IPerpetualOracle.LastPriceObservation[65535])",
             "numberOfBytes": "32"
           },
-          "t_mapping(t_uint256,t_array(t_struct(PriceEpochs)2159_storage)1094_storage)": {
+          "t_mapping(t_uint256,t_array(t_struct(PriceEpochs)6092_storage)1094_storage)": {
             "label": "mapping(uint256 => struct IPerpetualOracle.PriceEpochs[1094])",
             "numberOfBytes": "32"
           },
@@ -20884,7 +20884,7 @@
             "label": "mapping(uint256 => uint256)",
             "numberOfBytes": "32"
           },
-          "t_struct(IndexObservation)2147_storage": {
+          "t_struct(IndexObservation)6080_storage": {
             "label": "struct IPerpetualOracle.IndexObservation",
             "members": [
               {
@@ -20908,7 +20908,7 @@
             ],
             "numberOfBytes": "96"
           },
-          "t_struct(LastPriceObservation)2152_storage": {
+          "t_struct(LastPriceObservation)6085_storage": {
             "label": "struct IPerpetualOracle.LastPriceObservation",
             "members": [
               {
@@ -20926,7 +20926,7 @@
             ],
             "numberOfBytes": "64"
           },
-          "t_struct(PriceEpochs)2159_storage": {
+          "t_struct(PriceEpochs)6092_storage": {
             "label": "struct IPerpetualOracle.PriceEpochs",
             "members": [
               {

@@ -22,6 +22,7 @@ describe("Periodic Funding payment", function () {
   let perpetualOracle;
   let VolmexBaseToken;
   let volmexBaseToken;
+  let volmexBaseToken1;
   let VolmexQuoteToken;
   let volmexQuoteToken;
   let VolmexPerpPeriphery;
@@ -89,11 +90,24 @@ describe("Periodic Funding payment", function () {
         initializer: "initialize",
       },
     );
+    volmexBaseToken1 = await upgrades.deployProxy(
+      VolmexBaseToken,
+      [
+        "VolmexBaseToken", // nameArg
+        "VBT", // symbolArg,
+        account1.address, // priceFeedArg
+        true, // isBase
+      ],
+      {
+        initializer: "initialize",
+      },
+    );
     await volmexBaseToken.deployed();
+    console.log(volmexBaseToken.address, volmexBaseToken1.address, " base tokens");
     perpetualOracle = await upgrades.deployProxy(
       PerpetualOracle,
       [
-        [volmexBaseToken.address, volmexBaseToken.address],
+        [volmexBaseToken.address, volmexBaseToken1.address],
         [75000000, 60000000],
         [58000000, 50000000],
         [proofHash, proofHash],
@@ -1343,6 +1357,7 @@ describe("Periodic Funding payment", function () {
     let perpetualOracle;
     let VolmexBaseToken;
     let volmexBaseToken;
+    let volmexBaseToken1;
     let VolmexQuoteToken;
     let volmexQuoteToken;
     let VolmexPerpPeriphery;
@@ -1411,18 +1426,30 @@ describe("Periodic Funding payment", function () {
         },
       );
       await volmexBaseToken.deployed();
-
+      volmexBaseToken1 = await upgrades.deployProxy(
+        VolmexBaseToken,
+        [
+          "VolmexBaseToken", // nameArg
+          "VBT", // symbolArg,
+          account1.address, // priceFeedArg
+          true, // isBase
+        ],
+        {
+          initializer: "initialize",
+        },
+      );
+      await volmexBaseToken1.deployed();
       await (await perpView.setBaseToken(volmexBaseToken.address)).wait();
       perpetualOracle = await upgrades.deployProxy(
         PerpetualOracle,
         [
-          [volmexBaseToken.address, volmexBaseToken.address],
-          [200000000, 200000000],
+          [volmexBaseToken.address, volmexBaseToken1.address],
           [200060000, 200060000],
+          [200000000, 200000000],
           [proofHash, proofHash],
           owner.address,
         ],
-        { initializer: "__Perpetual_Oracles_Init" },
+        { initializer: "__PerpetualOracle_init" },
       );
       await perpetualOracle.deployed();
       await volmexBaseToken.setPriceFeed(perpetualOracle.address);
@@ -1698,11 +1725,8 @@ describe("Periodic Funding payment", function () {
     // when user opens  position his collateral value  = 1000 - (200.06 *4/100);
     // when user closes position his collateral value  = 1000 - (200.06 *4/100) - (200.06 *4/100) - funding payment;
     it("funding should occur", async () => {
-      await perpetualOracle.setMarkObservationAdder(owner.address);
       await perpetualOracle.setIndexObservationAdder(owner.address);
-      for (let index = 0; index <= 10; index++) {
-        await perpetualOracle.addMarkObservation(0, 200060000);
-      }
+
       for (let index = 0; index <= 10; index++) {
         await perpetualOracle.addIndexObservations([0], [200000000], [proofHash]);
       }
@@ -1773,11 +1797,12 @@ describe("Periodic Funding payment", function () {
       for (let index = 0; index <= 10; index++) {
         await perpetualOracle.addIndexObservations([0], [200000000], [proofHash]);
       }
-      await time.increase(10000);
+      await time.increase(10001);
       for (let index = 0; index <= 10; index++) {
         await perpetualOracle.addIndexObservations([0], [200000000], [proofHash]);
       }
       console.log((await vaultController.getAccountValue(account4.address)).toString());
+
       console.log("close position");
       const orderLeft1 = Order(
         ORDER,
@@ -2216,7 +2241,7 @@ describe("Periodic Funding payment", function () {
         liquidator,
       );
       const traderCollateral = await vaultController.getFreeCollateralByRatio(account4.address, 1);
-      expect(traderCollateral.toString()).to.be.equal("999849950919976000000");
+      expect(traderCollateral.toString()).to.be.equal("999850385586642666666");
     });
     // Fees deduction
     // user collateral = 1000
@@ -2351,140 +2376,139 @@ describe("Periodic Funding payment", function () {
         liquidator,
       );
       const traderCollateral = await vaultController.getFreeCollateralByRatio(account4.address, 1);
-      expect(traderCollateral.toString()).to.be.equal("999866615919976000000");
+      expect(traderCollateral.toString()).to.be.equal("999839951919976000000");
     });
 
-    // NOTE: Commented for now as it is moved to realizedandunrealizedpnl.test.ts
-    // it("should reach maximum funding rate", async () => {
-    //   await positioningConfig.setMaxFundingRate("7300");
-    //   await markPriceOracle.setObservationAdder(owner.address);
-    //   await indexPriceOracle.setObservationAdder(owner.address);
-    //   for (let index = 0; index <= 10; index++) {
-    //     await markPriceOracle.addObservation(99000000, 0);
-    //   }
-    //   for (let index = 0; index <= 10; index++) {
-    //     await indexPriceOracle.addObservation([100000000], [0], [proofHash]);
-    //   }
-    //   await markPriceOracle.setObservationAdder(matchingEngine.address);
-    //   await USDC.transfer(account4.address, "1000000000000000000");
-    //   await USDC.transfer(account3.address, "1000000000000000000");
-    //   await matchingEngine.grantMatchOrders(positioning.address);
-    //   await USDC.connect(account3).approve(volmexPerpPeriphery.address, "1000000000000000000");
-    //   await USDC.connect(account4).approve(volmexPerpPeriphery.address, "1000000000000000000");
-    //   await volmexPerpPeriphery.whitelistTrader(account3.address, true);
-    //   await volmexPerpPeriphery.whitelistTrader(account4.address, true);
+    it("should reach maximum funding rate", async () => {
+      await positioningConfig.setMaxFundingRate("7300");
+      await perpetualOracle.setIndexObservationAdder(owner.address);
+      await perpetualOracle.setMarkObservationAdder(owner.address);
+      for (let index = 0; index <= 10; index++) {
+        await perpetualOracle.addMarkObservation(0, 99000000);
+      }
+      for (let index = 0; index <= 10; index++) {
+        await perpetualOracle.addIndexObservations([0], [100000000], [proofHash]);
+      }
+      await perpetualOracle.setMarkObservationAdder(matchingEngine.address);
+      await USDC.transfer(account4.address, "1000000000000000000");
+      await USDC.transfer(account3.address, "1000000000000000000");
+      await matchingEngine.grantMatchOrders(positioning.address);
+      await USDC.connect(account3).approve(volmexPerpPeriphery.address, "1000000000000000000");
+      await USDC.connect(account4).approve(volmexPerpPeriphery.address, "1000000000000000000");
+      await volmexPerpPeriphery.whitelistTrader(account3.address, true);
+      await volmexPerpPeriphery.whitelistTrader(account4.address, true);
 
-    //   (
-    //     await volmexPerpPeriphery
-    //       .connect(account4)
-    //       .depositToVault(index, USDC.address, "1000000000")
-    //   ).wait();
-    //   (
-    //     await volmexPerpPeriphery
-    //       .connect(account3)
-    //       .depositToVault(index, USDC.address, "1000000000")
-    //   ).wait();
+      (
+        await volmexPerpPeriphery
+          .connect(account4)
+          .depositToVault(index, USDC.address, "1000000000")
+      ).wait();
+      (
+        await volmexPerpPeriphery
+          .connect(account3)
+          .depositToVault(index, USDC.address, "1000000000")
+      ).wait();
 
-    //   const orderLeft = Order(
-    //     ORDER,
-    //     deadline,
-    //     account4.address,
-    //     Asset(volmexBaseToken.address, "1000000000000000000"),
-    //     Asset(virtualToken.address, "100000000000000000000"),
-    //     256,
-    //     (1e6).toString(),
-    //     true,
-    //   );
-    //   const orderRight = Order(
-    //     ORDER,
-    //     deadline,
-    //     account3.address,
-    //     Asset(virtualToken.address, "100000000000000000000"),
-    //     Asset(volmexBaseToken.address, "1000000000000000000"),
-    //     890,
-    //     (1e6).toString(),
-    //     false,
-    //   );
+      const orderLeft = Order(
+        ORDER,
+        deadline,
+        account4.address,
+        Asset(volmexBaseToken.address, "1000000000000000000"),
+        Asset(virtualToken.address, "100000000000000000000"),
+        256,
+        (1e6).toString(),
+        true,
+      );
+      const orderRight = Order(
+        ORDER,
+        deadline,
+        account3.address,
+        Asset(virtualToken.address, "100000000000000000000"),
+        Asset(volmexBaseToken.address, "1000000000000000000"),
+        890,
+        (1e6).toString(),
+        false,
+      );
 
-    //   const signatureLeft = await getSignature(orderLeft, account4.address);
-    //   const signatureRight = await getSignature(orderRight, account3.address);
-    //   await volmexPerpPeriphery.openPosition(
-    //     index,
-    //     orderLeft,
-    //     signatureLeft,
-    //     orderRight,
-    //     signatureRight,
-    //     liquidator,
-    //   );
-    //   const positionSize1 = await accountBalance1.getPositionSize(
-    //     account3.address,
-    //     volmexBaseToken.address,
-    //   );
-    //   const positionSize2 = await accountBalance1.getPositionSize(
-    //     account4.address,
-    //     volmexBaseToken.address,
-    //   );
+      const signatureLeft = await getSignature(orderLeft, account4.address);
+      const signatureRight = await getSignature(orderRight, account3.address);
+      await volmexPerpPeriphery.openPosition(
+        index,
+        orderLeft,
+        signatureLeft,
+        orderRight,
+        signatureRight,
+        liquidator,
+      );
+      const positionSize1 = await accountBalance1.getPositionSize(
+        account3.address,
+        volmexBaseToken.address,
+      );
+      const positionSize2 = await accountBalance1.getPositionSize(
+        account4.address,
+        volmexBaseToken.address,
+      );
 
-    //   expect(positionSize1.toString()).to.be.equal("1000000000000000000");
-    //   expect(positionSize2.toString()).to.be.equal("-1000000000000000000");
-    //   await markPriceOracle.setObservationAdder(owner.address);
-    //   await time.increase(10000);
+      expect(positionSize1.toString()).to.be.equal("1000000000000000000");
+      expect(positionSize2.toString()).to.be.equal("-1000000000000000000");
+      await perpetualOracle.setMarkObservationAdder(owner.address);
+      await time.increase(10000);
 
-    //   for (let index = 0; index <= 10; index++) {
-    //     await indexPriceOracle.addObservation([100000000], [0], [proofHash]);
-    //   }
-    //   for (let index = 0; index <= 10; index++) {
-    //     await markPriceOracle.addObservation(1500000000, 0);
-    //   }
-    //   const timestamp = await time.latest();
-    //   await time.increase(18800);
-    //   for (let index = 0; index <= 10; index++) {
-    //     await indexPriceOracle.addObservation([100000000], [0], [proofHash]);
-    //   }
-    //   for (let index = 0; index <= 10; index++) {
-    //     await markPriceOracle.addObservation(1500000000, 0);
-    //   }
-    //   const orderLeft1 = Order(
-    //     ORDER,
-    //     deadline,
-    //     account3.address,
-    //     Asset(volmexBaseToken.address, "1000000000000000000"),
-    //     Asset(virtualToken.address, "1600000000000000000000"),
-    //     256,
-    //     (1e6).toString(),
-    //     true,
-    //   );
-    //   const orderRight1 = Order(
-    //     ORDER,
-    //     deadline,
-    //     account4.address,
-    //     Asset(virtualToken.address, "1600000000000000000000"),
-    //     Asset(volmexBaseToken.address, "1000000000000000000"),
-    //     890,
-    //     (1e6).toString(),
-    //     false,
-    //   );
+      for (let index = 0; index <= 10; index++) {
+        await perpetualOracle.addIndexObservations([0], [100000000], [proofHash]);
+      }
+      for (let index = 0; index <= 10; index++) {
+        await perpetualOracle.addMarkObservation(0, 1500000000);
+      }
+      const timestamp = await time.latest();
+      await time.increase(18800);
+      for (let index = 0; index <= 10; index++) {
+        await perpetualOracle.addIndexObservations([0], [100000000], [proofHash]);
+      }
+      for (let index = 0; index <= 10; index++) {
+        await perpetualOracle.addMarkObservation(0, 1500000000);
+      }
+      const orderLeft1 = Order(
+        ORDER,
+        deadline,
+        account3.address,
+        Asset(volmexBaseToken.address, "1000000000000000000"),
+        Asset(virtualToken.address, "1600000000000000000000"),
+        256,
+        (1e6).toString(),
+        true,
+      );
+      const orderRight1 = Order(
+        ORDER,
+        deadline,
+        account4.address,
+        Asset(virtualToken.address, "1600000000000000000000"),
+        Asset(volmexBaseToken.address, "1000000000000000000"),
+        890,
+        (1e6).toString(),
+        false,
+      );
 
-    //   const signatureLeft1 = await getSignature(orderLeft1, account3.address);
-    //   const signatureRight1 = await getSignature(orderRight1, account4.address);
-    //   await volmexPerpPeriphery.openPosition(
-    //     index,
-    //     orderLeft1,
-    //     signatureLeft1,
-    //     orderRight1,
-    //     signatureRight1,
-    //     liquidator,
-    //   );
-    //   const positionSize3 = await accountBalance1.getPositionSize(
-    //     account3.address,
-    //     volmexBaseToken.address,
-    //   );
-    //   const positionSize4 = await accountBalance1.getPositionSize(
-    //     account4.address,
-    //     volmexBaseToken.address,
-    //   );
-    //   const lastFundingrate = await positioning.getLastFundingRate(volmexBaseToken.address);
-    //   expect(lastFundingrate.toString()).to.be.equal("7300");
-    // });
+      const signatureLeft1 = await getSignature(orderLeft1, account3.address);
+      const signatureRight1 = await getSignature(orderRight1, account4.address);
+      await volmexPerpPeriphery.openPosition(
+        index,
+        orderLeft1,
+        signatureLeft1,
+        orderRight1,
+        signatureRight1,
+        liquidator,
+      );
+      const positionSize3 = await accountBalance1.getPositionSize(
+        account3.address,
+        volmexBaseToken.address,
+      );
+      const positionSize4 = await accountBalance1.getPositionSize(
+        account4.address,
+        volmexBaseToken.address,
+      );
+      const lastFundingrate = await positioning.getLastFundingRate(volmexBaseToken.address);
+      expect(lastFundingrate.toString()).to.be.equal("7300");
+    });
   });
 });

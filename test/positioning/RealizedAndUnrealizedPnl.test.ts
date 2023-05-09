@@ -2,7 +2,6 @@ import { expect } from "chai";
 import { ethers, upgrades } from "hardhat";
 const { Order, Asset, sign, encodeAddress } = require("../order");
 import { FakeContract, smock } from "@defi-wonderland/smock";
-import { FundingRate, IndexPriceOracle, MarkPriceOracle } from "../../typechain";
 import { BigNumber } from "ethers";
 const { expectRevert, time } = require("@openzeppelin/test-helpers");
 
@@ -26,15 +25,12 @@ describe("Realised pnl tests", function () {
   let vaultController;
   let AccountBalance;
   let accountBalance;
-  let MarkPriceOracle;
-  let markPriceOracle;
-  let IndexPriceOracle;
-  let indexPriceOracle;
   let VolmexBaseToken;
   let volmexBaseToken;
   let VolmexPerpPeriphery;
   let volmexPerpPeriphery;
-
+  let PerpetualOracle;
+  let perpetualOracle;
   let transferManagerTest;
   let accountBalance1;
   let MarketRegistry;
@@ -62,8 +58,8 @@ describe("Realised pnl tests", function () {
 
   this.beforeAll(async () => {
     VolmexPerpPeriphery = await ethers.getContractFactory("VolmexPerpPeriphery");
-    MarkPriceOracle = await ethers.getContractFactory("MarkPriceOracle");
-    IndexPriceOracle = await ethers.getContractFactory("IndexPriceOracle");
+    PerpetualOracle = await ethers.getContractFactory("PerpetualOracle");
+
     // fundingRate = await smock.fake("FundingRate")
     MatchingEngine = await ethers.getContractFactory("MatchingEngineTest");
     VirtualToken = await ethers.getContractFactory("VirtualTokenTest");
@@ -98,32 +94,26 @@ describe("Realised pnl tests", function () {
       },
     );
     await volmexBaseToken.deployed();
+    perpetualOracle = await upgrades.deployProxy(
+      PerpetualOracle,
+      [
+        [volmexBaseToken.address, volmexBaseToken.address],
+        [200000000, 200000000],
+        [200000000, 200000000],
+        [proofHash, proofHash],
+        owner.address,
+      ],
+      { initializer: "__PerpetualOracle_init" },
+    );
 
-    indexPriceOracle = await upgrades.deployProxy(
-      IndexPriceOracle,
-      [owner.address, [200000000], [volmexBaseToken.address], [proofHash], [capRatio]],
-      {
-        initializer: "initialize",
-      },
-    );
-    await indexPriceOracle.deployed();
-    await volmexBaseToken.setPriceFeed(indexPriceOracle.address);
-    markPriceOracle = await upgrades.deployProxy(
-      MarkPriceOracle,
-      [[200000000], [volmexBaseToken.address], owner.address],
-      {
-        initializer: "initialize",
-      },
-    );
-    await markPriceOracle.deployed();
-    await (await indexPriceOracle.grantInitialTimestampRole(markPriceOracle.address)).wait();
+    await volmexBaseToken.setPriceFeed(perpetualOracle.address);
 
     baseToken = await upgrades.deployProxy(
       VolmexBaseToken,
       [
         "BaseToken", // nameArg
         "BTN", // symbolArg,
-        indexPriceOracle.address, // priceFeedArg
+        perpetualOracle.address, // priceFeedArg
         true, // isBase
       ],
       {
@@ -139,9 +129,9 @@ describe("Realised pnl tests", function () {
 
     erc1271Test = await ERC1271Test.deploy();
 
-    positioningConfig = await upgrades.deployProxy(PositioningConfig, [markPriceOracle.address]);
+    positioningConfig = await upgrades.deployProxy(PositioningConfig, [perpetualOracle.address]);
     await positioningConfig.deployed();
-    await markPriceOracle.grantSmaIntervalRole(positioningConfig.address);
+    await perpetualOracle.grantSmaIntervalRole(positioningConfig.address);
     accountBalance = await upgrades.deployProxy(AccountBalance, [positioningConfig.address]);
     await accountBalance.deployed();
 
@@ -151,13 +141,13 @@ describe("Realised pnl tests", function () {
 
     matchingEngine = await upgrades.deployProxy(
       MatchingEngine,
-      [owner.address, markPriceOracle.address],
+      [owner.address, perpetualOracle.address],
       {
         initializer: "__MatchingEngineTest_init",
       },
     );
 
-    await markPriceOracle.setObservationAdder(matchingEngine.address);
+    await perpetualOracle.setMarkObservationAdder(matchingEngine.address);
 
     virtualToken = await upgrades.deployProxy(VirtualToken, ["VirtualToken", "VTK", false], {
       initializer: "initialize",
@@ -202,8 +192,7 @@ describe("Realised pnl tests", function () {
         vaultController.address,
         accountBalance1.address,
         matchingEngine.address,
-        markPriceOracle.address,
-        indexPriceOracle.address,
+        perpetualOracle.address,
         0,
         [owner.address, account2.address],
       ],
@@ -238,8 +227,7 @@ describe("Realised pnl tests", function () {
     await positioning.connect(owner).setDefaultFeeReceiver(owner.address);
     await positioning.connect(owner).setPositioning(positioning.address);
 
-    await (await markPriceOracle.setPositioning(positioning.address)).wait();
-    await (await markPriceOracle.setIndexOracle(indexPriceOracle.address)).wait();
+    await (await perpetualOracle.setPositioning(positioning.address)).wait();
     await positioningConfig.setPositioning(positioning.address);
     await positioningConfig.setAccountBalance(accountBalance1.address);
     await positioningConfig.setTwapInterval(28800);
@@ -247,8 +235,7 @@ describe("Realised pnl tests", function () {
     perpViewFake = await smock.fake("VolmexPerpView");
     volmexPerpPeriphery = await upgrades.deployProxy(VolmexPerpPeriphery, [
       perpViewFake.address,
-      markPriceOracle.address,
-      indexPriceOracle.address,
+      perpetualOracle.address,
       [vault.address, vault2.address],
       owner.address,
       relayer.address,
@@ -260,7 +247,7 @@ describe("Realised pnl tests", function () {
     await virtualToken.connect(account2).approve(vault.address, convert("100"));
     await virtualToken.connect(account1).approve(volmexPerpPeriphery.address, convert("100"));
     await virtualToken.connect(account2).approve(volmexPerpPeriphery.address, convert("100"));
-    await indexPriceOracle.setObservationAdder(owner.address);
+    await perpetualOracle.setIndexObservationAdder(owner.address);
     await vaultController
       .connect(account1)
       .deposit(
@@ -329,7 +316,7 @@ describe("Realised pnl tests", function () {
 
       await time.increase(10000);
       for (let i = 0; i < 10; i++) {
-        await indexPriceOracle.addObservation([250000000], [0], [proofHash]);
+        await perpetualOracle.addIndexObservations([0], [250000000], [proofHash]);
       }
 
       pnlTrader1 = await accountBalance1.getPnlAndPendingFee(account1.address);
@@ -448,7 +435,7 @@ describe("Realised pnl tests", function () {
 
       await time.increase(10000);
       for (let i = 0; i < 10; i++) {
-        await indexPriceOracle.addObservation([150000000], [0], [proofHash]);
+        await perpetualOracle.addIndexObservations([0], [150000000], [proofHash]);
       }
 
       pnlTrader1 = await accountBalance1.getPnlAndPendingFee(account1.address);

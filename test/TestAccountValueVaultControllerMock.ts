@@ -1,7 +1,6 @@
 import { parseUnits } from "ethers/lib/utils";
 import { expect } from "chai";
 import { ethers, upgrades } from "hardhat";
-import { IndexPriceOracle, MarkPriceOracle } from "../typechain";
 import { FakeContract, smock } from "@defi-wonderland/smock";
 
 describe("Vault Controller Mock tests for account value", function () {
@@ -12,21 +11,22 @@ describe("Vault Controller Mock tests for account value", function () {
   let vaultController;
   let vaultFactory;
   let DAI;
-  let markPriceFake: FakeContract<MarkPriceOracle>;
-  let indexPriceFake: FakeContract<IndexPriceOracle>;
-  let matchingEngineFake: FakeContract<MarkPriceOracle>;
+  let PerpetualOracle;
+  let perpetualOracle;
+  let matchingEngineFake;
   let Positioning;
   let positioning;
   let VolmexPerpPeriphery;
   let volmexPerpPeriphery;
   let prepViewFake;
   let owner, alice, relayer;
+  const proofHash = "0x6c00000000000000000000000000000000000000000000000000000000000000";
 
   beforeEach(async function () {
     [owner, alice, relayer] = await ethers.getSigners();
+    PerpetualOracle = await ethers.getContractFactory("PerpetualOracle");
     VolmexPerpPeriphery = await ethers.getContractFactory("VolmexPerpPeriphery");
-    markPriceFake = await smock.fake("MarkPriceOracle");
-    indexPriceFake = await smock.fake("IndexPriceOracle");
+
     matchingEngineFake = await smock.fake("MatchingEngine");
     prepViewFake = await smock.fake("VolmexPerpView");
 
@@ -39,10 +39,20 @@ describe("Vault Controller Mock tests for account value", function () {
     const Dai = await tokenFactory2.deploy();
     DAI = await Dai.deployed();
     await DAI.__TestERC20_init("TestDai", "DAI", 18);
-
+    perpetualOracle = await upgrades.deployProxy(
+      PerpetualOracle,
+      [
+        [alice.address, alice.address],
+        [10000000, 10000000],
+        [10000000, 10000000],
+        [proofHash, proofHash],
+        owner.address,
+      ],
+      { initializer: "__PerpetualOracle_init" },
+    );
     const positioningConfigFactory = await ethers.getContractFactory("PositioningConfig");
     positioningConfig = await upgrades.deployProxy(positioningConfigFactory, [
-      markPriceFake.address,
+      perpetualOracle.address,
     ]);
 
     const accountBalanceFactory = await ethers.getContractFactory("AccountBalance");
@@ -73,8 +83,7 @@ describe("Vault Controller Mock tests for account value", function () {
         vaultController.address,
         accountBalance.address,
         matchingEngineFake.address,
-        markPriceFake.address,
-        indexPriceFake.address,
+        perpetualOracle.address,
         0,
         [owner.address, alice.address],
       ],
@@ -97,8 +106,7 @@ describe("Vault Controller Mock tests for account value", function () {
 
     volmexPerpPeriphery = await upgrades.deployProxy(VolmexPerpPeriphery, [
       prepViewFake.address,
-      markPriceFake.address,
-      indexPriceFake.address,
+      perpetualOracle.address,
       [vault.address, vault.address],
       owner.address,
       relayer.address,
