@@ -569,7 +569,7 @@ describe("Positioning", function () {
             .openPosition(orderLeft, signatureLeft, orderRight, signatureRight, liquidator),
         ).to.be.revertedWith("Pausable: paused");
       });
-      it(" should fail to validate orders", async () => {
+      it("should fail to validate orders", async () => {
         let orderLeftLeverage = Order(
           ORDER,
           deadline,
