@@ -205,7 +205,9 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
             if (baseBalance < 0) {
                 // baseDebtValue = baseDebt * indexPrice
                 // baseDebtValue = baseBalance.mulDiv(_getIndexPrice(baseToken).toInt256(), 1e18);
-                baseDebtValue = (baseBalance * _getIndexPrice(baseToken, _smIntervalLiquidation).toInt256()) / _ORACLE_BASE;
+                uint256 indexPrice = _getIndexPrice(baseToken, _smIntervalLiquidation);
+                require(indexPrice != 0, "AccountBalance: zero index price");
+                baseDebtValue = (baseBalance * indexPrice.toInt256()) / _ORACLE_BASE;
             }
             totalBaseDebtValue = totalBaseDebtValue + baseDebtValue;
             // we can't calculate totalQuoteDebtValue until we have totalQuoteBalance
@@ -254,6 +256,7 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
         if (positionSize == 0) return 0;
 
         uint256 indexTwap = _getIndexPrice(baseToken, twInterval);
+        require(indexTwap != 0, "AccountBalance: zero index twap");
         // both positionSize & indexTwap are in 10^18 already
         // overflow inspection:
         // only overflow when position value in USD(18 decimals) > 2^255 / 10^18

@@ -592,14 +592,17 @@ contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, 
             positionSizeToBeLiquidated = maxLiquidatablePositionSize;
         }
 
+        uint256 indexPrice = _getIndexPrice(baseToken, _smIntervalLiquidation);
+        require(indexPrice != 0, "P_0IP"); // zero index price
         int256 liquidatedPositionSize = positionSizeToBeLiquidated.neg256();
-        int256 liquidatedPositionNotional = positionSizeToBeLiquidated.mulDiv(_getIndexPrice(baseToken, _smIntervalLiquidation).toInt256(), _ORACLE_BASE);
+        int256 liquidatedPositionNotional = positionSizeToBeLiquidated.mulDiv(indexPrice.toInt256(), _ORACLE_BASE);
 
         return (liquidatedPositionSize, liquidatedPositionNotional);
     }
 
-    function _getIndexPrice(address baseToken, uint256 twInterval) internal view returns (uint256) {
-        return IVolmexBaseToken(baseToken).getIndexPrice(_underlyingPriceIndex, twInterval);
+    function _getIndexPrice(address baseToken, uint256 twInterval) internal view returns (uint256 price) {
+        price = IVolmexBaseToken(baseToken).getIndexPrice(_underlyingPriceIndex, twInterval);
+
     }
 
     function _getTakerOpenNotional(address trader, address baseToken) internal view returns (int256) {

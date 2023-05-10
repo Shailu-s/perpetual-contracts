@@ -122,12 +122,12 @@ contract FundingRate is IFundingRate, BlockContext, PositioningCallee, FundingRa
         } else if (timestamp - lastSettledTimestamp > _fundingPeriod) {
             //when funding period is over
             uint256 fundingLatestTimestamp = lastSettledTimestamp + ((timestamp - lastSettledTimestamp) / _fundingPeriod) * _fundingPeriod;
-            (markTwap) = IPerpetualOracle(_perpetualOracleArg).getMarkEpochSMA(_underlyingPriceIndex, lastSettledTimestamp, fundingLatestTimestamp);
-            (indexTwap) = IPerpetualOracle(_perpetualOracleArg).getIndexEpochSMA(_underlyingPriceIndex, lastSettledTimestamp, fundingLatestTimestamp);
+            markTwap = IPerpetualOracle(_perpetualOracleArg).getMarkEpochSMA(_underlyingPriceIndex, lastSettledTimestamp, fundingLatestTimestamp);
+            indexTwap = IPerpetualOracle(_perpetualOracleArg).getIndexEpochSMA(_underlyingPriceIndex, lastSettledTimestamp, fundingLatestTimestamp);
+            require(indexTwap != 0, "P_IZ"); // index epoch price zero
             int256 deltaTwap = _getDeltaTwap(markTwap, indexTwap);
             int256 deltaTwPremiumX96 = deltaTwap * (fundingLatestTimestamp - lastSettledTimestamp).toInt256();
             globalTwPremium += deltaTwPremiumX96;
-            require(indexTwap != 0, "P_IZ"); // index epoch price zero
             fundingRate = (deltaTwPremiumX96 * _IORACLE_BASE) / (indexTwap.toInt256() * 86400);
         }
         return (globalTwPremium, markTwap, indexTwap, fundingRate);
