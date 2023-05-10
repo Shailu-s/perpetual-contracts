@@ -406,7 +406,7 @@ describe("PerpetualOracle - Index Price Oracle", function () {
         parseInt(timestamp) + 20000,
         parseInt(timestamp) + 28800,
       );
-      console.log(lastEpochIndexPrice.toString());
+      expect(lastEpochIndexPrice.toString()).to.be("0");
     });
   });
 });
