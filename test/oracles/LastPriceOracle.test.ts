@@ -524,7 +524,7 @@ describe("PerpetualOracle - Last Price Oracle", function () {
       );
       expect(lastEpochMarkPrice.toString()).to.be.equal("60000000");
     });
-    it.only("should fetch latest epoch price when max epochs are reached 2  times", async () => {
+    it("should fetch latest epoch price when max epochs are reached 2  times", async () => {
       for (let i = 0; i < 10; i++) {
         await perpetualOracle.addIndexObservations([0], [65000000], [proofHash]);
       }
