@@ -25,6 +25,7 @@ describe("PerpetualOracle - Last Price Oracle", function () {
   let perpetualOracle;
   let VolmexBaseToken;
   let volmexBaseToken;
+  let volmexBaseToken1;
   let VolmexQuoteToken;
   let volmexQuoteToken;
   let VolmexPerpPeriphery;
@@ -92,11 +93,25 @@ describe("PerpetualOracle - Last Price Oracle", function () {
     );
     await volmexBaseToken.deployed();
     await (await perpView.setBaseToken(volmexBaseToken.address)).wait();
+    volmexBaseToken1 = await upgrades.deployProxy(
+      VolmexBaseToken,
+      [
+        "VolmexBaseToken", // nameArg
+        "VBT", // symbolArg,
+        owner.address, // priceFeedArg
+        true, // isBase
+      ],
+      {
+        initializer: "initialize",
+      },
+    );
+    await volmexBaseToken.deployed();
+    await (await perpView.setBaseToken(volmexBaseToken.address)).wait();
 
     perpetualOracle = await upgrades.deployProxy(
       PerpetualOracle,
       [
-        [volmexBaseToken.address, volmexBaseToken.address],
+        [volmexBaseToken.address, volmexBaseToken1.address],
         [60000000, 60000000],
         [60000000, 60000000],
         [proofHash, proofHash],
@@ -253,42 +268,6 @@ describe("PerpetualOracle - Last Price Oracle", function () {
       volmexPerpPeriphery,
       "TraderWhitelisted",
     );
-    await perpetualOracle.setMarkObservationAdder(matchingEngine.address);
-
-    let salt = 2;
-    let orderLeft = Order(
-      ORDER,
-      deadline,
-      alice.address,
-      Asset(volmexQuoteToken.address, quoteAmount),
-      Asset(volmexBaseToken.address, baseAmount),
-      salt++,
-      0,
-      false,
-    );
-
-    let orderRight = Order(
-      ORDER,
-      deadline,
-      bob.address,
-      Asset(volmexBaseToken.address, baseAmount),
-      Asset(volmexQuoteToken.address, quoteAmount),
-      salt++,
-      0,
-      true,
-    );
-
-    const signatureLeft = await getSignature(orderLeft, alice.address);
-    const signatureRight = await getSignature(orderRight, bob.address);
-
-    const tx = await volmexPerpPeriphery.openPosition(
-      0,
-      orderLeft,
-      signatureLeft,
-      orderRight,
-      signatureRight,
-      liquidator,
-    );
     await perpetualOracle.setMarkObservationAdder(owner.address);
   });
 
@@ -312,7 +291,7 @@ describe("PerpetualOracle - Last Price Oracle", function () {
             parseInt(await time.latest()) + 28800,
           )
         ).toString(),
-      ).equal("0");
+      ).equal("60000000");
     });
 
     it("Should try set sm interval", async () => {
@@ -473,7 +452,20 @@ describe("PerpetualOracle - Last Price Oracle", function () {
       const txn2 = await perpetualOracle.lastestLastPriceSMA(0, 10000);
       expect(Number(txn2)).equal(20000000);
     });
-
+    it("should return latest last price when no epoch is added", async () => {
+      const currentTimeStamp = parseInt(await time.latest());
+      const price = await perpetualOracle.getMarkEpochSMA(
+        0,
+        currentTimeStamp,
+        currentTimeStamp + 10000,
+      );
+      expect(price.toString()).to.be.equal("60000000");
+    });
+    it("should revert with invalid time stamp", async () => {
+      await expect(perpetualOracle.lastestLastPriceSMA(0, 0)).to.be.revertedWith(
+        "PerpOracle: invalid timestamp",
+      );
+    });
     it("should fail to set Matching engine as admin assecc is not provided", async () => {
       const [owner, account1] = await ethers.getSigners();
       await expect(
@@ -492,6 +484,11 @@ describe("PerpetualOracle - Last Price Oracle", function () {
       await perpetualOracle.connect(account1).setFundingPeriod(14400);
       const fundingPeriod = await perpetualOracle.fundingPeriod();
       expect(fundingPeriod.toString()).to.be.equal("14400");
+    });
+    it("should fail to grant funding period role", async () => {
+      await expect(perpetualOracle.grantFundingPeriodRole(ZERO_ADDR)).to.be.revertedWith(
+        "PerpOracle: zero address",
+      );
     });
     it("should fail to set funding period", async () => {
       await perpetualOracle.grantFundingPeriodRole(account1.address);
@@ -513,6 +510,19 @@ describe("PerpetualOracle - Last Price Oracle", function () {
       );
 
       expect(parseInt(cumulativePrice1)).to.equal(70000000);
+    });
+    it("should fetch latest epoch price when max epochs are reached", async () => {
+      for (let i = 0; i < 1098; i++) {
+        await perpetualOracle.addMarkObservation(0, 70000000 * (i + 1));
+        await time.increase(28800);
+      }
+      const timestamp = await time.latest();
+      const lastEpochMarkPrice = await perpetualOracle.getMarkEpochSMA(
+        0,
+        parseInt(timestamp) - 100000,
+        parseInt(timestamp),
+      );
+      expect(lastEpochMarkPrice.toString()).to.be.equal("60000000");
     });
   });
   async function getSignature(orderObj, signer) {

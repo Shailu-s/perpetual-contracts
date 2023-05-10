@@ -217,43 +217,6 @@ describe("PerpetualOracle - Index Price Oracle", function () {
     ]);
     await volmexPerpPeriphery.deployed();
     await perpetualOracle.setIndexObservationAdder(owner.address);
-
-    const depositAmount = BigNumber.from("1000000000000000000000");
-    let baseAmount = "1000000000000000000"; //500
-    let quoteAmount = "60000000000000000000"; //100
-
-    // transfer balances
-    await (await USDC.connect(owner).transfer(alice.address, depositAmount)).wait();
-    await (await USDC.connect(owner).transfer(bob.address, depositAmount)).wait();
-
-    // approve to vault
-    await (await USDC.connect(owner).approve(volmexPerpPeriphery.address, depositAmount)).wait();
-    await (await USDC.connect(alice).approve(volmexPerpPeriphery.address, depositAmount)).wait();
-    await (await USDC.connect(bob).approve(volmexPerpPeriphery.address, depositAmount)).wait();
-    await (await USDC.connect(alice).approve(vaultController.address, depositAmount)).wait();
-    await (
-      await vaultController
-        .connect(alice)
-        .deposit(volmexPerpPeriphery.address, USDC.address, alice.address, depositAmount)
-    ).wait();
-    // deposit to vault
-    await (await volmexPerpPeriphery.depositToVault(0, USDC.address, depositAmount)).wait();
-    // await (
-    //   await volmexPerpPeriphery.connect(alice).depositToVault(0, USDC.address, depositAmount)
-    // ).wait();
-    await (
-      await volmexPerpPeriphery.connect(bob).depositToVault(0, USDC.address, depositAmount)
-    ).wait();
-
-    await expect(volmexPerpPeriphery.whitelistTrader(alice.address, true)).to.emit(
-      volmexPerpPeriphery,
-      "TraderWhitelisted",
-    );
-    await expect(volmexPerpPeriphery.whitelistTrader(bob.address, true)).to.emit(
-      volmexPerpPeriphery,
-      "TraderWhitelisted",
-    );
-    await perpetualOracle.setMarkObservationAdder(matchingEngine.address);
     await perpetualOracle.setIndexObservationAdder(owner.address);
   });
   describe("Epoch", () => {
@@ -381,6 +344,15 @@ describe("PerpetualOracle - Index Price Oracle", function () {
       expect(Number(txn3.answer)).equal(10000000);
     });
 
+    it("should return 0 price when no epoch is added", async () => {
+      const currentTimeStamp = parseInt(await time.latest());
+      const price = await perpetualOracle.getIndexEpochSMA(
+        0,
+        currentTimeStamp,
+        currentTimeStamp + 10000,
+      );
+      expect(price.toString()).to.be.equal("0");
+    });
     it("Should not error when there are no recent datapoints then more datapoints are added for cumulative price", async () => {
       await time.increase(200001);
       const txn1 = await perpetualOracle.latestIndexSMA(20, 0);
@@ -393,7 +365,18 @@ describe("PerpetualOracle - Index Price Oracle", function () {
       const txn2 = await perpetualOracle.latestIndexSMA(9000, 0);
       expect(Number(txn2.answer)).equal(20000000);
     });
-
+    it("should revert when tw interval  is zero", async () => {
+      const timestamp = parseInt(await time.latest());
+      await expect(perpetualOracle.latestIndexSMA(0, 0)).to.be.revertedWith(
+        "PerpOracle: invalid timestamp",
+      );
+    });
+    it("should revert when endtime stamp < start  ", async () => {
+      const timestamp = parseInt(await time.latest());
+      await expect(
+        perpetualOracle.getIndexEpochSMA(0, timestamp, timestamp - 7000),
+      ).to.be.revertedWith("PerpOracle: invalid timestamp");
+    });
     it("should fail to set Matching engine as admin assecc is not provided", async () => {
       const [owner, account1] = await ethers.getSigners();
       await expect(
