@@ -176,7 +176,7 @@ contract PerpetualOracle is AccessControlUpgradeable, IPerpetualOracle {
         uint256 _startTimestamp,
         uint256 _endTimestamp
     ) external view returns (uint256 price) {
-        (price) = _getEpochSMA(_index, _startTimestamp, _endTimestamp, false);
+        price = _getEpochSMA(_index, _startTimestamp, _endTimestamp, false);
     }
 
     function getMarkEpochSMA(
@@ -184,7 +184,7 @@ contract PerpetualOracle is AccessControlUpgradeable, IPerpetualOracle {
         uint256 _startTimestamp,
         uint256 _endTimestamp
     ) external view returns (uint256 price) {
-        (price) = _getEpochSMA(_index, _startTimestamp, _endTimestamp, true);
+        price = _getEpochSMA(_index, _startTimestamp, _endTimestamp, true);
     }
 
     function _pushLastPrice(uint256 _index, uint256 _price) internal {
@@ -392,7 +392,7 @@ contract PerpetualOracle is AccessControlUpgradeable, IPerpetualOracle {
         currentIndex = nextIndex - 1;
     }
 
-    function _getCurrentAllowedIndex(uint256 _maxAllowedDataPoints, uint256 _totalObservations) private view returns (uint256 currentIndex) {
+    function _getCurrentAllowedIndex(uint256 _maxAllowedDataPoints, uint256 _totalObservations) private pure returns (uint256 currentIndex) {
         if (_totalObservations < _maxAllowedDataPoints) {
             currentIndex = _totalObservations != 0 ? _totalObservations - 1 : 0;
         } else {
