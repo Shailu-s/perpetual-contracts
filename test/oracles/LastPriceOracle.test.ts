@@ -528,6 +528,7 @@ describe("PerpetualOracle - Last Price Oracle", function () {
       for (let i = 0; i < 10; i++) {
         await perpetualOracle.addIndexObservations([0], [65000000], [proofHash]);
       }
+
       for (let i = 0; i < 2200; i++) {
         await perpetualOracle.addMarkObservation(0, 70000000 * (i + 1));
         await time.increase(28800);

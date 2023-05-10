@@ -227,7 +227,6 @@ describe("Stake & Slash", function () {
 
       await slashing.connect(owner).stake(ownerAddress, ethers.utils.parseUnits("10000", 6)),
         await (await slashing.connect(owner).cooldown(ethers.utils.parseUnits("1000", 6))).wait();
-      console.log("here");
       const current = await time.latest();
       await time.increaseTo(current + 432000 + 1);
       const staker = await slashing.staker(ownerAddress);

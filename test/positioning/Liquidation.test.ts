@@ -173,7 +173,6 @@ describe("Liquidation test in Positioning", function () {
       positioningConfig.address,
       accountBalance1.address,
     ]);
-    console.log(accountBalance1.address);
     positioning = await upgrades.deployProxy(
       Positioning,
       [
@@ -190,7 +189,6 @@ describe("Liquidation test in Positioning", function () {
       },
     );
     await positioning.deployed();
-    console.log(positioning.address);
     await (await volmexBaseToken.setMintBurnRole(positioning.address)).wait();
     await (await volmexBaseToken1.setMintBurnRole(positioning.address)).wait();
     await (await virtualToken.setMintBurnRole(positioning.address)).wait();
@@ -348,13 +346,11 @@ describe("Liquidation test in Positioning", function () {
           await (await perpetualOracle.addIndexObservations([0], [70000000], [proofHash])).wait();
           await (await perpetualOracle.addIndexObservations([1], [70000000], [proofHash])).wait();
         }
-        console.log(parseInt(await time.latest()));
         await time.increase(60000);
         for (let index = 0; index < 10; index++) {
           await (await perpetualOracle.addIndexObservations([0], [200000000], [proofHash])).wait();
           await (await perpetualOracle.addIndexObservations([1], [200000000], [proofHash])).wait();
         }
-        console.log(parseInt(await time.latest()));
         // liquidating the position
         await expect(
           positioning

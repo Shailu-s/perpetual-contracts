@@ -103,7 +103,6 @@ describe("Periodic Funding payment", function () {
       },
     );
     await volmexBaseToken.deployed();
-    console.log(volmexBaseToken.address, volmexBaseToken1.address, " base tokens");
     perpetualOracle = await upgrades.deployProxy(
       PerpetualOracle,
       [
@@ -2048,10 +2047,7 @@ describe("Periodic Funding payment", function () {
         account4.address,
         volmexBaseToken.address,
       );
-      console.log(
-        (await vaultController.getFreeCollateralByRatio(account4.address, 1)).toString(),
-        "in test",
-      );
+
       expect(positionSize1.toString()).to.be.equal("1000000000000000000");
       expect(positionSize2.toString()).to.be.equal("-1000000000000000000");
       await perpetualOracle.setMarkObservationAdder(owner.address);
@@ -2070,11 +2066,7 @@ describe("Periodic Funding payment", function () {
         await perpetualOracle.addIndexObservations([0], [200000000], [proofHash]);
       }
       await perpetualOracle.setMarkObservationAdder(matchingEngine.address);
-      console.log("vault balance", (await USDC.balanceOf(vault.address)).toString());
-      console.log(
-        "account value ",
-        (await vaultController.getAccountValue(account3.address)).toString(),
-      );
+
       const orderLeft1 = Order(
         ORDER,
         deadline,
@@ -2098,16 +2090,7 @@ describe("Periodic Funding payment", function () {
 
       const signatureLeft1 = await getSignature(orderLeft1, account3.address);
       const signatureRight1 = await getSignature(orderRight1, account4.address);
-      console.log(
-        (
-          await positioning.getPendingFundingPayment(account4.address, volmexBaseToken.address)
-        ).toString(),
-        "in test",
-      );
-      console.log(
-        (await vaultController.getFreeCollateralByRatio(account4.address, 1)).toString(),
-        "in test",
-      );
+
       await volmexPerpPeriphery.openPosition(
         index,
         orderLeft1,
