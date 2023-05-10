@@ -6,7 +6,7 @@ const { Order, Asset, sign, encodeAddress } = require("../order");
 import { utils } from "ethers";
 const { expectRevert, time } = require("@openzeppelin/test-helpers");
 
-describe("perpetualOracle", function () {
+describe("PerpetualOracle - Last Price Oracle", function () {
   let MatchingEngine;
   let matchingEngine;
   let VirtualToken;
@@ -410,7 +410,19 @@ describe("perpetualOracle", function () {
       );
       expect(parseInt(lastEpochPrice)).to.be.equal(60000000);
     });
-
+    it("should get latest timestamp", async () => {
+      const receipt = await perpetualOracle.addMarkObservation(0, 1000000);
+      const { events } = await receipt.wait();
+      let data;
+      events.forEach((log: any) => {
+        if (log["event"] == "MarkObservationAdded") {
+          data = log["data"];
+        }
+      });
+      const logData = ethers.utils.defaultAbiCoder.decode(["uint256", "uint256", "uint256"], data);
+      const timestamp = parseInt(logData[2]);
+      expect(timestamp).to.be.equal(parseInt(await perpetualOracle.lastestTimestamp(0, true)));
+    });
     it("Should get cumulative price with time delay", async () => {
       for (let i = 0; i < 9; i++) {
         await perpetualOracle.addMarkObservation(0, 60000000);
@@ -473,6 +485,18 @@ describe("perpetualOracle", function () {
       const [owner, account1] = await ethers.getSigners();
       await expect(perpetualOracle.setMarkObservationAdder(ZERO_ADDR)).to.be.revertedWith(
         "PerpOracle: zero address",
+      );
+    });
+    it("should set funding period", async () => {
+      await perpetualOracle.grantFundingPeriodRole(account1.address);
+      await perpetualOracle.connect(account1).setFundingPeriod(14400);
+      const fundingPeriod = await perpetualOracle.fundingPeriod();
+      expect(fundingPeriod.toString()).to.be.equal("14400");
+    });
+    it("should fail to set funding period", async () => {
+      await perpetualOracle.grantFundingPeriodRole(account1.address);
+      await expect(perpetualOracle.setFundingPeriod(14400)).to.be.revertedWith(
+        "PerpOracle: not funding period role",
       );
     });
     it("Should return values from last epoch ", async () => {
