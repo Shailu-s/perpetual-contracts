@@ -22,7 +22,7 @@ import { IPositioning } from "../interfaces/IPositioning.sol";
 import { IPositioningConfig } from "../interfaces/IPositioningConfig.sol";
 import { IVirtualToken } from "../interfaces/IVirtualToken.sol";
 import { IVaultController } from "../interfaces/IVaultController.sol";
-import { IIndexPriceOracle } from "../interfaces/IIndexPriceOracle.sol";
+import { IPerpetualOracle } from "../interfaces/IPerpetualOracle.sol";
 
 import { BlockContext } from "../helpers/BlockContext.sol";
 import { FundingRate } from "../funding-rate/FundingRate.sol";
@@ -45,8 +45,7 @@ contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, 
         address vaultControllerArg,
         address accountBalanceArg,
         address matchingEngineArg,
-        address markPriceArg,
-        address indexPriceArg,
+        address perpetualOracleArg,
         uint256 underlyingPriceIndex,
         address[2] calldata liquidators
     ) external initializer {
@@ -61,7 +60,7 @@ contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, 
 
         __ReentrancyGuard_init();
         __OwnerPausable_init();
-        __FundingRate_init(markPriceArg, indexPriceArg);
+        __FundingRate_init(perpetualOracleArg);
         __OrderValidator_init_unchained();
 
         _positioningConfig = positioningConfigArg;
@@ -104,12 +103,11 @@ contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, 
         emit DefaultFeeReceiverChanged(defaultFeeReceiver);
     }
 
-    function setIndexPriceOracle(address indexPriceOracle) external {
+    function setPerpetualOracle(address perpetualOracleArg) external {
         _requirePositioningAdmin();
         // P_AZ: Index price oracle is address zero
-        require(indexPriceOracle != address(0), "P_AZ");
-        _indexPriceOracleArg = indexPriceOracle;
-        emit IndexPriceSet(indexPriceOracle);
+        require(perpetualOracleArg != address(0), "P_AZ");
+        _perpetualOracleArg = perpetualOracleArg;
     }
 
     /// @inheritdoc IPositioning
@@ -184,8 +182,7 @@ contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, 
 
         // short = selling base token
         address baseToken = orderLeft.isShort ? orderLeft.makeAsset.virtualToken : orderLeft.takeAsset.virtualToken;
-
-        require(IMarketRegistry(_marketRegistry).checkBaseToken(baseToken), "V_PERP: Basetoken not registered at market");
+        require(IMarketRegistry(_marketRegistry).checkBaseToken(baseToken), "V_PBRM"); // V_PERP: Basetoken not registered at market = V_PBRM
 
         // register base token for account balance calculations
         IAccountBalance(_accountBalance).registerBaseToken(orderLeft.trader, baseToken);
@@ -226,61 +223,23 @@ contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, 
     }
 
     function getOrderValidate(LibOrder.Order memory order) external view returns (bool) {
-        require(order.trader != address(0), "V_PERP_M: order verification failed");
-        require(order.salt != 0, "V_PERP_M: 0 salt can't be used");
-        require(order.salt >= makerMinSalt[_msgSender()], "V_PERP_M: order salt lower");
+        require(order.trader != address(0), "V_PERP_OVF"); // V_PERP_M: order verification failed
+        require(order.salt != 0, "V_PERP_0S"); //V_PERP_M: 0 salt can't be used
+        require(order.salt >= makerMinSalt[_msgSender()], "V_PERP_LS"); // V_PERP_M: order salt lower
         bytes32 orderHashKey = LibOrder.hashKey(order);
         uint256 fills = IMatchingEngine(_matchingEngine).fills(orderHashKey);
-        // order is cancelled, os there's nothing to fill
-        require(fills < order.makeAsset.value, "V_PERP_M: Nothing to fill");
+        require(fills < order.makeAsset.value, "V_PERP_NF"); //V_PERP_NF:  nothing to fill
         LibOrder.validate(order);
 
         uint24 imRatio = IPositioningConfig(_positioningConfig).getImRatio();
 
         require(
             int256(order.isShort ? order.takeAsset.value : order.makeAsset.value) < (_getFreeCollateralByRatio(order.trader, imRatio) * 1e6) / uint256(imRatio).toInt256(),
-            "V_PERP_NEFC"
+            "V_NEFC"
         );
         return true;
     }
 
-    function _getOrderValidate(LibOrder.Order memory order) internal view returns (bool) {
-        if (order.trader == address(0)){
-            return false;
-        }
-        if (order.salt == 0){
-            return false;
-        }
-        if (order.salt < makerMinSalt[_msgSender()]){
-            return false;
-        }
-        bytes32 orderHashKey = LibOrder.hashKey(order);
-        uint256 fills = IMatchingEngine(_matchingEngine).fills(orderHashKey);
-
-        // order is cancelled, os there's nothing to fill
-        if (fills > order.makeAsset.value){
-            return false;
-        }
-        if (order.deadline < block.timestamp){
-            return false;
-        }
-
-        uint24 imRatio = IPositioningConfig(_positioningConfig).getImRatio();
-        if (int256(order.isShort ? order.takeAsset.value : order.makeAsset.value) > (_getFreeCollateralByRatio(order.trader, imRatio) * 1e6) / uint256(imRatio).toInt256()){
-            return false;
-        }
-        return true;
-    }
-
-    function batchOrderValidate(LibOrder.Order[] memory order) external view returns (bool[] memory) {
-        uint256 ordersLength = order.length;
-        bool[] memory _result = new bool[](ordersLength);
-        for (uint256 orderIndex = 0; orderIndex < ordersLength; orderIndex++) {
-            bool valid = _getOrderValidate(order[orderIndex]);
-            _result[orderIndex] = valid;
-        }
-        return _result;
-    }
 
     ///@dev this function calculates total pending funding payment of a trader
     function getAllPendingFundingPayment(address trader) external view virtual override returns (int256 pendingFundingPayment) {
@@ -310,7 +269,7 @@ contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, 
 
     /// @dev Used to check for stale index oracle
     function isStaleIndexOracle() public view returns (bool) {
-        uint256 lastUpdatedTimestamp = IIndexPriceOracle(_indexPriceOracleArg).getLastUpdatedTimestamp(_underlyingPriceIndex);
+        uint256 lastUpdatedTimestamp = IPerpetualOracle(_perpetualOracleArg).lastestTimestamp(_underlyingPriceIndex, false);
         return block.timestamp - lastUpdatedTimestamp >= indexPriceAllowedInterval;
     }
 
@@ -633,14 +592,17 @@ contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, 
             positionSizeToBeLiquidated = maxLiquidatablePositionSize;
         }
 
+        uint256 indexPrice = _getIndexPrice(baseToken, _smIntervalLiquidation);
+        require(indexPrice != 0, "P_0IP"); // zero index price
         int256 liquidatedPositionSize = positionSizeToBeLiquidated.neg256();
-        int256 liquidatedPositionNotional = positionSizeToBeLiquidated.mulDiv(_getIndexPrice(baseToken, _smIntervalLiquidation).toInt256(), _ORACLE_BASE);
+        int256 liquidatedPositionNotional = positionSizeToBeLiquidated.mulDiv(indexPrice.toInt256(), _ORACLE_BASE);
 
         return (liquidatedPositionSize, liquidatedPositionNotional);
     }
 
-    function _getIndexPrice(address baseToken, uint256 twInterval) internal view returns (uint256) {
-        return IVolmexBaseToken(baseToken).getIndexPrice(_underlyingPriceIndex, twInterval);
+    function _getIndexPrice(address baseToken, uint256 twInterval) internal view returns (uint256 price) {
+        price = IVolmexBaseToken(baseToken).getIndexPrice(_underlyingPriceIndex, twInterval);
+
     }
 
     function _getTakerOpenNotional(address trader, address baseToken) internal view returns (int256) {
@@ -703,7 +665,7 @@ contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, 
     }
 
     function _requirePositioningAdmin() internal view {
-        require(hasRole(POSITIONING_ADMIN, _msgSender()), "Positioning: Not admin");
+        require(hasRole(POSITIONING_ADMIN, _msgSender()), "P_NA"); // Positioning: Not admin
     }
 
     function _requireSmIntervalRole() internal view {
@@ -711,7 +673,7 @@ contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, 
     }
 
     function _requireWhitelistLiquidator(address liquidator) internal view {
-        require(isLiquidatorWhitelisted[liquidator], "Positioning: liquidator not whitelisted");
+        require(isLiquidatorWhitelisted[liquidator], "P_LW"); // Positioning: liquidator not whitelisted
     }
 
     function _getPnlToBeRealized(InternalRealizePnlParams memory params) internal pure returns (int256) {

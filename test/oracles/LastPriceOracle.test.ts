@@ -6,7 +6,7 @@ const { Order, Asset, sign, encodeAddress } = require("../order");
 import { utils } from "ethers";
 const { expectRevert, time } = require("@openzeppelin/test-helpers");
 
-describe("MarkPriceOracle", function () {
+describe("PerpetualOracle - Last Price Oracle", function () {
   let MatchingEngine;
   let matchingEngine;
   let VirtualToken;
@@ -21,12 +21,11 @@ describe("MarkPriceOracle", function () {
   let VaultController;
   let vaultController;
   let AccountBalance;
-  let MarkPriceOracle;
-  let markPriceOracle;
-  let IndexPriceOracle;
-  let indexPriceOracle;
+  let PerpetualOracle;
+  let perpetualOracle;
   let VolmexBaseToken;
   let volmexBaseToken;
+  let volmexBaseToken1;
   let VolmexQuoteToken;
   let volmexQuoteToken;
   let VolmexPerpPeriphery;
@@ -57,8 +56,7 @@ describe("MarkPriceOracle", function () {
 
   this.beforeAll(async () => {
     VolmexPerpPeriphery = await ethers.getContractFactory("VolmexPerpPeriphery");
-    MarkPriceOracle = await ethers.getContractFactory("MarkPriceOracle");
-    IndexPriceOracle = await ethers.getContractFactory("IndexPriceOracle");
+    PerpetualOracle = await ethers.getContractFactory("PerpetualOracle");
     MatchingEngine = await ethers.getContractFactory("MatchingEngine");
     VirtualToken = await ethers.getContractFactory("VirtualTokenTest");
     ERC20TransferProxyTest = await ethers.getContractFactory("ERC20TransferProxyTest");
@@ -95,15 +93,33 @@ describe("MarkPriceOracle", function () {
     );
     await volmexBaseToken.deployed();
     await (await perpView.setBaseToken(volmexBaseToken.address)).wait();
-
-    indexPriceOracle = await upgrades.deployProxy(
-      IndexPriceOracle,
-      [owner.address, [65000000], [volmexBaseToken.address], [proofHash], [capRatio]],
+    volmexBaseToken1 = await upgrades.deployProxy(
+      VolmexBaseToken,
+      [
+        "VolmexBaseToken", // nameArg
+        "VBT", // symbolArg,
+        owner.address, // priceFeedArg
+        true, // isBase
+      ],
       {
         initializer: "initialize",
       },
     );
-    await volmexBaseToken.setPriceFeed(indexPriceOracle.address);
+    await volmexBaseToken.deployed();
+    await (await perpView.setBaseToken(volmexBaseToken.address)).wait();
+
+    perpetualOracle = await upgrades.deployProxy(
+      PerpetualOracle,
+      [
+        [volmexBaseToken.address, volmexBaseToken1.address],
+        [60000000, 60000000],
+        [60000000, 60000000],
+        [proofHash, proofHash],
+        owner.address,
+      ],
+      { initializer: "__PerpetualOracle_init" },
+    );
+    await volmexBaseToken.setPriceFeed(perpetualOracle.address);
     volmexQuoteToken = await upgrades.deployProxy(
       VolmexQuoteToken,
       [
@@ -118,18 +134,11 @@ describe("MarkPriceOracle", function () {
     await volmexQuoteToken.deployed();
     await (await perpView.setQuoteToken(volmexQuoteToken.address)).wait();
 
-    markPriceOracle = await upgrades.deployProxy(
-      MarkPriceOracle,
-      [[60000000], [volmexBaseToken.address], owner.address],
-      {
-        initializer: "initialize",
-      },
-    );
-    positioningConfig = await upgrades.deployProxy(PositioningConfig, [markPriceOracle.address]);
-    await indexPriceOracle.grantInitialTimestampRole(markPriceOracle.address);
+    positioningConfig = await upgrades.deployProxy(PositioningConfig, [perpetualOracle.address]);
+
     matchingEngine = await upgrades.deployProxy(MatchingEngine, [
       owner.address,
-      markPriceOracle.address,
+      perpetualOracle.address,
     ]);
 
     USDC = await TestERC20.deploy();
@@ -170,8 +179,7 @@ describe("MarkPriceOracle", function () {
         vaultController.address,
         accountBalance1.address,
         matchingEngine.address,
-        markPriceOracle.address,
-        indexPriceOracle.address,
+        perpetualOracle.address,
         0,
         [owner.address, account1.address],
       ],
@@ -181,7 +189,6 @@ describe("MarkPriceOracle", function () {
     );
     await positioning.deployed();
 
-    await markPriceOracle.deployed();
     await (await perpView.setPositioning(positioning.address)).wait();
 
     await (await perpView.incrementPerpIndex()).wait();
@@ -212,21 +219,19 @@ describe("MarkPriceOracle", function () {
     await positioning.connect(owner).setPositioning(positioning.address);
 
     await (await matchingEngine.grantMatchOrders(positioning.address)).wait();
-    await markPriceOracle.grantSmaIntervalRole(positioningConfig.address);
-    await markPriceOracle.setPositioning(positioning.address);
-    await markPriceOracle.setIndexOracle(indexPriceOracle.address);
+    await perpetualOracle.grantSmaIntervalRole(positioningConfig.address);
+    await perpetualOracle.setPositioning(positioning.address);
     await positioningConfig.setTwapInterval(28800);
 
     volmexPerpPeriphery = await upgrades.deployProxy(VolmexPerpPeriphery, [
       perpView.address,
-      markPriceOracle.address,
-      indexPriceOracle.address,
+      perpetualOracle.address,
       [vault.address, vault.address],
       owner.address,
       owner.address, // replace with replayer address
     ]);
     await volmexPerpPeriphery.deployed();
-    await markPriceOracle.setObservationAdder(owner.address);
+    await perpetualOracle.setIndexObservationAdder(owner.address);
 
     const depositAmount = BigNumber.from("1000000000000000000000");
     let baseAmount = "1000000000000000000"; //500
@@ -263,75 +268,35 @@ describe("MarkPriceOracle", function () {
       volmexPerpPeriphery,
       "TraderWhitelisted",
     );
-    await markPriceOracle.setObservationAdder(matchingEngine.address);
-
-    let salt = 2;
-    let orderLeft = Order(
-      ORDER,
-      deadline,
-      alice.address,
-      Asset(volmexQuoteToken.address, quoteAmount),
-      Asset(volmexBaseToken.address, baseAmount),
-      salt++,
-      0,
-      false,
-    );
-
-    let orderRight = Order(
-      ORDER,
-      deadline,
-      bob.address,
-      Asset(volmexBaseToken.address, baseAmount),
-      Asset(volmexQuoteToken.address, quoteAmount),
-      salt++,
-      0,
-      true,
-    );
-
-    const signatureLeft = await getSignature(orderLeft, alice.address);
-    const signatureRight = await getSignature(orderRight, bob.address);
-
-    const tx = await volmexPerpPeriphery.openPosition(
-      0,
-      orderLeft,
-      signatureLeft,
-      orderRight,
-      signatureRight,
-      liquidator,
-    );
-    await markPriceOracle.setObservationAdder(owner.address);
+    await perpetualOracle.setMarkObservationAdder(owner.address);
   });
 
   describe("setter and getter", () => {
     it("Should set epoch interval", async () => {
-      await (await markPriceOracle.setMarkEpochInterval(14400)).wait();
-      expect((await markPriceOracle.epochInterval()).toString()).equal("14400");
+      await perpetualOracle.grantSmaIntervalRole(owner.address);
+      await (await perpetualOracle.setMarkSmInterval(14400)).wait();
+      expect((await perpetualOracle.markSmInterval()).toString()).equal("14400");
     });
 
     it("Should get last mark price", async () => {
-      expect((await markPriceOracle.getLastMarkPrice(0)).toString()).equal("60000000");
+      expect((await perpetualOracle.latestMarkPrice(0)).toString()).equal("60000000");
     });
 
     it("Should get custom epoch price", async () => {
       expect(
         (
-          await markPriceOracle.getCustomEpochPrice(0, (await time.latest()).toString())
-        )[0].toString(),
+          await perpetualOracle.getMarkEpochSMA(
+            0,
+            parseInt(await time.latest()),
+            parseInt(await time.latest()) + 28800,
+          )
+        ).toString(),
       ).equal("60000000");
-    });
-
-    it("Should get current index count", async () => {
-      expect((await markPriceOracle.getIndexCount()).toString()).equal("1");
-    });
-
-    it("Should get last updated timestamp", async () => {
-      const timestamp = (Number(await time.latest()) - 1).toString();
-      expect((await markPriceOracle.getLastUpdatedTimestamp(0)).toString()).equal(timestamp);
     });
 
     it("Should try set sm interval", async () => {
       await expectRevert(
-        markPriceOracle.setMarkSmInterval(14400),
+        perpetualOracle.setMarkSmInterval(14400),
         "MarkPriceOracle: not sma interval role",
       );
     });
@@ -340,114 +305,120 @@ describe("MarkPriceOracle", function () {
   describe("Deployment", function () {
     it("Should deploy successfully", async () => {
       let receipt = await upgrades.deployProxy(
-        MarkPriceOracle,
-        [[10000000], [volmexBaseToken.address], owner.address],
-        {
-          initializer: "initialize",
-        },
+        PerpetualOracle,
+        [
+          [volmexBaseToken.address, volmexBaseToken.address],
+          [60000000, 60000000],
+          [60000000, 60000000],
+          [proofHash, proofHash],
+          owner.address,
+        ],
+        { initializer: "__PerpetualOracle_init" },
       );
       expect(receipt.confirmations).not.equal(0);
     });
     it("Should fail to initialize again", async () => {
       let receipt = await upgrades.deployProxy(
-        MarkPriceOracle,
-        [[10000000], [volmexBaseToken.address], owner.address],
-        {
-          initializer: "initialize",
-        },
+        PerpetualOracle,
+        [
+          [volmexBaseToken.address, volmexBaseToken.address],
+          [10000000, 10000000],
+          [10000000, 10000000],
+          [proofHash, proofHash],
+          owner.address,
+        ],
+        { initializer: "__PerpetualOracle_init" },
       );
       expect(receipt.confirmations).not.equal(0);
       await expect(
-        receipt.initialize([10000000], [volmexBaseToken.address], owner.address),
+        receipt.__PerpetualOracle_init(
+          [volmexBaseToken.address, volmexBaseToken.address],
+          [10000000, 10000000],
+          [10000000, 10000000],
+          [proofHash, proofHash],
+          owner.address,
+        ),
       ).to.be.revertedWith("Initializable: contract is already initialized");
-    });
-
-    it("Should fail to deploy if length of arrays is unequal", async () => {
-      await expect(
-        upgrades.deployProxy(
-          MarkPriceOracle,
-          [[10000000, 100000000], [volmexBaseToken.address], owner.address],
-          {
-            initializer: "initialize",
-          },
-        ),
-      ).to.be.revertedWith("MarkPriceOracle: Unequal length of prices & assets");
-    });
-
-    it("Should fail to deploy when asset address is 0", async () => {
-      await expect(
-        upgrades.deployProxy(
-          MarkPriceOracle,
-          [[10000000], ["0x0000000000000000000000000000000000000000"], owner.address],
-          {
-            initializer: "initialize",
-          },
-        ),
-      ).to.be.revertedWith("MarkPriceOracle: Asset address can't be 0");
     });
   });
 
   describe("Add Observation", async () => {
     it("Should add observation", async () => {
       for (let i = 0; i < 9; i++) {
-        await markPriceOracle.addObservation(60000000, 0);
+        await perpetualOracle.addMarkObservation(0, 60000000);
       }
 
-      const txn = await markPriceOracle.getMarkSma(100000, 0);
+      const txn = await perpetualOracle.lastestLastPriceSMA(0, 10000);
       expect(Number(txn)).equal(60000000);
     });
 
     it("should fail to add observation when cumulative price is zero ", async () => {
-      await expect(markPriceOracle.addObservation(0, 0)).to.be.revertedWith(
-        "MarkPriceOracle: Not zero",
+      await expect(perpetualOracle.addMarkObservation(0, 0)).to.be.revertedWith(
+        "PerpOracle: zero price",
       );
     });
     it("Should fail to add observation when caller is not exchange", async () => {
       await expect(
-        markPriceOracle.connect(account1).addObservation(1000000, 0),
-      ).to.be.revertedWith("MarkPriceOracle: not observation adder");
+        perpetualOracle.connect(account1).addMarkObservation(1000000, 0),
+      ).to.be.revertedWith("PerpOracle: not mark observation adder");
     });
 
     it("Should get cumulative price", async () => {
-      await markPriceOracle.addObservation(60000000, 0);
+      await perpetualOracle.addMarkObservation(0, 60000000);
 
-      const txn = await markPriceOracle.getMarkSma(10000000, 0);
+      const txn = await perpetualOracle.lastestLastPriceSMA(0, 10000);
       expect(Number(txn)).equal(60000000);
     });
     it("Should get last price ", async () => {
-      await markPriceOracle.addObservation(1000000, 0);
+      await perpetualOracle.addMarkObservation(0, 1000000);
 
-      const txn = await markPriceOracle.getLastPrice(0);
+      const txn = await perpetualOracle.lastestLastPriceSMA(0, 1);
       expect(Number(txn)).equal(1000000);
     });
     it("should  give last epoch price", async () => {
       await time.increase(28800);
       for (let i = 0; i < 50; i++) {
         await time.increase(300);
-        await markPriceOracle.addObservation(80000000, 0);
+        await perpetualOracle.addMarkObservation(0, 80000000);
       }
       const timestamp = await time.latest();
-      const lastEpochPrice = (await markPriceOracle.getLastEpochPrice(0))[0];
-      expect(parseInt(lastEpochPrice)).to.be.equal(79607831);
+      const lastEpochPrice = await perpetualOracle.getMarkEpochSMA(
+        0,
+        parseInt(timestamp) - 28800,
+        parseInt(timestamp),
+      );
+      expect(parseInt(lastEpochPrice)).to.be.equal(60000000);
     });
-
+    it("should get latest timestamp", async () => {
+      const receipt = await perpetualOracle.addMarkObservation(0, 1000000);
+      const { events } = await receipt.wait();
+      let data;
+      events.forEach((log: any) => {
+        if (log["event"] == "MarkObservationAdded") {
+          data = log["data"];
+        }
+      });
+      const logData = ethers.utils.defaultAbiCoder.decode(["uint256", "uint256", "uint256"], data);
+      const timestamp = parseInt(logData[2]);
+      expect(timestamp).to.be.equal(parseInt(await perpetualOracle.lastestTimestamp(0, true)));
+    });
     it("Should get cumulative price with time delay", async () => {
       for (let i = 0; i < 9; i++) {
-        await markPriceOracle.addObservation(60000000, 0);
+        await perpetualOracle.addMarkObservation(0, 60000000);
         await time.increase(1000);
       }
       const txns = await Promise.all([
-        markPriceOracle.getMarkSma(1000, 0),
-        markPriceOracle.getMarkSma(2000, 0),
-        markPriceOracle.getMarkSma(3000, 0),
-        markPriceOracle.getMarkSma(4000, 0),
-        markPriceOracle.getMarkSma(5000, 0),
-        markPriceOracle.getMarkSma(6000, 0),
-        markPriceOracle.getMarkSma(7000, 0),
-        markPriceOracle.getMarkSma(8000, 0),
-        markPriceOracle.getMarkSma(9000, 0),
-        markPriceOracle.getMarkSma(10000, 0),
-        markPriceOracle.getMarkSma(20000, 0),
+        perpetualOracle.lastestLastPriceSMA(0, 1000),
+        perpetualOracle.lastestLastPriceSMA(0, 2000),
+        perpetualOracle.lastestLastPriceSMA(0, 3000),
+        perpetualOracle.lastestLastPriceSMA(0, 4000),
+        perpetualOracle.lastestLastPriceSMA(0, 5000),
+        perpetualOracle.lastestLastPriceSMA(0, 6000),
+        perpetualOracle.lastestLastPriceSMA(0, 7000),
+        perpetualOracle.lastestLastPriceSMA(0, 8000),
+        perpetualOracle.lastestLastPriceSMA(0, 9000),
+        perpetualOracle.lastestLastPriceSMA(0, 100000),
+        perpetualOracle.lastestLastPriceSMA(0, 200000),
       ]);
       txns.forEach(txn => {
         expect(Number(txn)).equal(60000000);
@@ -455,72 +426,137 @@ describe("MarkPriceOracle", function () {
     });
 
     it("Should not error when there are no recent datapoints added for cumulative price", async () => {
-      const txn1 = await markPriceOracle.getMarkSma(20000, 0);
+      const txn1 = await perpetualOracle.lastestLastPriceSMA(0, 20000);
       expect(Number(txn1)).equal(60000000);
       for (let i = 0; i < 9; i++) {
-        await markPriceOracle.addObservation(60000000, 0);
+        await perpetualOracle.addMarkObservation(0, 60000000);
         await time.increase(1000);
       }
       // this covers the case of zero recent datapoints
       await time.increase(100000);
-      const txn2 = await markPriceOracle.getMarkSma(100000, 0);
-      expect(Number(txn2)).equal(60000000);
-      const txn3 = await markPriceOracle.getMarkSma(20000000, 0);
+      const txn2 = await perpetualOracle.lastestLastPriceSMA(0, 100000);
+      expect(Number(txn2)).equal(0);
+      const txn3 = await perpetualOracle.lastestLastPriceSMA(0, 20000000);
       expect(Number(txn3)).equal(60000000);
     });
 
     it("Should not error when there are no recent datapoints then more datapoints are added for cumulative price", async () => {
       await time.increase(200001);
-      const txn1 = await markPriceOracle.getMarkSma(20000, 0);
+      const txn1 = await perpetualOracle.lastestLastPriceSMA(0, 20000);
       expect(Number(txn1)).equal(60000000);
 
       for (let i = 0; i < 10; i++) {
-        await markPriceOracle.addObservation(20000000, 0);
+        await perpetualOracle.addMarkObservation(0, 20000000);
         await time.increase(1000);
       }
-      const txn2 = await markPriceOracle.getMarkSma(10000, 0);
+      const txn2 = await perpetualOracle.lastestLastPriceSMA(0, 10000);
       expect(Number(txn2)).equal(20000000);
     });
-
-    it("Should fail to  add multiple observations because uneuqal length of inputs", async () => {
-      await expect(
-        markPriceOracle.addAssets([10000000, 20000000], [volmexBaseToken.address]),
-      ).to.be.revertedWith("MarkPriceOracle: Unequal length of prices & assets");
+    it("should return latest last price when no epoch is added", async () => {
+      const currentTimeStamp = parseInt(await time.latest());
+      const price = await perpetualOracle.getMarkEpochSMA(
+        0,
+        currentTimeStamp,
+        currentTimeStamp + 10000,
+      );
+      expect(price.toString()).to.be.equal("60000000");
     });
-
-    it("Should fail to  add multiple observations because 0 address of a token", async () => {
-      await expect(
-        markPriceOracle.addAssets([10000000, 20000000], [volmexBaseToken.address, ZERO_ADDR]),
-      ).to.be.revertedWith("MarkPriceOracle: Asset address can't be 0");
+    it("should revert with invalid time stamp", async () => {
+      await expect(perpetualOracle.lastestLastPriceSMA(0, 0)).to.be.revertedWith(
+        "PerpOracle: invalid timestamp",
+      );
     });
     it("should fail to set Matching engine as admin assecc is not provided", async () => {
       const [owner, account1] = await ethers.getSigners();
       await expect(
-        markPriceOracle.connect(account1).setObservationAdder(matchingEngine.address),
-      ).to.be.revertedWith("MarkPriceOracle: not admin");
+        perpetualOracle.connect(account1).setMarkObservationAdder(matchingEngine.address),
+      ).to.be.revertedWith("PerpOracle: not admin");
     });
 
     it("should fail to set Matching engine as admin assecc is not provided", async () => {
       const [owner, account1] = await ethers.getSigners();
-      await expect(markPriceOracle.setObservationAdder(ZERO_ADDR)).to.be.revertedWith(
-        "MarkPriceOracle: zero address",
+      await expect(perpetualOracle.setMarkObservationAdder(ZERO_ADDR)).to.be.revertedWith(
+        "PerpOracle: zero address",
+      );
+    });
+    it("should set funding period", async () => {
+      await perpetualOracle.grantFundingPeriodRole(account1.address);
+      await perpetualOracle.connect(account1).setFundingPeriod(14400);
+      const fundingPeriod = await perpetualOracle.fundingPeriod();
+      expect(fundingPeriod.toString()).to.be.equal("14400");
+    });
+    it("should fail to grant funding period role", async () => {
+      await expect(perpetualOracle.grantFundingPeriodRole(ZERO_ADDR)).to.be.revertedWith(
+        "PerpOracle: zero address",
+      );
+    });
+    it("should fail to set funding period", async () => {
+      await perpetualOracle.grantFundingPeriodRole(account1.address);
+      await expect(perpetualOracle.setFundingPeriod(14400)).to.be.revertedWith(
+        "PerpOracle: not funding period role",
       );
     });
     it("Should return values from last epoch ", async () => {
       await time.increase(28800);
       const firstTimestamp = await time.latest();
       for (let i = 0; i <= 20; i++) {
-        await markPriceOracle.addObservation(70000000, 0);
+        await perpetualOracle.addMarkObservation(0, 70000000);
       }
       await time.increase(28800);
       const secondTimestamp = await time.latest();
-      const cumulativePrice1 = await markPriceOracle.getCustomUnderlyingSma(
+      const cumulativePrice1 = await perpetualOracle.lastestLastPriceSMA(
         0,
-        Number(firstTimestamp),
         Number(secondTimestamp),
       );
 
       expect(parseInt(cumulativePrice1)).to.equal(70000000);
+    });
+    it("should fetch latest epoch price when max epochs are reached", async () => {
+      for (let i = 0; i < 1098; i++) {
+        await perpetualOracle.addMarkObservation(0, 70000000 * (i + 1));
+        await time.increase(28800);
+      }
+      const timestamp = await time.latest();
+      const lastEpochMarkPrice = await perpetualOracle.getMarkEpochSMA(
+        0,
+        parseInt(timestamp) - 100000,
+        parseInt(timestamp),
+      );
+      expect(lastEpochMarkPrice.toString()).to.be.equal("60000000");
+    });
+    it("should fetch latest epoch price when max epochs are reached 2  times", async () => {
+      for (let i = 0; i < 10; i++) {
+        await perpetualOracle.addIndexObservations([0], [65000000], [proofHash]);
+      }
+
+      for (let i = 0; i < 2200; i++) {
+        await perpetualOracle.addMarkObservation(0, 70000000 * (i + 1));
+        await time.increase(28800);
+      }
+      const timestamp = await time.latest();
+      const lastEpochMarkPrice = await perpetualOracle.getMarkEpochSMA(
+        0,
+        parseInt(timestamp) - 28800 * 2190,
+        parseInt(timestamp),
+      );
+      expect(lastEpochMarkPrice.toString()).to.be.equal("65000000");
+    });
+    it("should fetch latest epoch price when max epochs are reached 2  times", async () => {
+      for (let i = 0; i < 10; i++) {
+        await perpetualOracle.addIndexObservations([0], [65000000], [proofHash]);
+      }
+
+      for (let i = 0; i < 1094; i++) {
+        await perpetualOracle.addMarkObservation(0, 70000000 * (i + 1));
+        await time.increase(28800);
+      }
+      const timestamp = await time.latest();
+      const lastEpochMarkPrice = await perpetualOracle.getMarkEpochSMA(
+        0,
+        parseInt(timestamp) - 100000,
+        parseInt(timestamp),
+      );
+      expect(lastEpochMarkPrice.toString()).to.be.equal("65000000");
     });
   });
   async function getSignature(orderObj, signer) {

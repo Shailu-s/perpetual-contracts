@@ -2,7 +2,6 @@ import { expect } from "chai";
 import { ethers, upgrades } from "hardhat";
 const { Order, Asset, sign, encodeAddress } = require("../order");
 import { FakeContract, smock } from "@defi-wonderland/smock";
-import { FundingRate, IndexPriceOracle, MarkPriceOracle } from "../../typechain";
 import { BigNumber } from "ethers";
 const { expectRevert, time } = require("@openzeppelin/test-helpers");
 describe("Liquidation test in Positioning", function () {
@@ -23,18 +22,14 @@ describe("Liquidation test in Positioning", function () {
   let vaultController;
   let AccountBalance;
   let accountBalance;
-  let MarkPriceOracle;
-  let markPriceOracle;
-  let IndexPriceOracle;
-  let indexPriceOracle;
-  let markPriceFake: FakeContract<MarkPriceOracle>;
-  let indexPriceFake: FakeContract<IndexPriceOracle>;
+  let PerpetualOracle;
+  let perpetualOracle;
   let VolmexBaseToken;
   let volmexBaseToken;
   let volmexBaseToken1;
   let VolmexPerpPeriphery;
   let volmexPerpPeriphery;
-
+  let Perppetual;
   let transferManagerTest;
   let accountBalance1;
   let MarketRegistry;
@@ -48,6 +43,7 @@ describe("Liquidation test in Positioning", function () {
   const deadline = 87654321987654;
   let owner, account1, account2, account3, account4, relayer;
   let liquidator;
+  const proofHash = "0x6c00000000000000000000000000000000000000000000000000000000000000";
 
   const one = ethers.constants.WeiPerEther; // 1e18
   const two = ethers.constants.WeiPerEther.mul(BigNumber.from("2")); // 2e18
@@ -59,13 +55,11 @@ describe("Liquidation test in Positioning", function () {
   const ORDER = "0xf555eb98";
   const STOP_LOSS_LIMIT_ORDER = "0xeeaed735";
   const TAKE_PROFIT_LIMIT_ORDER = "0xe0fc7f94";
-  const proofHash = "0x6c00000000000000000000000000000000000000000000000000000000000000";
   const capRatio = "400000000";
 
   this.beforeAll(async () => {
     VolmexPerpPeriphery = await ethers.getContractFactory("VolmexPerpPeriphery");
-    MarkPriceOracle = await ethers.getContractFactory("MarkPriceOracle");
-    IndexPriceOracle = await ethers.getContractFactory("IndexPriceOracle");
+    PerpetualOracle = await ethers.getContractFactory("PerpetualOracle");
     // indexPriceOracle = await smock.fake("IndexPriceOracle")
     // indexPriceFake = await smock.fake("IndexPriceOracle")
     // markPriceFake = await smock.fake("IndexPriceOracle")
@@ -118,40 +112,30 @@ describe("Liquidation test in Positioning", function () {
       },
     );
     await volmexBaseToken1.deployed();
-    indexPriceOracle = await upgrades.deployProxy(
-      IndexPriceOracle,
+    perpetualOracle = await upgrades.deployProxy(
+      PerpetualOracle,
       [
-        owner.address,
-        [100000000, 100000000],
         [volmexBaseToken.address, volmexBaseToken1.address],
+        [60000000, 58000000],
+        [50060000, 45060000],
         [proofHash, proofHash],
-        [capRatio, capRatio],
+        owner.address,
       ],
-      {
-        initializer: "initialize",
-      },
+      { initializer: "__PerpetualOracle_init" },
     );
-    await indexPriceOracle.deployed();
-    await volmexBaseToken.setPriceFeed(indexPriceOracle.address);
-    await volmexBaseToken1.setPriceFeed(indexPriceOracle.address);
-    markPriceOracle = await upgrades.deployProxy(
-      MarkPriceOracle,
-      [[100000000, 100000000], [volmexBaseToken.address, volmexBaseToken1.address], owner.address],
-      {
-        initializer: "initialize",
-      },
-    );
-    await markPriceOracle.deployed();
-    await (await indexPriceOracle.grantInitialTimestampRole(markPriceOracle.address)).wait();
-    await indexPriceOracle.setObservationAdder(owner.address);
+
+    await volmexBaseToken.setPriceFeed(perpetualOracle.address);
+    await volmexBaseToken1.setPriceFeed(perpetualOracle.address);
+
+    await perpetualOracle.setIndexObservationAdder(owner.address);
     for (let i = 0; i < 10; i++) {
-      await indexPriceOracle.addObservation([100000000], [0], [proofHash]);
+      await perpetualOracle.addIndexObservations([0], [100000000], [proofHash]);
       await time.increase(300);
     }
 
     erc1271Test = await ERC1271Test.deploy();
 
-    positioningConfig = await upgrades.deployProxy(PositioningConfig, [markPriceOracle.address]);
+    positioningConfig = await upgrades.deployProxy(PositioningConfig, [perpetualOracle.address]);
     await positioningConfig.deployed();
 
     accountBalance = await upgrades.deployProxy(AccountBalance, [positioningConfig.address]);
@@ -163,13 +147,13 @@ describe("Liquidation test in Positioning", function () {
 
     matchingEngine = await upgrades.deployProxy(
       MatchingEngine,
-      [owner.address, markPriceOracle.address],
+      [owner.address, perpetualOracle.address],
       {
         initializer: "__MatchingEngineTest_init",
       },
     );
 
-    await markPriceOracle.setObservationAdder(matchingEngine.address);
+    await perpetualOracle.setMarkObservationAdder(matchingEngine.address);
 
     virtualToken = await upgrades.deployProxy(VirtualToken, ["VirtualToken", "VTK", false], {
       initializer: "initialize",
@@ -189,7 +173,6 @@ describe("Liquidation test in Positioning", function () {
       positioningConfig.address,
       accountBalance1.address,
     ]);
-    console.log(accountBalance1.address);
     positioning = await upgrades.deployProxy(
       Positioning,
       [
@@ -197,8 +180,7 @@ describe("Liquidation test in Positioning", function () {
         vaultController.address,
         accountBalance1.address,
         matchingEngine.address,
-        markPriceOracle.address,
-        indexPriceOracle.address,
+        perpetualOracle.address,
         0,
         [owner.address, account2.address],
       ],
@@ -207,7 +189,6 @@ describe("Liquidation test in Positioning", function () {
       },
     );
     await positioning.deployed();
-    console.log(positioning.address);
     await (await volmexBaseToken.setMintBurnRole(positioning.address)).wait();
     await (await volmexBaseToken1.setMintBurnRole(positioning.address)).wait();
     await (await virtualToken.setMintBurnRole(positioning.address)).wait();
@@ -215,14 +196,13 @@ describe("Liquidation test in Positioning", function () {
     perpViewFake = await smock.fake("VolmexPerpView");
     volmexPerpPeriphery = await upgrades.deployProxy(VolmexPerpPeriphery, [
       perpViewFake.address,
-      markPriceOracle.address,
-      indexPriceOracle.address,
+      perpetualOracle.address,
       [vault.address, vault.address],
       owner.address,
       relayer.address,
     ]);
 
-    await indexPriceOracle.setObservationAdder(owner.address);
+    await perpetualOracle.setIndexObservationAdder(owner.address);
     await marketRegistry.connect(owner).addBaseToken(volmexBaseToken.address);
     await marketRegistry.connect(owner).addBaseToken(volmexBaseToken1.address);
     await marketRegistry.connect(owner).setMakerFeeRatio(0.0004e6);
@@ -232,7 +212,7 @@ describe("Liquidation test in Positioning", function () {
     await accountBalance1.connect(owner).setPositioning(positioning.address);
 
     await positioningConfig.connect(owner).setPositioning(positioning.address);
-    await positioningConfig.connet(owner).setAccountBalance(accountBalance1.address);
+    await positioningConfig.connect(owner).setAccountBalance(accountBalance1.address);
     await vault.connect(owner).setPositioning(positioning.address);
     await vault.connect(owner).setVaultController(vaultController.address);
     await vaultController.registerVault(vault.address, virtualToken.address);
@@ -314,9 +294,8 @@ describe("Liquidation test in Positioning", function () {
       0,
       false,
     );
-    await (await markPriceOracle.setPositioning(positioning.address)).wait();
-    await (await markPriceOracle.setIndexOracle(indexPriceOracle.address)).wait();
-    await (await markPriceOracle.grantSmaIntervalRole(positioningConfig.address)).wait();
+    await (await perpetualOracle.setPositioning(positioning.address)).wait();
+    await (await perpetualOracle.grantSmaIntervalRole(positioningConfig.address)).wait();
     await positioningConfig.setTwapInterval(28800);
     // for (let i = 0; i < 9; i++) {
     //   await matchingEngine.addObservation(1000000, 0);
@@ -326,6 +305,10 @@ describe("Liquidation test in Positioning", function () {
   describe("Match orders:", function () {
     describe("Success:", function () {
       it("should liquidate trader", async () => {
+        for (let index = 0; index < 10; index++) {
+          await (await perpetualOracle.addIndexObservations([0], [70000000], [proofHash])).wait();
+          await (await perpetualOracle.addIndexObservations([1], [70000000], [proofHash])).wait();
+        }
         let signatureLeft = await getSignature(orderLeft, account1.address);
         let signatureRight = await getSignature(orderRight, account2.address);
 
@@ -348,15 +331,9 @@ describe("Liquidation test in Positioning", function () {
           orderLeft.makeAsset.virtualToken,
         );
 
-        await expect(positionSize.toString()).to.be.equal("-2000000000000000000");
-        await expect(positionSize1.toString()).to.be.equal("2000000000000000000");
-        await time.increase(14400);
-        const proofHash = "0x6c00000000000000000000000000000000000000000000000000000000000000";
+        expect(positionSize.toString()).to.be.equal("-2000000000000000000");
+        expect(positionSize1.toString()).to.be.equal("2000000000000000000");
 
-        for (let index = 0; index < 10; index++) {
-          await (await indexPriceOracle.addObservation([200000000], [0], [proofHash])).wait();
-          await (await indexPriceOracle.addObservation([200000000], [1], [proofHash])).wait();
-        }
         const accountValue = await vaultController.getAccountValue(account1.address);
 
         const liquidatbalePositionSize = await accountBalance.getLiquidatablePositionSize(
@@ -365,10 +342,14 @@ describe("Liquidation test in Positioning", function () {
           accountValue.toString(),
         );
         expect(liquidatbalePositionSize.toString()).to.be.equal("0");
-        await time.increase(28800);
-        for (let index = 0; index < 50; index++) {
-          await (await indexPriceOracle.addObservation([250000000], [0], [proofHash])).wait();
-          await (await indexPriceOracle.addObservation([250000000], [1], [proofHash])).wait();
+        for (let index = 0; index < 10; index++) {
+          await (await perpetualOracle.addIndexObservations([0], [70000000], [proofHash])).wait();
+          await (await perpetualOracle.addIndexObservations([1], [70000000], [proofHash])).wait();
+        }
+        await time.increase(60000);
+        for (let index = 0; index < 10; index++) {
+          await (await perpetualOracle.addIndexObservations([0], [200000000], [proofHash])).wait();
+          await (await perpetualOracle.addIndexObservations([1], [200000000], [proofHash])).wait();
         }
         // liquidating the position
         await expect(
@@ -419,8 +400,8 @@ describe("Liquidation test in Positioning", function () {
         const proofHash = "0x6c00000000000000000000000000000000000000000000000000000000000000";
 
         for (let index = 0; index < 10; index++) {
-          await (await indexPriceOracle.addObservation([200000000], [0], [proofHash])).wait();
-          await (await indexPriceOracle.addObservation([200000000], [1], [proofHash])).wait();
+          await (await perpetualOracle.addIndexObservations([0], [200000000], [proofHash])).wait();
+          await (await perpetualOracle.addIndexObservations([1], [200000000], [proofHash])).wait();
         }
         const accountValue = await vaultController.getAccountValue(account1.address);
 
@@ -431,9 +412,9 @@ describe("Liquidation test in Positioning", function () {
         );
         expect(liquidatbalePositionSize.toString()).to.be.equal("0");
         await time.increase(28800);
-        for (let index = 0; index < 50; index++) {
-          await (await indexPriceOracle.addObservation([250000000], [0], [proofHash])).wait();
-          await (await indexPriceOracle.addObservation([250000000], [1], [proofHash])).wait();
+        for (let index = 0; index < 10; index++) {
+          await (await perpetualOracle.addIndexObservations([0], [250000000], [proofHash])).wait();
+          await (await perpetualOracle.addIndexObservations([1], [250000000], [proofHash])).wait();
         }
 
         const liquidatbalePositionSize1 = await accountBalance.getLiquidatablePositionSize(
@@ -473,14 +454,14 @@ describe("Liquidation test in Positioning", function () {
         const proofHash = "0x6c00000000000000000000000000000000000000000000000000000000000000";
 
         for (let index = 0; index < 10; index++) {
-          await (await indexPriceOracle.addObservation([200000000], [0], [proofHash])).wait();
-          await (await indexPriceOracle.addObservation([200000000], [1], [proofHash])).wait();
+          await (await perpetualOracle.addIndexObservations([0], [200000000], [proofHash])).wait();
+          await (await perpetualOracle.addIndexObservations([1], [200000000], [proofHash])).wait();
         }
 
         await time.increase(28800);
-        for (let index = 0; index < 50; index++) {
-          await (await indexPriceOracle.addObservation([250000000], [0], [proofHash])).wait();
-          await (await indexPriceOracle.addObservation([250000000], [1], [proofHash])).wait();
+        for (let index = 0; index < 10; index++) {
+          await (await perpetualOracle.addIndexObservations([0], [250000000], [proofHash])).wait();
+          await (await perpetualOracle.addIndexObservations([1], [250000000], [proofHash])).wait();
         }
         // liquidating the position
         await expect(
@@ -532,14 +513,14 @@ describe("Liquidation test in Positioning", function () {
         const proofHash = "0x6c00000000000000000000000000000000000000000000000000000000000000";
 
         for (let index = 0; index < 10; index++) {
-          await (await indexPriceOracle.addObservation([200000000], [0], [proofHash])).wait();
-          await (await indexPriceOracle.addObservation([200000000], [1], [proofHash])).wait();
+          await (await perpetualOracle.addIndexObservations([0], [200000000], [proofHash])).wait();
+          await (await perpetualOracle.addIndexObservations([1], [200000000], [proofHash])).wait();
         }
 
         await time.increase(28800);
-        for (let index = 0; index < 50; index++) {
-          await (await indexPriceOracle.addObservation([250000000], [0], [proofHash])).wait();
-          await (await indexPriceOracle.addObservation([250000000], [1], [proofHash])).wait();
+        for (let index = 0; index < 10; index++) {
+          await (await perpetualOracle.addIndexObservations([0], [250000000], [proofHash])).wait();
+          await (await perpetualOracle.addIndexObservations([1], [250000000], [proofHash])).wait();
         }
         // liquidating the position
         await positioning.pause();
@@ -578,21 +559,21 @@ describe("Liquidation test in Positioning", function () {
         const proofHash = "0x6c00000000000000000000000000000000000000000000000000000000000000";
 
         for (let index = 0; index < 10; index++) {
-          await (await indexPriceOracle.addObservation([200000000], [0], [proofHash])).wait();
-          await (await indexPriceOracle.addObservation([200000000], [1], [proofHash])).wait();
+          await (await perpetualOracle.addIndexObservations([0], [200000000], [proofHash])).wait();
+          await (await perpetualOracle.addIndexObservations([1], [200000000], [proofHash])).wait();
         }
 
         await time.increase(28800);
-        for (let index = 0; index < 50; index++) {
-          await (await indexPriceOracle.addObservation([250000000], [0], [proofHash])).wait();
-          await (await indexPriceOracle.addObservation([250000000], [1], [proofHash])).wait();
+        for (let index = 0; index < 10; index++) {
+          await (await perpetualOracle.addIndexObservations([0], [250000000], [proofHash])).wait();
+          await (await perpetualOracle.addIndexObservations([1], [250000000], [proofHash])).wait();
         }
         // liquidating the position
         await expect(
           positioning
             .connect(account1)
             .liquidate(account1.address, volmexBaseToken.address, "-1000000000000000000"),
-        ).to.be.revertedWith("Positioning: liquidator not whitelisted");
+        ).to.be.revertedWith("P_LW");
       });
       it("should liquidate trader when position size / total position size < 1 liquidatable position size > 0  ", async () => {
         let signatureLeft = await getSignature(orderLeft, account1.address);
@@ -623,14 +604,14 @@ describe("Liquidation test in Positioning", function () {
         const proofHash = "0x6c00000000000000000000000000000000000000000000000000000000000000";
 
         for (let index = 0; index < 10; index++) {
-          await (await indexPriceOracle.addObservation([200000000], [0], [proofHash])).wait();
-          await (await indexPriceOracle.addObservation([200000000], [1], [proofHash])).wait();
+          await (await perpetualOracle.addIndexObservations([0], [200000000], [proofHash])).wait();
+          await (await perpetualOracle.addIndexObservations([1], [200000000], [proofHash])).wait();
         }
 
         await time.increase(28800);
-        for (let index = 0; index < 50; index++) {
-          await (await indexPriceOracle.addObservation([250000000], [0], [proofHash])).wait();
-          await (await indexPriceOracle.addObservation([250000000], [1], [proofHash])).wait();
+        for (let index = 0; index < 10; index++) {
+          await (await perpetualOracle.addIndexObservations([0], [200000000], [proofHash])).wait();
+          await (await perpetualOracle.addIndexObservations([1], [200000000], [proofHash])).wait();
         }
         const positionsize = await accountBalance1.getTotalPositionValue(
           account1.address,
@@ -708,14 +689,14 @@ describe("Liquidation test in Positioning", function () {
         const proofHash = "0x6c00000000000000000000000000000000000000000000000000000000000000";
 
         for (let index = 0; index < 10; index++) {
-          await (await indexPriceOracle.addObservation([200000000], [0], [proofHash])).wait();
-          await (await indexPriceOracle.addObservation([200000000], [1], [proofHash])).wait();
+          await (await perpetualOracle.addIndexObservations([0], [200000000], [proofHash])).wait();
+          await (await perpetualOracle.addIndexObservations([1], [200000000], [proofHash])).wait();
         }
 
         await time.increase(28800);
-        for (let index = 0; index < 50; index++) {
-          await (await indexPriceOracle.addObservation([250000000], [0], [proofHash])).wait();
-          await (await indexPriceOracle.addObservation([250000000], [1], [proofHash])).wait();
+        for (let index = 0; index < 10; index++) {
+          await (await perpetualOracle.addIndexObservations([0], [250000000], [proofHash])).wait();
+          await (await perpetualOracle.addIndexObservations([1], [250000000], [proofHash])).wait();
         }
         const positionsize = await accountBalance1.getTotalPositionValue(
           account1.address,
@@ -790,14 +771,14 @@ describe("Liquidation test in Positioning", function () {
         const proofHash = "0x6c00000000000000000000000000000000000000000000000000000000000000";
 
         for (let index = 0; index < 10; index++) {
-          await (await indexPriceOracle.addObservation([200000000], [0], [proofHash])).wait();
-          await (await indexPriceOracle.addObservation([200000000], [1], [proofHash])).wait();
+          await (await perpetualOracle.addIndexObservations([0], [200000000], [proofHash])).wait();
+          await (await perpetualOracle.addIndexObservations([1], [200000000], [proofHash])).wait();
         }
 
         await time.increase(28800);
-        for (let index = 0; index < 50; index++) {
-          await (await indexPriceOracle.addObservation([250000000], [0], [proofHash])).wait();
-          await (await indexPriceOracle.addObservation([250000000], [1], [proofHash])).wait();
+        for (let index = 0; index < 10; index++) {
+          await (await perpetualOracle.addIndexObservations([0], [250000000], [proofHash])).wait();
+          await (await perpetualOracle.addIndexObservations([1], [250000000], [proofHash])).wait();
         }
         // liquidating the position
         await expect(
@@ -854,16 +835,15 @@ describe("Liquidation test in Positioning", function () {
 
         await time.increase(14400);
         const proofHash = "0x6c00000000000000000000000000000000000000000000000000000000000000";
-
         for (let index = 0; index < 10; index++) {
-          await (await indexPriceOracle.addObservation([200000000], [0], [proofHash])).wait();
-          await (await indexPriceOracle.addObservation([200000000], [1], [proofHash])).wait();
+          await (await perpetualOracle.addIndexObservations([0], [200000000], [proofHash])).wait();
+          await (await perpetualOracle.addIndexObservations([1], [200000000], [proofHash])).wait();
         }
 
         await time.increase(28800);
-        for (let index = 0; index < 50; index++) {
-          await (await indexPriceOracle.addObservation([250000000], [0], [proofHash])).wait();
-          await (await indexPriceOracle.addObservation([250000000], [1], [proofHash])).wait();
+        for (let index = 0; index < 10; index++) {
+          await (await perpetualOracle.addIndexObservations([0], [250000000], [proofHash])).wait();
+          await (await perpetualOracle.addIndexObservations([1], [250000000], [proofHash])).wait();
         }
         await positioning.pause();
         // not liquidating the position
@@ -949,14 +929,14 @@ describe("Liquidation test in Positioning", function () {
         const proofHash = "0x6c00000000000000000000000000000000000000000000000000000000000000";
 
         for (let index = 0; index < 10; index++) {
-          await (await indexPriceOracle.addObservation([200000000], [0], [proofHash])).wait();
-          await (await indexPriceOracle.addObservation([200000000], [1], [proofHash])).wait();
+          await (await perpetualOracle.addIndexObservations([0], [200000000], [proofHash])).wait();
+          await (await perpetualOracle.addIndexObservations([1], [200000000], [proofHash])).wait();
         }
 
         await time.increase(28800);
-        for (let index = 0; index < 50; index++) {
-          await (await indexPriceOracle.addObservation([250000000], [0], [proofHash])).wait();
-          await (await indexPriceOracle.addObservation([250000000], [1], [proofHash])).wait();
+        for (let index = 0; index < 10; index++) {
+          await (await perpetualOracle.addIndexObservations([0], [250000000], [proofHash])).wait();
+          await (await perpetualOracle.addIndexObservations([1], [250000000], [proofHash])).wait();
         }
 
         // liquidating the position

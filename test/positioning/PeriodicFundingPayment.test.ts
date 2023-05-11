@@ -18,12 +18,11 @@ describe("Periodic Funding payment", function () {
   let VaultController;
   let vaultController;
   let AccountBalance;
-  let MarkPriceOracle;
-  let markPriceOracle;
-  let IndexPriceOracle;
-  let indexPriceOracle;
+  let PerpetualOracle;
+  let perpetualOracle;
   let VolmexBaseToken;
   let volmexBaseToken;
+  let volmexBaseToken1;
   let VolmexQuoteToken;
   let volmexQuoteToken;
   let VolmexPerpPeriphery;
@@ -53,8 +52,7 @@ describe("Periodic Funding payment", function () {
   }
   this.beforeAll(async () => {
     VolmexPerpPeriphery = await ethers.getContractFactory("VolmexPerpPeriphery");
-    MarkPriceOracle = await ethers.getContractFactory("MarkPriceOracle");
-    IndexPriceOracle = await ethers.getContractFactory("IndexPriceOracle");
+    PerpetualOracle = await ethers.getContractFactory("PerpetualOracle");
     MatchingEngine = await ethers.getContractFactory("MatchingEngine");
     VirtualToken = await ethers.getContractFactory("VirtualTokenTest");
     ERC20TransferProxyTest = await ethers.getContractFactory("ERC20TransferProxyTest");
@@ -92,18 +90,32 @@ describe("Periodic Funding payment", function () {
         initializer: "initialize",
       },
     );
-    await volmexBaseToken.deployed();
-
-    await (await perpView.setBaseToken(volmexBaseToken.address)).wait();
-    indexPriceOracle = await upgrades.deployProxy(
-      IndexPriceOracle,
-      [owner.address, [75000000], [volmexBaseToken.address], [proofHash], [capRatio]],
+    volmexBaseToken1 = await upgrades.deployProxy(
+      VolmexBaseToken,
+      [
+        "VolmexBaseToken", // nameArg
+        "VBT", // symbolArg,
+        account1.address, // priceFeedArg
+        true, // isBase
+      ],
       {
         initializer: "initialize",
       },
     );
-    await indexPriceOracle.deployed();
-    await volmexBaseToken.setPriceFeed(indexPriceOracle.address);
+    await volmexBaseToken.deployed();
+    perpetualOracle = await upgrades.deployProxy(
+      PerpetualOracle,
+      [
+        [volmexBaseToken.address, volmexBaseToken1.address],
+        [70000000, 60000000],
+        [75000000, 50000000],
+        [proofHash, proofHash],
+        owner.address,
+      ],
+      { initializer: "__PerpetualOracle_init" },
+    );
+
+    await volmexBaseToken.setPriceFeed(perpetualOracle.address);
     volmexQuoteToken = await upgrades.deployProxy(
       VolmexQuoteToken,
       [
@@ -118,26 +130,17 @@ describe("Periodic Funding payment", function () {
     await volmexQuoteToken.deployed();
     await (await perpView.setQuoteToken(volmexQuoteToken.address)).wait();
 
-    markPriceOracle = await upgrades.deployProxy(
-      MarkPriceOracle,
-      [[70000000], [volmexBaseToken.address], owner.address],
-      {
-        initializer: "initialize",
-      },
-    );
-    await markPriceOracle.deployed();
-    await (await indexPriceOracle.grantInitialTimestampRole(markPriceOracle.address)).wait();
-    positioningConfig = await upgrades.deployProxy(PositioningConfig, [markPriceOracle.address]);
-    await markPriceOracle.grantSmaIntervalRole(positioningConfig.address);
+    positioningConfig = await upgrades.deployProxy(PositioningConfig, [perpetualOracle.address]);
+    await perpetualOracle.grantSmaIntervalRole(positioningConfig.address);
     USDC = await TestERC20.deploy();
     await USDC.__TestERC20_init("TestUSDC", "USDC", 6);
     await USDC.deployed();
 
     matchingEngine = await upgrades.deployProxy(MatchingEngine, [
       owner.address,
-      markPriceOracle.address,
+      perpetualOracle.address,
     ]);
-    await markPriceOracle.setObservationAdder(matchingEngine.address);
+    await perpetualOracle.setMarkObservationAdder(matchingEngine.address);
 
     virtualToken = await upgrades.deployProxy(VirtualToken, ["VirtualToken", "VTK", false], {
       initializer: "initialize",
@@ -174,8 +177,7 @@ describe("Periodic Funding payment", function () {
         vaultController.address,
         accountBalance1.address,
         matchingEngine.address,
-        markPriceOracle.address,
-        indexPriceOracle.address,
+        perpetualOracle.address,
         0,
         [owner.address, account1.address],
       ],
@@ -211,19 +213,19 @@ describe("Periodic Funding payment", function () {
     await positioning.connect(owner).setDefaultFeeReceiver(owner.address);
     await positioning.connect(owner).setPositioning(positioning.address);
 
-    await (await markPriceOracle.setObservationAdder(owner.address)).wait();
+    await (await perpetualOracle.setIndexObservationAdder(owner.address)).wait();
     await (await matchingEngine.grantMatchOrders(positioning.address)).wait();
-    await (await markPriceOracle.setObservationAdder(matchingEngine.address)).wait();
+    await (await perpetualOracle.setMarkObservationAdder(matchingEngine.address)).wait();
     volmexPerpPeriphery = await upgrades.deployProxy(VolmexPerpPeriphery, [
       perpView.address,
-      markPriceOracle.address,
-      indexPriceOracle.address,
+      perpetualOracle.address,
       [vault.address, vault.address],
       owner.address,
       owner.address, // replace with replayer address
     ]);
-    await (await markPriceOracle.setPositioning(positioning.address)).wait();
-    await (await markPriceOracle.setIndexOracle(indexPriceOracle.address)).wait();
+    await (await perpetualOracle.setPositioning(positioning.address)).wait();
+    await positioningConfig.setPositioning(positioning.address);
+    await positioningConfig.setAccountBalance(accountBalance1.address);
     await positioningConfig.setTwapInterval(28800);
 
     await volmexPerpPeriphery.deployed();
@@ -261,17 +263,17 @@ describe("Periodic Funding payment", function () {
         .connect(bob)
         .depositToVault(index, USDC.address, "1000000000000000000000000")
     ).wait();
-    await indexPriceOracle.setObservationAdder(owner.address);
+    await perpetualOracle.setIndexObservationAdder(owner.address);
     for (let i = 0; i < 10; i++) {
-      await indexPriceOracle.addObservation([75000000], [0], [proofHash]);
+      await perpetualOracle.addIndexObservations([0], [75000000], [proofHash]);
     }
   });
 
   describe("Periodic Funding Payment", function () {
     it("Funding payment should not change in before 8 hours", async () => {
-      const price = await accountBalance1.getIndexPrice(volmexBaseToken.address);
+      const price = await accountBalance1.getIndexPrice(volmexBaseToken.address, 28800);
       await matchingEngine.grantMatchOrders(positioning.address);
-      expect(price.toString()).to.equal("7500000000");
+      expect(price.toString()).to.equal("75000000");
 
       const orderLeft = Order(
         ORDER,
@@ -461,11 +463,11 @@ describe("Periodic Funding payment", function () {
       );
 
       for (let i = 0; i < 10; i++) {
-        await indexPriceOracle.addObservation([75000000], [0], [proofHash]);
+        await perpetualOracle.addIndexObservations([0], [75000000], [proofHash]);
       }
       await time.increase(30000);
       for (let i = 0; i < 10; i++) {
-        await indexPriceOracle.addObservation([75000000], [0], [proofHash]);
+        await perpetualOracle.addIndexObservations([0], [75000000], [proofHash]);
       }
       for (let i = 67; i < 68; i++) {
         const orderLeft = Order(
@@ -648,11 +650,11 @@ describe("Periodic Funding payment", function () {
       );
       expect(accountInfo1.lastTwPremiumGrowthGlobal.toString()).to.equal("0");
       for (let i = 0; i < 10; i++) {
-        await indexPriceOracle.addObservation([75000000], [0], [proofHash]);
+        await perpetualOracle.addIndexObservations([0], [75000000], [proofHash]);
       }
       await time.increase(30000);
       for (let i = 0; i < 10; i++) {
-        await indexPriceOracle.addObservation([75000000], [0], [proofHash]);
+        await perpetualOracle.addIndexObservations([0], [75000000], [proofHash]);
       }
       for (let i = 30; i < 31; i++) {
         const orderLeft = Order(
@@ -857,13 +859,12 @@ describe("Periodic Funding payment", function () {
       expect(fundingPayment2.toString()).to.equal("0");
 
       for (let i = 0; i < 10; i++) {
-        await indexPriceOracle.addObservation([75000000], [0], [proofHash]);
+        await perpetualOracle.addIndexObservations([0], [75000000], [proofHash]);
       }
       await time.increase(30000);
-      for (let i = 0; i < 20; i++) {
-        await indexPriceOracle.addObservation([75000000], [0], [proofHash]);
+      for (let i = 0; i < 10; i++) {
+        await perpetualOracle.addIndexObservations([0], [75000000], [proofHash]);
       }
-
       const fundingPayment3 = await positioning.getPendingFundingPayment(
         account1.address,
         volmexBaseToken.address,
@@ -1020,11 +1021,12 @@ describe("Periodic Funding payment", function () {
       expect(fundingPayment2.toString()).to.equal("0");
 
       for (let i = 0; i < 10; i++) {
-        await indexPriceOracle.addObservation([75000000], [0], [proofHash]);
+        await perpetualOracle.addIndexObservations([0], [75000000], [proofHash]);
       }
+
       await time.increase(30000);
       for (let i = 0; i < 10; i++) {
-        await indexPriceOracle.addObservation([75000000], [0], [proofHash]);
+        await perpetualOracle.addIndexObservations([0], [75000000], [proofHash]);
       }
 
       const fundingPayment3 = await positioning.getPendingFundingPayment(
@@ -1071,11 +1073,11 @@ describe("Periodic Funding payment", function () {
         );
       }
       for (let i = 0; i < 10; i++) {
-        await indexPriceOracle.addObservation([75000000], [0], [proofHash]);
+        await perpetualOracle.addIndexObservations([0], [75000000], [proofHash]);
       }
       await time.increase(30000);
       for (let i = 0; i < 10; i++) {
-        await indexPriceOracle.addObservation([75000000], [0], [proofHash]);
+        await perpetualOracle.addIndexObservations([0], [75000000], [proofHash]);
       }
       const fundingPayment5 = await positioning.getPendingFundingPayment(
         account1.address,
@@ -1187,10 +1189,12 @@ describe("Periodic Funding payment", function () {
       expect(fundingPayment1.toString()).to.equal("0");
       expect(fundingPayment2.toString()).to.equal("0");
       for (let i = 0; i < 10; i++) {
-        await indexPriceOracle.addObservation([75000000], [0], [proofHash]);
+        await perpetualOracle.addIndexObservations([0], [75000000], [proofHash]);
       }
       await time.increase(14000);
-
+      for (let i = 0; i < 10; i++) {
+        await perpetualOracle.addIndexObservations([0], [75000000], [proofHash]);
+      }
       for (let i = 34; i < 38; i++) {
         const orderLeft = Order(
           ORDER,
@@ -1247,6 +1251,9 @@ describe("Periodic Funding payment", function () {
 
       const signatureLeft1 = await getSignature(orderLeft1, alice.address);
       const signatureRight1 = await getSignature(orderRight1, bob.address);
+      for (let i = 0; i < 10; i++) {
+        await perpetualOracle.addIndexObservations([0], [75000000], [proofHash]);
+      }
       await volmexPerpPeriphery.openPosition(
         index,
         orderLeft1,
@@ -1283,7 +1290,7 @@ describe("Periodic Funding payment", function () {
 
       await time.increase(15000);
       for (let i = 0; i < 10; i++) {
-        await indexPriceOracle.addObservation([75000000], [0], [proofHash]);
+        await perpetualOracle.addIndexObservations([0], [75000000], [proofHash]);
       }
       const fundingPayment7 = await positioning.getPendingFundingPayment(
         account1.address,
@@ -1314,7 +1321,7 @@ describe("Periodic Funding payment", function () {
 
       await time.increase(30000);
       for (let i = 0; i < 10; i++) {
-        await indexPriceOracle.addObservation([75000000], [0], [proofHash]);
+        await perpetualOracle.addIndexObservations([0], [75000000], [proofHash]);
       }
       const fundingPayment11 = await positioning.getPendingFundingPayment(
         alice.address,
@@ -1345,12 +1352,11 @@ describe("Periodic Funding payment", function () {
     let VaultController;
     let vaultController;
     let AccountBalance;
-    let MarkPriceOracle;
-    let markPriceOracle;
-    let IndexPriceOracle;
-    let indexPriceOracle;
+    let PerpetualOracle;
+    let perpetualOracle;
     let VolmexBaseToken;
     let volmexBaseToken;
+    let volmexBaseToken1;
     let VolmexQuoteToken;
     let volmexQuoteToken;
     let VolmexPerpPeriphery;
@@ -1380,8 +1386,7 @@ describe("Periodic Funding payment", function () {
     }
     this.beforeAll(async () => {
       VolmexPerpPeriphery = await ethers.getContractFactory("VolmexPerpPeriphery");
-      MarkPriceOracle = await ethers.getContractFactory("MarkPriceOracle");
-      IndexPriceOracle = await ethers.getContractFactory("IndexPriceOracle");
+      PerpetualOracle = await ethers.getContractFactory("PerpetualOracle");
       MatchingEngine = await ethers.getContractFactory("MatchingEngine");
       VirtualToken = await ethers.getContractFactory("VirtualTokenTest");
       ERC20TransferProxyTest = await ethers.getContractFactory("ERC20TransferProxyTest");
@@ -1420,17 +1425,33 @@ describe("Periodic Funding payment", function () {
         },
       );
       await volmexBaseToken.deployed();
-
-      await (await perpView.setBaseToken(volmexBaseToken.address)).wait();
-      indexPriceOracle = await upgrades.deployProxy(
-        IndexPriceOracle,
-        [owner.address, [200000000], [volmexBaseToken.address], [proofHash], [capRatio]],
+      volmexBaseToken1 = await upgrades.deployProxy(
+        VolmexBaseToken,
+        [
+          "VolmexBaseToken", // nameArg
+          "VBT", // symbolArg,
+          account1.address, // priceFeedArg
+          true, // isBase
+        ],
         {
           initializer: "initialize",
         },
       );
-      await indexPriceOracle.deployed();
-      await volmexBaseToken.setPriceFeed(indexPriceOracle.address);
+      await volmexBaseToken1.deployed();
+      await (await perpView.setBaseToken(volmexBaseToken.address)).wait();
+      perpetualOracle = await upgrades.deployProxy(
+        PerpetualOracle,
+        [
+          [volmexBaseToken.address, volmexBaseToken1.address],
+          [200060000, 200060000],
+          [200000000, 200000000],
+          [proofHash, proofHash],
+          owner.address,
+        ],
+        { initializer: "__PerpetualOracle_init" },
+      );
+      await perpetualOracle.deployed();
+      await volmexBaseToken.setPriceFeed(perpetualOracle.address);
       volmexQuoteToken = await upgrades.deployProxy(
         VolmexQuoteToken,
         [
@@ -1445,26 +1466,17 @@ describe("Periodic Funding payment", function () {
       await volmexQuoteToken.deployed();
       await (await perpView.setQuoteToken(volmexQuoteToken.address)).wait();
 
-      markPriceOracle = await upgrades.deployProxy(
-        MarkPriceOracle,
-        [[200060000], [volmexBaseToken.address], owner.address],
-        {
-          initializer: "initialize",
-        },
-      );
-      await markPriceOracle.deployed();
-      await (await indexPriceOracle.grantInitialTimestampRole(markPriceOracle.address)).wait();
-      positioningConfig = await upgrades.deployProxy(PositioningConfig, [markPriceOracle.address]);
-      await markPriceOracle.grantSmaIntervalRole(positioningConfig.address);
+      positioningConfig = await upgrades.deployProxy(PositioningConfig, [perpetualOracle.address]);
+      await perpetualOracle.grantSmaIntervalRole(positioningConfig.address);
       USDC = await TestERC20.deploy();
       await USDC.__TestERC20_init("TestUSDC", "USDC", 6);
       await USDC.deployed();
 
       matchingEngine = await upgrades.deployProxy(MatchingEngine, [
         owner.address,
-        markPriceOracle.address,
+        perpetualOracle.address,
       ]);
-      await markPriceOracle.setObservationAdder(matchingEngine.address);
+      await perpetualOracle.setMarkObservationAdder(matchingEngine.address);
 
       virtualToken = await upgrades.deployProxy(VirtualToken, ["VirtualToken", "VTK", false], {
         initializer: "initialize",
@@ -1501,8 +1513,7 @@ describe("Periodic Funding payment", function () {
           vaultController.address,
           accountBalance1.address,
           matchingEngine.address,
-          markPriceOracle.address,
-          indexPriceOracle.address,
+          perpetualOracle.address,
           0,
           [owner.address, account1.address],
         ],
@@ -1538,19 +1549,19 @@ describe("Periodic Funding payment", function () {
       await positioning.connect(owner).setDefaultFeeReceiver(owner.address);
       await positioning.connect(owner).setPositioning(positioning.address);
 
-      await (await markPriceOracle.setObservationAdder(owner.address)).wait();
+      await (await perpetualOracle.setIndexObservationAdder(owner.address)).wait();
       await (await matchingEngine.grantMatchOrders(positioning.address)).wait();
-      await (await markPriceOracle.setObservationAdder(matchingEngine.address)).wait();
+      await (await perpetualOracle.setMarkObservationAdder(matchingEngine.address)).wait();
       volmexPerpPeriphery = await upgrades.deployProxy(VolmexPerpPeriphery, [
         perpView.address,
-        markPriceOracle.address,
-        indexPriceOracle.address,
+        perpetualOracle.address,
         [vault.address, vault.address],
         owner.address,
         owner.address, // replace with replayer address
       ]);
-      await (await markPriceOracle.setPositioning(positioning.address)).wait();
-      await (await markPriceOracle.setIndexOracle(indexPriceOracle.address)).wait();
+      await (await perpetualOracle.setPositioning(positioning.address)).wait();
+      await positioningConfig.setPositioning(positioning.address);
+      await positioningConfig.setAccountBalance(accountBalance1.address);
       await positioningConfig.setTwapInterval(28800);
 
       await volmexPerpPeriphery.deployed();
@@ -1600,15 +1611,15 @@ describe("Periodic Funding payment", function () {
     // when user opens  position his collateral value  = 1000 - (200.06 *4/100);
     // when user closes position his collateral value  = 1000 - (200.06 *4/100) - (200.06 *4/100);
     it("Funding should not occur is user closes his position before 8 hours", async () => {
-      await markPriceOracle.setObservationAdder(owner.address);
-      await indexPriceOracle.setObservationAdder(owner.address);
+      await perpetualOracle.setMarkObservationAdder(owner.address);
+      await perpetualOracle.setIndexObservationAdder(owner.address);
       for (let index = 0; index <= 100; index++) {
-        await markPriceOracle.addObservation(200060000, 0);
+        await perpetualOracle.addMarkObservation(0, 200060000);
       }
       for (let index = 0; index <= 100; index++) {
-        await indexPriceOracle.addObservation([200000000], [0], [proofHash]);
+        await perpetualOracle.addIndexObservations([0], [200000000], [proofHash]);
       }
-      await markPriceOracle.setObservationAdder(matchingEngine.address);
+      await perpetualOracle.setMarkObservationAdder(matchingEngine.address);
       await USDC.transfer(account4.address, "1000000000000000000");
       await USDC.transfer(account3.address, "1000000000000000000");
       await matchingEngine.grantMatchOrders(positioning.address);
@@ -1713,16 +1724,12 @@ describe("Periodic Funding payment", function () {
     // when user opens  position his collateral value  = 1000 - (200.06 *4/100);
     // when user closes position his collateral value  = 1000 - (200.06 *4/100) - (200.06 *4/100) - funding payment;
     it("funding should occur", async () => {
-      // await positioningConfig.setMaxFundingRate("100000");
-      await markPriceOracle.setObservationAdder(owner.address);
-      await indexPriceOracle.setObservationAdder(owner.address);
-      for (let index = 0; index <= 100; index++) {
-        await markPriceOracle.addObservation(200060000, 0);
+      await perpetualOracle.setIndexObservationAdder(owner.address);
+
+      for (let index = 0; index <= 10; index++) {
+        await perpetualOracle.addIndexObservations([0], [200000000], [proofHash]);
       }
-      for (let index = 0; index <= 100; index++) {
-        await indexPriceOracle.addObservation([200000000], [0], [proofHash]);
-      }
-      await markPriceOracle.setObservationAdder(matchingEngine.address);
+      await perpetualOracle.setMarkObservationAdder(matchingEngine.address);
       await USDC.transfer(account4.address, "1000000000000000000");
       await USDC.transfer(account3.address, "1000000000000000000");
       await matchingEngine.grantMatchOrders(positioning.address);
@@ -1787,13 +1794,14 @@ describe("Periodic Funding payment", function () {
 
       await time.increase(18800);
       for (let index = 0; index <= 10; index++) {
-        await indexPriceOracle.addObservation([200000000], [0], [proofHash]);
+        await perpetualOracle.addIndexObservations([0], [200000000], [proofHash]);
       }
-      await time.increase(10000);
+      await time.increase(10001);
       for (let index = 0; index <= 10; index++) {
-        await indexPriceOracle.addObservation([200000000], [0], [proofHash]);
+        await perpetualOracle.addIndexObservations([0], [200000000], [proofHash]);
       }
       console.log((await vaultController.getAccountValue(account4.address)).toString());
+
       console.log("close position");
       const orderLeft1 = Order(
         ORDER,
@@ -1839,15 +1847,14 @@ describe("Periodic Funding payment", function () {
     // when user opens  position his collateral value  = 1000 - (200.06 *4/100);
     // when user closes position his collateral value  = 1000 - (200.06 *4/100) - (200.06 *4/100) - funding payment in last cycle
     it("Funding should occur during multiple cycles", async () => {
-      await markPriceOracle.setObservationAdder(owner.address);
-      await indexPriceOracle.setObservationAdder(owner.address);
-      for (let index = 0; index <= 100; index++) {
-        await markPriceOracle.addObservation(200060000, 0);
+      await perpetualOracle.setMarkObservationAdder(owner.address);
+      await perpetualOracle.setIndexObservationAdder(owner.address);
+      for (let index = 0; index <= 10; index++) {
+        await perpetualOracle.addMarkObservation(0, 200060000);
       }
-      for (let index = 0; index <= 100; index++) {
-        await indexPriceOracle.addObservation([200000000], [0], [proofHash]);
+      for (let index = 0; index <= 10; index++) {
+        await perpetualOracle.addIndexObservations([0], [200000000], [proofHash]);
       }
-      await markPriceOracle.setObservationAdder(matchingEngine.address);
       await USDC.transfer(account4.address, "1000000000000000000");
       await USDC.transfer(account3.address, "1000000000000000000");
       await matchingEngine.grantMatchOrders(positioning.address);
@@ -1911,20 +1918,21 @@ describe("Periodic Funding payment", function () {
 
       await time.increase(18800);
       for (let index = 0; index <= 10; index++) {
-        await indexPriceOracle.addObservation([200000000], [0], [proofHash]);
+        await perpetualOracle.addIndexObservations([0], [200000000], [proofHash]);
       }
+
       await time.increase(10000);
       for (let index = 0; index <= 10; index++) {
-        await indexPriceOracle.addObservation([200000000], [0], [proofHash]);
+        await perpetualOracle.addIndexObservations([0], [200000000], [proofHash]);
       }
 
       await time.increase(18800);
       for (let index = 0; index <= 10; index++) {
-        await indexPriceOracle.addObservation([200000000], [0], [proofHash]);
+        await perpetualOracle.addIndexObservations([0], [200000000], [proofHash]);
       }
       await time.increase(10000);
       for (let index = 0; index <= 10; index++) {
-        await indexPriceOracle.addObservation([200000000], [0], [proofHash]);
+        await perpetualOracle.addIndexObservations([0], [200000000], [proofHash]);
       }
 
       const orderLeft1 = Order(
@@ -1972,16 +1980,15 @@ describe("Periodic Funding payment", function () {
     // when user opens  position his collateral value  = 1000 - (200.06 *4/100);
     // when user closes position his collateral value  = 1000 - (200.06 *4/100) - (200.06 *4/100) - funding payment in last cycle
     it("should test clamp upper bound ", async () => {
-      await positioningConfig.setMaxFundingRate("730000");
-      await markPriceOracle.setObservationAdder(owner.address);
-      await indexPriceOracle.setObservationAdder(owner.address);
+      await positioningConfig.setMaxFundingRate("7300");
+      await perpetualOracle.setMarkObservationAdder(owner.address);
+      await perpetualOracle.setIndexObservationAdder(owner.address);
       for (let index = 0; index <= 10; index++) {
-        await markPriceOracle.addObservation(200060000, 0);
+        await perpetualOracle.addMarkObservation(0, 200060000);
       }
       for (let index = 0; index <= 10; index++) {
-        await indexPriceOracle.addObservation([200000000], [0], [proofHash]);
+        await perpetualOracle.addIndexObservations([0], [200000000], [proofHash]);
       }
-      await markPriceOracle.setObservationAdder(matchingEngine.address);
       await USDC.transfer(account4.address, "1000000000000000000");
       await USDC.transfer(account3.address, "1000000000000000000");
       await matchingEngine.grantMatchOrders(positioning.address);
@@ -2040,33 +2047,26 @@ describe("Periodic Funding payment", function () {
         account4.address,
         volmexBaseToken.address,
       );
-      console.log(
-        (await vaultController.getFreeCollateralByRatio(account4.address, 1)).toString(),
-        "in test",
-      );
+
       expect(positionSize1.toString()).to.be.equal("1000000000000000000");
       expect(positionSize2.toString()).to.be.equal("-1000000000000000000");
-      await markPriceOracle.setObservationAdder(owner.address);
+      await perpetualOracle.setMarkObservationAdder(owner.address);
       await time.increase(10000);
 
       for (let index = 0; index <= 10; index++) {
-        await indexPriceOracle.addObservation([200000000], [0], [proofHash]);
+        await perpetualOracle.addIndexObservations([0], [200000000], [proofHash]);
       }
       for (let index = 0; index <= 10; index++) {
-        await markPriceOracle.addObservation(400000000, 0);
+        await perpetualOracle.addMarkObservation(0, 400000000);
       }
       const timestamp = await time.latest();
 
       await time.increase(18800);
       for (let index = 0; index <= 10; index++) {
-        await indexPriceOracle.addObservation([200000000], [0], [proofHash]);
+        await perpetualOracle.addIndexObservations([0], [200000000], [proofHash]);
       }
-      await markPriceOracle.setObservationAdder(matchingEngine.address);
-      console.log("vault balance", (await USDC.balanceOf(vault.address)).toString());
-      console.log(
-        "account value ",
-        (await vaultController.getAccountValue(account3.address)).toString(),
-      );
+      await perpetualOracle.setMarkObservationAdder(matchingEngine.address);
+
       const orderLeft1 = Order(
         ORDER,
         deadline,
@@ -2090,16 +2090,7 @@ describe("Periodic Funding payment", function () {
 
       const signatureLeft1 = await getSignature(orderLeft1, account3.address);
       const signatureRight1 = await getSignature(orderRight1, account4.address);
-      console.log(
-        (
-          await positioning.getPendingFundingPayment(account4.address, volmexBaseToken.address)
-        ).toString(),
-        "in test",
-      );
-      console.log(
-        (await vaultController.getFreeCollateralByRatio(account4.address, 1)).toString(),
-        "in test",
-      );
+
       await volmexPerpPeriphery.openPosition(
         index,
         orderLeft1,
@@ -2109,23 +2100,23 @@ describe("Periodic Funding payment", function () {
         liquidator,
       );
       const traderCollateral = await vaultController.getFreeCollateralByRatio(account4.address, 1);
-      expect(traderCollateral.toString()).to.be.equal("1017933874919976000000");
+      expect(traderCollateral.toString()).to.be.equal("999859951919976000000");
     });
     // Fees deduction
     // user collateral = 1000
     // when user opens  position his collateral value  = 1000 - (200.06 *4/100);
     // when user closes position his collateral value  = 1000 - (200.06 *4/100) - (200.06 *4/100) - funding payment in last cycle
     it("should test clamp lower bound ", async () => {
-      await positioningConfig.setMaxFundingRate("1000000");
-      await markPriceOracle.setObservationAdder(owner.address);
-      await indexPriceOracle.setObservationAdder(owner.address);
+      await positioningConfig.setMaxFundingRate("7300");
+      await perpetualOracle.setMarkObservationAdder(owner.address);
+      await perpetualOracle.setIndexObservationAdder(owner.address);
       for (let index = 0; index <= 10; index++) {
-        await markPriceOracle.addObservation(200060000, 0);
+        await perpetualOracle.addMarkObservation(0, 200060000);
       }
       for (let index = 0; index <= 10; index++) {
-        await indexPriceOracle.addObservation([200000000], [0], [proofHash]);
+        await perpetualOracle.addIndexObservations([0], [200000000], [proofHash]);
       }
-      await markPriceOracle.setObservationAdder(matchingEngine.address);
+      await perpetualOracle.setMarkObservationAdder(matchingEngine.address);
       await USDC.transfer(account4.address, "1000000000000000000");
       await USDC.transfer(account3.address, "1000000000000000000");
       await matchingEngine.grantMatchOrders(positioning.address);
@@ -2186,20 +2177,21 @@ describe("Periodic Funding payment", function () {
       );
       expect(positionSize1.toString()).to.be.equal("1000000000000000000");
       expect(positionSize2.toString()).to.be.equal("-1000000000000000000");
-      await markPriceOracle.setObservationAdder(owner.address);
+      await perpetualOracle.setMarkObservationAdder(owner.address);
       await time.increase(10000);
 
       for (let index = 0; index <= 10; index++) {
-        await indexPriceOracle.addObservation([200000000], [0], [proofHash]);
+        await perpetualOracle.addIndexObservations([0], [200000000], [proofHash]);
       }
       for (let index = 0; index <= 10; index++) {
-        await markPriceOracle.addObservation(10000000, 0);
+        await perpetualOracle.addMarkObservation(0, 10000000);
       }
       await time.increase(18800);
       for (let index = 0; index <= 10; index++) {
-        await indexPriceOracle.addObservation([200000000], [0], [proofHash]);
+        await perpetualOracle.addIndexObservations([0], [200000000], [proofHash]);
       }
-      await markPriceOracle.setObservationAdder(matchingEngine.address);
+
+      await perpetualOracle.setMarkObservationAdder(matchingEngine.address);
       const orderLeft1 = Order(
         ORDER,
         deadline,
@@ -2232,7 +2224,7 @@ describe("Periodic Funding payment", function () {
         liquidator,
       );
       const traderCollateral = await vaultController.getFreeCollateralByRatio(account4.address, 1);
-      expect(traderCollateral.toString()).to.be.equal("982679147919976000000");
+      expect(traderCollateral.toString()).to.be.equal("999850385586642666666");
     });
     // Fees deduction
     // user collateral = 1000
@@ -2240,15 +2232,15 @@ describe("Periodic Funding payment", function () {
     // when user closes position his collateral value  = 1000 - (200.06 *4/100) - (200.06 *4/100) - funding payment in last cycle
     it("Testing when funding rate goes positive to negative from cycle 1 to cycle 2", async () => {
       await positioningConfig.setMaxFundingRate("800000");
-      await markPriceOracle.setObservationAdder(owner.address);
-      await indexPriceOracle.setObservationAdder(owner.address);
+      await perpetualOracle.setMarkObservationAdder(owner.address);
+      await perpetualOracle.setIndexObservationAdder(owner.address);
       for (let index = 0; index <= 10; index++) {
-        await markPriceOracle.addObservation(200060000, 0);
+        await perpetualOracle.addMarkObservation(0, 200060000);
       }
       for (let index = 0; index <= 10; index++) {
-        await indexPriceOracle.addObservation([200000000], [0], [proofHash]);
+        await perpetualOracle.addIndexObservations([0], [200000000], [proofHash]);
       }
-      await markPriceOracle.setObservationAdder(matchingEngine.address);
+      await perpetualOracle.setMarkObservationAdder(matchingEngine.address);
       await USDC.transfer(account4.address, "1000000000000000000");
       await USDC.transfer(account3.address, "1000000000000000000");
       await matchingEngine.grantMatchOrders(positioning.address);
@@ -2309,32 +2301,32 @@ describe("Periodic Funding payment", function () {
       );
       expect(positionSize1.toString()).to.be.equal("1000000000000000000");
       expect(positionSize2.toString()).to.be.equal("-1000000000000000000");
-      await markPriceOracle.setObservationAdder(owner.address);
+      await perpetualOracle.setMarkObservationAdder(owner.address);
       for (let index = 0; index <= 10; index++) {
-        await (await markPriceOracle.addObservation(400000000, 0)).wait();
+        await (await perpetualOracle.addMarkObservation(0, 400000000)).wait();
       }
       await time.increase(10000);
       for (let index = 0; index <= 10; index++) {
-        await indexPriceOracle.addObservation([200000000], [0], [proofHash]);
+        await perpetualOracle.addIndexObservations([0], [200000000], [proofHash]);
       }
 
       await time.increase(18800);
       for (let index = 0; index <= 10; index++) {
-        await indexPriceOracle.addObservation([200000000], [0], [proofHash]);
+        await perpetualOracle.addIndexObservations([0], [200000000], [proofHash]);
       }
       await time.increase(10000);
       for (let index = 0; index <= 10; index++) {
-        await markPriceOracle.addObservation(10000000, 0);
+        await perpetualOracle.addMarkObservation(0, 10000000);
       }
       for (let index = 0; index <= 10; index++) {
-        await indexPriceOracle.addObservation([200000000], [0], [proofHash]);
+        await perpetualOracle.addIndexObservations([0], [200000000], [proofHash]);
       }
 
       await time.increase(18800);
       for (let index = 0; index <= 10; index++) {
-        await indexPriceOracle.addObservation([200000000], [0], [proofHash]);
+        await perpetualOracle.addIndexObservations([0], [200000000], [proofHash]);
       }
-      await markPriceOracle.setObservationAdder(matchingEngine.address);
+      await perpetualOracle.setMarkObservationAdder(matchingEngine.address);
       const orderLeft1 = Order(
         ORDER,
         deadline,
@@ -2367,7 +2359,139 @@ describe("Periodic Funding payment", function () {
         liquidator,
       );
       const traderCollateral = await vaultController.getFreeCollateralByRatio(account4.address, 1);
-      expect(traderCollateral.toString()).to.be.equal("958140857253309333334");
+      expect(traderCollateral.toString()).to.be.equal("999839951919976000000");
+    });
+
+    it("should reach maximum funding rate", async () => {
+      await positioningConfig.setMaxFundingRate("7300");
+      await perpetualOracle.setIndexObservationAdder(owner.address);
+      await perpetualOracle.setMarkObservationAdder(owner.address);
+      for (let index = 0; index <= 10; index++) {
+        await perpetualOracle.addMarkObservation(0, 99000000);
+      }
+      for (let index = 0; index <= 10; index++) {
+        await perpetualOracle.addIndexObservations([0], [100000000], [proofHash]);
+      }
+      await perpetualOracle.setMarkObservationAdder(matchingEngine.address);
+      await USDC.transfer(account4.address, "1000000000000000000");
+      await USDC.transfer(account3.address, "1000000000000000000");
+      await matchingEngine.grantMatchOrders(positioning.address);
+      await USDC.connect(account3).approve(volmexPerpPeriphery.address, "1000000000000000000");
+      await USDC.connect(account4).approve(volmexPerpPeriphery.address, "1000000000000000000");
+      await volmexPerpPeriphery.whitelistTrader(account3.address, true);
+      await volmexPerpPeriphery.whitelistTrader(account4.address, true);
+
+      (
+        await volmexPerpPeriphery
+          .connect(account4)
+          .depositToVault(index, USDC.address, "1000000000")
+      ).wait();
+      (
+        await volmexPerpPeriphery
+          .connect(account3)
+          .depositToVault(index, USDC.address, "1000000000")
+      ).wait();
+
+      const orderLeft = Order(
+        ORDER,
+        deadline,
+        account4.address,
+        Asset(volmexBaseToken.address, "1000000000000000000"),
+        Asset(virtualToken.address, "100000000000000000000"),
+        256,
+        (1e6).toString(),
+        true,
+      );
+      const orderRight = Order(
+        ORDER,
+        deadline,
+        account3.address,
+        Asset(virtualToken.address, "100000000000000000000"),
+        Asset(volmexBaseToken.address, "1000000000000000000"),
+        890,
+        (1e6).toString(),
+        false,
+      );
+
+      const signatureLeft = await getSignature(orderLeft, account4.address);
+      const signatureRight = await getSignature(orderRight, account3.address);
+      await volmexPerpPeriphery.openPosition(
+        index,
+        orderLeft,
+        signatureLeft,
+        orderRight,
+        signatureRight,
+        liquidator,
+      );
+      const positionSize1 = await accountBalance1.getPositionSize(
+        account3.address,
+        volmexBaseToken.address,
+      );
+      const positionSize2 = await accountBalance1.getPositionSize(
+        account4.address,
+        volmexBaseToken.address,
+      );
+
+      expect(positionSize1.toString()).to.be.equal("1000000000000000000");
+      expect(positionSize2.toString()).to.be.equal("-1000000000000000000");
+      await perpetualOracle.setMarkObservationAdder(owner.address);
+      await time.increase(10000);
+
+      for (let index = 0; index <= 10; index++) {
+        await perpetualOracle.addIndexObservations([0], [100000000], [proofHash]);
+      }
+      for (let index = 0; index <= 10; index++) {
+        await perpetualOracle.addMarkObservation(0, 1500000000);
+      }
+      const timestamp = await time.latest();
+      await time.increase(18800);
+      for (let index = 0; index <= 10; index++) {
+        await perpetualOracle.addIndexObservations([0], [100000000], [proofHash]);
+      }
+      for (let index = 0; index <= 10; index++) {
+        await perpetualOracle.addMarkObservation(0, 1500000000);
+      }
+      const orderLeft1 = Order(
+        ORDER,
+        deadline,
+        account3.address,
+        Asset(volmexBaseToken.address, "1000000000000000000"),
+        Asset(virtualToken.address, "1600000000000000000000"),
+        256,
+        (1e6).toString(),
+        true,
+      );
+      const orderRight1 = Order(
+        ORDER,
+        deadline,
+        account4.address,
+        Asset(virtualToken.address, "1600000000000000000000"),
+        Asset(volmexBaseToken.address, "1000000000000000000"),
+        890,
+        (1e6).toString(),
+        false,
+      );
+
+      const signatureLeft1 = await getSignature(orderLeft1, account3.address);
+      const signatureRight1 = await getSignature(orderRight1, account4.address);
+      await volmexPerpPeriphery.openPosition(
+        index,
+        orderLeft1,
+        signatureLeft1,
+        orderRight1,
+        signatureRight1,
+        liquidator,
+      );
+      const positionSize3 = await accountBalance1.getPositionSize(
+        account3.address,
+        volmexBaseToken.address,
+      );
+      const positionSize4 = await accountBalance1.getPositionSize(
+        account4.address,
+        volmexBaseToken.address,
+      );
+      const lastFundingrate = await positioning.getLastFundingRate(volmexBaseToken.address);
+      expect(lastFundingrate.toString()).to.be.equal("7300");
     });
   });
 });

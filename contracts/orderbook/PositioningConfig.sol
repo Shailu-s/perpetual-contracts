@@ -4,7 +4,7 @@ pragma solidity =0.8.18;
 import "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 import { IPositioningConfig } from "../interfaces/IPositioningConfig.sol";
 import { PositioningConfigStorageV1 } from "../storage/PositioningConfigStorage.sol";
-import { IMarkPriceOracle } from "../interfaces/IMarkPriceOracle.sol";
+import { IPerpetualOracle } from "../interfaces/IPerpetualOracle.sol";
 import { IPositioning } from "../interfaces/IPositioning.sol";
 import { IAccountBalance } from "../interfaces/IAccountBalance.sol";
 
@@ -26,7 +26,7 @@ contract PositioningConfig is IPositioningConfig, PositioningConfigStorageV1, Ac
         _;
     }
 
-    function initialize(IMarkPriceOracle markPriceOracleArg) external initializer {
+    function initialize(IPerpetualOracle perpetualOracleArg) external initializer {
         _maxMarketsPerAccount = type(uint8).max;
         _imRatio = 0.2e6; // initial-margin ratio, 20% in decimal 6
         _mmRatio = 0.2e6; // minimum-margin ratio, 20% in decimal 6
@@ -37,7 +37,7 @@ contract PositioningConfig is IPositioningConfig, PositioningConfigStorageV1, Ac
         _twapInterval = 28800;
         _twapIntervalLiquidation = 3600; // 1 hour only for position size value when liquidation
         _settlementTokenBalanceCap = 0;
-        markPriceOracle = markPriceOracleArg;
+        perpetualOracle = perpetualOracleArg;
         _grantRole(POSITIONING_CONFIG_ADMIN, _msgSender());
     }
 
@@ -61,7 +61,7 @@ contract PositioningConfig is IPositioningConfig, PositioningConfigStorageV1, Ac
         // PC_ITI: invalid twapInterval
         require(twapIntervalArg != 0, "PC_ITI");
         _twapInterval = twapIntervalArg;
-        markPriceOracle.setMarkSmInterval(twapIntervalArg);
+        perpetualOracle.setMarkSmInterval(twapIntervalArg);
         positioning.setSmInterval(twapIntervalArg);
         accountBalance.setSmInterval(twapIntervalArg);
         emit TwapIntervalChanged(twapIntervalArg);
@@ -118,9 +118,9 @@ contract PositioningConfig is IPositioningConfig, PositioningConfigStorageV1, Ac
         emit PartialLiquidationRatioChanged(_partialLiquidationRatio);
     }
 
-    function setMarkPriceOracle(IMarkPriceOracle markPriceOracleArg) external {
+    function setPerpetualOracle(IPerpetualOracle perpetualOracleArg) external {
         _requirePositioningConfigAdmin();
-        markPriceOracle = markPriceOracleArg;
+        perpetualOracle = perpetualOracleArg;
     }
 
     function setPositioning(IPositioning positioningArg) external {

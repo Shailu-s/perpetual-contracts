@@ -5,7 +5,7 @@ pragma solidity =0.8.18;
 /// contract which implements PositioningStorageV1 and following the naming convention
 /// PositioningStorageVX.
 abstract contract PositioningStorageV1 {
-    uint256 internal constant _ORACLE_BASE = 100000000;
+    uint256 internal constant _ORACLE_BASE = 1000000;
     uint256 internal constant _ORACLE_BASE_X6 = 1000000;
     uint256 internal constant _FULLY_CLOSED_RATIO = 1e18;
     uint256 internal constant _UINT256_MAX = 2**256 - 1;

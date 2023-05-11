@@ -9,12 +9,12 @@ contract MatchingEngine is MatchingEngineCore {
      * @notice Initialize the contract
      *
      * @param _owner Owner address
-     * @param _markPriceOracle Address of mark price oracle
+     * @param _perpetualOracle Address of mark price oracle
      */
-    function initialize(address _owner, IMarkPriceOracle _markPriceOracle) public initializer {
+    function initialize(address _owner, IPerpetualOracle _perpetualOracle) public initializer {
         __Context_init_unchained();
         __Pausable_init_unchained();
-        markPriceOracle = _markPriceOracle;
+        perpetualOracle = _perpetualOracle;
         _grantRole(MATCHING_ENGINE_CORE_ADMIN, _owner);
     }
 }

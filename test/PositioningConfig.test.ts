@@ -4,31 +4,51 @@ import { ethers, upgrades } from "hardhat";
 describe("PositioningConfig", function () {
   let PositioningConfig;
   let positioningConfig;
-  let MarkPriceOracle;
-  let markPriceOracle;
+  let PerpetualOracle;
+  let perpetualOracle;
+  let VolmexBaseToken;
+  let volmexBaseToken;
   let owner, account1;
+  const proofHash = "0x6c00000000000000000000000000000000000000000000000000000000000000";
 
   this.beforeAll(async () => {
     PositioningConfig = await ethers.getContractFactory("PositioningConfig");
-    MarkPriceOracle = await ethers.getContractFactory("MarkPriceOracle");
+    PerpetualOracle = await ethers.getContractFactory("PerpetualOracle");
+    VolmexBaseToken = await ethers.getContractFactory("VolmexBaseToken");
     [owner, account1] = await ethers.getSigners();
   });
 
   this.beforeEach(async () => {
-    markPriceOracle = await upgrades.deployProxy(
-      MarkPriceOracle,
-      [[100000], [account1.address], owner.address],
+    volmexBaseToken = await upgrades.deployProxy(
+      VolmexBaseToken,
+      [
+        "VolmexBaseToken", // nameArg
+        "VBT", // symbolArg,
+        account1.address, // priceFeedArg
+        true, // isBase
+      ],
       {
         initializer: "initialize",
       },
     );
-    await markPriceOracle.deployed();
+    await volmexBaseToken.deployed();
+    perpetualOracle = await upgrades.deployProxy(
+      PerpetualOracle,
+      [
+        [volmexBaseToken.address, volmexBaseToken.address],
+        [10000000, 10000000],
+        [10000000, 10000000],
+        [proofHash, proofHash],
+        owner.address,
+      ],
+      { initializer: "__PerpetualOracle_init" },
+    );
 
-    positioningConfig = await upgrades.deployProxy(PositioningConfig, [markPriceOracle.address], {
+    positioningConfig = await upgrades.deployProxy(PositioningConfig, [perpetualOracle.address], {
       initializer: "initialize",
     });
     await positioningConfig.deployed();
-    await markPriceOracle.grantSmaIntervalRole(positioningConfig.address);
+    await perpetualOracle.grantSmaIntervalRole(positioningConfig.address);
   });
 
   describe("Deployment", () => {
@@ -37,7 +57,7 @@ describe("PositioningConfig", function () {
       expect(receipt.confirmations).not.equal(0);
     });
     it("should not reinitilaize", async () => {
-      await expect(positioningConfig.initialize(markPriceOracle.address)).to.be.revertedWith(
+      await expect(positioningConfig.initialize(perpetualOracle.address)).to.be.revertedWith(
         "Initializable: contract is already initialized",
       );
     });
@@ -56,25 +76,6 @@ describe("PositioningConfig", function () {
 
       const liquidationPenaltyRatio = await positioningConfig.getLiquidationPenaltyRatio();
       await expect(liquidationPenaltyRatio).to.be.equal(50000);
-    });
-
-    it("should set mark Price oracle mark twap interval to 500", async () => {
-      await positioningConfig.setTwapInterval(500);
-      const twap = await markPriceOracle.markSmInterval();
-      expect(parseInt(twap)).to.be.equal(500);
-    });
-    it("should set mark Price oracle", async () => {
-      const markPriceOracle1 = await upgrades.deployProxy(
-        MarkPriceOracle,
-        [[100000], [account1.address], owner.address],
-        {
-          initializer: "initialize",
-        },
-      );
-      await markPriceOracle1.deployed();
-      await positioningConfig.setMarkPriceOracle(markPriceOracle1.address);
-      const markPriceOracle = await positioningConfig.markPriceOracle();
-      expect(markPriceOracle).to.be.equal(markPriceOracle1.address);
     });
 
     it("should setLiquidationPenaltyRatio for ratio = 1e6", async () => {
@@ -129,15 +130,6 @@ describe("PositioningConfig", function () {
   });
 
   describe("setTwapInterval", async () => {
-    it("should setTwapInterval", async () => {
-      // type(uint32).max = 2e32 - 1 = 4294967295
-      await expect(positioningConfig.setTwapInterval("4294967295"))
-        .to.emit(positioningConfig, "TwapIntervalChanged")
-        .withArgs(4294967295);
-      const twapInterval = await positioningConfig.getTwapInterval();
-      await expect(twapInterval).to.equal(4294967295);
-    });
-
     it("should fail to setTwapInterval to 0", async () => {
       await expect(positioningConfig.setTwapInterval("0")).to.be.revertedWith("PC_ITI");
     });
