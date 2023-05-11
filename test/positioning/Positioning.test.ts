@@ -51,6 +51,7 @@ describe("Positioning", function () {
   const five = ethers.constants.WeiPerEther.mul(BigNumber.from("5")); // 5e18
   const ten = ethers.constants.WeiPerEther.mul(BigNumber.from("10000")); // 10e18
   const ORDER = "0xf555eb98";
+  const TAKE_PROFIT_INDEX_PRICE = "0x67393efa";
   const STOP_LOSS_LIMIT_ORDER = "0xeeaed735";
   const TAKE_PROFIT_LIMIT_ORDER = "0xe0fc7f94";
   const ZERO_ADDR = "0x0000000000000000000000000000000000000000";
@@ -1379,10 +1380,105 @@ describe("Positioning", function () {
 
         await expect(positionSizeAfter).to.be.equal("0");
       });
-      it("should not be allowed to close position", async () => {
-        // indexPriceOracle.getIndexSma.whenCalledWith(0).returns(['1000000000000000', '0', '0']);
-        // indexPriceOracle.getIndexSma.whenCalledWith(3600).returns(['1000000000000000', '0', '0']);
+      it.only("should close position for market order with limit order", async () => {
+        await perpetualOracle.setIndexObservationAdder(owner.address);
+        await matchingEngine.grantMatchOrders(positioning.address);
 
+        await virtualToken.mint(account1.address, convert("1000000000"));
+        await virtualToken.mint(account2.address, convert("1000000000"));
+
+        await virtualToken.connect(account1).approve(vault.address, convert("1000000000"));
+        await virtualToken.connect(account2).approve(vault.address, convert("1000000000"));
+        await virtualToken
+          .connect(account1)
+          .approve(volmexPerpPeriphery.address, convert("1000000000"));
+        await virtualToken
+          .connect(account2)
+          .approve(volmexPerpPeriphery.address, convert("1000000000"));
+        await vaultController
+          .connect(account1)
+          .deposit(
+            volmexPerpPeriphery.address,
+            virtualToken.address,
+            account1.address,
+            convert("1000000000"),
+          );
+        await vaultController
+          .connect(account2)
+          .deposit(
+            volmexPerpPeriphery.address,
+            virtualToken.address,
+            account2.address,
+            convert("1000000000"),
+          );
+        for (let i = 0; i < 10; i++) {
+          await perpetualOracle.addIndexObservations([0], [200000000], [proofHash]);
+        }
+        const orderLeft = Order(
+          ORDER,
+          deadline,
+          account1.address,
+          Asset(volmexBaseToken.address, "10000000000000000000"),
+          Asset(virtualToken.address, "1900000000000000000000"),
+          1,
+          0,
+          true,
+        );
+
+        const orderRight = Order(
+          ORDER,
+          deadline,
+          account2.address,
+          Asset(virtualToken.address, "1900000000000000000000"),
+          Asset(volmexBaseToken.address, "10000000000000000000"),
+          1,
+          0,
+          false,
+        );
+        let signatureLeft = await getSignature(orderLeft, account1.address);
+        let signatureRight = await getSignature(orderRight, account2.address);
+        // opening the position here
+        await expect(
+          positioning
+            .connect(account1)
+            .openPosition(orderLeft, signatureLeft, orderRight, signatureRight, liquidator),
+        ).to.emit(positioning, "PositionChanged");
+        const orderLeft1 = Order(
+          ORDER,
+          deadline,
+          account2.address,
+          Asset(volmexBaseToken.address, "10000000000000000000"),
+          Asset(virtualToken.address, "1900000000000000000000"),
+          78,
+          0,
+          true,
+        );
+
+        const orderRight1 = Order(
+          TAKE_PROFIT_INDEX_PRICE,
+          deadline,
+          account1.address,
+          Asset(virtualToken.address, "1999000000000000000000"),
+          Asset(volmexBaseToken.address, "10000000000000000000"),
+          89,
+          199000000,
+          false,
+        );
+        let signatureLeft1 = await getSignature(orderLeft1, account2.address);
+        let signatureRight1 = await getSignature(orderRight1, account1.address);
+        // closing the position here
+        await expect(
+          positioning
+            .connect(account1)
+            .openPosition(orderLeft1, signatureLeft1, orderRight1, signatureRight1, liquidator),
+        ).to.emit(positioning, "PositionChanged");
+        const positionSizeAfter1 = await accountBalance1.getPositionSize(
+          account2.address,
+          orderLeft1.makeAsset.virtualToken,
+        );
+        expect(positionSizeAfter1.toString()).to.be.equal("0");
+      });
+      it("should not be allowed to close position", async () => {
         await matchingEngine.grantMatchOrders(positioning.address);
 
         await virtualToken.mint(account1.address, convert("1000000000"));
