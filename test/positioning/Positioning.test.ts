@@ -1380,7 +1380,7 @@ describe("Positioning", function () {
 
         await expect(positionSizeAfter).to.be.equal("0");
       });
-      it.only("should close position for market order with limit order", async () => {
+      it("should close position for market order with limit order", async () => {
         await perpetualOracle.setIndexObservationAdder(owner.address);
         await matchingEngine.grantMatchOrders(positioning.address);
 
