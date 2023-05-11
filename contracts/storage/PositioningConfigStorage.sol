@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: BUSL - 1.1
 pragma solidity =0.8.18;
-import { IMarkPriceOracle } from "../interfaces/IMarkPriceOracle.sol";
+import { IPerpetualOracle } from "../interfaces/IPerpetualOracle.sol";
 import { IPositioning } from "../interfaces/IPositioning.sol";
 import { IAccountBalance } from "../interfaces/IAccountBalance.sol";
 
@@ -19,7 +19,7 @@ abstract contract PositioningConfigStorageV1 {
     uint256 internal _twapInterval;
     uint256 internal _twapIntervalLiquidation;
     uint256 internal _settlementTokenBalanceCap;
-    IMarkPriceOracle public markPriceOracle;
+    IPerpetualOracle public perpetualOracle;
     IPositioning public positioning;
     IAccountBalance public accountBalance;
 }

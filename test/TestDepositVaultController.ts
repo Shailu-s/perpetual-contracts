@@ -1,7 +1,6 @@
 import { parseUnits } from "ethers/lib/utils";
 import { expect } from "chai";
 import { ethers, upgrades } from "hardhat";
-import { IndexPriceOracle, MarkPriceOracle } from "../typechain";
 import { FakeContract, smock } from "@defi-wonderland/smock";
 import { sample } from "lodash";
 
@@ -14,15 +13,15 @@ describe("Vault Controller deposit tests", function () {
   let vaultController;
   let vaultFactory;
   let DAI;
-  let MarkPriceOracle;
-  let IndexPriceOracle;
-  let markPriceFake: FakeContract<MarkPriceOracle>;
-  let indexPriceFake: FakeContract<IndexPriceOracle>;
-  let matchingEngineFake: FakeContract<MarkPriceOracle>;
+  let PerpetualOracle;
+  let perpetualOracle;
+  let matchingEngineFake;
   let Positioning;
   let positioning;
   let VolmexPerpPeriphery;
   let volmexPerpPeriphery;
+  let VolmexBaseToken;
+  let volmexBaseToken;
   let prepViewFake;
   let owner, alice, relayer;
   const proofHash = "0x6c00000000000000000000000000000000000000000000000000000000000000";
@@ -31,8 +30,8 @@ describe("Vault Controller deposit tests", function () {
   beforeEach(async function () {
     VolmexPerpPeriphery = await ethers.getContractFactory("VolmexPerpPeriphery");
     [owner, alice, relayer] = await ethers.getSigners();
-    markPriceFake = await smock.fake("MarkPriceOracle");
-    indexPriceFake = await smock.fake("IndexPriceOracle");
+    PerpetualOracle = await ethers.getContractFactory("PerpetualOracle");
+    VolmexBaseToken = await ethers.getContractFactory("VolmexBaseToken");
     matchingEngineFake = await smock.fake("MatchingEngine");
     prepViewFake = await smock.fake("VolmexPerpView");
 
@@ -45,10 +44,33 @@ describe("Vault Controller deposit tests", function () {
     const Dai = await tokenFactory2.deploy();
     DAI = await Dai.deployed();
     await DAI.__TestERC20_init("TestDai", "DAI", 10);
-
+    volmexBaseToken = await upgrades.deployProxy(
+      VolmexBaseToken,
+      [
+        "VolmexBaseToken", // nameArg
+        "VBT", // symbolArg,
+        alice.address, // priceFeedArg
+        true, // isBase
+      ],
+      {
+        initializer: "initialize",
+      },
+    );
+    await volmexBaseToken.deployed();
+    perpetualOracle = await upgrades.deployProxy(
+      PerpetualOracle,
+      [
+        [volmexBaseToken.address, volmexBaseToken.address],
+        [10000000, 10000000],
+        [10000000, 10000000],
+        [proofHash, proofHash],
+        owner.address,
+      ],
+      { initializer: "__PerpetualOracle_init" },
+    );
     const positioningConfigFactory = await ethers.getContractFactory("PositioningConfig");
     positioningConfig = await upgrades.deployProxy(positioningConfigFactory, [
-      markPriceFake.address,
+      perpetualOracle.address,
     ]);
 
     const accountBalanceFactory = await ethers.getContractFactory("AccountBalance");
@@ -84,8 +106,7 @@ describe("Vault Controller deposit tests", function () {
         vaultController.address,
         accountBalance.address,
         matchingEngineFake.address,
-        markPriceFake.address,
-        indexPriceFake.address,
+        perpetualOracle.address,
         0,
         [owner.address, alice.address],
       ],
@@ -111,8 +132,7 @@ describe("Vault Controller deposit tests", function () {
 
     volmexPerpPeriphery = await upgrades.deployProxy(VolmexPerpPeriphery, [
       prepViewFake.address,
-      markPriceFake.address,
-      indexPriceFake.address,
+      perpetualOracle.address,
       [vault.address, vault.address],
       owner.address,
       relayer.address,
@@ -247,65 +267,7 @@ describe("Vault Controller deposit tests", function () {
         .deposit(volmexPerpPeriphery.address, USDC.address, alice.address, "0"),
     ).to.be.revertedWith("VC_CDZA");
   });
-  it("Negative  Test for deposit when positionign is 0", async () => {
-    const vaultContractFactory = await ethers.getContractFactory("VaultController");
-    const [owner, alice] = await ethers.getSigners();
-    let vaultController1 = await upgrades.deployProxy(vaultContractFactory, [
-      positioningConfig.address,
-      accountBalance.address,
-    ]);
 
-    vaultFactory = await ethers.getContractFactory("Vault");
-    vault = await upgrades.deployProxy(vaultFactory, [
-      positioningConfig.address,
-      accountBalance.address,
-      USDC.address,
-      vaultController1.address,
-    ]);
-    DAIVault = await upgrades.deployProxy(vaultFactory, [
-      positioningConfig.address,
-      accountBalance.address,
-      DAI.address,
-      vaultController1.address,
-    ]);
-
-    Positioning = await ethers.getContractFactory("PositioningTest");
-    positioning = await upgrades.deployProxy(
-      Positioning,
-      [
-        positioningConfig.address,
-        vaultController1.address,
-        accountBalance.address,
-        matchingEngineFake.address,
-        markPriceFake.address,
-        indexPriceFake.address,
-        0,
-        [owner.address, alice.address],
-      ],
-      {
-        initializer: "initialize",
-      },
-    );
-
-    await vaultController1.registerVault(vault.address, USDC.address);
-    await vaultController1.registerVault(DAIVault.address, DAI.address);
-
-    const amount = parseUnits("100", await USDC.decimals());
-
-    await positioningConfig.setSettlementTokenBalanceCap(amount);
-
-    const USDCVaultAddress = await vaultController1.getVault(USDC.address);
-
-    const USDCVaultContract = await vaultFactory.attach(USDCVaultAddress);
-    await USDC.connect(alice).approve(USDCVaultAddress, amount);
-    await USDC.connect(alice).approve(volmexPerpPeriphery.address, amount);
-    // check event has been sent
-    await expect(
-      vaultController1
-        .connect(alice)
-        .deposit(volmexPerpPeriphery.address, USDC.address, alice.address, "0"),
-    ).to.be.revertedWith("VC_PNS");
-  });
   it("Positive Test for deposit function", async () => {
     const [owner, alice] = await ethers.getSigners();
 

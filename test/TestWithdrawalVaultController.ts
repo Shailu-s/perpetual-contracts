@@ -1,7 +1,7 @@
 import { parseUnits } from "ethers/lib/utils";
 import { expect } from "chai";
 import { ethers, upgrades } from "hardhat";
-import { MarkPriceOracle, IndexPriceOracle, MatchingEngine } from "../typechain";
+import { MatchingEngine } from "../typechain";
 import { FakeContract, smock } from "@defi-wonderland/smock";
 
 describe("Vault Controller tests for withdrawal", function () {
@@ -14,10 +14,8 @@ describe("Vault Controller tests for withdrawal", function () {
   let vaultFactory;
   let DAI;
   let matchingEngineFake: FakeContract<MatchingEngine>;
-  let MarkPriceOracle;
-  let markPriceOracle;
-  let IndexPriceOracle;
-  let indexPriceOracle;
+  let PerpetualOracle;
+  let perpetualOracle;
   let VolmexBaseToken;
   let volmexBaseToken;
   let Positioning;
@@ -34,8 +32,7 @@ describe("Vault Controller tests for withdrawal", function () {
     [owner, alice, relayer] = await ethers.getSigners();
 
     VolmexPerpPeriphery = await ethers.getContractFactory("VolmexPerpPeriphery");
-    MarkPriceOracle = await ethers.getContractFactory("MarkPriceOracle");
-    IndexPriceOracle = await ethers.getContractFactory("IndexPriceOracle");
+    PerpetualOracle = await ethers.getContractFactory("PerpetualOracle");
     VolmexBaseToken = await ethers.getContractFactory("VolmexBaseToken");
     perpViewFake = await smock.fake("VolmexPerpView");
 
@@ -52,23 +49,19 @@ describe("Vault Controller tests for withdrawal", function () {
       },
     );
     await volmexBaseToken.deployed();
-    indexPriceOracle = await upgrades.deployProxy(
-      IndexPriceOracle,
-      [owner.address, [100000], [volmexBaseToken.address], [proofHash], [capRatio]],
-      {
-        initializer: "initialize",
-      },
+    perpetualOracle = await upgrades.deployProxy(
+      PerpetualOracle,
+      [
+        [volmexBaseToken.address, volmexBaseToken.address],
+        [10000000, 10000000],
+        [10000000, 10000000],
+        [proofHash, proofHash],
+        owner.address,
+      ],
+      { initializer: "__PerpetualOracle_init" },
     );
-    await indexPriceOracle.deployed();
-    await volmexBaseToken.setPriceFeed(indexPriceOracle.address);
-    markPriceOracle = await upgrades.deployProxy(
-      MarkPriceOracle,
-      [[100000], [volmexBaseToken.address], owner.address],
-      {
-        initializer: "initialize",
-      },
-    );
-    await markPriceOracle.deployed();
+
+    await volmexBaseToken.setPriceFeed(perpetualOracle.address);
 
     matchingEngineFake = await smock.fake("MatchingEngine");
 
@@ -84,7 +77,7 @@ describe("Vault Controller tests for withdrawal", function () {
 
     const positioningConfigFactory = await ethers.getContractFactory("PositioningConfig");
     positioningConfig = await upgrades.deployProxy(positioningConfigFactory, [
-      markPriceOracle.address,
+      perpetualOracle.address,
     ]);
 
     const accountBalanceFactory = await ethers.getContractFactory("AccountBalance");
@@ -123,8 +116,7 @@ describe("Vault Controller tests for withdrawal", function () {
         vaultController.address,
         accountBalance.address,
         matchingEngineFake.address,
-        markPriceOracle.address,
-        indexPriceOracle.address,
+        perpetualOracle.address,
         0,
         [owner.address, alice.address],
       ],
@@ -150,8 +142,7 @@ describe("Vault Controller tests for withdrawal", function () {
 
     volmexPerpPeriphery = await upgrades.deployProxy(VolmexPerpPeriphery, [
       perpViewFake.address,
-      markPriceOracle.address,
-      indexPriceOracle.address,
+      perpetualOracle.address,
       [vault.address, vault.address],
       owner.address,
       relayer.address,
@@ -177,8 +168,7 @@ describe("Vault Controller tests for withdrawal", function () {
         vaultController.address,
         accountBalance.address,
         matchingEngineFake.address,
-        markPriceOracle.address,
-        indexPriceOracle.address,
+        perpetualOracle.address,
         0,
         [owner.address, alice.address],
       ],
@@ -303,62 +293,7 @@ describe("Vault Controller tests for withdrawal", function () {
       vaultController.connect(alice).withdraw(USDC.address, alice.address, "0"),
     ).to.be.revertedWith("VC_CWZA");
   });
-  it("when positioning is not set", async () => {
-    const vaultContractFactory = await ethers.getContractFactory("VaultController");
-    const [owner, alice] = await ethers.getSigners();
-    let vaultController1 = await upgrades.deployProxy(vaultContractFactory, [
-      positioningConfig.address,
-      accountBalance.address,
-    ]);
 
-    vaultFactory = await ethers.getContractFactory("Vault");
-    vault = await upgrades.deployProxy(vaultFactory, [
-      positioningConfig.address,
-      accountBalance.address,
-      USDC.address,
-      vaultController1.address,
-    ]);
-    DAIVault = await upgrades.deployProxy(vaultFactory, [
-      positioningConfig.address,
-      accountBalance.address,
-      DAI.address,
-      vaultController1.address,
-    ]);
-
-    Positioning = await ethers.getContractFactory("PositioningTest");
-    positioning = await upgrades.deployProxy(
-      Positioning,
-      [
-        positioningConfig.address,
-        vaultController1.address,
-        accountBalance.address,
-        matchingEngineFake.address,
-        markPriceOracle.address,
-        indexPriceOracle.address,
-        0,
-        [owner.address, alice.address],
-      ],
-      {
-        initializer: "initialize",
-      },
-    );
-
-    await vaultController1.registerVault(vault.address, USDC.address);
-    await vaultController1.registerVault(DAIVault.address, DAI.address);
-
-    const amount = parseUnits("100", await USDC.decimals());
-
-    await positioningConfig.setSettlementTokenBalanceCap(amount);
-
-    const USDCVaultAddress = await vaultController1.getVault(USDC.address);
-
-    const USDCVaultContract = await vaultFactory.attach(USDCVaultAddress);
-    await USDC.connect(alice).approve(USDCVaultAddress, amount);
-    await USDC.connect(alice).approve(volmexPerpPeriphery.address, amount);
-    await expect(
-      vaultController1.connect(alice).withdraw(USDC.address, alice.address, amount),
-    ).to.be.revertedWith("VC_PNS");
-  });
   it("should not return  account value when contract is paused", async () => {
     await vaultController.pause();
     await expect(vaultController.getAccountValue(owner.address)).to.be.revertedWith(

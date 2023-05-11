@@ -6,8 +6,8 @@ const { expectRevert } = require("@openzeppelin/test-helpers");
 describe("PerpFactory", function () {
   let MatchingEngine;
   let matchingEngine;
-  let MarkPriceOracle;
-  let markPriceOracle;
+  let PerpetualOracle;
+  let perpetualOracle;
   let VolmexBaseToken;
   let volmexBaseToken;
   let VolmexQuoteToken;
@@ -16,8 +16,7 @@ describe("PerpFactory", function () {
   let virtualTokenTest;
   let PerpFactory;
   let factory;
-  let IndexPriceOracle;
-  let indexPriceOracle;
+
   let VaultController;
   let vaultController;
   let PositioningConfig;
@@ -45,8 +44,7 @@ describe("PerpFactory", function () {
     VolmexBaseToken = await ethers.getContractFactory("VolmexBaseToken");
     VolmexQuoteToken = await ethers.getContractFactory("VolmexQuoteToken");
     VirtualTokenTest = await ethers.getContractFactory("VirtualTokenTest");
-    MarkPriceOracle = await ethers.getContractFactory("MarkPriceOracle");
-    IndexPriceOracle = await ethers.getContractFactory("IndexPriceOracle");
+    PerpetualOracle = await ethers.getContractFactory("PerpetualOracle");
     VaultController = await ethers.getContractFactory("VaultController");
     PositioningConfig = await ethers.getContractFactory("PositioningConfig");
     AccountBalance = await ethers.getContractFactory("AccountBalance");
@@ -64,17 +62,32 @@ describe("PerpFactory", function () {
     await perpView.deployed();
     await (await perpView.grantViewStatesRole(owner.address)).wait();
 
-    volmexBaseToken = await VolmexBaseToken.deploy();
-    await volmexBaseToken.deployed();
-    indexPriceOracle = await upgrades.deployProxy(
-      IndexPriceOracle,
-      [owner.address, [100000], [volmexBaseToken.address], [proofHash], [capRatio]],
+    volmexBaseToken = await upgrades.deployProxy(
+      VolmexBaseToken,
+      [
+        "VolmexBaseToken", // nameArg
+        "VBT", // symbolArg,
+        alice.address, // priceFeedArg
+        true, // isBase
+      ],
       {
         initializer: "initialize",
       },
     );
-    await volmexBaseToken.setPriceFeed(indexPriceOracle.address);
-    await indexPriceOracle.setObservationAdder(owner.address);
+    await volmexBaseToken.deployed();
+    perpetualOracle = await upgrades.deployProxy(
+      PerpetualOracle,
+      [
+        [volmexBaseToken.address, volmexBaseToken.address],
+        [10000000, 10000000],
+        [10000000, 10000000],
+        [proofHash, proofHash],
+        owner.address,
+      ],
+      { initializer: "__PerpetualOracle_init" },
+    );
+    await volmexBaseToken.setPriceFeed(perpetualOracle.address);
+    await perpetualOracle.setIndexObservationAdder(owner.address);
     volmexQuoteToken = await VolmexQuoteToken.deploy();
     await volmexQuoteToken.deployed();
 
@@ -84,20 +97,10 @@ describe("PerpFactory", function () {
 
     marketRegistry = await MarketRegistry.deploy();
     marketRegistry.initialize(USDC.address);
-    markPriceOracle = await upgrades.deployProxy(
-      MarkPriceOracle,
-      [[100000], [volmexBaseToken.address], owner.address],
-      {
-        initializer: "initialize",
-      },
-    );
-    await markPriceOracle.deployed();
-
-    await markPriceOracle.deployed();
 
     matchingEngine = await upgrades.deployProxy(MatchingEngine, [
       owner.address,
-      markPriceOracle.address,
+      perpetualOracle.address,
     ]);
     await matchingEngine.deployed();
 
@@ -188,7 +191,7 @@ describe("PerpFactory", function () {
 
   describe("Clone:", function () {
     it("Should set token implementation contract correctly", async () => {
-      await factory.cloneBaseToken("MyTestToken", "MTK", indexPriceOracle.address);
+      await factory.cloneBaseToken("MyTestToken", "MTK", perpetualOracle.address);
       const tokenImplementation = await factory.baseTokenImplementation();
       expect(tokenImplementation).equal(volmexBaseToken.address);
     });
@@ -205,7 +208,7 @@ describe("PerpFactory", function () {
     });
 
     it("Should clone base token", async () => {
-      await factory.cloneBaseToken("MyTestToken", "MTK", indexPriceOracle.address);
+      await factory.cloneBaseToken("MyTestToken", "MTK", perpetualOracle.address);
       const cloneTokenAddress = await perpView.baseTokens(0);
       expect(cloneTokenAddress).not.equal(ZERO_ADDR);
     });
@@ -221,8 +224,7 @@ describe("PerpFactory", function () {
       await factory.clonePerpEcosystem(
         positioningConfig.address,
         matchingEngine.address,
-        markPriceOracle.address,
-        indexPriceOracle.address,
+        perpetualOracle.address,
         volmexQuoteToken.address,
         index,
         [owner.address, alice.address],
@@ -235,8 +237,7 @@ describe("PerpFactory", function () {
         await factory.clonePerpEcosystem(
           positioningConfig.address,
           matchingEngine.address,
-          markPriceOracle.address,
-          indexPriceOracle.address,
+          perpetualOracle.address,
           volmexQuoteToken.address,
           index,
           [owner.address, alice.address],
@@ -257,8 +258,7 @@ describe("PerpFactory", function () {
       await factory.clonePerpEcosystem(
         positioningConfig.address,
         matchingEngine.address,
-        markPriceOracle.address,
-        indexPriceOracle.address,
+        perpetualOracle.address,
         volmexQuoteToken.address,
         index,
         [owner.address, alice.address],
@@ -281,8 +281,7 @@ describe("PerpFactory", function () {
           .clonePerpEcosystem(
             positioningConfig.address,
             matchingEngine.address,
-            markPriceOracle.address,
-            indexPriceOracle.address,
+            perpetualOracle.address,
             volmexQuoteToken.address,
             index,
             [owner.address, alice.address],
@@ -295,8 +294,7 @@ describe("PerpFactory", function () {
       await factory.clonePerpEcosystem(
         positioningConfig.address,
         matchingEngine.address,
-        markPriceOracle.address,
-        indexPriceOracle.address,
+        perpetualOracle.address,
         volmexQuoteToken.address,
         index,
         [owner.address, alice.address],
@@ -321,8 +319,8 @@ describe("PerpFactory", function () {
         [
           "VolmexBaseToken", // nameArg
           "VBT", // symbolArg,
-          indexPriceOracle.address, // priceFeedArg
-          true
+          perpetualOracle.address, // priceFeedArg
+          true,
         ],
         {
           initializer: "initialize",
@@ -333,34 +331,26 @@ describe("PerpFactory", function () {
     it("Should update the priceFeed", async () => {
       const [owner] = await ethers.getSigners();
 
-      let newIndexPriceOracle = await upgrades.deployProxy(
-        IndexPriceOracle,
-        [owner.address, [100000], [volmexBaseToken.address], [proofHash], [capRatio]],
-        {
-          initializer: "initialize",
-        },
-      );
-
-      await expect(newVolmexBaseToken.setPriceFeed(newIndexPriceOracle.address))
+      await expect(newVolmexBaseToken.setPriceFeed(perpetualOracle.address))
         .to.emit(newVolmexBaseToken, "PriceFeedChanged")
-        .withArgs(newIndexPriceOracle.address);
+        .withArgs(perpetualOracle.address);
     });
 
     it("Should return the current priceFeed", async () => {
       const priceFeed = await newVolmexBaseToken.getPriceFeed();
-      expect(priceFeed).to.equal(indexPriceOracle.address);
+      expect(priceFeed).to.equal(perpetualOracle.address);
     });
   });
 
   describe("Index Price", () => {
     it("Should return the current index price", async () => {
-      await indexPriceOracle.addObservation([250000000], [0], [proofHash]);
+      await perpetualOracle.addIndexObservations([0], [250000000], [proofHash]);
       const newVolmexBaseToken = await upgrades.deployProxy(
         VolmexBaseToken,
         [
           "VolmexBaseToken", // nameArg
           "VBT", // symbolArg,
-          indexPriceOracle.address, // priceFeedArg
+          perpetualOracle.address, // priceFeedArg
           true,
         ],
         {
@@ -368,8 +358,8 @@ describe("PerpFactory", function () {
         },
       );
 
-      const volmexBaseTokenIndexPrice = await newVolmexBaseToken.getIndexPrice(0);
-      const priceFeedIndexPrice = await indexPriceOracle.latestRoundData(28800, 0);
+      const volmexBaseTokenIndexPrice = await newVolmexBaseToken.getIndexPrice(0, 28800);
+      const priceFeedIndexPrice = await perpetualOracle.latestIndexSMA(28800, 0);
       expect(volmexBaseTokenIndexPrice).to.equal(priceFeedIndexPrice.answer);
     });
   });

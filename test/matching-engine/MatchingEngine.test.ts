@@ -13,11 +13,12 @@ describe("MatchingEngine", function () {
   let erc20TransferProxy;
   let ERC20TransferProxyTest;
   let TransferManagerTest;
+  let PerpetualOracle;
+  let perpetualOracle;
   let community;
   let ERC1271Test;
   let erc1271Test;
   let asset;
-  let MarkPriceOracle;
   let PositioningConfig;
   let positioningConfig;
   let Positioning;
@@ -28,13 +29,10 @@ describe("MatchingEngine", function () {
   let vault;
   let VaultController;
   let vaultController;
-  let markPriceOracle;
   let VolmexBaseToken;
   let volmexBaseToken;
-  let IndexPriceOracle;
   let MarketRegistry;
   let marketRegistry;
-  let indexPriceOracle;
   let volmexPerpPeriphery;
   let VolmexPerpPeriphery;
   let perpViewFake;
@@ -60,9 +58,8 @@ describe("MatchingEngine", function () {
     VolmexPerpPeriphery = await ethers.getContractFactory("VolmexPerpPeriphery");
     MarketRegistry = await ethers.getContractFactory("MarketRegistry");
     MatchingEngine = await ethers.getContractFactory("MatchingEngineTest");
-    MarkPriceOracle = await ethers.getContractFactory("MarkPriceOracle");
     VolmexBaseToken = await ethers.getContractFactory("VolmexBaseToken");
-    IndexPriceOracle = await ethers.getContractFactory("IndexPriceOracle");
+    PerpetualOracle = await ethers.getContractFactory("PerpetualOracle");
     Positioning = await ethers.getContractFactory("PositioningTest");
     Vault = await ethers.getContractFactory("Vault");
     VaultController = await ethers.getContractFactory("VaultController");
@@ -94,27 +91,23 @@ describe("MatchingEngine", function () {
       },
     );
     await volmexBaseToken.deployed();
-    indexPriceOracle = await upgrades.deployProxy(
-      IndexPriceOracle,
-      [owner.address, [100000], [volmexBaseToken.address], [proofHash], [capRatio]],
-      {
-        initializer: "initialize",
-      },
+
+    perpetualOracle = await upgrades.deployProxy(
+      PerpetualOracle,
+      [
+        [volmexBaseToken.address, volmexBaseToken.address],
+        [10000000, 10000000],
+        [10000000, 10000000],
+        [proofHash, proofHash],
+        owner.address,
+      ],
+      { initializer: "__PerpetualOracle_init" },
     );
 
-    markPriceOracle = await upgrades.deployProxy(
-      MarkPriceOracle,
-      [[1000000], [volmexBaseToken.address], owner.address],
-      {
-        initializer: "initialize",
-      },
-    );
-    await markPriceOracle.deployed();
-    await (await indexPriceOracle.grantInitialTimestampRole(markPriceOracle.address)).wait();
-    await volmexBaseToken.setPriceFeed(indexPriceOracle.address);
-    positioningConfig = await upgrades.deployProxy(PositioningConfig, [markPriceOracle.address]);
+    await volmexBaseToken.setPriceFeed(perpetualOracle.address);
+    positioningConfig = await upgrades.deployProxy(PositioningConfig, [perpetualOracle.address]);
     await positioningConfig.deployed();
-    await markPriceOracle.grantSmaIntervalRole(positioningConfig.address);
+    await perpetualOracle.grantSmaIntervalRole(positioningConfig.address);
     accountBalance = await upgrades.deployProxy(AccountBalance, [positioningConfig.address]);
     await accountBalance.deployed();
     vaultController = await upgrades.deployProxy(VaultController, [
@@ -129,13 +122,13 @@ describe("MatchingEngine", function () {
 
     matchingEngine = await upgrades.deployProxy(
       MatchingEngine,
-      [owner.address, markPriceOracle.address],
+      [owner.address, perpetualOracle.address],
       {
         initializer: "__MatchingEngineTest_init",
       },
     );
 
-    await markPriceOracle.setObservationAdder(matchingEngine.address);
+    await perpetualOracle.setMarkObservationAdder(matchingEngine.address);
 
     transferManagerTest = await upgrades.deployProxy(
       TransferManagerTest,
@@ -156,8 +149,7 @@ describe("MatchingEngine", function () {
         vaultController.address,
         accountBalance.address,
         matchingEngine.address,
-        markPriceOracle.address,
-        indexPriceOracle.address,
+        perpetualOracle.address,
         0,
         [owner.address, account2.address],
       ],
@@ -181,13 +173,12 @@ describe("MatchingEngine", function () {
     perpViewFake = await smock.fake("VolmexPerpView");
     volmexPerpPeriphery = await upgrades.deployProxy(VolmexPerpPeriphery, [
       perpViewFake.address,
-      markPriceOracle.address,
-      indexPriceOracle.address,
+      perpetualOracle.address,
       [vault.address, vault.address],
       owner.address,
       account4.address,
     ]);
-    await indexPriceOracle.setObservationAdder(owner.address);
+    await perpetualOracle.setIndexObservationAdder(owner.address);
     await marketRegistry.connect(owner).addBaseToken(volmexBaseToken.address);
 
     await marketRegistry.connect(owner).setMakerFeeRatio(0.0004e6);
@@ -209,8 +200,9 @@ describe("MatchingEngine", function () {
     await positioning.connect(owner).setMarketRegistry(marketRegistry.address);
     await positioning.connect(owner).setDefaultFeeReceiver(owner.address);
     await positioning.connect(owner).setPositioning(positioning.address);
-    await (await markPriceOracle.setPositioning(positioning.address)).wait();
-    await (await markPriceOracle.setIndexOracle(indexPriceOracle.address)).wait();
+    await (await perpetualOracle.setPositioning(positioning.address)).wait();
+    await positioningConfig.setPositioning(positioning.address);
+    await positioningConfig.setAccountBalance(accountBalance.address);
     await positioningConfig.setTwapInterval(28800);
 
     asset = Asset(virtualToken.address, "10");
@@ -295,7 +287,7 @@ describe("MatchingEngine", function () {
     });
     it("MatchingEngineshould fail to initialze again", async () => {
       await expect(
-        matchingEngine.initialize(owner.address, markPriceOracle.address),
+        matchingEngine.initialize(owner.address, perpetualOracle.address),
       ).to.be.revertedWith("Initializable: contract is already initialized");
     });
     it("should fail to initialize transfer manager again", async () => {

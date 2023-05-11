@@ -152,8 +152,7 @@ contract PerpFactory is Initializable, IPerpFactory, AccessControlUpgradeable {
     function clonePerpEcosystem(
         address _positioningConfig,
         address _matchingEngine,
-        address _markPriceOracle,
-        address _indexPriceOracle,
+        address _perpetualOracle,
         address _quoteToken,
         uint256 _underlyingPriceIndex,
         address[2] calldata _liquidators
@@ -169,8 +168,7 @@ contract PerpFactory is Initializable, IPerpFactory, AccessControlUpgradeable {
                 IVaultController(perpEcosystem[1]),
                 _matchingEngine,
                 perpEcosystem[0],
-                _markPriceOracle,
-                _indexPriceOracle,
+                _perpetualOracle,
                 _underlyingPriceIndex,
                 _liquidators
             )
@@ -197,8 +195,7 @@ contract PerpFactory is Initializable, IPerpFactory, AccessControlUpgradeable {
         IVaultController _vaultController,
         address _matchingEngine,
         address _accountBalance,
-        address _markPriceOracle,
-        address _indexPriceOracle,
+        address _perpetualOracle,
         uint256 _underlyingPriceIndex,
         address[2] calldata _liquidators
     ) private returns (IPositioning positioning) {
@@ -209,8 +206,7 @@ contract PerpFactory is Initializable, IPerpFactory, AccessControlUpgradeable {
             address(_vaultController),
             _matchingEngine,
             _accountBalance,
-            _markPriceOracle,
-            _indexPriceOracle,
+            _perpetualOracle,
             _underlyingPriceIndex,
             _liquidators
         );
