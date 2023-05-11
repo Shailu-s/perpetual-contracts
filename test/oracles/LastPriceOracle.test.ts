@@ -524,6 +524,40 @@ describe("PerpetualOracle - Last Price Oracle", function () {
       );
       expect(lastEpochMarkPrice.toString()).to.be.equal("60000000");
     });
+    it("should fetch latest epoch price when max epochs are reached 2  times", async () => {
+      for (let i = 0; i < 10; i++) {
+        await perpetualOracle.addIndexObservations([0], [65000000], [proofHash]);
+      }
+
+      for (let i = 0; i < 2200; i++) {
+        await perpetualOracle.addMarkObservation(0, 70000000 * (i + 1));
+        await time.increase(28800);
+      }
+      const timestamp = await time.latest();
+      const lastEpochMarkPrice = await perpetualOracle.getMarkEpochSMA(
+        0,
+        parseInt(timestamp) - 28800 * 2190,
+        parseInt(timestamp),
+      );
+      expect(lastEpochMarkPrice.toString()).to.be.equal("65000000");
+    });
+    it("should fetch latest epoch price when max epochs are reached 2  times", async () => {
+      for (let i = 0; i < 10; i++) {
+        await perpetualOracle.addIndexObservations([0], [65000000], [proofHash]);
+      }
+
+      for (let i = 0; i < 1094; i++) {
+        await perpetualOracle.addMarkObservation(0, 70000000 * (i + 1));
+        await time.increase(28800);
+      }
+      const timestamp = await time.latest();
+      const lastEpochMarkPrice = await perpetualOracle.getMarkEpochSMA(
+        0,
+        parseInt(timestamp) - 100000,
+        parseInt(timestamp),
+      );
+      expect(lastEpochMarkPrice.toString()).to.be.equal("65000000");
+    });
   });
   async function getSignature(orderObj, signer) {
     return sign(orderObj, signer, positioning.address);

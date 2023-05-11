@@ -389,5 +389,24 @@ describe("PerpetualOracle - Index Price Oracle", function () {
         "PerpOracle: zero address",
       );
     });
+    it("should return zero when  the start time stamp is less than last time stamp", async () => {
+      await perpetualOracle.setMarkObservationAdder(owner.address);
+      await perpetualOracle.addMarkObservation(0, 70000000);
+      for (let i = 0; i < 10; i++) {
+        await perpetualOracle.addIndexObservations([0], [65000000], [proofHash]);
+      }
+
+      for (let i = 0; i < 2; i++) {
+        await perpetualOracle.addMarkObservation(0, 70000000 * (i + 1));
+        await time.increase(28800);
+      }
+      const timestamp = await time.latest();
+      const lastEpochIndexPrice = await perpetualOracle.getIndexEpochSMA(
+        0,
+        parseInt(timestamp) + 20000,
+        parseInt(timestamp) + 28800,
+      );
+      expect(lastEpochIndexPrice.toString()).to.be("0");
+    });
   });
 });

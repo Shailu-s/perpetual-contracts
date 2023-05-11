@@ -942,7 +942,6 @@ describe("VolmexPerpPeriphery", function () {
       const signatureRightLimitOrder = await getSignature(orderRight, account2.address);
 
       await matchingEngine.grantMatchOrders(positioning.address);
-      console.log(signatureLeftLimitOrder);
       await expect(
         volmexPerpPeriphery
           .connect(account1)
