@@ -15,13 +15,14 @@ import { LibSafeCastUint } from "../libs/LibSafeCastUint.sol";
 import { LibSignature } from "../libs/LibSignature.sol";
 
 import { IAccountBalance } from "../interfaces/IAccountBalance.sol";
-import { IIndexPrice } from "../interfaces/IIndexPrice.sol";
+import { IVolmexBaseToken } from "../interfaces/IVolmexBaseToken.sol";
 import { IMatchingEngine } from "../interfaces/IMatchingEngine.sol";
 import { IMarketRegistry } from "../interfaces/IMarketRegistry.sol";
 import { IPositioning } from "../interfaces/IPositioning.sol";
 import { IPositioningConfig } from "../interfaces/IPositioningConfig.sol";
 import { IVirtualToken } from "../interfaces/IVirtualToken.sol";
 import { IVaultController } from "../interfaces/IVaultController.sol";
+import { IPerpetualOracle } from "../interfaces/IPerpetualOracle.sol";
 
 import { BlockContext } from "../helpers/BlockContext.sol";
 import { FundingRate } from "../funding-rate/FundingRate.sol";
@@ -59,25 +60,19 @@ contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, 
 
         __ReentrancyGuard_init();
         __OwnerPausable_init();
-        __FundingRate_init(markPriceArg, indexPriceArg);
+        __FundingRate_init(perpetualOracleArg);
         __OrderValidator_init_unchained();
 
         _positioningConfig = positioningConfigArg;
         _vaultController = vaultControllerArg;
         _accountBalance = accountBalanceArg;
         _matchingEngine = matchingEngineArg;
-
-        for (; indexCount < 2; indexCount++) {
-            _underlyingPriceIndex[volmexBaseTokenArgs[indexCount]] = indexCount;
-        }
-        _smInterval = 28800;
-        _smIntervalLiquidation = 3600;
-        indexPriceAllowedInterval = 1800;
+        _underlyingPriceIndex = underlyingPriceIndex;
         for (uint256 index = 0; index < 2; index++) {
             isLiquidatorWhitelisted[liquidators[index]] = true;
         }
         isLiquidatorWhitelistEnabled = true;
-
+        _grantRole(SM_INTERVAL_ROLE, positioningConfigArg);
         _grantRole(POSITIONING_ADMIN, _msgSender());
     }
 
@@ -105,12 +100,11 @@ contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, 
         emit DefaultFeeReceiverChanged(defaultFeeReceiver);
     }
 
-    function setIndexPriceOracle(address indexPriceOracle) external {
+    function setPerpetualOracle(address perpetualOracleArg) external {
         _requirePositioningAdmin();
         // P_AZ: Index price oracle is address zero
-        require(indexPriceOracle != address(0), "P_AZ");
-        _indexPriceOracleArg = indexPriceOracle;
-        emit IndexPriceSet(indexPriceOracle);
+        require(perpetualOracleArg != address(0), "P_AZ");
+        _perpetualOracleArg = perpetualOracleArg;
     }
 
     /// @inheritdoc IPositioning
@@ -131,6 +125,21 @@ contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, 
         emit FundingPeriodSet(period);
     }
 
+    function setSmInterval(uint256 smInterval) external virtual {
+        _requireSmIntervalRole();
+        _smInterval = smInterval;
+    }
+
+    function setSmIntervalLiquidation(uint256 smIntervalLiquidation) external virtual {
+        _requireSmIntervalRole();
+        _smIntervalLiquidation = smIntervalLiquidation;
+    }
+
+    function setIndexOracleInterval(uint256 _interval) external virtual {
+        _requirePositioningAdmin();
+        indexPriceAllowedInterval = _interval;
+    }
+
     function toggleLiquidatorWhitelist() external {
         _requirePositioningAdmin();
         isLiquidatorWhitelistEnabled = !isLiquidatorWhitelistEnabled;
@@ -142,12 +151,14 @@ contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, 
         address baseToken,
         int256 positionSize
     ) external override whenNotPaused nonReentrant {
+        require(!isStaleIndexOracle(), "P_SIP"); // stale index price
         _liquidate(trader, baseToken, positionSize);
     }
 
     ///Note for Auditor: Check full position liquidation even when partial was needed
     /// @inheritdoc IPositioning
     function liquidateFullPosition(address trader, address baseToken) external override whenNotPaused nonReentrant {
+        require(!isStaleIndexOracle(), "P_SIP"); // stale index price
         // positionSizeToBeLiquidated = 0 means liquidating as much as possible
         _liquidate(trader, baseToken, 0);
     }
@@ -162,13 +173,13 @@ contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, 
         bytes memory signatureRight,
         bytes memory liquidator
     ) external override whenNotPaused nonReentrant {
+        require(!isStaleIndexOracle(), "P_SIP"); // stale index price
         _validateFull(orderLeft, signatureLeft);
         _validateFull(orderRight, signatureRight);
 
         // short = selling base token
         address baseToken = orderLeft.isShort ? orderLeft.makeAsset.virtualToken : orderLeft.takeAsset.virtualToken;
-
-        require(IMarketRegistry(_marketRegistry).checkBaseToken(baseToken), "V_PERP: Basetoken not registered at market");
+        require(IMarketRegistry(_marketRegistry).checkBaseToken(baseToken), "V_PBRM"); // V_PERP: Basetoken not registered at market = V_PBRM
 
         // register base token for account balance calculations
         IAccountBalance(_accountBalance).registerBaseToken(orderLeft.trader, baseToken);
@@ -209,20 +220,19 @@ contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, 
     }
 
     function getOrderValidate(LibOrder.Order memory order) external view returns (bool) {
-        require(order.trader != address(0), "V_PERP_M: order verification failed");
-        require(order.salt != 0, "V_PERP_M: 0 salt can't be used");
-        require(order.salt >= makerMinSalt[_msgSender()], "V_PERP_M: order salt lower");
+        require(order.trader != address(0), "V_PERP_OVF"); // V_PERP_M: order verification failed
+        require(order.salt != 0, "V_PERP_0S"); //V_PERP_M: 0 salt can't be used
+        require(order.salt >= makerMinSalt[_msgSender()], "V_PERP_LS"); // V_PERP_M: order salt lower
         bytes32 orderHashKey = LibOrder.hashKey(order);
         uint256 fills = IMatchingEngine(_matchingEngine).fills(orderHashKey);
-        // order is cancelled, os there's nothing to fill
-        require(fills < order.makeAsset.value, "V_PERP_M: Nothing to fill");
+        require(fills < order.makeAsset.value, "V_PERP_NF"); //V_PERP_NF:  nothing to fill
         LibOrder.validate(order);
 
         uint24 imRatio = IPositioningConfig(_positioningConfig).getImRatio();
 
         require(
             int256(order.isShort ? order.takeAsset.value : order.makeAsset.value) < (_getFreeCollateralByRatio(order.trader, imRatio) * 1e6) / uint256(imRatio).toInt256(),
-            "V_PERP_NEFC"
+            "V_NEFC"
         );
         return true;
     }
@@ -239,8 +249,8 @@ contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, 
     }
 
     /// @dev this function is used to fetch index price of base token
-    function getIndexPrice(address baseToken) external view returns (uint256 indexPrice) {
-        indexPrice = _getIndexPrice(baseToken);
+    function getIndexPrice(address baseToken, uint256 twInterval) external view returns (uint256 indexPrice) {
+        indexPrice = _getIndexPrice(baseToken, twInterval);
     }
 
     /// @dev this function is used to know the trader is liquidateable
@@ -253,6 +263,17 @@ contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, 
         accountValue = _getAccountValue(trader);
     }
 
+    /// @dev Used to check for stale index oracle
+    function isStaleIndexOracle() public view returns (bool) {
+        uint256 lastUpdatedTimestamp = IPerpetualOracle(_perpetualOracleArg).lastestTimestamp(_underlyingPriceIndex, false);
+        return block.timestamp - lastUpdatedTimestamp >= indexPriceAllowedInterval;
+    }
+
+    /// @dev Used to check for stale index oracle
+    function isStaleIndexOracle() public view returns (bool) {
+        uint256 lastUpdatedTimestamp = IPerpetualOracle(_perpetualOracleArg).lastestTimestamp(0, false);
+        return block.timestamp - lastUpdatedTimestamp >= indexPriceAllowedInterval;
+    }
 
     /// @dev Used to check for stale index oracle
     function isStaleIndexOracle() public view returns (bool) {
@@ -579,23 +600,16 @@ contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, 
             positionSizeToBeLiquidated = maxLiquidatablePositionSize;
         }
 
+        uint256 indexPrice = _getIndexPrice(baseToken, _smIntervalLiquidation);
+        require(indexPrice != 0, "P_0IP"); // zero index price
         int256 liquidatedPositionSize = positionSizeToBeLiquidated.neg256();
-        int256 liquidatedPositionNotional = positionSizeToBeLiquidated.mulDiv(_getIndexPrice(baseToken).toInt256(), _ORACLE_BASE);
+        int256 liquidatedPositionNotional = positionSizeToBeLiquidated.mulDiv(indexPrice.toInt256(), _ORACLE_BASE);
 
         return (liquidatedPositionSize, liquidatedPositionNotional);
     }
 
-<<<<<<< Updated upstream
     function _getIndexPrice(address baseToken) internal view returns (uint256) {
         return IIndexPrice(baseToken).getIndexPrice(_underlyingPriceIndex);
-=======
-    function _getIndexPrice(address baseToken, uint256 twInterval) internal view returns (uint256 price) {
-        uint256 index = _underlyingPriceIndex[baseToken];
-        price = IVolmexBaseToken(baseToken).getIndexPrice(index, twInterval);
-<<<<<<< Updated upstream
->>>>>>> Stashed changes
-=======
->>>>>>> Stashed changes
     }
 
     function _getTakerOpenNotional(address trader, address baseToken) internal view returns (int256) {
@@ -658,11 +672,15 @@ contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, 
     }
 
     function _requirePositioningAdmin() internal view {
-        require(hasRole(POSITIONING_ADMIN, _msgSender()), "Positioning: Not admin");
+        require(hasRole(POSITIONING_ADMIN, _msgSender()), "P_NA"); // Positioning: Not admin
+    }
+
+    function _requireSmIntervalRole() internal view {
+        require(hasRole(SM_INTERVAL_ROLE, _msgSender()), "Positioning: Not sm interval role");
     }
 
     function _requireWhitelistLiquidator(address liquidator) internal view {
-        require(isLiquidatorWhitelisted[liquidator], "Positioning: liquidator not whitelisted");
+        require(isLiquidatorWhitelisted[liquidator], "P_LW"); // Positioning: liquidator not whitelisted
     }
 
     function _getPnlToBeRealized(InternalRealizePnlParams memory params) internal pure returns (int256) {

@@ -24,6 +24,7 @@ contract VirtualToken is IVirtualToken, ERC20Upgradeable, AccessControlUpgradeab
         isBase = isBaseArg;
         __ERC20_init(nameArg, symbolArg);
         _grantRole(VIRTUAL_TOKEN_ADMIN, _msgSender());
+        _setRoleAdmin(VIRTUAL_TOKEN_ADMIN, VIRTUAL_TOKEN_ADMIN);
     }
 
     function setMintBurnRole(address minterBurner) external {

@@ -43,6 +43,8 @@ interface IAccountBalance {
     /// @param realizedPnl Amount of pnl realized
     /// @param fee Amount of maker fee collected from pool
     function settleBalanceAndDeregister(address trader, address baseToken, int256 takerBase, int256 takerQuote, int256 realizedPnl, int256 fee) external returns (int256);
+    function setSmInterval(uint256 smInterval) external;
+    function setSmIntervalLiquidation(uint256 smIntervalLiquidation) external;
     /// @notice Get liquidatable position size of trader's baseToken market
     /// @param trader The address of trader
     /// @param baseToken The address of baseToken
@@ -99,7 +101,7 @@ interface IAccountBalance {
     /// @param trader The address of trader
     /// @param baseToken The address of baseToken
     /// @return totalPositionValue Total position value of trader's baseToken market
-    function getTotalPositionValue(address trader, address baseToken) external view returns (int256);
+    function getTotalPositionValue(address trader, address baseToken, uint256 twInterval) external view returns (int256);
     /// @notice Get all market position abs value of trader
     /// @param trader The address of trader
     /// @return totalAbsPositionValue Sum up positions value of every market

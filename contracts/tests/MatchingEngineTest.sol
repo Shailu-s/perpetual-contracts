@@ -7,8 +7,8 @@ import "../matching-engine/MatchingEngine.sol";
 contract MatchingEngineTest is MatchingEngine {
     uint256 private constant _UINT256_MAX = 2**256 - 1;
 
-    function __MatchingEngineTest_init(address owner, IMarkPriceOracle markPriceOracle) external initializer {
-        initialize(owner, markPriceOracle);
+    function __MatchingEngineTest_init(address owner, IPerpetualOracle perpetualOracle) external initializer {
+        initialize(owner, perpetualOracle);
         _grantRole(CAN_MATCH_ORDERS, _msgSender());
         _grantRole(CAN_MATCH_ORDERS, address(this));
     }
@@ -21,16 +21,8 @@ contract MatchingEngineTest is MatchingEngine {
         makerMinSalt[_msgSender()] = _val;
     }
 
-    function addAssets(
-        uint256[] calldata _underlyingPrices,
-        address[] calldata _assets,
-        uint256[] calldata _capRatio
-    ) public {
-        markPriceOracle.addAssets(_underlyingPrices, _assets, _capRatio);
-    }
-
     function addObservation(uint256 _priceCumulative, uint256 _index) public {
-        markPriceOracle.addObservation(_priceCumulative, _index);
+        perpetualOracle.addMarkObservation(_priceCumulative, _index);
     }
 
     //TODO Should be inculded in matching engine core

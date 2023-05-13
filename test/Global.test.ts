@@ -10,8 +10,8 @@ describe("Global", function () {
   let PerpFactory;
   let VolmexBaseToken;
   let VolmexQuoteToken;
-  let MarkPriceOracle;
-  let IndexPriceOracle;
+  let PerpetualOracle;
+  let perpetualOracle;
   let VaultController;
   let PositioningConfig;
   let AccountBalance;
@@ -21,10 +21,8 @@ describe("Global", function () {
   let VolmexPerpPeriphery;
   let VolmexPerpView;
   let TestERC20;
-  let indexPriceOracle;
   let volmexBaseToken;
   let volmexQuoteToken;
-  let markPriceOracle;
   let usdc;
   let positioningConfig;
   let accountBalance;
@@ -65,8 +63,7 @@ describe("Global", function () {
     PerpFactory = await ethers.getContractFactory("PerpFactory");
     VolmexBaseToken = await ethers.getContractFactory("VolmexBaseToken");
     VolmexQuoteToken = await ethers.getContractFactory("VolmexQuoteToken");
-    MarkPriceOracle = await ethers.getContractFactory("MarkPriceOracle");
-    IndexPriceOracle = await ethers.getContractFactory("IndexPriceOracle");
+    PerpetualOracle = await ethers.getContractFactory("PerpetualOracle");
     VaultController = await ethers.getContractFactory("VaultController");
     PositioningConfig = await ethers.getContractFactory("PositioningConfig");
     AccountBalance = await ethers.getContractFactory("AccountBalance");
@@ -96,20 +93,21 @@ describe("Global", function () {
       },
     );
     await volmexBaseToken.deployed();
-    indexPriceOracle = await upgrades.deployProxy(
-      IndexPriceOracle,
-      [owner.address, [100000000], [volmexBaseToken.address], [proofHash], [capRatio]],
-      {
-        initializer: "initialize",
-      },
+    perpetualOracle = await upgrades.deployProxy(
+      PerpetualOracle,
+      [
+        [volmexBaseToken.address, volmexBaseToken.address],
+        [10000000, 10000000],
+        [10000000, 10000000],
+        [proofHash, proofHash],
+        owner.address,
+      ],
+      { initializer: "__PerpetualOracle_init" },
     );
-    await indexPriceOracle.deployed();
-    await indexPriceOracle.setObservationAdder(owner.address);
-    for (let index = 0; index < 10; index++) {
-      await (await indexPriceOracle.addObservation([100000000], [0], [proofHash])).wait();
-      await (await indexPriceOracle.addObservation([100000000], [1], [proofHash])).wait();
-    }
-    await volmexBaseToken.setPriceFeed(indexPriceOracle.address);
+    await perpetualOracle.deployed();
+    await perpetualOracle.setIndexObservationAdder(owner.address);
+
+    await volmexBaseToken.setPriceFeed(perpetualOracle.address);
     await (await perpView.setBaseToken(volmexBaseToken.address)).wait();
 
     volmexQuoteToken = await upgrades.deployProxy(
@@ -126,16 +124,6 @@ describe("Global", function () {
     await volmexQuoteToken.deployed();
     await (await perpView.setQuoteToken(volmexQuoteToken.address)).wait();
 
-    markPriceOracle = await upgrades.deployProxy(
-      MarkPriceOracle,
-      [[10000000], [volmexBaseToken.address], owner.address],
-      {
-        initializer: "initialize",
-      },
-    );
-    await markPriceOracle.deployed();
-    await (await indexPriceOracle.grantInitialTimestampRole(markPriceOracle.address)).wait();
-
     usdc = await upgrades.deployProxy(TestERC20, ["VolmexUSDC", "VUSDC", 6], {
       initializer: "__TestERC20_init",
     });
@@ -143,12 +131,12 @@ describe("Global", function () {
 
     matchingEngine = await upgrades.deployProxy(MatchingEngine, [
       owner.address,
-      markPriceOracle.address,
+      perpetualOracle.address,
     ]);
     await matchingEngine.deployed();
-    await (await markPriceOracle.setObservationAdder(matchingEngine.address)).wait();
+    await (await perpetualOracle.setMarkObservationAdder(matchingEngine.address)).wait();
 
-    positioningConfig = await upgrades.deployProxy(PositioningConfig, [markPriceOracle.address]);
+    positioningConfig = await upgrades.deployProxy(PositioningConfig, [perpetualOracle.address]);
     await positioningConfig.deployed();
     await positioningConfig.setMaxMarketsPerAccount(5);
     await positioningConfig.setSettlementTokenBalanceCap("10000000000000000000000000");
@@ -180,8 +168,7 @@ describe("Global", function () {
         vaultController.address,
         accountBalance.address,
         matchingEngine.address,
-        markPriceOracle.address,
-        indexPriceOracle.address,
+        perpetualOracle.address,
         0,
         [owner.address, account1.address],
       ],
@@ -203,15 +190,16 @@ describe("Global", function () {
     await (await vaultController.setPositioning(positioning.address)).wait();
     await (await vaultController.registerVault(vault.address, usdc.address)).wait();
     await (await accountBalance.setPositioning(positioning.address)).wait();
-    await (await markPriceOracle.setPositioning(positioning.address)).wait();
-    await (await markPriceOracle.setIndexOracle(indexPriceOracle.address)).wait();
-    await markPriceOracle.grantSmaIntervalRole(positioningConfig.address);
+    await (await perpetualOracle.setPositioning(positioning.address)).wait();
+
+    await perpetualOracle.grantSmaIntervalRole(positioningConfig.address);
+    await positioningConfig.setPositioning(positioning.address);
+    await positioningConfig.setAccountBalance(accountBalance.address);
     await positioningConfig.setTwapInterval(28800);
 
     periphery = await upgrades.deployProxy(VolmexPerpPeriphery, [
       perpView.address,
-      markPriceOracle.address,
-      indexPriceOracle.address,
+      perpetualOracle.address,
       [vault.address, vault.address],
       owner.address,
       owner.address, // replace with relayer
@@ -239,8 +227,6 @@ describe("Global", function () {
   });
 
   it("should match orders and open position", async () => {
-    const txn = await markPriceOracle.getMarkSma(10000000, 0);
-
     await matchingEngine.grantMatchOrders(positioning.address);
 
     await usdc.connect(owner).mint(account1.address, "10000000000000000000");
@@ -315,10 +301,9 @@ describe("Global", function () {
     expect(positionSize1).to.be.equal("-1000000000000000000");
 
     const proofHash = "0x6c00000000000000000000000000000000000000000000000000000000000000";
-
     for (let index = 0; index < 10; index++) {
-      await (await indexPriceOracle.addObservation([100000000], [0], [proofHash])).wait();
-      await (await indexPriceOracle.addObservation([100000000], [1], [proofHash])).wait();
+      await (await perpetualOracle.addIndexObservations([0], [100000000], [proofHash])).wait();
+      await (await perpetualOracle.addIndexObservations([1], [100000000], [proofHash])).wait();
     }
 
     orderLeft = Order(
@@ -442,9 +427,7 @@ describe("Global", function () {
   });
 
   it("should match orders and open position", async () => {
-    const index = await markPriceOracle.indexByBaseToken(volmexBaseToken.address);
-    let observations = await markPriceOracle.getMarkSma(3600, index);
-    console.log("observations", observations.toString());
+    const index = await perpetualOracle.indexByBaseToken(volmexBaseToken.address);
 
     await matchingEngine.grantMatchOrders(positioning.address);
 
@@ -515,7 +498,7 @@ describe("Global", function () {
       ],
     ]);
 
-    observations = await markPriceOracle.getMarkSma(3600, index);
+    let observations = await perpetualOracle.lastestLastPriceSMA(index, 3600);
     console.log("observations", observations.toString());
     console.log("Another call \n");
 
@@ -525,8 +508,8 @@ describe("Global", function () {
     const proofHash = "0x6c00000000000000000000000000000000000000000000000000000000000000";
 
     for (let index = 0; index < 10; index++) {
-      await (await indexPriceOracle.addObservation([100000000], [0], [proofHash])).wait();
-      await (await indexPriceOracle.addObservation([100000000], [1], [proofHash])).wait();
+      await (await perpetualOracle.addIndexObservations([0], [100000000], [proofHash])).wait();
+      await (await perpetualOracle.addIndexObservations([1], [100000000], [proofHash])).wait();
     }
 
     // both partially filled {2, 3} {2, 1}
@@ -587,7 +570,7 @@ describe("Global", function () {
       ],
     ]);
 
-    observations = await markPriceOracle.getMarkSma(3600, index);
+    observations = await perpetualOracle.lastestLastPriceSMA(index, 3600);
     console.log("observations", observations.toString());
 
     console.log("Another call \n");
@@ -650,7 +633,7 @@ describe("Global", function () {
       ],
     ]);
 
-    observations = await markPriceOracle.getMarkSma(3600, index);
+    observations = await perpetualOracle.lastestLastPriceSMA(index, 3600);
     console.log("observations", observations.toString());
   });
 

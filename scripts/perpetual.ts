@@ -10,8 +10,7 @@ const positioning = async () => {
   const PerpFactory = await ethers.getContractFactory("PerpFactory");
   const VolmexBaseToken = await ethers.getContractFactory("VolmexBaseToken");
   const VolmexQuoteToken = await ethers.getContractFactory("VolmexQuoteToken");
-  const MarkPriceOracle = await ethers.getContractFactory("MarkPriceOracle");
-  const IndexPriceOracle = await ethers.getContractFactory("IndexPriceOracle");
+  const PerpetualOracle = await ethers.getContractFactory("PerpetualOracle");
   const VaultController = await ethers.getContractFactory("VaultController");
   const PositioningConfig = await ethers.getContractFactory("PositioningConfig");
   const AccountBalance = await ethers.getContractFactory("AccountBalance");
@@ -45,19 +44,42 @@ const positioning = async () => {
   console.log(volmexBaseToken.address);
   await (await perpView.setBaseToken(volmexBaseToken.address)).wait();
 
-  console.log("Deploying Index Price Oracle ...");
-  let indexOracle = process.env.INDEX_PRICE_ORACLE;
-  if (!process.env.INDEX_PRICE_ORACLE) {
-    const indexPriceOracle = await upgrades.deployProxy(IndexPriceOracle, [
-      owner.address, [75000000], [volmexBaseToken.address], [proofHash], [capRatio]
-    ], {
+  const volmexBaseToken2 = await upgrades.deployProxy(
+    VolmexBaseToken,
+    [
+      "Virtual ETH Index Token", // nameArg
+      "VEVIV", // symbolArg,
+      owner.address, // zero address on init
+      true, // isBase
+    ],
+    {
       initializer: "initialize",
-    });
-    await indexPriceOracle.deployed();
-    indexOracle = indexPriceOracle.address;
-    console.log(indexOracle);
+    },
+  );
+  await volmexBaseToken2.deployed();
+  console.log(volmexBaseToken2.address);
+  await (await perpView.setBaseToken(volmexBaseToken2.address)).wait();
+
+  console.log("Deploying Perpetuals oracle ...");
+
+  const perpetualOracle = await upgrades.deployProxy(
+    PerpetualOracle,
+    [
+      [volmexBaseToken.address, volmexBaseToken2.address],
+      [71000000, 52000000],
+      [52000000, 50000000],
+      [proofHash, proofHash],
+      owner.address,
+    ],
+    { initializer: "__PerpetualOracle_init" },
+  );
+
+  await perpetualOracle.deployed();
+  await (await volmexBaseToken.setPriceFeed(perpetualOracle.address)).wait();
+  await (await volmexBaseToken2.setPriceFeed(perpetualOracle.address)).wait();
+  if (process.env.INDEX_OBSERVATION_ADDER) {
+    await (await perpetualOracle.setIndexObservationAdder(process.env.INDEX_OBSERVATION_ADDER)).wait();
   }
-  await (await volmexBaseToken.setPriceFeed(indexOracle)).wait();
 
   console.log("Deploying Quote Token ...");
   const volmexQuoteToken = await upgrades.deployProxy(
@@ -75,29 +97,10 @@ const positioning = async () => {
   console.log(volmexQuoteToken.address);
   await (await perpView.setQuoteToken(volmexQuoteToken.address)).wait();
 
-  console.log("Deploying Mark Price Oracle ...");
-  const markPriceOracle = await upgrades.deployProxy(
-    MarkPriceOracle,
-    [[52000000], [volmexBaseToken.address], owner.address],
-    {
-      initializer: "initialize",
-    },
-  );
-  await markPriceOracle.deployed();
-  console.log(markPriceOracle.address);
-  await (await markPriceOracle.setIndexOracle(indexOracle)).wait();
-  const indexPriceOracle = IndexPriceOracle.attach(indexOracle);
-  await (await indexPriceOracle.grantInitialTimestampRole(markPriceOracle.address)).wait();
-
   console.log("Deploying USDT ...");
   let usdtAddress = process.env.USDT;
   if (!process.env.USDT) {
-    const usdt = await TestERC20.deploy(
-      "1000000000000000000",
-      "Tether USD",
-      "USDT",
-      6
-    );
+    const usdt = await TestERC20.deploy("1000000000000000000", "Tether USD", "USDT", 6);
     await usdt.deployed();
     usdtAddress = usdt.address;
     console.log(usdt.address);
@@ -106,17 +109,19 @@ const positioning = async () => {
   console.log("Deploying MatchingEngine ...");
   const matchingEngine = await upgrades.deployProxy(MatchingEngine, [
     owner.address,
-    markPriceOracle.address,
+    perpetualOracle.address,
   ]);
   await matchingEngine.deployed();
   console.log(matchingEngine.address);
-  await (await markPriceOracle.setObservationAdder(matchingEngine.address)).wait();
-
+  await (await perpetualOracle.setMarkObservationAdder(matchingEngine.address)).wait();
+  await (await perpetualOracle.setIndexObservationAdder(owner.address)).wait();
   console.log("Deploying Positioning Config ...");
-  const positioningConfig = await upgrades.deployProxy(PositioningConfig, [markPriceOracle.address]);
+  const positioningConfig = await upgrades.deployProxy(PositioningConfig, [
+    perpetualOracle.address,
+  ]);
   await positioningConfig.deployed();
   console.log(positioningConfig.address);
-  await (await markPriceOracle.grantSmaIntervalRole(positioningConfig.address)).wait();
+  await (await perpetualOracle.grantSmaIntervalRole(positioningConfig.address)).wait();
   await positioningConfig.setMaxMarketsPerAccount(5);
   await positioningConfig.setSettlementTokenBalanceCap("10000000000000");
 
@@ -125,6 +130,8 @@ const positioning = async () => {
   await accountBalance.deployed();
   console.log(accountBalance.address);
   await (await perpView.setAccount(accountBalance.address)).wait();
+  console.log("Set accounts - positioning config ...");
+  await (await positioningConfig.setAccountBalance(accountBalance.address)).wait();
 
   console.log("Deploying Vault Controller ...");
   const vaultController = await upgrades.deployProxy(VaultController, [
@@ -141,7 +148,7 @@ const positioning = async () => {
     positioningConfig.address,
     accountBalance.address,
     usdtAddress,
-    vaultController.address
+    vaultController.address,
   ]);
   await vault.deployed();
   console.log(vault.address);
@@ -155,8 +162,7 @@ const positioning = async () => {
       vaultController.address,
       accountBalance.address,
       matchingEngine.address,
-      markPriceOracle.address,
-      indexOracle,
+      perpetualOracle.address,
       0,
       [owner.address, `${process.env.LIQUIDATOR}`],
     ],
@@ -166,10 +172,12 @@ const positioning = async () => {
   );
   await positioning.deployed();
   console.log(positioning.address);
+  console.log("Set positioning - positioning config ...");
+  await (await positioningConfig.setPositioning(positioning.address)).wait();
   console.log("Set positioning - accounts ...");
   await (await accountBalance.setPositioning(positioning.address)).wait();
   console.log("Set positioning - mark oracle ...");
-  await (await markPriceOracle.setPositioning(positioning.address)).wait();
+  await (await perpetualOracle.setPositioning(positioning.address)).wait();
   console.log("Grant match order ...");
   await (await matchingEngine.grantMatchOrders(positioning.address)).wait();
   console.log("Set at perp view ...");
@@ -201,11 +209,10 @@ const positioning = async () => {
   console.log("Deploying Periphery contract ...");
   const periphery = await upgrades.deployProxy(VolmexPerpPeriphery, [
     perpView.address,
-    markPriceOracle.address,
-    indexOracle,
+    perpetualOracle.address,
     [vault.address, vault.address],
     owner.address,
-    process.env.RELAYER ? process.env.RELAYER : owner.address
+    process.env.RELAYER ? process.env.RELAYER : owner.address,
   ]);
   await periphery.deployed();
   console.log(periphery.address);
@@ -237,8 +244,7 @@ const positioning = async () => {
     AccountBalance: accountBalance.address,
     BaseToken: volmexBaseToken.address,
     Factory: factory.address,
-    IndexPriceOracle: indexOracle,
-    MarkPriceOracle: markPriceOracle.address,
+    PerpetualOracles: perpetualOracle.address,
     MarketRegistry: marketRegistry.address,
     MatchingEngine: matchingEngine.address,
     Periphery: periphery.address,
@@ -249,17 +255,17 @@ const positioning = async () => {
     Vault: vault.address,
     VaultController: vaultController.address,
     USDT: usdtAddress,
-    Deployer: await owner.getAddress()
+    Deployer: await owner.getAddress(),
   };
   console.log("\n =====Deployment Successful===== \n");
   console.log(addresses);
 
   try {
     await run("verify:verify", {
-      address: await proxyAdmin.getProxyImplementation(indexOracle),
+      address: await proxyAdmin.getProxyImplementation(perpetualOracle.address),
     });
   } catch (error) {
-    console.log("ERROR - verify - Index price oracle", error);
+    console.log("ERROR - verify - Perpetual oracles", error);
   }
   try {
     await run("verify:verify", {
@@ -278,23 +284,12 @@ const positioning = async () => {
   try {
     await run("verify:verify", {
       address: usdtAddress,
-      constructorArguments: [
-        "1000000000000000000",
-        "Tether USD",
-        "USDT",
-        6
-      ]
+      constructorArguments: ["1000000000000000000", "Tether USD", "USDT", 6],
     });
   } catch (error) {
     console.log("ERROR - verify - usdt token!");
   }
-  try {
-    await run("verify:verify", {
-      address: await proxyAdmin.getProxyImplementation(markPriceOracle.address),
-    });
-  } catch (error) {
-    console.log("ERROR - verify - mark price oracle!");
-  }
+
   try {
     await run("verify:verify", {
       address: await proxyAdmin.getProxyImplementation(matchingEngine.address),

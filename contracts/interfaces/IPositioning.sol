@@ -70,11 +70,10 @@ interface IPositioning is IFundingRate {
     event TrustedForwarderChanged(address indexed forwarder);
     /// @notice Emitted when liquidator is whitelisted or removed
     event LiquidatorWhitelisted(address indexed liquidator, bool isWhitelist);
-    event IndexPriceSet(address indexed indexPriceOracle);
     event FundingPeriodSet(uint256 fundingInterval);
 
     /// @dev this function is public for testing
-    function initialize(address positioningConfigArg, address vaultControllerArg, address accountBalanceArg, address matchingEngineArg, address markPriceArg, address indexPriceArg, uint256 underlyingPriceIndex, address[2] calldata liquidators) external;
+    function initialize(address positioningConfigArg, address vaultControllerArg, address accountBalanceArg, address matchingEngineArg, address perpetualOracleArg, uint256 underlyingPriceIndex, address[2] calldata liquidators) external;
     /// @notice Settle all markets fundingPayment to owedRealized Pnl
     /// @param trader The address of trader
     function settleAllFunding(address trader) external;
@@ -86,6 +85,8 @@ interface IPositioning is IFundingRate {
     /// @notice Update funding rate inteval
     /// @param period should be the funding settlement period
     function setFundingPeriod(uint256 period) external;
+    function setSmInterval(uint256 smInterval) external;
+    function setSmIntervalLiquidation(uint256 smIntervalLiquidation) external;
     /// @notice If true, allows only whitelisted liquidators, else everyone can be liquidator
     function toggleLiquidatorWhitelist() external;
     /// @notice Trader can call `openPosition` to long/short on baseToken market
@@ -134,4 +135,8 @@ interface IPositioning is IFundingRate {
     /// @notice Get AccountBalance address
     /// @return accountBalance `AccountBalance` address
     function getAccountBalance() external view returns (address accountBalance);
+    /// @notice Check if order is valid
+    /// @param order order
+    function getOrderValidate(LibOrder.Order memory order) external view returns (bool);
+    function isStaleIndexOracle() external view returns (bool);
 }

@@ -1,7 +1,6 @@
 import { parseUnits } from "ethers/lib/utils";
 import { expect } from "chai";
 import { ethers, upgrades, waffle } from "hardhat";
-import { IndexPriceOracle, MarkPriceOracle, MatchingEngine, VaultController } from "../typechain";
 import { FakeContract, smock } from "@defi-wonderland/smock";
 
 describe("Vault", function () {
@@ -15,10 +14,8 @@ describe("Vault", function () {
   let vaultFactory;
   let DAI;
   let ETH;
-  let MarkPriceOracle;
-  let markPriceOracle;
-  let IndexPriceOracle;
-  let indexPriceOracle;
+  let PerpetualOracle;
+  let perpetualOracle;
   let MatchingEngine;
   let matchingEngine;
   let Positioning;
@@ -37,8 +34,8 @@ describe("Vault", function () {
   beforeEach(async function () {
     VolmexPerpPeriphery = await ethers.getContractFactory("VolmexPerpPeriphery");
     [owner, alice, relayer, bob, cole] = await ethers.getSigners();
-    IndexPriceOracle = await ethers.getContractFactory("IndexPriceOracle");
-    MarkPriceOracle = await ethers.getContractFactory("MarkPriceOracle");
+    PerpetualOracle = await ethers.getContractFactory("PerpetualOracle");
+
     MatchingEngine = await ethers.getContractFactory("MatchingEngineTest");
     perpViewFake = await smock.fake("VolmexPerpView");
 
@@ -56,26 +53,21 @@ describe("Vault", function () {
     const eth = await tokenFactory3.deploy();
     ETH = await eth.deployed();
     await eth.__TestERC20_init("TestETH", "ETH", 18);
-    indexPriceOracle = await upgrades.deployProxy(
-      IndexPriceOracle,
-      [owner.address, [100000], [alice.address], [proofHash], [capRatio]],
-      {
-        initializer: "initialize",
-      },
+    perpetualOracle = await upgrades.deployProxy(
+      PerpetualOracle,
+      [
+        [alice.address, alice.address],
+        [10000000, 10000000],
+        [10000000, 10000000],
+        [proofHash, proofHash],
+        owner.address,
+      ],
+      { initializer: "__PerpetualOracle_init" },
     );
-    await indexPriceOracle.deployed();
 
-    markPriceOracle = await upgrades.deployProxy(
-      MarkPriceOracle,
-      [[100000], [alice.address], owner.address],
-      {
-        initializer: "initialize",
-      },
-    );
-    await markPriceOracle.deployed();
     const positioningConfigFactory = await ethers.getContractFactory("PositioningConfig");
     positioningConfig = await upgrades.deployProxy(positioningConfigFactory, [
-      markPriceOracle.address,
+      perpetualOracle.address,
     ]);
     const accountBalanceFactory = await ethers.getContractFactory("AccountBalance");
     accountBalance = await upgrades.deployProxy(accountBalanceFactory, [
@@ -102,10 +94,9 @@ describe("Vault", function () {
       vaultController.address,
     ]);
 
-    await markPriceOracle.deployed();
     matchingEngine = await upgrades.deployProxy(
       MatchingEngine,
-      [owner.address, markPriceOracle.address],
+      [owner.address, perpetualOracle.address],
       {
         initializer: "__MatchingEngineTest_init",
       },
@@ -118,8 +109,7 @@ describe("Vault", function () {
         vaultController.address,
         accountBalance.address,
         matchingEngine.address,
-        markPriceOracle.address,
-        indexPriceOracle.address,
+        perpetualOracle.address,
         0,
         [owner.address, alice.address],
       ],
@@ -127,7 +117,6 @@ describe("Vault", function () {
         initializer: "initialize",
       },
     );
-    console.log(vault.address);
     await vaultController.connect(owner).setPositioning(positioning.address);
     await vaultController.registerVault(vault.address, USDC.address);
     await vaultController.registerVault(DAIVault.address, DAI.address);
@@ -149,8 +138,7 @@ describe("Vault", function () {
 
     volmexPerpPeriphery = await upgrades.deployProxy(VolmexPerpPeriphery, [
       perpViewFake.address,
-      markPriceOracle.address,
-      indexPriceOracle.address,
+      perpetualOracle.address,
       [vault.address, vault.address],
       owner.address,
       relayer.address,
@@ -413,8 +401,7 @@ describe("Vault", function () {
     it("shoud not allow whitdraw when reentered", async () => {
       VolmexPerpPeriphery = await ethers.getContractFactory("VolmexPerpPeriphery");
       [owner, alice, relayer, bob, cole] = await ethers.getSigners();
-      IndexPriceOracle = await ethers.getContractFactory("IndexPriceOracle");
-      MarkPriceOracle = await ethers.getContractFactory("MarkPriceOracle");
+      PerpetualOracle = await ethers.getContractFactory("PerpetualOracle");
       MatchingEngine = await ethers.getContractFactory("MatchingEngineTest");
       perpViewFake = await smock.fake("VolmexPerpView");
 
@@ -432,26 +419,20 @@ describe("Vault", function () {
       const eth = await tokenFactory3.deploy();
       ETH = await eth.deployed();
       await eth.__TestERC20_init("TestETH", "ETH", 18);
-      indexPriceOracle = await upgrades.deployProxy(
-        IndexPriceOracle,
-        [owner.address, [100000], [alice.address], [proofHash], [capRatio]],
-        {
-          initializer: "initialize",
-        },
+      perpetualOracle = await upgrades.deployProxy(
+        PerpetualOracle,
+        [
+          [alice.address, alice.address],
+          [10000000, 10000000],
+          [10000000, 10000000],
+          [proofHash, proofHash],
+          owner.address,
+        ],
+        { initializer: "__PerpetualOracle_init" },
       );
-      await indexPriceOracle.deployed();
-
-      markPriceOracle = await upgrades.deployProxy(
-        MarkPriceOracle,
-        [[100000], [alice.address], owner.address],
-        {
-          initializer: "initialize",
-        },
-      );
-      await markPriceOracle.deployed();
       const positioningConfigFactory = await ethers.getContractFactory("PositioningConfig");
       positioningConfig = await upgrades.deployProxy(positioningConfigFactory, [
-        markPriceOracle.address,
+        perpetualOracle.address,
       ]);
       const accountBalanceFactory = await ethers.getContractFactory("AccountBalance");
       accountBalance = await upgrades.deployProxy(accountBalanceFactory, [
@@ -478,10 +459,9 @@ describe("Vault", function () {
         vaultController.address,
       ]);
 
-      await markPriceOracle.deployed();
       matchingEngine = await upgrades.deployProxy(
         MatchingEngine,
-        [owner.address, markPriceOracle.address],
+        [owner.address, perpetualOracle.address],
         {
           initializer: "__MatchingEngineTest_init",
         },
@@ -494,8 +474,7 @@ describe("Vault", function () {
           vaultController.address,
           accountBalance.address,
           matchingEngine.address,
-          markPriceOracle.address,
-          indexPriceOracle.address,
+          perpetualOracle.address,
           0,
           [owner.address, alice.address],
         ],
@@ -524,8 +503,7 @@ describe("Vault", function () {
 
       volmexPerpPeriphery = await upgrades.deployProxy(VolmexPerpPeriphery, [
         perpViewFake.address,
-        markPriceOracle.address,
-        indexPriceOracle.address,
+        perpetualOracle.address,
         [vault.address, vault.address],
         owner.address,
         relayer.address,
@@ -558,8 +536,7 @@ describe("Vault", function () {
       await vault.setSettlementToken(devil.address);
       const amount2 = parseUnits("4000000000000000000", await devil.decimals());
       const VaultController1 = await ethers.getContractFactory("VaultControllerTest");
-      console.log(vault.address);
-      console.log(owner.address);
+
       const vaultController1 = await VaultController1.deploy();
       await vaultController1.deployed();
       await vault.setVaultController(vaultController1.address);
@@ -571,8 +548,8 @@ describe("Vault", function () {
     it("shoud not allow  deposit when reentered", async () => {
       VolmexPerpPeriphery = await ethers.getContractFactory("VolmexPerpPeriphery");
       [owner, alice, relayer, bob, cole] = await ethers.getSigners();
-      IndexPriceOracle = await ethers.getContractFactory("IndexPriceOracle");
-      MarkPriceOracle = await ethers.getContractFactory("MarkPriceOracle");
+      PerpetualOracle = await ethers.getContractFactory("PerpetualOracle");
+
       MatchingEngine = await ethers.getContractFactory("MatchingEngineTest");
       perpViewFake = await smock.fake("VolmexPerpView");
 
@@ -590,26 +567,20 @@ describe("Vault", function () {
       const eth = await tokenFactory3.deploy();
       ETH = await eth.deployed();
       await eth.__TestERC20_init("TestETH", "ETH", 18);
-      indexPriceOracle = await upgrades.deployProxy(
-        IndexPriceOracle,
-        [owner.address, [100000], [alice.address], [proofHash], [capRatio]],
-        {
-          initializer: "initialize",
-        },
+      perpetualOracle = await upgrades.deployProxy(
+        PerpetualOracle,
+        [
+          [alice.address, alice.address],
+          [10000000, 10000000],
+          [10000000, 10000000],
+          [proofHash, proofHash],
+          owner.address,
+        ],
+        { initializer: "__PerpetualOracle_init" },
       );
-      await indexPriceOracle.deployed();
-
-      markPriceOracle = await upgrades.deployProxy(
-        MarkPriceOracle,
-        [[100000], [alice.address], owner.address],
-        {
-          initializer: "initialize",
-        },
-      );
-      await markPriceOracle.deployed();
       const positioningConfigFactory = await ethers.getContractFactory("PositioningConfig");
       positioningConfig = await upgrades.deployProxy(positioningConfigFactory, [
-        markPriceOracle.address,
+        perpetualOracle.address,
       ]);
       const accountBalanceFactory = await ethers.getContractFactory("AccountBalance");
       accountBalance = await upgrades.deployProxy(accountBalanceFactory, [
@@ -636,10 +607,9 @@ describe("Vault", function () {
         vaultController.address,
       ]);
 
-      await markPriceOracle.deployed();
       matchingEngine = await upgrades.deployProxy(
         MatchingEngine,
-        [owner.address, markPriceOracle.address],
+        [owner.address, perpetualOracle.address],
         {
           initializer: "__MatchingEngineTest_init",
         },
@@ -652,8 +622,7 @@ describe("Vault", function () {
           vaultController.address,
           accountBalance.address,
           matchingEngine.address,
-          markPriceOracle.address,
-          indexPriceOracle.address,
+          perpetualOracle.address,
           0,
           [owner.address, alice.address],
         ],
@@ -682,8 +651,7 @@ describe("Vault", function () {
 
       volmexPerpPeriphery = await upgrades.deployProxy(VolmexPerpPeriphery, [
         perpViewFake.address,
-        markPriceOracle.address,
-        indexPriceOracle.address,
+        perpetualOracle.address,
         [vault.address, vault.address],
         owner.address,
         relayer.address,
@@ -707,8 +675,7 @@ describe("Vault", function () {
       await vault.setSettlementToken(devil.address);
       const amount2 = parseUnits("4000000000000000000", await devil.decimals());
       const VaultController1 = await ethers.getContractFactory("VaultControllerTest");
-      console.log(vault.address);
-      console.log(owner.address);
+
       const vaultController1 = await VaultController1.deploy();
       await vaultController1.deployed();
       await vault.setVaultController(vaultController1.address);
@@ -884,8 +851,8 @@ describe("Vault", function () {
     it("Negative Test for transferFundToVault", async () => {
       VolmexPerpPeriphery = await ethers.getContractFactory("VolmexPerpPeriphery");
       const [owner, alice, relayer, bob, cole] = await ethers.getSigners();
-      IndexPriceOracle = await ethers.getContractFactory("IndexPriceOracle");
-      MarkPriceOracle = await ethers.getContractFactory("MarkPriceOracle");
+      PerpetualOracle = await ethers.getContractFactory("PerpetualOracle");
+
       MatchingEngine = await ethers.getContractFactory("MatchingEngineTest");
       perpViewFake = await smock.fake("VolmexPerpView");
 
@@ -903,26 +870,20 @@ describe("Vault", function () {
       const eth = await tokenFactory3.deploy();
       ETH = await eth.deployed();
       await eth.__TestERC20_init("TestETH", "ETH", 18);
-      indexPriceOracle = await upgrades.deployProxy(
-        IndexPriceOracle,
-        [owner.address, [100000], [alice.address], [proofHash], [capRatio]],
-        {
-          initializer: "initialize",
-        },
+      perpetualOracle = await upgrades.deployProxy(
+        PerpetualOracle,
+        [
+          [alice.address, alice.address],
+          [10000000, 10000000],
+          [10000000, 10000000],
+          [proofHash, proofHash],
+          owner.address,
+        ],
+        { initializer: "__PerpetualOracle_init" },
       );
-      await indexPriceOracle.deployed();
-
-      markPriceOracle = await upgrades.deployProxy(
-        MarkPriceOracle,
-        [[100000], [alice.address], owner.address],
-        {
-          initializer: "initialize",
-        },
-      );
-      await markPriceOracle.deployed();
       const positioningConfigFactory = await ethers.getContractFactory("PositioningConfig");
       positioningConfig = await upgrades.deployProxy(positioningConfigFactory, [
-        markPriceOracle.address,
+        perpViewFake.address,
       ]);
       const accountBalanceFactory = await ethers.getContractFactory("AccountBalance");
       accountBalance = await upgrades.deployProxy(accountBalanceFactory, [
@@ -949,10 +910,9 @@ describe("Vault", function () {
         vaultController.address,
       ]);
 
-      await markPriceOracle.deployed();
       matchingEngine = await upgrades.deployProxy(
         MatchingEngine,
-        [owner.address, markPriceOracle.address],
+        [owner.address, perpetualOracle.address],
         {
           initializer: "__MatchingEngineTest_init",
         },
@@ -965,8 +925,7 @@ describe("Vault", function () {
           vaultController.address,
           accountBalance.address,
           matchingEngine.address,
-          markPriceOracle.address,
-          indexPriceOracle.address,
+          perpetualOracle.address,
           0,
           [owner.address, alice.address],
         ],
@@ -995,8 +954,7 @@ describe("Vault", function () {
 
       volmexPerpPeriphery = await upgrades.deployProxy(VolmexPerpPeriphery, [
         perpViewFake.address,
-        markPriceOracle.address,
-        indexPriceOracle.address,
+        perpetualOracle.address,
         [vault.address, vault.address],
         owner.address,
         relayer.address,
