@@ -44,9 +44,8 @@ contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, 
         address vaultControllerArg,
         address accountBalanceArg,
         address matchingEngineArg,
-        address markPriceArg,
-        address indexPriceArg,
-        uint256 underlyingPriceIndex,
+        address perpetualOracleArg,
+        address[2] volmexBaseTokenArgs,
         address[2] calldata liquidators
     ) external initializer {
         // P_VANC: Vault address is not contract
@@ -67,7 +66,13 @@ contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, 
         _vaultController = vaultControllerArg;
         _accountBalance = accountBalanceArg;
         _matchingEngine = matchingEngineArg;
-        _underlyingPriceIndex = underlyingPriceIndex;
+
+        for (; indexCount < 2; indexCount++) {
+            _underlyingPriceIndex[volmexBaseTokenArgs[indexCount]] = indexCount;
+        }
+        _smInterval = 28800;
+        _smIntervalLiquidation = 3600;
+        indexPriceAllowedInterval = 1800;
         for (uint256 index = 0; index < 2; index++) {
             isLiquidatorWhitelisted[liquidators[index]] = true;
         }
@@ -246,6 +251,13 @@ contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, 
     /// @dev Used to fetch account value of a trader
     function getAccountValue(address trader) external view returns (int256 accountValue) {
         accountValue = _getAccountValue(trader);
+    }
+
+
+    /// @dev Used to check for stale index oracle
+    function isStaleIndexOracle() public view returns (bool) {
+        uint256 lastUpdatedTimestamp = IPerpetualOracle(_perpetualOracleArg).lastestTimestamp(0, false);
+        return block.timestamp - lastUpdatedTimestamp >= indexPriceAllowedInterval;
     }
 
     /// @inheritdoc IPositioning
@@ -573,8 +585,17 @@ contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, 
         return (liquidatedPositionSize, liquidatedPositionNotional);
     }
 
+<<<<<<< Updated upstream
     function _getIndexPrice(address baseToken) internal view returns (uint256) {
         return IIndexPrice(baseToken).getIndexPrice(_underlyingPriceIndex);
+=======
+    function _getIndexPrice(address baseToken, uint256 twInterval) internal view returns (uint256 price) {
+        uint256 index = _underlyingPriceIndex[baseToken];
+        price = IVolmexBaseToken(baseToken).getIndexPrice(index, twInterval);
+<<<<<<< Updated upstream
+>>>>>>> Stashed changes
+=======
+>>>>>>> Stashed changes
     }
 
     function _getTakerOpenNotional(address trader, address baseToken) internal view returns (int256) {
