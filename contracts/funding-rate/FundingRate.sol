@@ -107,6 +107,7 @@ contract FundingRate is IFundingRate, BlockContext, PositioningCallee, FundingRa
     {
         uint256 twapInterval = IPositioningConfig(_positioningConfig).getTwapInterval();
         uint256 timestamp = _blockTimestamp();
+        uint256 baseTokenIndex = _underlyingPriceIndex[baseToken];
         // shorten twapInterval if prior observations are not enough
         // in first epoch, block-based funding is applicable
         if (_firstTradedTimestampMap[baseToken] != 0) {
@@ -117,13 +118,13 @@ contract FundingRate is IFundingRate, BlockContext, PositioningCallee, FundingRa
         uint256 lastSettledTimestamp = _lastSettledTimestampMap[baseToken];
         globalTwPremium = _globalFundingGrowthMap[baseToken];
         if (lastSettledTimestamp == 0) {
-            markTwap = IPerpetualOracle(_perpetualOracleArg).lastestLastPriceSMA(_underlyingPriceIndex, twapInterval);
-            indexTwap = IPerpetualOracle(_perpetualOracleArg).latestIndexPrice(_underlyingPriceIndex);
+            markTwap = IPerpetualOracle(_perpetualOracleArg).lastestLastPriceSMA(baseTokenIndex, twapInterval);
+            indexTwap = IPerpetualOracle(_perpetualOracleArg).latestIndexPrice(baseTokenIndex);
         } else if (timestamp - lastSettledTimestamp > _fundingPeriod) {
             //when funding period is over
             uint256 fundingLatestTimestamp = lastSettledTimestamp + ((timestamp - lastSettledTimestamp) / _fundingPeriod) * _fundingPeriod;
-            markTwap = IPerpetualOracle(_perpetualOracleArg).getMarkEpochSMA(_underlyingPriceIndex, lastSettledTimestamp, fundingLatestTimestamp);
-            indexTwap = IPerpetualOracle(_perpetualOracleArg).getIndexEpochSMA(_underlyingPriceIndex, lastSettledTimestamp, fundingLatestTimestamp);
+            markTwap = IPerpetualOracle(_perpetualOracleArg).getMarkEpochSMA(baseTokenIndex, lastSettledTimestamp, fundingLatestTimestamp);
+            indexTwap = IPerpetualOracle(_perpetualOracleArg).getIndexEpochSMA(baseTokenIndex, lastSettledTimestamp, fundingLatestTimestamp);
             require(indexTwap != 0, "P_IZ"); // index epoch price zero
             int256 deltaTwap = _getDeltaTwap(markTwap, indexTwap);
             int256 deltaTwPremiumX96 = deltaTwap * (fundingLatestTimestamp - lastSettledTimestamp).toInt256();

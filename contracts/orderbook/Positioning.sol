@@ -46,7 +46,7 @@ contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, 
         address accountBalanceArg,
         address matchingEngineArg,
         address perpetualOracleArg,
-        address[2] volmexBaseTokenArgs,
+        address[2] calldata baseTokenArgs,
         address[2] calldata liquidators
     ) external initializer {
         // P_VANC: Vault address is not contract
@@ -67,7 +67,12 @@ contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, 
         _vaultController = vaultControllerArg;
         _accountBalance = accountBalanceArg;
         _matchingEngine = matchingEngineArg;
-        _underlyingPriceIndex = underlyingPriceIndex;
+        _smInterval = 28800;
+        _smIntervalLiquidation = 3600;
+        indexPriceAllowedInterval = 1800;
+        for (uint256 index = 0; index < 2; index++) {
+            _underlyingPriceIndex[baseTokenArgs[index]] = index;
+        }
         for (uint256 index = 0; index < 2; index++) {
             isLiquidatorWhitelisted[liquidators[index]] = true;
         }
@@ -151,14 +156,14 @@ contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, 
         address baseToken,
         int256 positionSize
     ) external override whenNotPaused nonReentrant {
-        require(!isStaleIndexOracle(), "P_SIP"); // stale index price
+        require(!isStaleIndexOracle(baseToken), "P_SIP"); // stale index price
         _liquidate(trader, baseToken, positionSize);
     }
 
     ///Note for Auditor: Check full position liquidation even when partial was needed
     /// @inheritdoc IPositioning
     function liquidateFullPosition(address trader, address baseToken) external override whenNotPaused nonReentrant {
-        require(!isStaleIndexOracle(), "P_SIP"); // stale index price
+        require(!isStaleIndexOracle(baseToken), "P_SIP"); // stale index price
         // positionSizeToBeLiquidated = 0 means liquidating as much as possible
         _liquidate(trader, baseToken, 0);
     }
@@ -173,12 +178,12 @@ contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, 
         bytes memory signatureRight,
         bytes memory liquidator
     ) external override whenNotPaused nonReentrant {
-        require(!isStaleIndexOracle(), "P_SIP"); // stale index price
+        // short = selling base token
+        address baseToken = orderLeft.isShort ? orderLeft.makeAsset.virtualToken : orderLeft.takeAsset.virtualToken;
+        require(!isStaleIndexOracle(baseToken), "P_SIP"); // stale index price
         _validateFull(orderLeft, signatureLeft);
         _validateFull(orderRight, signatureRight);
 
-        // short = selling base token
-        address baseToken = orderLeft.isShort ? orderLeft.makeAsset.virtualToken : orderLeft.takeAsset.virtualToken;
         require(IMarketRegistry(_marketRegistry).checkBaseToken(baseToken), "V_PBRM"); // V_PERP: Basetoken not registered at market = V_PBRM
 
         // register base token for account balance calculations
@@ -264,20 +269,9 @@ contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, 
     }
 
     /// @dev Used to check for stale index oracle
-    function isStaleIndexOracle() public view returns (bool) {
-        uint256 lastUpdatedTimestamp = IPerpetualOracle(_perpetualOracleArg).lastestTimestamp(_underlyingPriceIndex, false);
-        return block.timestamp - lastUpdatedTimestamp >= indexPriceAllowedInterval;
-    }
-
-    /// @dev Used to check for stale index oracle
-    function isStaleIndexOracle() public view returns (bool) {
-        uint256 lastUpdatedTimestamp = IPerpetualOracle(_perpetualOracleArg).lastestTimestamp(0, false);
-        return block.timestamp - lastUpdatedTimestamp >= indexPriceAllowedInterval;
-    }
-
-    /// @dev Used to check for stale index oracle
-    function isStaleIndexOracle() public view returns (bool) {
-        uint256 lastUpdatedTimestamp = IPerpetualOracle(_perpetualOracleArg).lastestTimestamp(0, false);
+    function isStaleIndexOracle(address baseToken) public view returns (bool) {
+        uint256 index = _underlyingPriceIndex[baseToken];
+        uint256 lastUpdatedTimestamp = IPerpetualOracle(_perpetualOracleArg).lastestTimestamp(index, false);
         return block.timestamp - lastUpdatedTimestamp >= indexPriceAllowedInterval;
     }
 
@@ -608,8 +602,9 @@ contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, 
         return (liquidatedPositionSize, liquidatedPositionNotional);
     }
 
-    function _getIndexPrice(address baseToken) internal view returns (uint256) {
-        return IIndexPrice(baseToken).getIndexPrice(_underlyingPriceIndex);
+    function _getIndexPrice(address baseToken, uint256 twInterval) internal view returns (uint256 price) {
+        uint256 index = _underlyingPriceIndex[baseToken];
+        price = IVolmexBaseToken(baseToken).getIndexPrice(index, twInterval);
     }
 
     function _getTakerOpenNotional(address trader, address baseToken) internal view returns (int256) {
