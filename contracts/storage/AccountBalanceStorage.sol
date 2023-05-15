@@ -23,5 +23,5 @@ abstract contract AccountBalanceStorageV1 {
     // first key: trader, second key: baseToken
     mapping(address => mapping(address => LibAccountMarket.Info)) internal _accountMarketMap;
     // Index price oracle underlying index
-    uint256 internal _underlyingPriceIndex;
+    mapping(address => uint256) _underlyingPriceIndex;
 }

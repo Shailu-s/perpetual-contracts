@@ -30,16 +30,18 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
 
     uint256 internal constant _MIN_PARTIAL_LIQUIDATE_POSITION_VALUE = 100e18 wei; // 100 USD in decimal 18
 
-    function initialize(address positioningConfigArg) external initializer {
+    function initialize(address positioningConfigArg, address[2] calldata baseTokenArgs) external initializer {
         // IPositioningConfig address is not contract
         require(positioningConfigArg.isContract(), "AB_VPMMCNC");
 
         __PositioningCallee_init();
 
         _positioningConfig = positioningConfigArg;
-        _underlyingPriceIndex = 0;
         _smInterval = 28800;
         _smIntervalLiquidation = 3600;
+        for (uint256 index; index < 2; index++) {
+            _underlyingPriceIndex[baseTokenArgs[index]] = index;
+        }
         _grantRole(SM_INTERVAL_ROLE, positioningConfigArg);
         _grantRole(ACCOUNT_BALANCE_ADMIN, _msgSender());
     }
@@ -49,10 +51,10 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
         _grantRole(CAN_SETTLE_REALIZED_PNL, account);
     }
 
-    function setUnderlyingPriceIndex(uint256 underlyingIndex) external {
+    function setUnderlyingPriceIndex(address baseToken, uint256 underlyingIndex) external {
         _requireAccountBalanceAdmin();
-        _underlyingPriceIndex = underlyingIndex;
-        emit UnderlyingPriceIndexSet(underlyingIndex);
+        _underlyingPriceIndex[baseToken] = underlyingIndex;
+        emit UnderlyingPriceIndexSet(underlyingIndex, baseToken);
     }
 
     function setSmInterval(uint256 smInterval) external virtual {
@@ -251,7 +253,11 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
     }
 
     /// @inheritdoc IAccountBalance
-    function getTotalPositionValue(address trader, address baseToken, uint256 twInterval) public view override returns (int256) {
+    function getTotalPositionValue(
+        address trader,
+        address baseToken,
+        uint256 twInterval
+    ) public view override returns (int256) {
         int256 positionSize = getPositionSize(trader, baseToken);
         if (positionSize == 0) return 0;
 
@@ -275,6 +281,10 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
             totalPositionValue = totalPositionValue + positionValue;
         }
         return totalPositionValue;
+    }
+
+    function getTraderBaseTokens(address trader) public view override returns (address[] memory) {
+        return _baseTokensMap[trader];
     }
 
     function _modifyTakerBalance(
@@ -337,7 +347,8 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
     }
 
     function _getIndexPrice(address baseToken, uint256 twInterval) internal view returns (uint256) {
-        return IVolmexBaseToken(baseToken).getIndexPrice(_underlyingPriceIndex, twInterval);
+        uint256 baseTokenIndex = _underlyingPriceIndex[baseToken];
+        return IVolmexBaseToken(baseToken).getIndexPrice(baseTokenIndex, twInterval);
     }
 
     /// @return netQuoteBalance = quote.balance
