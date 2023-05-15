@@ -233,7 +233,7 @@ describe("VolmexPerpPeriphery", function () {
       for (let index = 0; index <= 10; index++) {
         await perpetualOracle.addIndexObservations([0], [100000000], [proofHash]);
       }
-      console.log(" opeoning posiiton");
+
       await perpetualOracle.setMarkObservationAdder(matchingEngine.address);
       await USDC.transfer(account4.address, "1000000000000000000");
       await USDC.transfer(account3.address, "1000000000000000000");
@@ -275,6 +275,7 @@ describe("VolmexPerpPeriphery", function () {
 
       const signatureLeft = await getSignature(orderLeft, account4.address);
       const signatureRight = await getSignature(orderRight, account3.address);
+      console.log("opening position");
       await volmexPerpPeriphery.openPosition(
         0,
         orderLeft,
@@ -299,8 +300,7 @@ describe("VolmexPerpPeriphery", function () {
         account3.address,
         1000000,
       );
-      console.log(" closing posiiton");
-      console.log(traderCollateral1.toString(), " total collatela after first in test");
+      console.log("closing positon");
       await perpetualOracle.setMarkObservationAdder(owner.address);
       await time.increase(10000);
 
