@@ -221,7 +221,7 @@ describe("VolmexPerpPeriphery", function () {
     await volmexPerpPeriphery.deployed();
   });
   describe("close position", () => {
-    it.only("A user should be able to withdraw entire balance after closing and opening same position", async () => {
+    it("A user should be able to withdraw entire balance after closing and opening same position", async () => {
       await positioningConfig.setMaxFundingRate("7300");
       await marketRegistry.connect(owner).setMakerFeeRatio(0.0004e6);
       await marketRegistry.connect(owner).setTakerFeeRatio(0.0004e6);
