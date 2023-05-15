@@ -300,7 +300,6 @@ describe("VolmexPerpPeriphery", function () {
         account3.address,
         1000000,
       );
-      console.log("closing positon");
       await perpetualOracle.setMarkObservationAdder(owner.address);
       await time.increase(10000);
 
@@ -351,6 +350,7 @@ describe("VolmexPerpPeriphery", function () {
         volmexBaseToken.address,
       );
       // expect(pendingFundingPayment.toString()).to.be.equal("730000000000000000");
+      console.log("closing positon");
       await volmexPerpPeriphery.openPosition(
         0,
         orderLeft1,
