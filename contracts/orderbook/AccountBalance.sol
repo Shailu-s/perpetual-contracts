@@ -51,10 +51,10 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
         _grantRole(CAN_SETTLE_REALIZED_PNL, account);
     }
 
-    function setUnderlyingPriceIndex(address baseToken, uint256 underlyingIndex) external {
+    function setUnderlyingPriceIndex(address volmexBaseToken, uint256 underlyingIndex) external {
         _requireAccountBalanceAdmin();
-        _underlyingPriceIndex[baseToken] = underlyingIndex;
-        emit UnderlyingPriceIndexSet(underlyingIndex, baseToken);
+        _underlyingPriceIndex[volmexBaseToken] = underlyingIndex;
+        emit UnderlyingPriceIndexSet(underlyingIndex, volmexBaseToken);
     }
 
     function setSmInterval(uint256 smInterval) external virtual {
