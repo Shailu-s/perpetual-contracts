@@ -2472,7 +2472,7 @@ describe("Positioning", function () {
             signatureRight,
             liquidator,
           ),
-        ).to.be.revertedWith("V_PERP_M: Order left canceled");
+        ).to.be.revertedWith("V_PERP_M: Order canceled");
       });
       it("wrong market registry", async () => {
         await expect(

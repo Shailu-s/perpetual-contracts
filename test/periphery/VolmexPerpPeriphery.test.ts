@@ -1526,7 +1526,7 @@ describe("VolmexPerpPeriphery", function () {
           signatureRight,
           liquidator,
         ),
-        "V_PERP_M: Order left canceled"
+        "V_PERP_M: Order canceled"
       )
     });
     describe("Bulk Methods", function () {
