@@ -2437,7 +2437,7 @@ describe("Positioning", function () {
             convert("1000"),
           );
 
-        await positioning.connect(account1).setMakerMinSalt(100);
+        await (await matchingEngine.connect(account1).cancelAllOrders(100)).wait();
 
         const orderLeft1 = Order(
           ORDER,
@@ -2472,7 +2472,7 @@ describe("Positioning", function () {
             signatureRight,
             liquidator,
           ),
-        ).to.be.revertedWith("V_PERP_M: Order canceled");
+        ).to.be.revertedWith("V_PERP_M: Order left canceled");
       });
       it("wrong market registry", async () => {
         await expect(
