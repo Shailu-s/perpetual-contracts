@@ -1,10 +1,10 @@
 import { expect } from "chai";
 import { ethers, upgrades } from "hardhat";
-import { smock } from "@defi-wonderland/smock";
 import { parseUnits, zeroPad } from "ethers/lib/utils";
 const { Order, Asset, sign, encodeAddress } = require("../order");
 import { BigNumber } from "ethers";
 import { time } from "@nomicfoundation/hardhat-network-helpers";
+const { expectRevert } = require("@openzeppelin/test-helpers");
 
 describe("VolmexPerpPeriphery", function () {
   let MatchingEngine;
@@ -1439,6 +1439,95 @@ describe("VolmexPerpPeriphery", function () {
 
       expect(positionSize).to.be.equal("-1000000000000000000");
       expect(positionSize1).to.be.equal("1000000000000000000");
+    });
+
+    it("Should fail after min salt is set", async () => {
+      await matchingEngine.grantMatchOrders(positioning.address);
+
+      await await USDC.transfer(account1.address, "200000000");
+      await await USDC.transfer(account2.address, "200000000");
+      await USDC.connect(account1).approve(volmexPerpPeriphery.address, "200000000");
+      await USDC.connect(account2).approve(volmexPerpPeriphery.address, "200000000");
+      await volmexPerpPeriphery.whitelistTrader(account1.address, true);
+      await volmexPerpPeriphery.whitelistTrader(account2.address, true);
+      (
+        await volmexPerpPeriphery
+          .connect(account1)
+          .depositToVault(index, USDC.address, "200000000")
+      ).wait();
+      (
+        await volmexPerpPeriphery
+          .connect(account2)
+          .depositToVault(index, USDC.address, "200000000")
+      ).wait();
+
+      let signatureLeft = await getSignature(orderLeft, account1.address);
+      let signatureRight = await getSignature(orderRight, account2.address);
+
+      // opening the positions here
+      await expect(
+        volmexPerpPeriphery.openPosition(
+          index,
+          orderLeft,
+          signatureLeft,
+          orderRight,
+          signatureRight,
+          liquidator,
+        ),
+      ).to.emit(positioning, "PositionChanged");
+
+      const positionSize = await accountBalance1.getPositionSize(
+        account1.address,
+        orderLeft.makeAsset.virtualToken,
+      );
+      const positionSize1 = await accountBalance1.getPositionSize(
+        account2.address,
+        orderLeft.makeAsset.virtualToken,
+      );
+
+      expect(positionSize).to.be.equal("-1000000000000000000");
+      expect(positionSize1).to.be.equal("1000000000000000000");
+
+      await (await matchingEngine.connect(account1).cancelAllOrders(5)).wait();
+      await (await matchingEngine.connect(account2).cancelAllOrders(6)).wait();
+
+      orderLeft = Order(
+        ORDER,
+        deadline,
+        account1.address,
+        Asset(volmexBaseToken.address, one.toString()),
+        Asset(virtualToken.address, one.toString()),
+        4,
+        (1e6).toString(),
+        true,
+      );
+
+      orderRight = Order(
+        ORDER,
+        deadline,
+        account2.address,
+        Asset(virtualToken.address, one.toString()),
+        Asset(volmexBaseToken.address, one.toString()),
+        5,
+        (1e6).toString(),
+        false,
+      );
+
+      signatureLeft = await getSignature(orderLeft, account1.address);
+      signatureRight = await getSignature(orderRight, account2.address);
+
+      // revert open position due to min salt
+      await expectRevert(
+        volmexPerpPeriphery.openPosition(
+          index,
+          orderLeft,
+          signatureLeft,
+          orderRight,
+          signatureRight,
+          liquidator,
+        ),
+        "V_PERP_M: Order canceled"
+      )
     });
     describe("Bulk Methods", function () {
       it("should open position in batch", async () => {
