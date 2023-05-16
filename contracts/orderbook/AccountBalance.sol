@@ -30,7 +30,7 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
 
     uint256 internal constant _MIN_PARTIAL_LIQUIDATE_POSITION_VALUE = 100e18 wei; // 100 USD in decimal 18
 
-    function initialize(address positioningConfigArg, address[2] calldata baseTokenArgs) external initializer {
+    function initialize(address positioningConfigArg, address[2] calldata volmexBaseTokenArgs) external initializer {
         // IPositioningConfig address is not contract
         require(positioningConfigArg.isContract(), "AB_VPMMCNC");
 
@@ -40,7 +40,7 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
         _smInterval = 28800;
         _smIntervalLiquidation = 3600;
         for (uint256 index; index < 2; index++) {
-            _underlyingPriceIndex[baseTokenArgs[index]] = index;
+            _underlyingPriceIndex[volmexBaseTokenArgs[index]] = index;
         }
         _grantRole(SM_INTERVAL_ROLE, positioningConfigArg);
         _grantRole(ACCOUNT_BALANCE_ADMIN, _msgSender());

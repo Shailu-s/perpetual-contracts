@@ -46,7 +46,7 @@ contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, 
         address accountBalanceArg,
         address matchingEngineArg,
         address perpetualOracleArg,
-        address[2] calldata baseTokenArgs,
+        address[2] calldata volmexBaseTokenArgs,
         address[2] calldata liquidators
     ) external initializer {
         // P_VANC: Vault address is not contract
@@ -71,7 +71,7 @@ contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, 
         _smIntervalLiquidation = 3600;
         indexPriceAllowedInterval = 1800;
         for (uint256 index = 0; index < 2; index++) {
-            _underlyingPriceIndex[baseTokenArgs[index]] = index;
+            _underlyingPriceIndex[volmexBaseTokenArgs[index]] = index;
         }
         for (uint256 index = 0; index < 2; index++) {
             isLiquidatorWhitelisted[liquidators[index]] = true;
