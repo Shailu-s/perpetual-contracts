@@ -368,6 +368,7 @@ describe("VolmexPerpPeriphery", function () {
       expect(unrealisedPnlTrader1).to.be.equal("-40020000000000000");
 
       expect(unrealisedPnlTrader2).to.be.equal("-40020000000000000");
+
       const positionSize3 = await accountBalance1.getPositionSize(
         account3.address,
         volmexBaseToken.address,
@@ -376,7 +377,8 @@ describe("VolmexPerpPeriphery", function () {
         account4.address,
         volmexBaseToken.address,
       );
-
+      expect(positionSize3.toString()).to.be.equal("0");
+      expect(positionSize4.toString()).to.be.equal("0");
       pendingFundingPayment = await positioning.getPendingFundingPayment(
         account3.address,
         volmexBaseToken.address,
