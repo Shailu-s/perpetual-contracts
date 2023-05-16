@@ -323,7 +323,7 @@ describe("MatchingEngine", function () {
         "0",
         true,
       );
-      await matchingEngine.setMakerMinSalt("100");
+      await matchingEngine.cancelAllOrders("100");
       await expect(matchingEngine.cancelOrder(order1)).to.be.revertedWith(
         "V_PERP_M: order salt lower",
       );

@@ -6,10 +6,6 @@ import "../libs/LibOrder.sol";
 import "../interfaces/IMatchingEngine.sol";
 
 contract PositioningTest is Positioning {
-    function setMakerMinSalt(uint256 _val) external {
-        IMatchingEngine(_matchingEngine).cancelAllOrders(_val);
-    }
-
     function registerBaseToken(address trader, address token) external {
         _registerBaseToken(trader, token);
     }
