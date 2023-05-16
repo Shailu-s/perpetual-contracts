@@ -92,6 +92,8 @@ abstract contract MatchingEngineCore is PausableUpgradeable, AssetMatcher, Acces
         _requireCanMatchOrders();
         if (orderLeft.trader != address(0) && orderRight.trader != address(0)) {
             require(orderRight.trader != orderLeft.trader, "V_PERP_M: order verification failed");
+            require((orderLeft.salt >= makerMinSalt[orderLeft.trader]), "V_PERP_M: Order left canceled");
+            require((orderLeft.salt >= makerMinSalt[orderRight.trader]), "V_PERP_M: Order right canceled");
         }
         LibFill.FillResult memory newFill = _matchAndTransfer(orderLeft, orderRight);
 
