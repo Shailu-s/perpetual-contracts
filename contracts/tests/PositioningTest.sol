@@ -3,10 +3,11 @@ pragma solidity =0.8.18;
 
 import { Positioning } from "../orderbook/Positioning.sol";
 import "../libs/LibOrder.sol";
+import "../interfaces/IMatchingEngine.sol";
 
 contract PositioningTest is Positioning {
     function setMakerMinSalt(uint256 _val) external {
-        makerMinSalt[_msgSender()] = _val;
+        IMatchingEngine(_matchingEngine).cancelAllOrders(_val);
     }
 
     function registerBaseToken(address trader, address token) external {

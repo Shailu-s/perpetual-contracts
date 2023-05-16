@@ -1441,7 +1441,7 @@ describe("VolmexPerpPeriphery", function () {
       expect(positionSize1).to.be.equal("1000000000000000000");
     });
 
-    it.only("Should fail after min salt is set", async () => {
+    it("Should fail after min salt is set", async () => {
       await matchingEngine.grantMatchOrders(positioning.address);
 
       await await USDC.transfer(account1.address, "200000000");
