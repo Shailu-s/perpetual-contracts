@@ -393,8 +393,13 @@ describe("PerpetualOracle - Index Price Oracle", function () {
       await perpetualOracle.setMarkObservationAdder(owner.address);
       await perpetualOracle.addMarkObservation(0, 70000000);
       for (let i = 0; i < 10; i++) {
-        await perpetualOracle.addIndexObservations([0], [65000000], [proofHash]);
+        for (let j = 0; j < 10; j++) {
+          await perpetualOracle.addIndexObservations([0], [65000000], [proofHash]);
+        }
+        time.increase(28000);
+        console.log((await perpetualOracle.indexEpochs(0, i != 0 ? i - 1: 0)).toString());
       }
+      console.log("Totalepochs", (await perpetualOracle.indexPriceEpochsCount(0)).toString());
 
       for (let i = 0; i < 2; i++) {
         await perpetualOracle.addMarkObservation(0, 70000000 * (i + 1));

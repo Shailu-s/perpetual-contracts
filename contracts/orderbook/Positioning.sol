@@ -225,7 +225,7 @@ contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, 
     function getOrderValidate(LibOrder.Order memory order) external view returns (bool) {
         require(order.trader != address(0), "V_PERP_OVF"); // V_PERP_M: order verification failed
         require(order.salt != 0, "V_PERP_0S"); //V_PERP_M: 0 salt can't be used
-        require(order.salt >= makerMinSalt[_msgSender()], "V_PERP_LS"); // V_PERP_M: order salt lower
+        require(order.salt >= IMatchingEngine(_matchingEngine).makerMinSalt(_msgSender()), "V_PERP_LS"); // V_PERP_M: order salt lower
         bytes32 orderHashKey = LibOrder.hashKey(order);
         uint256 fills = IMatchingEngine(_matchingEngine).fills(orderHashKey);
         require(fills < order.makeAsset.value, "V_PERP_NF"); //V_PERP_NF:  nothing to fill

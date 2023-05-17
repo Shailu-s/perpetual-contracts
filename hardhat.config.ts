@@ -39,6 +39,10 @@ const config: HardhatUserConfig = {
   networks: {
     hardhat: {
       allowUnlimitedContractSize: true,
+      forking: {
+        url: `https://arb-goerli.g.alchemy.com/v2/${process.env.ARBITRUM_TESTNET_ALCHEMY_API_KEY}`,
+        blockNumber: 19456140
+      }
     },
     goerli: {
       url: `https://eth-goerli.g.alchemy.com/v2/${process.env.GOERLI_ALCHEMY_API_KEY}`,
@@ -65,8 +69,7 @@ const config: HardhatUserConfig = {
       timeout: 36000000,
     },
     "arbitrum-goerli": {
-      url: "https://proportionate-practical-aura.arbitrum-goerli.discover.quiknode.pro/5cded48053396d8c01f9ed826f656640c2fedd8e/",
-      // `https://arb-goerli.g.alchemy.com/v2/${process.env.ARBITRUM_TESTNET_ALCHEMY_API_KEY}`,
+      url: `https://arb-goerli.g.alchemy.com/v2/${process.env.ARBITRUM_TESTNET_ALCHEMY_API_KEY}`,
       accounts: [`0x${process.env.PRIVATE_KEY}`],
       throwOnTransactionFailures: true,
       loggingEnabled: true,

@@ -92,6 +92,8 @@ abstract contract MatchingEngineCore is PausableUpgradeable, AssetMatcher, Acces
         _requireCanMatchOrders();
         if (orderLeft.trader != address(0) && orderRight.trader != address(0)) {
             require(orderRight.trader != orderLeft.trader, "V_PERP_M: order verification failed");
+            _requireMinSalt(orderLeft.salt, orderLeft.trader);
+            _requireMinSalt(orderRight.salt, orderRight.trader);
         }
         LibFill.FillResult memory newFill = _matchAndTransfer(orderLeft, orderRight);
 
@@ -161,6 +163,10 @@ abstract contract MatchingEngineCore is PausableUpgradeable, AssetMatcher, Acces
         } else {
             fill = fills[hash];
         }
+    }
+
+    function _requireMinSalt(uint256 salt, address trader) internal view {
+        if (salt != 0) require(salt >= makerMinSalt[trader], "V_PERP_M: Order canceled");
     }
 
     function _requireCanMatchOrders() internal view {
