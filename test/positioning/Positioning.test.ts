@@ -1626,7 +1626,7 @@ describe("Positioning", function () {
         await expect(positionSizeAfter.toString()).to.be.equal("0");
         await expect(positionSizeAfter1.toString()).to.be.equal("0");
       });
-      it("should close position with complementary order", async () => {
+      it("should close position with complementary order scenario 1 ", async () => {
         await matchingEngine.grantMatchOrders(positioning.address);
 
         await virtualToken.mint(account1.address, convert("100000000000000"));
@@ -1725,7 +1725,7 @@ describe("Positioning", function () {
 
         expect(positionSizeAfter.toString()).to.be.equal("0");
       });
-      it("should close position with complementary order", async () => {
+      it("should close position with complementary order scenario 2", async () => {
         await matchingEngine.grantMatchOrders(positioning.address);
 
         await virtualToken.mint(account1.address, convert("100000000000000"));
