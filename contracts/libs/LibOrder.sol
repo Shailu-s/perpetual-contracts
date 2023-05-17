@@ -45,9 +45,14 @@ library LibOrder {
         );
     }
 
-    function calculateRemaining(Order memory order, uint256 fill) internal pure returns (uint256 baseValue, uint256 quoteValue) {
-        baseValue = order.makeAsset.value - fill;
-        quoteValue = LibMath.safeGetPartialAmountFloor(order.takeAsset.value, order.makeAsset.value, baseValue);
+    function calculateRemaining(Order memory order, uint256 fill, bool isMakeFill) internal pure returns (uint256 makeValue, uint256 takeValue) {
+        if (isMakeFill) {
+            makeValue = order.makeAsset.value - fill;
+            takeValue = LibMath.safeGetPartialAmountFloor(order.takeAsset.value, order.makeAsset.value, makeValue);
+        } else {
+            takeValue = order.takeAsset.value - fill;
+            makeValue = LibMath.safeGetPartialAmountFloor(order.makeAsset.value, order.takeAsset.value, takeValue);
+        }
     }
 
     function hashKey(Order memory order) internal pure returns (bytes32) {
