@@ -152,7 +152,7 @@ abstract contract MatchingEngineCore is PausableUpgradeable, AssetMatcher, Acces
         }
 
         if (orderRight.salt != 0) {
-            fills[rightOrderKeyHash] = rightOrderFill + newFill.rightValue;
+            fills[rightOrderKeyHash] = rightOrderFill + newFill.leftValue;
         }
         return newFill;
     }
