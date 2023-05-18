@@ -220,183 +220,7 @@ describe("VolmexPerpPeriphery", function () {
     ]);
     await volmexPerpPeriphery.deployed();
   });
-  describe("close position", () => {
-    it.only("A user should be able to withdraw entire balance after closing and opening same position", async () => {
-      await positioningConfig.setMaxFundingRate("7300");
-      await marketRegistry.connect(owner).setMakerFeeRatio(0.0004e6);
-      await marketRegistry.connect(owner).setTakerFeeRatio(0.0004e6);
-      await perpetualOracle.setMarkObservationAdder(owner.address);
-      await perpetualOracle.setIndexObservationAdder(owner.address);
-      for (let index = 0; index <= 10; index++) {
-        await perpetualOracle.addMarkObservation(0, 99000000);
-      }
-      for (let index = 0; index <= 10; index++) {
-        await perpetualOracle.addIndexObservations([0], [100000000], [proofHash]);
-      }
 
-      await perpetualOracle.setMarkObservationAdder(matchingEngine.address);
-      await USDC.transfer(account4.address, "1000000000000000000");
-      await USDC.transfer(account3.address, "1000000000000000000");
-      await matchingEngine.grantMatchOrders(positioning.address);
-      await USDC.connect(account3).approve(volmexPerpPeriphery.address, "1000000000000000000");
-      await USDC.connect(account4).approve(volmexPerpPeriphery.address, "1000000000000000000");
-      await volmexPerpPeriphery.whitelistTrader(account3.address, true);
-      await volmexPerpPeriphery.whitelistTrader(account4.address, true);
-
-      (
-        await volmexPerpPeriphery.connect(account4).depositToVault(0, USDC.address, "1000000000")
-      ).wait();
-      (
-        await volmexPerpPeriphery.connect(account3).depositToVault(0, USDC.address, "1000000000")
-      ).wait();
-
-      // account4 sell order 1 EVIV @ 100 USDT
-      const orderLeft = Order(
-        ORDER,
-        deadline,
-        account4.address,
-        Asset(volmexBaseToken.address, "1000000000000000000"), // 1
-        Asset(virtualToken.address, "100000000000000000000"), // 100
-        256,
-        (1e6).toString(),
-        true,
-      );
-      // account3 buy order 1 EVIV @ 100 USDT
-      const orderRight = Order(
-        ORDER,
-        deadline,
-        account3.address,
-        Asset(virtualToken.address, "100000000000000000000"),
-        Asset(volmexBaseToken.address, "1000000000000000000"),
-        890,
-        (1e6).toString(),
-        false,
-      );
-
-      const signatureLeft = await getSignature(orderLeft, account4.address);
-      const signatureRight = await getSignature(orderRight, account3.address);
-      console.log("opening position");
-      await volmexPerpPeriphery.openPosition(
-        0,
-        orderLeft,
-        signatureLeft,
-        orderRight,
-        signatureRight,
-        liquidator,
-      );
-
-      const positionSize1 = await accountBalance1.getPositionSize(
-        account3.address,
-        volmexBaseToken.address,
-      );
-      const positionSize2 = await accountBalance1.getPositionSize(
-        account4.address,
-        volmexBaseToken.address,
-      );
-
-      expect(positionSize1.toString()).to.be.equal("1000000000000000000");
-      expect(positionSize2.toString()).to.be.equal("-1000000000000000000");
-      const traderCollateral1 = await vaultController.getFreeCollateralByRatio(
-        account3.address,
-        1000000,
-      );
-      await perpetualOracle.setMarkObservationAdder(owner.address);
-      await time.increase(10000);
-
-      for (let index = 0; index <= 10; index++) {
-        await perpetualOracle.addIndexObservations([0], [100000000], [proofHash]);
-      }
-      for (let index = 0; index <= 10; index++) {
-        await perpetualOracle.addMarkObservation(0, 1500000000);
-      }
-      const timestamp = await time.latest();
-      // await time.increase(18800);
-      // for (let index = 0; index <= 10; index++) {
-      //   await indexPriceOracle.addObservation([100000000], [0], [proofHash]);
-      // }
-      // for (let index = 0; index <= 10; index++) {
-      //   await markPriceOracle.addObservation(1500000000, 0);
-      // }
-
-      // account3 sell order 1 EVIV @ 100 USDT
-      const orderLeft1 = Order(
-        ORDER,
-        deadline,
-        account3.address,
-        Asset(volmexBaseToken.address, "1000000000000000000"), // 1 EVIV
-        Asset(virtualToken.address, "100050000000000000000"), // 100 USDT
-        256,
-        (1e6).toString(),
-        true,
-      );
-      // account4 buy order 1 EVIV @ 100 USDT
-      const orderRight1 = Order(
-        ORDER,
-        deadline,
-        account4.address,
-        Asset(virtualToken.address, "100050000000000000000"), // 100 USDT
-        Asset(volmexBaseToken.address, "1000000000000000000"), // 1 EVIV
-        890,
-        (1e6).toString(),
-        false,
-      );
-
-      const signatureLeft1 = await getSignature(orderLeft1, account3.address);
-      const signatureRight1 = await getSignature(orderRight1, account4.address);
-      let indexsma = await perpetualOracle.latestIndexSMA(28800, 0);
-      console.log("indexsma", indexsma.toString());
-      let pendingFundingPayment = await positioning.getPendingFundingPayment(
-        account3.address,
-        volmexBaseToken.address,
-      );
-      // expect(pendingFundingPayment.toString()).to.be.equal("730000000000000000");
-      console.log("closing positon");
-      await volmexPerpPeriphery.openPosition(
-        0,
-        orderLeft1,
-        signatureLeft1,
-        orderRight1,
-        signatureRight1,
-        liquidator,
-      );
-      let pnlTrader1 = await accountBalance1.getPnlAndPendingFee(account3.address);
-      let pnlTrader2 = await accountBalance1.getPnlAndPendingFee(account4.address);
-      let unrealisedPnlTrader2 = pnlTrader2[1].toString();
-      let unrealisedPnlTrader1 = pnlTrader1[1].toString();
-      let realisedPnlTrader2 = pnlTrader2[0].toString();
-      let realisedPnlTrader1 = pnlTrader1[0].toString();
-      expect(unrealisedPnlTrader1).to.be.equal("-40020000000000000");
-
-      expect(unrealisedPnlTrader2).to.be.equal("-40020000000000000");
-      const positionSize3 = await accountBalance1.getPositionSize(
-        account3.address,
-        volmexBaseToken.address,
-      );
-      const positionSize4 = await accountBalance1.getPositionSize(
-        account4.address,
-        volmexBaseToken.address,
-      );
-
-      pendingFundingPayment = await positioning.getPendingFundingPayment(
-        account3.address,
-        volmexBaseToken.address,
-      );
-      expect(pendingFundingPayment.toString()).to.be.equal("0");
-      // 1 * 0.73%  * 100
-      // max funding payment of 0.73 USDT
-      // max funding payment = position size in EVIV * max funding rate * indexsma 8 hour
-      const lastFundingrate = await positioning.getLastFundingRate(volmexBaseToken.address);
-      const traderCollateral = await vaultController.getFreeCollateralByRatio(
-        account3.address,
-        200000,
-      );
-
-      expect(traderCollateral.toString()).to.be.equal("999961976000000000000");
-      const tx = await volmexPerpPeriphery
-        .connect(account3)
-        .withdrawFromVault("0", USDC.address, account3.address, "999961976");
-    });
-  });
   describe("Funding payment", () => {
     const depositAmount = BigNumber.from("100000000000000");
     let baseAmount = "50000000000000"; //50
@@ -787,7 +611,387 @@ describe("VolmexPerpPeriphery", function () {
       }
     });
   });
+  describe("2x trading fees issue", () => {
+    it("A user should be able to withdraw entire balance after closing and opening same position", async () => {
+      await positioningConfig.setMaxFundingRate("7300");
+      await marketRegistry.connect(owner).setMakerFeeRatio(0.0004e6);
+      await marketRegistry.connect(owner).setTakerFeeRatio(0.0004e6);
+      await perpetualOracle.setMarkObservationAdder(owner.address);
+      await perpetualOracle.setIndexObservationAdder(owner.address);
+      for (let index = 0; index <= 10; index++) {
+        await perpetualOracle.addMarkObservation(0, 99000000);
+      }
+      for (let index = 0; index <= 10; index++) {
+        await perpetualOracle.addIndexObservations([0], [100000000], [proofHash]);
+      }
 
+      await perpetualOracle.setMarkObservationAdder(matchingEngine.address);
+      await USDC.transfer(account4.address, "1000000000000000000");
+      await USDC.transfer(account3.address, "1000000000000000000");
+      await matchingEngine.grantMatchOrders(positioning.address);
+      await USDC.connect(account3).approve(volmexPerpPeriphery.address, "1000000000000000000");
+      await USDC.connect(account4).approve(volmexPerpPeriphery.address, "1000000000000000000");
+      await volmexPerpPeriphery.whitelistTrader(account3.address, true);
+      await volmexPerpPeriphery.whitelistTrader(account4.address, true);
+
+      (
+        await volmexPerpPeriphery.connect(account4).depositToVault(0, USDC.address, "1000000000")
+      ).wait();
+      (
+        await volmexPerpPeriphery.connect(account3).depositToVault(0, USDC.address, "1000000000")
+      ).wait();
+
+      // account4 sell order 1 EVIV @ 100 USDT
+      const orderLeft = Order(
+        ORDER,
+        deadline,
+        account4.address,
+        Asset(volmexBaseToken.address, "1000000000000000000"), // 1
+        Asset(virtualToken.address, "100000000000000000000"), // 100
+        256,
+        (1e6).toString(),
+        true,
+      );
+      // account3 buy order 1 EVIV @ 100 USDT
+      const orderRight = Order(
+        ORDER,
+        deadline,
+        account3.address,
+        Asset(virtualToken.address, "100000000000000000000"),
+        Asset(volmexBaseToken.address, "1000000000000000000"),
+        890,
+        (1e6).toString(),
+        false,
+      );
+
+      const signatureLeft = await getSignature(orderLeft, account4.address);
+      const signatureRight = await getSignature(orderRight, account3.address);
+      console.log("opening position");
+      await volmexPerpPeriphery.openPosition(
+        0,
+        orderLeft,
+        signatureLeft,
+        orderRight,
+        signatureRight,
+        liquidator,
+      );
+
+      const positionSize1 = await accountBalance1.getPositionSize(
+        account3.address,
+        volmexBaseToken.address,
+      );
+      const positionSize2 = await accountBalance1.getPositionSize(
+        account4.address,
+        volmexBaseToken.address,
+      );
+
+      expect(positionSize1.toString()).to.be.equal("1000000000000000000");
+      expect(positionSize2.toString()).to.be.equal("-1000000000000000000");
+      const traderCollateral1 = await vaultController.getFreeCollateralByRatio(
+        account3.address,
+        1000000,
+      );
+      await perpetualOracle.setMarkObservationAdder(owner.address);
+      await time.increase(10000);
+
+      for (let index = 0; index <= 10; index++) {
+        await perpetualOracle.addIndexObservations([0], [100000000], [proofHash]);
+      }
+      for (let index = 0; index <= 10; index++) {
+        await perpetualOracle.addMarkObservation(0, 1500000000);
+      }
+      const timestamp = await time.latest();
+      // await time.increase(18800);
+      // for (let index = 0; index <= 10; index++) {
+      //   await indexPriceOracle.addObservation([100000000], [0], [proofHash]);
+      // }
+      // for (let index = 0; index <= 10; index++) {
+      //   await markPriceOracle.addObservation(1500000000, 0);
+      // }
+
+      // account3 sell order 1 EVIV @ 100 USDT
+      let openNotional = await accountBalance1.getOpenNotional(
+        account3.address,
+        volmexBaseToken.address,
+      );
+      console.log(openNotional.toString(), " open notional");
+
+      const orderLeft1 = Order(
+        ORDER,
+        deadline,
+        account3.address,
+        Asset(volmexBaseToken.address, "1000000000000000000"), // 1 EVIV
+        Asset(virtualToken.address, "100000000000000000000"), // 100 USDT
+        256,
+        (1e6).toString(),
+        true,
+      );
+      // account4 buy order 1 EVIV @ 100 USDT
+      const orderRight1 = Order(
+        ORDER,
+        deadline,
+        account4.address,
+        Asset(virtualToken.address, "100000000000000000000"), // 100 USDT
+        Asset(volmexBaseToken.address, "1000000000000000000"), // 1 EVIV
+        890,
+        (1e6).toString(),
+        false,
+      );
+
+      const signatureLeft1 = await getSignature(orderLeft1, account3.address);
+      const signatureRight1 = await getSignature(orderRight1, account4.address);
+      let indexsma = await perpetualOracle.latestIndexSMA(28800, 0);
+      console.log("indexsma", indexsma.toString());
+      let pendingFundingPayment = await positioning.getPendingFundingPayment(
+        account3.address,
+        volmexBaseToken.address,
+      );
+      // expect(pendingFundingPayment.toString()).to.be.equal("730000000000000000");
+      console.log("closing positon");
+      console.log(liquidator, " liquidator");
+      await volmexPerpPeriphery.openPosition(
+        0,
+        orderLeft1,
+        signatureLeft1,
+        orderRight1,
+        signatureRight1,
+        liquidator,
+      );
+      let pnlTrader1 = await accountBalance1.getPnlAndPendingFee(account3.address);
+      let pnlTrader2 = await accountBalance1.getPnlAndPendingFee(account4.address);
+      let unrealisedPnlTrader2 = pnlTrader2[1].toString();
+      let unrealisedPnlTrader1 = pnlTrader1[1].toString();
+      let realisedPnlTrader2 = pnlTrader2[0].toString();
+      let realisedPnlTrader1 = pnlTrader1[0].toString();
+      expect(unrealisedPnlTrader1).to.be.equal("0");
+
+      expect(unrealisedPnlTrader2).to.be.equal("0");
+      const positionSize3 = await accountBalance1.getPositionSize(
+        account3.address,
+        volmexBaseToken.address,
+      );
+      const positionSize4 = await accountBalance1.getPositionSize(
+        account4.address,
+        volmexBaseToken.address,
+      );
+
+      pendingFundingPayment = await positioning.getPendingFundingPayment(
+        account3.address,
+        volmexBaseToken.address,
+      );
+      expect(pendingFundingPayment.toString()).to.be.equal("0");
+      openNotional = await accountBalance1.getOpenNotional(
+        account3.address,
+        volmexBaseToken.address,
+      );
+      console.log(openNotional.toString(), " open notional");
+      // 1 * 0.73%  * 100
+      // max funding payment of 0.73 USDT
+      // max funding payment = position size in EVIV * max funding rate * indexsma 8 hour
+      const lastFundingrate = await positioning.getLastFundingRate(volmexBaseToken.address);
+      const traderCollateral = await vaultController.getFreeCollateralByRatio(
+        account3.address,
+        200000,
+      );
+
+      expect(traderCollateral.toString()).to.be.equal("999920000000000000000");
+      const tx = await volmexPerpPeriphery
+        .connect(account3)
+        .withdrawFromVault("0", USDC.address, account3.address, "999920000");
+    });
+    it("should not close his position and goes long again", async () => {
+      await positioningConfig.setMaxFundingRate("7300");
+      await marketRegistry.connect(owner).setMakerFeeRatio(0.0004e6);
+      await marketRegistry.connect(owner).setTakerFeeRatio(0.0004e6);
+      await perpetualOracle.setMarkObservationAdder(owner.address);
+      await perpetualOracle.setIndexObservationAdder(owner.address);
+      for (let index = 0; index <= 10; index++) {
+        await perpetualOracle.addMarkObservation(0, 99000000);
+      }
+      for (let index = 0; index <= 10; index++) {
+        await perpetualOracle.addIndexObservations([0], [100000000], [proofHash]);
+      }
+
+      await perpetualOracle.setMarkObservationAdder(matchingEngine.address);
+      await USDC.transfer(account4.address, "1000000000000000000");
+      await USDC.transfer(account3.address, "1000000000000000000");
+      await matchingEngine.grantMatchOrders(positioning.address);
+      await USDC.connect(account3).approve(volmexPerpPeriphery.address, "1000000000000000000");
+      await USDC.connect(account4).approve(volmexPerpPeriphery.address, "1000000000000000000");
+      await volmexPerpPeriphery.whitelistTrader(account3.address, true);
+      await volmexPerpPeriphery.whitelistTrader(account4.address, true);
+
+      (
+        await volmexPerpPeriphery.connect(account4).depositToVault(0, USDC.address, "1000000000")
+      ).wait();
+      (
+        await volmexPerpPeriphery.connect(account3).depositToVault(0, USDC.address, "1000000000")
+      ).wait();
+
+      // account4 sell order 1 EVIV @ 100 USDT
+      const orderLeft = Order(
+        ORDER,
+        deadline,
+        account4.address,
+        Asset(volmexBaseToken.address, "1000000000000000000"), // 1
+        Asset(virtualToken.address, "100000000000000000000"), // 100
+        256,
+        (1e6).toString(),
+        true,
+      );
+      // account3 buy order 1 EVIV @ 100 USDT
+      const orderRight = Order(
+        ORDER,
+        deadline,
+        account3.address,
+        Asset(virtualToken.address, "100000000000000000000"),
+        Asset(volmexBaseToken.address, "1000000000000000000"),
+        890,
+        (1e6).toString(),
+        false,
+      );
+
+      const signatureLeft = await getSignature(orderLeft, account4.address);
+      const signatureRight = await getSignature(orderRight, account3.address);
+      console.log("opening position");
+      await volmexPerpPeriphery.openPosition(
+        0,
+        orderLeft,
+        signatureLeft,
+        orderRight,
+        signatureRight,
+        liquidator,
+      );
+
+      const positionSize1 = await accountBalance1.getPositionSize(
+        account3.address,
+        volmexBaseToken.address,
+      );
+      const positionSize2 = await accountBalance1.getPositionSize(
+        account4.address,
+        volmexBaseToken.address,
+      );
+
+      expect(positionSize1.toString()).to.be.equal("1000000000000000000");
+      expect(positionSize2.toString()).to.be.equal("-1000000000000000000");
+      const traderCollateral1 = await vaultController.getFreeCollateralByRatio(
+        account3.address,
+        200000,
+      );
+      const traderCollateral2 = await vaultController.getFreeCollateralByRatio(
+        account4.address,
+        200000,
+      );
+      await perpetualOracle.setMarkObservationAdder(owner.address);
+      await time.increase(10000);
+
+      for (let index = 0; index <= 10; index++) {
+        await perpetualOracle.addIndexObservations([0], [100000000], [proofHash]);
+      }
+      for (let index = 0; index <= 10; index++) {
+        await perpetualOracle.addMarkObservation(0, 90000000);
+      }
+      const timestamp = await time.latest();
+      // await time.increase(18800);
+      // for (let index = 0; index <= 10; index++) {
+      //   await indexPriceOracle.addObservation([100000000], [0], [proofHash]);
+      // }
+      // for (let index = 0; index <= 10; index++) {
+      //   await markPriceOracle.addObservation(1500000000, 0);
+      // }
+
+      // account3 sell order 1 EVIV @ 100 USDT
+      let openNotional = await accountBalance1.getOpenNotional(
+        account3.address,
+        volmexBaseToken.address,
+      );
+      const quoteValue1 = BigNumber.from(traderCollateral1.toString()).mul(470).div(100);
+      const quoteValue2 = BigNumber.from(traderCollateral2.toString()).mul(470).div(100);
+      console.log(quoteValue1.toString(), "quote value 1");
+      console.log(quoteValue2.toString(), "quote value 2");
+      const baseValue1 = quoteValue1.div(99);
+      const baseValue2 = quoteValue2.div(99);
+      const orderLeft1 = Order(
+        ORDER,
+        deadline,
+        account3.address,
+        Asset(virtualToken.address, quoteValue1.toString()),
+        Asset(volmexBaseToken.address, baseValue1.toString()),
+        560,
+        (1e6).toString(),
+        false,
+      );
+      // account4 buy order 1 EVIV @ 100 USDT
+      const orderRight1 = Order(
+        ORDER,
+        deadline,
+        account4.address,
+        Asset(volmexBaseToken.address, baseValue2.toString()),
+        Asset(virtualToken.address, quoteValue2.toString()),
+        900,
+        (1e6).toString(),
+        true,
+      );
+
+      const signatureLeft1 = await getSignature(orderLeft1, account3.address);
+      const signatureRight1 = await getSignature(orderRight1, account4.address);
+      let indexsma = await perpetualOracle.latestIndexSMA(28800, 0);
+      console.log("indexsma", indexsma.toString());
+      let pendingFundingPayment = await positioning.getPendingFundingPayment(
+        account3.address,
+        volmexBaseToken.address,
+      );
+      // expect(pendingFundingPayment.toString()).to.be.equal("730000000000000000");
+      console.log("closing positon");
+      console.log(liquidator, " liquidator");
+      await volmexPerpPeriphery.openPosition(
+        0,
+        orderLeft1,
+        signatureLeft1,
+        orderRight1,
+        signatureRight1,
+        liquidator,
+      );
+      let pnlTrader1 = await accountBalance1.getPnlAndPendingFee(account3.address);
+      let pnlTrader2 = await accountBalance1.getPnlAndPendingFee(account4.address);
+      let unrealisedPnlTrader2 = pnlTrader2[1].toString();
+      let unrealisedPnlTrader1 = pnlTrader1[1].toString();
+      let realisedPnlTrader2 = pnlTrader2[0].toString();
+      let realisedPnlTrader1 = pnlTrader1[0].toString();
+      expect(unrealisedPnlTrader1).to.be.equal("44640663977373737300");
+
+      expect(unrealisedPnlTrader2).to.be.equal("-48405283497373737300");
+      const positionSize3 = await accountBalance1.getPositionSize(
+        account3.address,
+        volmexBaseToken.address,
+      );
+      const positionSize4 = await accountBalance1.getPositionSize(
+        account4.address,
+        volmexBaseToken.address,
+      );
+
+      pendingFundingPayment = await positioning.getPendingFundingPayment(
+        account3.address,
+        volmexBaseToken.address,
+      );
+      expect(pendingFundingPayment.toString()).to.be.equal("0");
+      openNotional = await accountBalance1.getOpenNotional(
+        account3.address,
+        volmexBaseToken.address,
+      );
+      console.log(openNotional.toString(), " open notional");
+      // 1 * 0.73%  * 100
+      // max funding payment of 0.73 USDT
+      // max funding payment = position size in EVIV * max funding rate * indexsma 8 hour
+      const lastFundingrate = await positioning.getLastFundingRate(volmexBaseToken.address);
+      const traderCollateral = await vaultController.getFreeCollateralByRatio(
+        account3.address,
+        200000,
+      );
+
+      expect(traderCollateral.toString()).to.be.equal("58468658048000000000");
+    });
+  });
   describe("VolmexPerpPeriphery deployment", async () => {
     it("should deploy VolmexPerpPeriphery", async () => {
       volmexPerpPeriphery = await upgrades.deployProxy(VolmexPerpPeriphery, [
