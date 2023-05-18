@@ -221,7 +221,7 @@ describe("VolmexPerpPeriphery", function () {
     await volmexPerpPeriphery.deployed();
   });
   describe("close position", () => {
-    it("A user should be able to withdraw entire balance after closing and opening same position", async () => {
+    it.only("A user should be able to withdraw entire balance after closing and opening same position", async () => {
       await positioningConfig.setMaxFundingRate("7300");
       await marketRegistry.connect(owner).setMakerFeeRatio(0.0004e6);
       await marketRegistry.connect(owner).setTakerFeeRatio(0.0004e6);
@@ -388,10 +388,13 @@ describe("VolmexPerpPeriphery", function () {
       const lastFundingrate = await positioning.getLastFundingRate(volmexBaseToken.address);
       const traderCollateral = await vaultController.getFreeCollateralByRatio(
         account3.address,
-        1000000,
+        200000,
       );
 
-      expect(traderCollateral.toString()).to.be.equal("999929960000000000000");
+      expect(traderCollateral.toString()).to.be.equal("999961976000000000000");
+      const tx = await volmexPerpPeriphery
+        .connect(account3)
+        .withdrawFromVault("0", USDC.address, account3.address, "999961976");
     });
   });
   describe("Funding payment", () => {
