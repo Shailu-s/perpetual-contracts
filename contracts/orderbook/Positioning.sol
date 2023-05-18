@@ -71,7 +71,7 @@ contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, 
         _smIntervalLiquidation = 3600;
         indexPriceAllowedInterval = 1800;
         for (uint256 index = 0; index < 2; index++) {
-            _underlyingPriceIndex[volmexBaseTokenArgs[index]] = index;
+            _underlyingPriceIndexes[volmexBaseTokenArgs[index]] = index;
         }
         for (uint256 index = 0; index < 2; index++) {
             isLiquidatorWhitelisted[liquidators[index]] = true;
@@ -270,7 +270,7 @@ contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, 
 
     /// @dev Used to check for stale index oracle
     function isStaleIndexOracle(address baseToken) public view returns (bool) {
-        uint256 index = _underlyingPriceIndex[baseToken];
+        uint256 index = _underlyingPriceIndexes[baseToken];
         uint256 lastUpdatedTimestamp = IPerpetualOracle(_perpetualOracleArg).lastestTimestamp(index, false);
         return block.timestamp - lastUpdatedTimestamp >= indexPriceAllowedInterval;
     }
@@ -603,7 +603,7 @@ contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, 
     }
 
     function _getIndexPrice(address baseToken, uint256 twInterval) internal view returns (uint256 price) {
-        uint256 index = _underlyingPriceIndex[baseToken];
+        uint256 index = _underlyingPriceIndexes[baseToken];
         price = IVolmexBaseToken(baseToken).getIndexPrice(index, twInterval);
     }
 

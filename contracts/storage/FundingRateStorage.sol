@@ -11,7 +11,7 @@ abstract contract FundingRateStorage {
     uint256 internal _fundingPeriod;
     mapping(address => uint256) internal _lastFundingIndexPrice;
     mapping(address => int256) internal _lastFundingRate;
-    mapping(address => uint256) internal _underlyingPriceIndex;
+    mapping(address => uint256) internal _underlyingPriceIndexes;
 
     uint256[50] private __gap;
 }

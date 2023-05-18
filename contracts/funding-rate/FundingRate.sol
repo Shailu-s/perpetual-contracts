@@ -107,7 +107,7 @@ contract FundingRate is IFundingRate, BlockContext, PositioningCallee, FundingRa
     {
         uint256 twapInterval = IPositioningConfig(_positioningConfig).getTwapInterval();
         uint256 timestamp = _blockTimestamp();
-        uint256 baseTokenIndex = _underlyingPriceIndex[baseToken];
+        uint256 baseTokenIndex = _underlyingPriceIndexes[baseToken];
         // shorten twapInterval if prior observations are not enough
         // in first epoch, block-based funding is applicable
         if (_firstTradedTimestampMap[baseToken] != 0) {
