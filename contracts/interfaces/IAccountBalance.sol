@@ -13,7 +13,7 @@ interface IAccountBalance {
     /// @dev Emit when underlying price index is set
     event UnderlyingPriceIndexSet(uint256 indexed underlyingIndex, address baseToken);
 
-    function initialize(address positioningConfigArg, address[2] calldata baseTokenArgs) external;
+    function initialize(address positioningConfigArg, address[2] calldata volmexBaseTokenArgs) external;
 
     /// @notice Modify trader owedRealizedPnl
     /// @dev Only used by `Positioning` contract

@@ -40,7 +40,7 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
         _smInterval = 28800;
         _smIntervalLiquidation = 3600;
         for (uint256 index; index < 2; index++) {
-            _underlyingPriceIndex[volmexBaseTokenArgs[index]] = index;
+            _underlyingPriceIndexes[volmexBaseTokenArgs[index]] = index;
         }
         _grantRole(SM_INTERVAL_ROLE, positioningConfigArg);
         _grantRole(ACCOUNT_BALANCE_ADMIN, _msgSender());
@@ -53,7 +53,7 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
 
     function setUnderlyingPriceIndex(address volmexBaseToken, uint256 underlyingIndex) external {
         _requireAccountBalanceAdmin();
-        _underlyingPriceIndex[volmexBaseToken] = underlyingIndex;
+        _underlyingPriceIndexes[volmexBaseToken] = underlyingIndex;
         emit UnderlyingPriceIndexSet(underlyingIndex, volmexBaseToken);
     }
 
@@ -347,7 +347,7 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
     }
 
     function _getIndexPrice(address baseToken, uint256 twInterval) internal view returns (uint256) {
-        uint256 baseTokenIndex = _underlyingPriceIndex[baseToken];
+        uint256 baseTokenIndex = _underlyingPriceIndexes[baseToken];
         return IVolmexBaseToken(baseToken).getIndexPrice(baseTokenIndex, twInterval);
     }
 
