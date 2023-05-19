@@ -34,31 +34,35 @@ library LibFill {
         //We have 3 cases here:
         if (rightTakeValue > leftMakeValue) {
             //1nd: left order should be fully filled
-            return fillLeft(leftMakeValue, leftTakeValue, rightOrder.makeAsset.value, rightOrder.takeAsset.value); //lq,lb,rb,rq
+            return fillLeft(leftMakeValue, leftTakeValue, rightOrder.makeAsset.value, rightOrder.takeAsset.value, isLeftMakeFill); //lq,lb,rb,rq
         }
         //2st: right order should be fully filled or 3d: both should be fully filled if required values are the same
-        return fillRight(leftOrder.makeAsset.value, leftOrder.takeAsset.value, rightMakeValue, rightTakeValue); //lq,lb,rb,rq
+        return fillRight(leftOrder.makeAsset.value, leftOrder.takeAsset.value, rightMakeValue, rightTakeValue, isLeftMakeFill); //lq,lb,rb,rq
     }
 
     function fillRight(
         uint256 leftMakeValue,
         uint256 leftTakeValue,
         uint256 rightMakeValue,
-        uint256 rightTakeValue
+        uint256 rightTakeValue,
+        bool isLeftMakeFill
     ) internal pure returns (FillResult memory result) {
         uint256 leftTake = LibMath.safeGetPartialAmountFloor(rightTakeValue, leftMakeValue, leftTakeValue); //rq * lb / lq
         require(leftTake <= rightMakeValue, "V_PERP_M: fillRight: unable to fill");
-        return FillResult(rightTakeValue, rightMakeValue); //rq, lb == left goes long ; rb, lq ==left goes short
+        if(!isLeftMakeFill) leftTake = rightMakeValue;
+        return FillResult(rightTakeValue, leftTake); //rq, lb == left goes long ; rb, lq ==left goes short
     }
 
     function fillLeft(
         uint256 leftMakeValue,
         uint256 leftTakeValue,
         uint256 rightMakeValue,
-        uint256 rightTakeValue
+        uint256 rightTakeValue,
+        bool isLeftMakeFill
     ) internal pure returns (FillResult memory result) {
         uint256 rightTake = LibMath.safeGetPartialAmountFloor(leftTakeValue, rightMakeValue, rightTakeValue); //lb *rq / rb = rq
         require(rightTake <= leftMakeValue, "V_PERP_M: fillLeft: unable to fill");
+        if(!isLeftMakeFill) leftMakeValue = rightTake;
         return FillResult(leftMakeValue, leftTakeValue); //lq,lb
     }
 }
