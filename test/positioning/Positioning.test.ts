@@ -29,6 +29,7 @@ describe("Positioning", function () {
   let perpetualOracle;
   let VolmexBaseToken;
   let volmexBaseToken;
+  let volmexBaseToken1;
   let VolmexPerpPeriphery;
   let volmexPerpPeriphery;
 
@@ -93,11 +94,23 @@ describe("Positioning", function () {
         initializer: "initialize",
       },
     );
+    volmexBaseToken1 = await upgrades.deployProxy(
+      VolmexBaseToken,
+      [
+        "VolmexBaseToken", // nameArg
+        "VBT", // symbolArg,
+        account1.address, // priceFeedArg
+        true, // isBase
+      ],
+      {
+        initializer: "initialize",
+      },
+    );
     await volmexBaseToken.deployed();
     perpetualOracle = await upgrades.deployProxy(
       PerpetualOracle,
       [
-        [volmexBaseToken.address, volmexBaseToken.address],
+        [volmexBaseToken.address, volmexBaseToken1.address],
         [200000000, 200000000],
         [200060000, 200060000],
         [proofHash, proofHash],
@@ -107,7 +120,7 @@ describe("Positioning", function () {
     );
 
     await volmexBaseToken.setPriceFeed(perpetualOracle.address);
-
+    await volmexBaseToken1.setPriceFeed(perpetualOracle.address);
     baseToken = await upgrades.deployProxy(
       VolmexBaseToken,
       [
@@ -182,7 +195,7 @@ describe("Positioning", function () {
 
     accountBalance1 = await upgrades.deployProxy(AccountBalance, [
       positioningConfig.address,
-      [volmexBaseToken.address, volmexBaseToken.address],
+      [volmexBaseToken.address, volmexBaseToken1.address],
     ]);
     vaultController = await upgrades.deployProxy(VaultController, [
       positioningConfig.address,
@@ -199,7 +212,7 @@ describe("Positioning", function () {
         accountBalance1.address,
         matchingEngine.address,
         perpetualOracle.address,
-        [volmexBaseToken.address, volmexBaseToken.address],
+        [volmexBaseToken.address, volmexBaseToken1.address],
         [owner.address, account2.address],
       ],
       {
@@ -315,9 +328,12 @@ describe("Positioning", function () {
         ).to.be.revertedWith("Initializable: contract is already initialized");
       });
       it("should fail to initialze account balance again because invalid positionig config adderess", async () => {
-        await expect(upgrades.deployProxy(AccountBalance, [account1.address])).to.be.revertedWith(
-          "AB_VPMMCNC",
-        );
+        await expect(
+          upgrades.deployProxy(AccountBalance, [
+            account1.address,
+            [volmexBaseToken.address, volmexBaseToken1.address],
+          ]),
+        ).to.be.revertedWith("AB_VPMMCNC");
       });
       it("should fail to intialize again", async () => {
         const [owner, account1, account2] = await ethers.getSigners();
@@ -328,7 +344,7 @@ describe("Positioning", function () {
             accountBalance1.address,
             matchingEngine.address,
             perpetualOracle.address,
-            [volmexBaseToken.address, volmexBaseToken.address],
+            [volmexBaseToken.address, volmexBaseToken1.address],
             [owner.address, account2.address],
           ),
         ).to.be.revertedWith("Initializable: contract is already initialized");
@@ -345,7 +361,7 @@ describe("Positioning", function () {
               accountBalance1.address,
               matchingEngine.address,
               perpetualOracle.address,
-              [volmexBaseToken.address, volmexBaseToken.address],
+              [volmexBaseToken.address, volmexBaseToken1.address],
               [owner.address, account2.address],
             ],
             {
@@ -367,7 +383,7 @@ describe("Positioning", function () {
               account1.address,
               matchingEngine.address,
               perpetualOracle.address,
-              [volmexBaseToken.address, volmexBaseToken.address],
+              [volmexBaseToken.address, volmexBaseToken1.address],
               [owner.address, account2.address],
             ],
             {
@@ -389,7 +405,7 @@ describe("Positioning", function () {
               accountBalance1.address,
               account1.address,
               perpetualOracle.address,
-              [volmexBaseToken.address, volmexBaseToken.address],
+              [volmexBaseToken.address, volmexBaseToken1.address],
               [owner.address, account2.address],
             ],
             {
@@ -416,14 +432,16 @@ describe("Positioning", function () {
 
   describe("setUnderlying price index", async () => {
     it("should set index price oracle ", async () => {
-      expect(await accountBalance.connect(owner).setUnderlyingPriceIndex(1))
+      expect(
+        await accountBalance.connect(owner).setUnderlyingPriceIndex(volmexBaseToken.address, 0),
+      )
         .to.emit(accountBalance, "UnderlyingPriceIndexSet")
         .withArgs(1);
     });
     it("should fail to set index price oracle ", async () => {
-      await expect(accountBalance.connect(account1).setUnderlyingPriceIndex(1)).to.be.revertedWith(
-        "AccountBalance: Not admin",
-      );
+      await expect(
+        accountBalance.connect(account1).setUnderlyingPriceIndex(volmexBaseToken.address, 0),
+      ).to.be.revertedWith("AccountBalance: Not admin");
     });
   });
   describe("set twInterval for liquidation", async () => {
@@ -667,6 +685,7 @@ describe("Positioning", function () {
         await perpetualOracle.setIndexObservationAdder(owner.address);
         for (let i = 0; i < 10; i++) {
           await perpetualOracle.addIndexObservations([0], [100000000], [proofHash]);
+          await perpetualOracle.addIndexObservations([1], [100000000], [proofHash]);
         }
         await expect(
           positioning
@@ -2666,7 +2685,10 @@ describe("Liquidation test in Positioning", function () {
       accountBalance.address,
     ]);
 
-    accountBalance1 = await upgrades.deployProxy(AccountBalance, [positioningConfig.address]);
+    accountBalance1 = await upgrades.deployProxy(AccountBalance, [
+      positioningConfig.address,
+      [volmexBaseToken.address, volmexBaseToken1.address],
+    ]);
     vaultController = await upgrades.deployProxy(VaultController, [
       positioningConfig.address,
       accountBalance1.address,

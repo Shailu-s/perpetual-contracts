@@ -226,7 +226,7 @@ describe("PerpFactory", function () {
         matchingEngine.address,
         perpetualOracle.address,
         volmexQuoteToken.address,
-        index,
+        [volmexBaseToken.address, volmexBaseToken.address],
         [owner.address, alice.address],
       );
     });
@@ -239,7 +239,7 @@ describe("PerpFactory", function () {
           matchingEngine.address,
           perpetualOracle.address,
           volmexQuoteToken.address,
-          index,
+          [volmexBaseToken.address, volmexBaseToken.address],
           [owner.address, alice.address],
         ),
       )
@@ -260,7 +260,7 @@ describe("PerpFactory", function () {
         matchingEngine.address,
         perpetualOracle.address,
         volmexQuoteToken.address,
-        index,
+        [volmexBaseToken.address, volmexBaseToken.address],
         [owner.address, alice.address],
       );
       const vaultClone = await factory.cloneVault(
@@ -283,7 +283,7 @@ describe("PerpFactory", function () {
             matchingEngine.address,
             perpetualOracle.address,
             volmexQuoteToken.address,
-            index,
+            [volmexBaseToken.address, volmexBaseToken.address],
             [owner.address, alice.address],
           ),
       ).to.be.revertedWith("PF_NCD");
@@ -296,7 +296,7 @@ describe("PerpFactory", function () {
         matchingEngine.address,
         perpetualOracle.address,
         volmexQuoteToken.address,
-        index,
+        [volmexBaseToken.address, volmexBaseToken.address],
         [owner.address, alice.address],
       );
       await expect(

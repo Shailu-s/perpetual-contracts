@@ -76,6 +76,7 @@ describe("Vault Controller deposit tests", function () {
     const accountBalanceFactory = await ethers.getContractFactory("AccountBalance");
     accountBalance = await upgrades.deployProxy(accountBalanceFactory, [
       positioningConfig.address,
+      [volmexBaseToken.address, volmexBaseToken.address],
     ]);
 
     const vaultContractFactory = await ethers.getContractFactory("VaultController");

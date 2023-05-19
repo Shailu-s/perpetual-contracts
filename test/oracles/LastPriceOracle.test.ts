@@ -408,6 +408,7 @@ describe("PerpetualOracle - Last Price Oracle", function () {
       expect(timestamp).to.be.equal(parseInt(await perpetualOracle.lastestTimestamp(0, true)));
     });
     it("Should get cumulative price with time delay", async () => {
+      await time.increase(1000);
       for (let i = 0; i < 9; i++) {
         await perpetualOracle.addMarkObservation(0, 60000000);
         await time.increase(1000);

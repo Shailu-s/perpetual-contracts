@@ -27,6 +27,7 @@ describe("Realised pnl tests", function () {
   let accountBalance;
   let VolmexBaseToken;
   let volmexBaseToken;
+  let volmexBaseToken1;
   let VolmexPerpPeriphery;
   let volmexPerpPeriphery;
   let PerpetualOracle;
@@ -94,10 +95,23 @@ describe("Realised pnl tests", function () {
       },
     );
     await volmexBaseToken.deployed();
+    volmexBaseToken1 = await upgrades.deployProxy(
+      VolmexBaseToken,
+      [
+        "VolmexBaseToken", // nameArg
+        "VBT", // symbolArg,
+        account1.address, // priceFeedArg
+        true, // isBase
+      ],
+      {
+        initializer: "initialize",
+      },
+    );
+    await volmexBaseToken.deployed();
     perpetualOracle = await upgrades.deployProxy(
       PerpetualOracle,
       [
-        [volmexBaseToken.address, volmexBaseToken.address],
+        [volmexBaseToken.address, volmexBaseToken1.address],
         [200000000, 200000000],
         [200000000, 200000000],
         [proofHash, proofHash],
@@ -107,7 +121,7 @@ describe("Realised pnl tests", function () {
     );
 
     await volmexBaseToken.setPriceFeed(perpetualOracle.address);
-
+    await volmexBaseToken1.setPriceFeed(perpetualOracle.address);
     baseToken = await upgrades.deployProxy(
       VolmexBaseToken,
       [
@@ -134,7 +148,7 @@ describe("Realised pnl tests", function () {
     await perpetualOracle.grantSmaIntervalRole(positioningConfig.address);
     accountBalance = await upgrades.deployProxy(AccountBalance, [
       positioningConfig.address,
-      [volmexBaseToken.address, volmexBaseToken.address],
+      [volmexBaseToken.address, volmexBaseToken1.address],
     ]);
     await accountBalance.deployed();
 
@@ -182,7 +196,7 @@ describe("Realised pnl tests", function () {
 
     accountBalance1 = await upgrades.deployProxy(AccountBalance, [
       positioningConfig.address,
-      [volmexBaseToken.address, volmexBaseToken.address],
+      [volmexBaseToken.address, volmexBaseToken1.address],
     ]);
     vaultController = await upgrades.deployProxy(VaultController, [
       positioningConfig.address,
@@ -199,7 +213,7 @@ describe("Realised pnl tests", function () {
         accountBalance1.address,
         matchingEngine.address,
         perpetualOracle.address,
-        [volmexBaseToken.address, volmexBaseToken.address],
+        [volmexBaseToken.address, volmexBaseToken1.address],
         [owner.address, account2.address],
       ],
       {
@@ -212,6 +226,7 @@ describe("Realised pnl tests", function () {
 
     // await marketRegistry.connect(owner).addBaseToken(virtualToken.address)
     await marketRegistry.connect(owner).addBaseToken(volmexBaseToken.address);
+    await marketRegistry.connect(owner).addBaseToken(volmexBaseToken1.address);
     // await marketRegistry.connect(owner).addBaseToken(baseToken.address)
     await marketRegistry.connect(owner).setMakerFeeRatio(0.0004e6);
     await marketRegistry.connect(owner).setTakerFeeRatio(0.0004e6);
@@ -270,6 +285,10 @@ describe("Realised pnl tests", function () {
         account2.address,
         convert("100"),
       );
+    for (let i = 0; i < 10; i++) {
+      await perpetualOracle.addIndexObservations([0], [200000000], [proofHash]);
+      await perpetualOracle.addIndexObservations([1], [200000000], [proofHash]);
+    }
   });
   describe("Testing scenarios for realized and unrealised pnl", async () => {
     /* Scenario 1 : After opening a long position and indextwap moves favorably, the user’s 
