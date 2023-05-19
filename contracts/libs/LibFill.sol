@@ -26,10 +26,11 @@ library LibFill {
         LibOrder.Order memory leftOrder,
         LibOrder.Order memory rightOrder,
         uint256 leftOrderFill,
-        uint256 rightOrderFill
+        uint256 rightOrderFill,
+        bool isLeftMakeFill
     ) internal pure returns (FillResult memory) {
-        (uint256 leftMakeValue, uint256 leftTakeValue) = LibOrder.calculateRemaining(leftOrder, leftOrderFill, true); //q,b
-        (uint256 rightMakeValue, uint256 rightTakeValue) = LibOrder.calculateRemaining(rightOrder, rightOrderFill, false); //b,q
+        (uint256 leftMakeValue, uint256 leftTakeValue) = LibOrder.calculateRemaining(leftOrder, leftOrderFill, isLeftMakeFill); //q,b
+        (uint256 rightMakeValue, uint256 rightTakeValue) = LibOrder.calculateRemaining(rightOrder, rightOrderFill, !isLeftMakeFill); //b,q
         //We have 3 cases here:
         if (rightTakeValue > leftMakeValue) {
             //1nd: left order should be fully filled
