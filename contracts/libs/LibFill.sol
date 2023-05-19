@@ -3,7 +3,7 @@
 pragma solidity =0.8.18;
 
 import "./LibOrder.sol";
-
+import "hardhat/console.sol";
 library LibFill {
     struct FillResult {
         uint256 leftValue;
@@ -28,9 +28,11 @@ library LibFill {
         uint256 leftOrderFill,
         uint256 rightOrderFill,
         bool isLeftMakeFill
-    ) internal pure returns (FillResult memory) {
+    ) internal view returns (FillResult memory) {
         (uint256 leftMakeValue, uint256 leftTakeValue) = LibOrder.calculateRemaining(leftOrder, leftOrderFill, isLeftMakeFill); //q,b
+        console.log("calculateRemaning left ", leftMakeValue, leftTakeValue);
         (uint256 rightMakeValue, uint256 rightTakeValue) = LibOrder.calculateRemaining(rightOrder, rightOrderFill, !isLeftMakeFill); //b,q
+        console.log("calculateRemaning right ", rightMakeValue, rightTakeValue);
         //We have 3 cases here:
         if (rightTakeValue > leftMakeValue) {
             //1nd: left order should be fully filled
@@ -46,8 +48,9 @@ library LibFill {
         uint256 rightMakeValue,
         uint256 rightTakeValue,
         bool isLeftMakeFill
-    ) internal pure returns (FillResult memory result) {
+    ) internal view returns (FillResult memory result) {
         uint256 leftTake = LibMath.safeGetPartialAmountFloor(rightTakeValue, leftMakeValue, leftTakeValue); //rq * lb / lq
+        console.log("fill right", rightTakeValue, rightMakeValue, leftTake);
         require(leftTake <= rightMakeValue, "V_PERP_M: fillRight: unable to fill");
         if(!isLeftMakeFill) leftTake = rightMakeValue;
         return FillResult(rightTakeValue, leftTake); //rq, lb == left goes long ; rb, lq ==left goes short
@@ -59,8 +62,9 @@ library LibFill {
         uint256 rightMakeValue,
         uint256 rightTakeValue,
         bool isLeftMakeFill
-    ) internal pure returns (FillResult memory result) {
+    ) internal view returns (FillResult memory result) {
         uint256 rightTake = LibMath.safeGetPartialAmountFloor(leftTakeValue, rightMakeValue, rightTakeValue); //lb *rq / rb = rq
+        console.log("fill left", leftMakeValue, leftTakeValue, rightTake);
         require(rightTake <= leftMakeValue, "V_PERP_M: fillLeft: unable to fill");
         if(!isLeftMakeFill) leftMakeValue = rightTake;
         return FillResult(leftMakeValue, leftTakeValue); //lq,lb
