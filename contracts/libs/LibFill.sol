@@ -45,9 +45,9 @@ library LibFill {
         uint256 rightMakeValue,
         uint256 rightTakeValue
     ) internal pure returns (FillResult memory result) {
-        uint256 makerValue = LibMath.safeGetPartialAmountFloor(rightTakeValue, leftMakeValue, leftTakeValue); //rq * lb / lq
-        require(makerValue <= rightMakeValue, "V_PERP_M: fillRight: unable to fill");
-        return FillResult(rightTakeValue, makerValue); //rq, lb == left goes long ; rb, lq ==left goes short
+        uint256 leftTake = LibMath.safeGetPartialAmountFloor(rightTakeValue, leftMakeValue, leftTakeValue); //rq * lb / lq
+        require(leftTake <= rightMakeValue, "V_PERP_M: fillRight: unable to fill");
+        return FillResult(rightTakeValue, rightMakeValue); //rq, lb == left goes long ; rb, lq ==left goes short
     }
 
     function fillLeft(
