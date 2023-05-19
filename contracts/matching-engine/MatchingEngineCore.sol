@@ -142,7 +142,7 @@ abstract contract MatchingEngineCore is PausableUpgradeable, AssetMatcher, Acces
         bytes32 rightOrderKeyHash = LibOrder.hashKey(orderRight);
         uint256 leftOrderFill = _getOrderFill(orderLeft.salt, leftOrderKeyHash);
         uint256 rightOrderFill = _getOrderFill(orderRight.salt, rightOrderKeyHash);
-        bool isLeftMakeFill = !IVirtualToken(orderLeft.takeAsset.virtualToken).isBase(); // Note: quoteToken will return isBase = false, so orderLeft is make fill
+        bool isLeftMakeFill = orderLeft.isShort;
 
         LibFill.FillResult memory newFill = LibFill.fillOrder(orderLeft, orderRight, leftOrderFill, rightOrderFill, isLeftMakeFill);
 
