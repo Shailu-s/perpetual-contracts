@@ -8,7 +8,7 @@ import "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol"
 import "../libs/LibFill.sol";
 import "../interfaces/IPerpetualOracle.sol";
 import "./AssetMatcher.sol";
-import "hardhat/console.sol";
+
 abstract contract MatchingEngineCore is PausableUpgradeable, AssetMatcher, AccessControlUpgradeable {
     uint256 private constant _UINT256_MAX = 2**256 - 1;
     uint256 private constant _ORACLE_BASE = 1000000;
@@ -143,10 +143,8 @@ abstract contract MatchingEngineCore is PausableUpgradeable, AssetMatcher, Acces
         uint256 leftOrderFill = _getOrderFill(orderLeft.salt, leftOrderKeyHash);
         uint256 rightOrderFill = _getOrderFill(orderRight.salt, rightOrderKeyHash);
         bool isLeftMakeFill = orderLeft.isShort;
-        console.log("isLeftMakeFill ", isLeftMakeFill);
 
         LibFill.FillResult memory newFill = LibFill.fillOrder(orderLeft, orderRight, leftOrderFill, rightOrderFill, isLeftMakeFill);
-        console.log("new Fills ", newFill.leftValue, newFill.rightValue);
         require(newFill.rightValue > 0 && newFill.leftValue > 0, "V_PERP_M: nothing to fill");
 
         if (orderLeft.salt != 0) {
@@ -164,8 +162,6 @@ abstract contract MatchingEngineCore is PausableUpgradeable, AssetMatcher, Acces
                 fills[rightOrderKeyHash] = rightOrderFill + newFill.leftValue;
             }
         }
-        console.log("fills[leftOrderKeyHash] ", fills[leftOrderKeyHash]);
-        console.log("fills[rightOrderKeyHash] ", fills[rightOrderKeyHash]);
         return newFill;
     }
 
