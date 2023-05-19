@@ -132,7 +132,10 @@ describe("Positioning", function () {
     positioningConfig = await upgrades.deployProxy(PositioningConfig, [perpetualOracle.address]);
     await positioningConfig.deployed();
     await perpetualOracle.grantSmaIntervalRole(positioningConfig.address);
-    accountBalance = await upgrades.deployProxy(AccountBalance, [positioningConfig.address]);
+    accountBalance = await upgrades.deployProxy(AccountBalance, [
+      positioningConfig.address,
+      [volmexBaseToken.address, volmexBaseToken.address],
+    ]);
     await accountBalance.deployed();
 
     USDC = await TestERC20.deploy();
@@ -177,7 +180,10 @@ describe("Positioning", function () {
       },
     );
 
-    accountBalance1 = await upgrades.deployProxy(AccountBalance, [positioningConfig.address]);
+    accountBalance1 = await upgrades.deployProxy(AccountBalance, [
+      positioningConfig.address,
+      [volmexBaseToken.address, volmexBaseToken.address],
+    ]);
     vaultController = await upgrades.deployProxy(VaultController, [
       positioningConfig.address,
       accountBalance1.address,
@@ -193,7 +199,7 @@ describe("Positioning", function () {
         accountBalance1.address,
         matchingEngine.address,
         perpetualOracle.address,
-        0,
+        [volmexBaseToken.address, volmexBaseToken.address],
         [owner.address, account2.address],
       ],
       {
@@ -291,7 +297,7 @@ describe("Positioning", function () {
               accountBalance1.address,
               matchingEngine.address,
               perpetualOracle.address,
-              0,
+              [volmexBaseToken.address, volmexBaseToken.address],
               [owner.address, account2.address],
             ],
             {
@@ -301,9 +307,12 @@ describe("Positioning", function () {
         ).to.be.revertedWith("P_PCNC");
       });
       it("should fail to initialze account balance again", async () => {
-        await expect(accountBalance.initialize(positioningConfig.address)).to.be.revertedWith(
-          "Initializable: contract is already initialized",
-        );
+        await expect(
+          accountBalance.initialize(positioningConfig.address, [
+            volmexBaseToken.address,
+            volmexBaseToken.address,
+          ]),
+        ).to.be.revertedWith("Initializable: contract is already initialized");
       });
       it("should fail to initialze account balance again because invalid positionig config adderess", async () => {
         await expect(upgrades.deployProxy(AccountBalance, [account1.address])).to.be.revertedWith(
@@ -319,7 +328,7 @@ describe("Positioning", function () {
             accountBalance1.address,
             matchingEngine.address,
             perpetualOracle.address,
-            0,
+            [volmexBaseToken.address, volmexBaseToken.address],
             [owner.address, account2.address],
           ),
         ).to.be.revertedWith("Initializable: contract is already initialized");
@@ -336,7 +345,7 @@ describe("Positioning", function () {
               accountBalance1.address,
               matchingEngine.address,
               perpetualOracle.address,
-              0,
+              [volmexBaseToken.address, volmexBaseToken.address],
               [owner.address, account2.address],
             ],
             {
@@ -358,7 +367,7 @@ describe("Positioning", function () {
               account1.address,
               matchingEngine.address,
               perpetualOracle.address,
-              0,
+              [volmexBaseToken.address, volmexBaseToken.address],
               [owner.address, account2.address],
             ],
             {
@@ -380,7 +389,7 @@ describe("Positioning", function () {
               accountBalance1.address,
               account1.address,
               perpetualOracle.address,
-              0,
+              [volmexBaseToken.address, volmexBaseToken.address],
               [owner.address, account2.address],
             ],
             {
@@ -1705,7 +1714,7 @@ describe("Positioning", function () {
             accountBalance1.address,
             matchingEngine.address,
             perpetualOracle.address,
-            0,
+            [volmexBaseToken.address, volmexBaseToken.address],
             [owner.address, account2.address],
           ],
           {
@@ -2624,7 +2633,10 @@ describe("Liquidation test in Positioning", function () {
     positioningConfig = await upgrades.deployProxy(PositioningConfig, [perpetualOracle.address]);
     await positioningConfig.deployed();
 
-    accountBalance = await upgrades.deployProxy(AccountBalance, [positioningConfig.address]);
+    accountBalance = await upgrades.deployProxy(AccountBalance, [
+      positioningConfig.address,
+      [volmexBaseToken.address, volmexBaseToken1.address],
+    ]);
     await accountBalance.deployed();
 
     USDC = await TestERC20.deploy();
@@ -2667,7 +2679,7 @@ describe("Liquidation test in Positioning", function () {
         accountBalance1.address,
         matchingEngine.address,
         perpetualOracle.address,
-        0,
+        [volmexBaseToken.address, volmexBaseToken1.address],
         [owner.address, account2.address],
       ],
       {

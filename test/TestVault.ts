@@ -437,6 +437,7 @@ describe("Vault", function () {
       const accountBalanceFactory = await ethers.getContractFactory("AccountBalance");
       accountBalance = await upgrades.deployProxy(accountBalanceFactory, [
         positioningConfig.address,
+        [alice.address, alice.address],
       ]);
 
       const vaultContractFactory = await ethers.getContractFactory("VaultController");
@@ -475,7 +476,7 @@ describe("Vault", function () {
           accountBalance.address,
           matchingEngine.address,
           perpetualOracle.address,
-          0,
+          [alice.address, alice.address],
           [owner.address, alice.address],
         ],
         {
@@ -585,6 +586,7 @@ describe("Vault", function () {
       const accountBalanceFactory = await ethers.getContractFactory("AccountBalance");
       accountBalance = await upgrades.deployProxy(accountBalanceFactory, [
         positioningConfig.address,
+        [alice.address, alice.address],
       ]);
 
       const vaultContractFactory = await ethers.getContractFactory("VaultController");
@@ -623,7 +625,7 @@ describe("Vault", function () {
           accountBalance.address,
           matchingEngine.address,
           perpetualOracle.address,
-          0,
+          [alice.address, alice.address],
           [owner.address, alice.address],
         ],
         {

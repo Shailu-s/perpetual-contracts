@@ -141,7 +141,10 @@ describe("Global", function () {
     await positioningConfig.setMaxMarketsPerAccount(5);
     await positioningConfig.setSettlementTokenBalanceCap("10000000000000000000000000");
 
-    accountBalance = await upgrades.deployProxy(AccountBalance, [positioningConfig.address]);
+    accountBalance = await upgrades.deployProxy(AccountBalance, [
+      positioningConfig.address,
+      [volmexBaseToken.address, volmexBaseToken.address],
+    ]);
     await accountBalance.deployed();
     await (await perpView.setAccount(accountBalance.address)).wait();
 
@@ -169,7 +172,7 @@ describe("Global", function () {
         accountBalance.address,
         matchingEngine.address,
         perpetualOracle.address,
-        0,
+        [volmexBaseToken.address, volmexBaseToken.address],
         [owner.address, account1.address],
       ],
       {

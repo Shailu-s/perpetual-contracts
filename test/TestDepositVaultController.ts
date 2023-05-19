@@ -107,7 +107,7 @@ describe("Vault Controller deposit tests", function () {
         accountBalance.address,
         matchingEngineFake.address,
         perpetualOracle.address,
-        0,
+        [volmexBaseToken.address, volmexBaseToken.address],
         [owner.address, alice.address],
       ],
       {

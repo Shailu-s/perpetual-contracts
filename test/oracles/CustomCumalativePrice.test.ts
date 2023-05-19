@@ -140,7 +140,10 @@ describe("Custom Cumulative Price", function () {
     });
     await virtualToken.deployed();
 
-    accountBalance1 = await upgrades.deployProxy(AccountBalance, [positioningConfig.address]);
+    accountBalance1 = await upgrades.deployProxy(AccountBalance, [
+      positioningConfig.address,
+      [volmexBaseToken.address, volmexBaseToken.address],
+    ]);
     await accountBalance1.deployed();
     await (await perpView.setAccount(accountBalance1.address)).wait();
     vaultController = await upgrades.deployProxy(VaultController, [
@@ -170,7 +173,7 @@ describe("Custom Cumulative Price", function () {
         accountBalance1.address,
         matchingEngine.address,
         perpetualOracle.address,
-        0,
+        [volmexBaseToken.address, volmexBaseToken.address],
         [owner.address, account1.address],
       ],
       {

@@ -152,7 +152,10 @@ describe("Multiple protocols", function () {
     });
     await virtualToken.deployed();
 
-    accountBalance1 = await upgrades.deployProxy(AccountBalance, [positioningConfig.address]);
+    accountBalance1 = await upgrades.deployProxy(AccountBalance, [
+      positioningConfig.address,
+      [EVIV.address, BVIV.address],
+    ]);
     await accountBalance1.deployed();
     await (await perpView.setAccount(accountBalance1.address)).wait();
     vaultController = await upgrades.deployProxy(VaultController, [
@@ -182,7 +185,7 @@ describe("Multiple protocols", function () {
         accountBalance1.address,
         matchingEngine.address,
         perpetualOracle.address,
-        0,
+        [EVIV.address, BVIV.address],
         [owner.address, account1.address],
       ],
       {

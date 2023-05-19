@@ -108,7 +108,10 @@ describe("MatchingEngine", function () {
     positioningConfig = await upgrades.deployProxy(PositioningConfig, [perpetualOracle.address]);
     await positioningConfig.deployed();
     await perpetualOracle.grantSmaIntervalRole(positioningConfig.address);
-    accountBalance = await upgrades.deployProxy(AccountBalance, [positioningConfig.address]);
+    accountBalance = await upgrades.deployProxy(AccountBalance, [
+      positioningConfig.address,
+      [volmexBaseToken.address, volmexBaseToken.address],
+    ]);
     await accountBalance.deployed();
     vaultController = await upgrades.deployProxy(VaultController, [
       positioningConfig.address,
@@ -150,7 +153,7 @@ describe("MatchingEngine", function () {
         accountBalance.address,
         matchingEngine.address,
         perpetualOracle.address,
-        0,
+        [volmexBaseToken.address, volmexBaseToken.address],
         [owner.address, account2.address],
       ],
       {

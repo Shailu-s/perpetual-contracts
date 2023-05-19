@@ -84,7 +84,7 @@ describe("Vault Controller Mock tests for account value", function () {
         accountBalance.address,
         matchingEngineFake.address,
         perpetualOracle.address,
-        0,
+        [alice.address, alice.address],
         [owner.address, alice.address],
       ],
       {
