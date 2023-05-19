@@ -240,7 +240,6 @@ contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, 
         return true;
     }
 
-
     ///@dev this function calculates total pending funding payment of a trader
     function getAllPendingFundingPayment(address trader) external view virtual override returns (int256 pendingFundingPayment) {
         address[] memory baseTokens = IAccountBalance(_accountBalance).getBaseTokens(trader);
@@ -368,7 +367,6 @@ contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, 
     /// @dev Settle trader's funding payment to his/her realized pnl.
     function _settleFunding(address trader, address baseToken) internal {
         (int256 fundingPayment, int256 globalTwPremiumGrowth) = settleFunding(trader, baseToken);
-
         if (fundingPayment != 0) {
             IAccountBalance(_accountBalance).modifyOwedRealizedPnl(trader, fundingPayment.neg256(), baseToken);
             emit FundingPaymentSettled(trader, baseToken, fundingPayment);
@@ -417,8 +415,18 @@ contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, 
             );
 
         int256[2] memory realizedPnL;
-        realizedPnL[0] = _realizePnLChecks(orderLeft, baseToken, internalData.leftExchangedPositionSize, internalData.leftExchangedPositionNotional);
-        realizedPnL[1] = _realizePnLChecks(orderRight, baseToken, internalData.rightExchangedPositionSize, internalData.rightExchangedPositionNotional);
+        realizedPnL[0] = _realizePnLChecks(
+            orderLeft,
+            baseToken,
+            internalData.leftExchangedPositionSize,
+            internalData.leftExchangedPositionNotional - orderFees.orderLeftFee.toInt256()
+        );
+        realizedPnL[1] = _realizePnLChecks(
+            orderRight,
+            baseToken,
+            internalData.rightExchangedPositionSize,
+            internalData.rightExchangedPositionNotional - orderFees.orderRightFee.toInt256()
+        );
 
         // modifies PnL of fee receiver
         _modifyOwedRealizedPnl(_getFeeReceiver(), (orderFees.orderLeftFee + orderFees.orderRightFee).toInt256(), baseToken);
@@ -548,7 +556,6 @@ contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, 
         int256 takerPositionSize = _getTakerPosition(order.trader, baseToken);
         // get openNotional before swap
         int256 oldTakerOpenNotional = _getTakerOpenNotional(order.trader, baseToken);
-
         // when takerPositionSize < 0, it's a short position
         bool isReducingPosition = takerPositionSize == 0 ? false : takerPositionSize < 0 != order.isShort;
         // when reducing/not increasing the position size, it's necessary to realize pnl
@@ -602,7 +609,6 @@ contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, 
 
     function _getIndexPrice(address baseToken, uint256 twInterval) internal view returns (uint256 price) {
         price = IVolmexBaseToken(baseToken).getIndexPrice(_underlyingPriceIndex, twInterval);
-
     }
 
     function _getTakerOpenNotional(address trader, address baseToken) internal view returns (int256) {
