@@ -14,7 +14,6 @@ abstract contract OrderValidator is Initializable, ContextUpgradeable, EIP712Upg
     using AddressUpgradeable for address;
 
     bytes4 internal constant _MAGICVALUE = 0x1626ba7e;
-    mapping(address => uint256) public makerMinSalt;
 
     function __OrderValidator_init_unchained() internal onlyInitializing {
         __EIP712_init_unchained("V_PERP", "1");
@@ -28,7 +27,6 @@ abstract contract OrderValidator is Initializable, ContextUpgradeable, EIP712Upg
                 order.trader = _msgSender();
             }
         } else {
-            require((order.salt >= makerMinSalt[order.trader]), "V_PERP_M: Order canceled");
             if (_msgSender() != order.trader) {
                 bytes32 hash = LibOrder.hash(order);
                 address signer;
