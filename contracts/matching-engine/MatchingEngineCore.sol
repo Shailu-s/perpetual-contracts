@@ -142,17 +142,25 @@ abstract contract MatchingEngineCore is PausableUpgradeable, AssetMatcher, Acces
         bytes32 rightOrderKeyHash = LibOrder.hashKey(orderRight);
         uint256 leftOrderFill = _getOrderFill(orderLeft.salt, leftOrderKeyHash);
         uint256 rightOrderFill = _getOrderFill(orderRight.salt, rightOrderKeyHash);
+        bool isLeftMakeFill = orderLeft.isShort;
 
-        LibFill.FillResult memory newFill = LibFill.fillOrder(orderLeft, orderRight, leftOrderFill, rightOrderFill);
-
+        LibFill.FillResult memory newFill = LibFill.fillOrder(orderLeft, orderRight, leftOrderFill, rightOrderFill, isLeftMakeFill);
         require(newFill.rightValue > 0 && newFill.leftValue > 0, "V_PERP_M: nothing to fill");
 
         if (orderLeft.salt != 0) {
-            fills[leftOrderKeyHash] = leftOrderFill + newFill.leftValue;
+            if (isLeftMakeFill) {
+                fills[leftOrderKeyHash] = leftOrderFill + newFill.leftValue;
+            } else {
+                fills[leftOrderKeyHash] = leftOrderFill + newFill.rightValue;
+            }
         }
 
         if (orderRight.salt != 0) {
-            fills[rightOrderKeyHash] = rightOrderFill + newFill.rightValue;
+            if (!isLeftMakeFill) {
+                fills[rightOrderKeyHash] = rightOrderFill + newFill.rightValue;
+            } else {
+                fills[rightOrderKeyHash] = rightOrderFill + newFill.leftValue;
+            }
         }
         return newFill;
     }
