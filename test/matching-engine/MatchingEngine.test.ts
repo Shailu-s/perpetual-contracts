@@ -510,7 +510,7 @@ describe("MatchingEngine", function () {
         );
 
         // price = 100
-        console.log("Wassup!!")
+
         await expect(matchingEngine.matchOrders(orderLeft, orderRight)) //10,0.1
           .to.emit(matchingEngine, "Matched")
           .withArgs(
@@ -1540,9 +1540,6 @@ describe("MatchingEngine", function () {
         );
         const receipt = await (await matchingEngine.matchOrders(orderLeft, orderRight)).wait();
         const newFills = matchedFills(receipt);
-        console.log("orderLeft  ", 20, 200);
-        console.log("orderRight ", 110, 10);
-        console.log("Fills      ", newFills.leftValue, newFills.rightValue);
         expect(newFills.leftValue).equal(convert(10));
         expect(newFills.rightValue).equal(convert(100));
       });
@@ -1570,9 +1567,6 @@ describe("MatchingEngine", function () {
         );
         const receipt = await (await matchingEngine.matchOrders(orderLeft, orderRight)).wait();
         const newFills = matchedFills(receipt);
-        console.log("orderLeft  ", 10, 100);
-        console.log("orderRight ", 110, 10);
-        console.log("Fills      ", newFills.leftValue, newFills.rightValue);
         expect(newFills.leftValue).equal(convert(10));
         expect(newFills.rightValue).equal(convert(100));
       });
@@ -1600,9 +1594,6 @@ describe("MatchingEngine", function () {
         );
         const receipt = await (await matchingEngine.matchOrders(orderLeft, orderRight)).wait();
         const newFills = matchedFills(receipt);
-        console.log("orderLeft  ", 10, 100);
-        console.log("orderRight ", 220, 20);
-        console.log("Fills      ", newFills.leftValue, newFills.rightValue);
         expect(newFills.leftValue).equal(convert(10));
         expect(newFills.rightValue).equal(convert(100));
       });
@@ -1633,9 +1624,6 @@ describe("MatchingEngine", function () {
         );
         const receipt = await (await matchingEngine.matchOrders(orderLeft, orderRight)).wait();
         const newFills = matchedFills(receipt);
-        console.log("orderLeft  ", 20, 200);
-        console.log("orderRight ", 100, 10);
-        console.log("Fills      ", newFills.leftValue, newFills.rightValue);
         expect(newFills.leftValue).equal(convert(10));
         expect(newFills.rightValue).equal(convert(100));
       });
@@ -1663,9 +1651,6 @@ describe("MatchingEngine", function () {
         );
         const receipt = await (await matchingEngine.matchOrders(orderLeft, orderRight)).wait();
         const newFills = matchedFills(receipt);
-        console.log("orderLeft  ", 10, 100);
-        console.log("orderRight ", 100, 10);
-        console.log("Fills      ", newFills.leftValue, newFills.rightValue);
         expect(newFills.leftValue).equal(convert(10));
         expect(newFills.rightValue).equal(convert(100));
       });
@@ -1693,9 +1678,6 @@ describe("MatchingEngine", function () {
         );
         const receipt = await (await matchingEngine.matchOrders(orderLeft, orderRight)).wait();
         const newFills = matchedFills(receipt);
-        console.log("orderLeft  ", 10, 100);
-        console.log("orderRight ", 200, 20);
-        console.log("Fills      ", newFills.leftValue, newFills.rightValue);
         expect(newFills.leftValue).equal(convert(10));
         expect(newFills.rightValue).equal(convert(100));
       });
@@ -1817,9 +1799,6 @@ describe("MatchingEngine", function () {
         );
         const receipt = await (await matchingEngine.matchOrders(orderLeft, orderRight)).wait();
         const newFills = matchedFills(receipt);
-        console.log("orderLeft  ", 220, 20);
-        console.log("orderRight ", 10, 100);
-        console.log("Fills      ", newFills.leftValue, newFills.rightValue);
         expect(newFills.leftValue).equal(convert(100));
         expect(newFills.rightValue).equal("9090909090909090909");
       });
@@ -1847,9 +1826,6 @@ describe("MatchingEngine", function () {
         );
         const receipt = await (await matchingEngine.matchOrders(orderLeft, orderRight)).wait();
         const newFills = matchedFills(receipt);
-        console.log("orderLeft  ", 110, 10);
-        console.log("orderRight ", 10, 100);
-        console.log("Fills      ", newFills.leftValue, newFills.rightValue);
         expect(newFills.leftValue).equal(convert(100));
         expect(newFills.rightValue).equal("9090909090909090909");
       });
@@ -1877,9 +1853,6 @@ describe("MatchingEngine", function () {
         );
         const receipt = await (await matchingEngine.matchOrders(orderLeft, orderRight)).wait();
         const newFills = matchedFills(receipt);
-        console.log("orderLeft  ", 110, 10);
-        console.log("orderRight ", 20, 200);
-        console.log("Fills      ", newFills.leftValue, newFills.rightValue);
         expect(newFills.leftValue).equal(convert(110));
         expect(newFills.rightValue).equal(convert(10));
       });
