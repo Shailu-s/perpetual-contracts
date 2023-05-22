@@ -1,9 +1,11 @@
 import { expect } from "chai";
 import { ethers, upgrades } from "hardhat";
-const { Order, Asset, sign, encodeAddress } = require("../order");
-import { FakeContract, smock } from "@defi-wonderland/smock";
-const libDeal = require("../libDeal");
+import { Result } from "ethers/lib/utils";
+import { smock } from "@defi-wonderland/smock";
 import { BigNumber } from "ethers";
+const { expectRevert } = require("@openzeppelin/test-helpers");
+const { Order, Asset, sign, encodeAddress } = require("../order");
+const libDeal = require("../libDeal");
 
 describe("MatchingEngine", function () {
   let MatchingEngine;
@@ -207,7 +209,7 @@ describe("MatchingEngine", function () {
     await virtualToken.connect(account1).approve(volmexPerpPeriphery.address, ten.toString());
     await virtualToken.connect(account2).approve(volmexPerpPeriphery.address, ten.toString());
 
-    // volmexPerpPeriphery.address, USDC.address, alice.address, amount
+    // volmexPerpPeriphery.address, USDC.address, account1.address, amount
     await vaultController
       .connect(account1)
       .deposit(
@@ -520,7 +522,7 @@ describe("MatchingEngine", function () {
           .withArgs(
             [account1.address, account2.address],
             [1, 2],
-            ["10000000000000000000", "10000000000000000000"],
+            ["100000000000000000", "100000000000000000"],
           );
       });
       it("Should partial match orderLeft and full match order right", async () => {
@@ -677,7 +679,7 @@ describe("MatchingEngine", function () {
           .withArgs(
             [account1.address, account2.address],
             [1, 2],
-            ["10000000000000000000", "10000000000000000000"],
+            ["20000000000000000000", "20000000000000000000"],
           );
       });
       it("Should fail to match orders when basetoken is 0", async () => {
@@ -922,7 +924,7 @@ describe("MatchingEngine", function () {
         await expect(matchingEngine.matchOrders(orderLeft, orderRight))
           .to.emit(matchingEngine, "Matched")
           .to.emit(matchingEngine, "OrdersFilled")
-          .withArgs([account1.address, account2.address], [1, 2], ["10", "10"]);
+          .withArgs([account1.address, account2.address], [1, 2], ["2", "2"]);
       });
       it("Should match orders when left order address is 0", async () => {
         const orderLeft = Order(
@@ -952,7 +954,7 @@ describe("MatchingEngine", function () {
           .withArgs(
             ["0x0000000000000000000000000000000000000000", account2.address],
             [1, 2],
-            ["20", "20"],
+            ["10", "10"],
           );
       });
     });
@@ -1019,7 +1021,7 @@ describe("MatchingEngine", function () {
           .withArgs(
             [account1.address, account2.address],
             [2, 3],
-            ["700000000000000000000", "700000000000000000000"],
+            ["9859154929577464788", "9859154929577464788"],
           );
       });
 
@@ -1042,7 +1044,7 @@ describe("MatchingEngine", function () {
           .withArgs(
             [account1.address, account2.address],
             [2, 3],
-            ["700000000000000000000", "700000000000000000000"],
+            ["5384615384615384615", "5384615384615384615"],
           );
       });
       it("Should not match orders with lower price than 70", async () => {
@@ -1081,7 +1083,7 @@ describe("MatchingEngine", function () {
           .withArgs(
             [account1.address, account2.address],
             [2, 3],
-            ["700000000000000000000", "700000000000000000000"],
+            ["9859154929577464788", "9859154929577464788"],
           );
       });
       it("Should match take profit with market order of price more than 70", async () => {
@@ -1103,7 +1105,7 @@ describe("MatchingEngine", function () {
           .withArgs(
             [account1.address, account2.address],
             [2, 3],
-            ["700000000000000000000", "700000000000000000000"],
+            ["9859154929577464788", "9859154929577464788"],
           );
       });
     });
@@ -1128,7 +1130,7 @@ describe("MatchingEngine", function () {
           .withArgs(
             [account1.address, account2.address],
             [2, 3],
-            ["700000000000000000000", "700000000000000000000"],
+            ["9859154929577464788", "9859154929577464788"],
           );
       });
 
@@ -1151,7 +1153,7 @@ describe("MatchingEngine", function () {
           .withArgs(
             [account1.address, account2.address],
             [2, 3],
-            ["700000000000000000000", "700000000000000000000"],
+            ["5384615384615384615", "5384615384615384615"],
           );
       });
       it("Should not match orders with lower price than 70", async () => {
@@ -1191,7 +1193,7 @@ describe("MatchingEngine", function () {
           .withArgs(
             [account1.address, account2.address],
             [2, 3],
-            ["700000000000000000000", "700000000000000000000"],
+            ["9859154929577464788", "9859154929577464788"],
           );
       });
       it("Should match stop loss with take profit order of price more than 70", async () => {
@@ -1213,7 +1215,7 @@ describe("MatchingEngine", function () {
           .withArgs(
             [account1.address, account2.address],
             [2, 3],
-            ["700000000000000000000", "700000000000000000000"],
+            ["9859154929577464788", "9859154929577464788"],
           );
       });
     });
@@ -1238,7 +1240,7 @@ describe("MatchingEngine", function () {
           .withArgs(
             [account1.address, account2.address],
             [2, 3],
-            ["700000000000000000000", "700000000000000000000"],
+            ["9859154929577464788", "9859154929577464788"],
           );
       });
 
@@ -1261,7 +1263,7 @@ describe("MatchingEngine", function () {
           .withArgs(
             [account1.address, account2.address],
             [2, 3],
-            ["700000000000000000000", "700000000000000000000"],
+            ["5384615384615384615", "5384615384615384615"],
           );
       });
       it("Should not match orders with lower price than 70", async () => {
@@ -1300,7 +1302,7 @@ describe("MatchingEngine", function () {
           .withArgs(
             [account1.address, account2.address],
             [2, 3],
-            ["700000000000000000000", "700000000000000000000"],
+            ["9859154929577464788", "9859154929577464788"],
           );
       });
       it("Should match take profit with take profit order of price more than 70", async () => {
@@ -1322,7 +1324,7 @@ describe("MatchingEngine", function () {
           .withArgs(
             [account1.address, account2.address],
             [2, 3],
-            ["700000000000000000000", "700000000000000000000"],
+            ["9859154929577464788", "9859154929577464788"],
           );
       });
     });
@@ -1506,7 +1508,483 @@ describe("MatchingEngine", function () {
       );
     });
   });
+
+  describe("Left order - EVIV perp", () => {
+    const isShort = true;
+    let salt = 0;
+    this.beforeEach(async () => {
+      await (await matchingEngine.grantMatchOrders(owner.address)).wait();
+    });
+    describe("Left order fill with better price", () => {
+      it("Should left partial and right complete fill", async () => {
+        orderLeft = Order(
+          ORDER,
+          deadline,
+          account1.address,
+          Asset(volmexBaseToken.address, convert(20)),
+          Asset(virtualToken.address, convert(200)),
+          ++salt,
+          0,
+          isShort,
+        );
+
+        orderRight = Order(
+          ORDER,
+          deadline,
+          account2.address,
+          Asset(virtualToken.address, convert(110)),
+          Asset(volmexBaseToken.address, convert(10)),
+          ++salt,
+          0,
+          !isShort,
+        );
+        const receipt = await (await matchingEngine.matchOrders(orderLeft, orderRight)).wait();
+        const newFills = matchedFills(receipt);
+        console.log("orderLeft  ", 20, 200);
+        console.log("orderRight ", 110, 10);
+        console.log("Fills      ", newFills.leftValue, newFills.rightValue);
+        expect(newFills.leftValue).equal(convert(10));
+        expect(newFills.rightValue).equal(convert(100));
+      });
+      it("Should left and right complete fill", async () => {
+        orderLeft = Order(
+          ORDER,
+          deadline,
+          account1.address,
+          Asset(volmexBaseToken.address, convert(10)),
+          Asset(virtualToken.address, convert(100)),
+          ++salt,
+          0,
+          isShort,
+        );
+
+        orderRight = Order(
+          ORDER,
+          deadline,
+          account2.address,
+          Asset(virtualToken.address, convert(110)),
+          Asset(volmexBaseToken.address, convert(10)),
+          ++salt,
+          0,
+          !isShort,
+        );
+        const receipt = await (await matchingEngine.matchOrders(orderLeft, orderRight)).wait();
+        const newFills = matchedFills(receipt);
+        console.log("orderLeft  ", 10, 100);
+        console.log("orderRight ", 110, 10);
+        console.log("Fills      ", newFills.leftValue, newFills.rightValue);
+        expect(newFills.leftValue).equal(convert(10));
+        expect(newFills.rightValue).equal(convert(100));
+      });
+      it("Should left complete and right partial fill", async () => {
+        orderLeft = Order(
+          ORDER,
+          deadline,
+          account1.address,
+          Asset(volmexBaseToken.address, convert(10)),
+          Asset(virtualToken.address, convert(100)),
+          ++salt,
+          0,
+          isShort,
+        );
+
+        orderRight = Order(
+          ORDER,
+          deadline,
+          account2.address,
+          Asset(virtualToken.address, convert(220)),
+          Asset(volmexBaseToken.address, convert(20)),
+          ++salt,
+          0,
+          !isShort,
+        );
+        const receipt = await (await matchingEngine.matchOrders(orderLeft, orderRight)).wait();
+        const newFills = matchedFills(receipt);
+        console.log("orderLeft  ", 10, 100);
+        console.log("orderRight ", 220, 20);
+        console.log("Fills      ", newFills.leftValue, newFills.rightValue);
+        expect(newFills.leftValue).equal(convert(10));
+        expect(newFills.rightValue).equal(convert(100));
+      });
+    });
+
+    describe("Both order price same", () => {
+      it("Should left partial and right complete fill", async () => {
+        orderLeft = Order(
+          ORDER,
+          deadline,
+          account1.address,
+          Asset(volmexBaseToken.address, convert(20)),
+          Asset(virtualToken.address, convert(200)),
+          ++salt,
+          0,
+          isShort,
+        );
+
+        orderRight = Order(
+          ORDER,
+          deadline,
+          account2.address,
+          Asset(virtualToken.address, convert(100)),
+          Asset(volmexBaseToken.address, convert(10)),
+          ++salt,
+          0,
+          !isShort,
+        );
+        const receipt = await (await matchingEngine.matchOrders(orderLeft, orderRight)).wait();
+        const newFills = matchedFills(receipt);
+        console.log("orderLeft  ", 20, 200);
+        console.log("orderRight ", 100, 10);
+        console.log("Fills      ", newFills.leftValue, newFills.rightValue);
+        expect(newFills.leftValue).equal(convert(10));
+        expect(newFills.rightValue).equal(convert(100));
+      });
+      it("Should left and right complete fill", async () => {
+        orderLeft = Order(
+          ORDER,
+          deadline,
+          account1.address,
+          Asset(volmexBaseToken.address, convert(10)),
+          Asset(virtualToken.address, convert(100)),
+          ++salt,
+          0,
+          isShort,
+        );
+
+        orderRight = Order(
+          ORDER,
+          deadline,
+          account2.address,
+          Asset(virtualToken.address, convert(100)),
+          Asset(volmexBaseToken.address, convert(10)),
+          ++salt,
+          0,
+          !isShort,
+        );
+        const receipt = await (await matchingEngine.matchOrders(orderLeft, orderRight)).wait();
+        const newFills = matchedFills(receipt);
+        console.log("orderLeft  ", 10, 100);
+        console.log("orderRight ", 100, 10);
+        console.log("Fills      ", newFills.leftValue, newFills.rightValue);
+        expect(newFills.leftValue).equal(convert(10));
+        expect(newFills.rightValue).equal(convert(100));
+      });
+      it("Should left complete and right partial fill", async () => {
+        orderLeft = Order(
+          ORDER,
+          deadline,
+          account1.address,
+          Asset(volmexBaseToken.address, convert(10)),
+          Asset(virtualToken.address, convert(100)),
+          ++salt,
+          0,
+          isShort,
+        );
+
+        orderRight = Order(
+          ORDER,
+          deadline,
+          account2.address,
+          Asset(virtualToken.address, convert(200)),
+          Asset(volmexBaseToken.address, convert(20)),
+          ++salt,
+          0,
+          !isShort,
+        );
+        const receipt = await (await matchingEngine.matchOrders(orderLeft, orderRight)).wait();
+        const newFills = matchedFills(receipt);
+        console.log("orderLeft  ", 10, 100);
+        console.log("orderRight ", 200, 20);
+        console.log("Fills      ", newFills.leftValue, newFills.rightValue);
+        expect(newFills.leftValue).equal(convert(10));
+        expect(newFills.rightValue).equal(convert(100));
+      });
+    });
+
+    describe("Right order fill with better price", () => {
+      it("Should left partial and right complete fill", async () => {
+        orderLeft = Order(
+          ORDER,
+          deadline,
+          account1.address,
+          Asset(volmexBaseToken.address, convert(20)),
+          Asset(virtualToken.address, convert(220)),
+          ++salt,
+          0,
+          isShort,
+        );
+
+        orderRight = Order(
+          ORDER,
+          deadline,
+          account2.address,
+          Asset(virtualToken.address, convert(100)),
+          Asset(volmexBaseToken.address, convert(10)),
+          ++salt,
+          0,
+          !isShort,
+        );
+        await expectRevert(
+          matchingEngine.matchOrders(orderLeft, orderRight),
+          "V_PERP_M: fillRight: unable to fill"
+        )
+      });
+      it("Should left and right complete fill", async () => {
+        orderLeft = Order(
+          ORDER,
+          deadline,
+          account1.address,
+          Asset(volmexBaseToken.address, convert(10)),
+          Asset(virtualToken.address, convert(110)),
+          ++salt,
+          0,
+          isShort,
+        );
+
+        orderRight = Order(
+          ORDER,
+          deadline,
+          account2.address,
+          Asset(virtualToken.address, convert(100)),
+          Asset(volmexBaseToken.address, convert(10)),
+          ++salt,
+          0,
+          !isShort,
+        );
+        await expectRevert(
+          matchingEngine.matchOrders(orderLeft, orderRight),
+          "V_PERP_M: fillRight: unable to fill"
+        )
+      });
+      it("Should left complete and right partial fill", async () => {
+        orderLeft = Order(
+          ORDER,
+          deadline,
+          account1.address,
+          Asset(volmexBaseToken.address, convert(10)),
+          Asset(virtualToken.address, convert(110)),
+          ++salt,
+          0,
+          isShort,
+        );
+
+        orderRight = Order(
+          ORDER,
+          deadline,
+          account2.address,
+          Asset(virtualToken.address, convert(200)),
+          Asset(volmexBaseToken.address, convert(20)),
+          ++salt,
+          0,
+          !isShort,
+        );
+        await expectRevert(
+          matchingEngine.matchOrders(orderLeft, orderRight),
+          "V_PERP_M: fillLeft: unable to fill"
+        )
+      });
+    });
+  });
+
+	describe("Right order - EVIV perp", () => {
+    const isShort = true;
+    let salt = 0;
+    this.beforeEach(async () => {
+      await (await matchingEngine.grantMatchOrders(owner.address)).wait();
+    });
+		describe("Right order fill with better price", () => {
+      it("Should left partial and right complete fill", async () => {
+        orderLeft = Order(
+          ORDER,
+          deadline,
+          account1.address,
+          Asset(virtualToken.address, convert(220)),
+          Asset(volmexBaseToken.address, convert(20)),
+          ++salt,
+          0,
+          !isShort,
+        );
+
+        orderRight = Order(
+          ORDER,
+          deadline,
+          account2.address,
+          Asset(volmexBaseToken.address, convert(10)),
+          Asset(virtualToken.address, convert(100)),
+          ++salt,
+          0,
+          isShort,
+        );
+        const receipt = await (await matchingEngine.matchOrders(orderLeft, orderRight)).wait();
+        const newFills = matchedFills(receipt);
+        console.log("orderLeft  ", 220, 20);
+        console.log("orderRight ", 10, 100);
+        console.log("Fills      ", newFills.leftValue, newFills.rightValue);
+        expect(newFills.leftValue).equal(convert(100));
+        expect(newFills.rightValue).equal("9090909090909090909");
+      });
+      it("Should left and right complete fill", async () => {
+        orderLeft = Order(
+          ORDER,
+          deadline,
+          account1.address,
+          Asset(virtualToken.address, convert(110)),
+          Asset(volmexBaseToken.address, convert(10)),
+          ++salt,
+          0,
+          !isShort,
+        );
+
+        orderRight = Order(
+          ORDER,
+          deadline,
+          account2.address,
+          Asset(volmexBaseToken.address, convert(10)),
+          Asset(virtualToken.address, convert(100)),
+          ++salt,
+          0,
+          isShort,
+        );
+        const receipt = await (await matchingEngine.matchOrders(orderLeft, orderRight)).wait();
+        const newFills = matchedFills(receipt);
+        console.log("orderLeft  ", 110, 10);
+        console.log("orderRight ", 10, 100);
+        console.log("Fills      ", newFills.leftValue, newFills.rightValue);
+        expect(newFills.leftValue).equal(convert(100));
+        expect(newFills.rightValue).equal("9090909090909090909");
+      });
+      it("Should left complete and right partial fill", async () => {
+        orderLeft = Order(
+          ORDER,
+          deadline,
+          account1.address,
+          Asset(virtualToken.address, convert(110)),
+          Asset(volmexBaseToken.address, convert(10)),
+          ++salt,
+          0,
+          !isShort,
+        );
+
+        orderRight = Order(
+          ORDER,
+          deadline,
+          account2.address,
+          Asset(volmexBaseToken.address, convert(20)),
+          Asset(virtualToken.address, convert(200)),
+          ++salt,
+          0,
+          isShort,
+        );
+        const receipt = await (await matchingEngine.matchOrders(orderLeft, orderRight)).wait();
+        const newFills = matchedFills(receipt);
+        console.log("orderLeft  ", 110, 10);
+        console.log("orderRight ", 20, 200);
+        console.log("Fills      ", newFills.leftValue, newFills.rightValue);
+        expect(newFills.leftValue).equal(convert(110));
+        expect(newFills.rightValue).equal(convert(10));
+      });
+    });
+
+		describe("Left order fill with better price", () => {
+      it("Should left partial and right complete fill", async () => {
+        orderLeft = Order(
+          ORDER,
+          deadline,
+          account1.address,
+          Asset(virtualToken.address, convert(200)),
+          Asset(volmexBaseToken.address, convert(20)),
+          ++salt,
+          0,
+          !isShort,
+        );
+
+        orderRight = Order(
+          ORDER,
+          deadline,
+          account2.address,
+          Asset(volmexBaseToken.address, convert(10)),
+          Asset(virtualToken.address, convert(110)),
+          ++salt,
+          0,
+        	isShort,
+        );
+        await expectRevert(
+          matchingEngine.matchOrders(orderLeft, orderRight),
+          "V_PERP_M: fillRight: unable to fill"
+        );
+      });
+      it("Should left and right complete fill", async () => {
+        orderLeft = Order(
+          ORDER,
+          deadline,
+          account1.address,
+          Asset(virtualToken.address, convert(100)),
+          Asset(volmexBaseToken.address, convert(10)),
+          ++salt,
+          0,
+          !isShort,
+        );
+
+        orderRight = Order(
+          ORDER,
+          deadline,
+          account2.address,
+          Asset(volmexBaseToken.address, convert(10)),
+          Asset(virtualToken.address, convert(110)),
+          ++salt,
+          0,
+          isShort,
+        );
+        await expectRevert(
+          matchingEngine.matchOrders(orderLeft, orderRight),
+          "V_PERP_M: fillLeft: unable to fill"
+        );
+      });
+      it("Should left complete and right partial fill", async () => {
+        orderLeft = Order(
+          ORDER,
+          deadline,
+          account1.address,
+          Asset(virtualToken.address, convert(100)),
+          Asset(volmexBaseToken.address, convert(10)),
+          ++salt,
+          0,
+          !isShort,
+        );
+
+        orderRight = Order(
+          ORDER,
+          deadline,
+          account2.address,
+          Asset(volmexBaseToken.address, convert(20)),
+          Asset(virtualToken.address, convert(220)),
+          ++salt,
+          0,
+          isShort,
+        );
+        await expectRevert(
+          matchingEngine.matchOrders(orderLeft, orderRight),
+          "V_PERP_M: fillLeft: unable to fill"
+        )
+      });
+    });
+	})
   async function getSignature(orderObj, signer) {
     return sign(orderObj, signer, positioning.address);
   }
 });
+
+const oneE18 = "1000000000000000000";
+const matchedFills = (receipt: Result) => {
+  const matched = receipt.events?.filter(x => {
+    return x.event == "Matched";
+  });
+  return {
+    leftValue: matched[0].args[3].toString(),
+    rightValue: matched[0].args[4].toString(),
+  };
+};
+const convert = (num: number) => {
+  const one = BigNumber.from(ethers.constants.WeiPerEther.toString()); // 1e18 in string
+  return BigNumber.from(num).mul(one).toString();
+};
