@@ -159,6 +159,10 @@ describe("PerpetualOracle - Index Price Oracle", function () {
 
     (await accountBalance1.grantSettleRealizedPnlRole(vault.address)).wait();
     (await accountBalance1.grantSettleRealizedPnlRole(vaultController.address)).wait();
+    marketRegistry = await upgrades.deployProxy(MarketRegistry, [
+      volmexQuoteToken.address,
+      [volmexBaseToken.address, volmexBaseToken.address],
+    ]);
 
     positioning = await upgrades.deployProxy(
       Positioning,
@@ -168,6 +172,7 @@ describe("PerpetualOracle - Index Price Oracle", function () {
         accountBalance1.address,
         matchingEngine.address,
         perpetualOracle.address,
+        marketRegistry.address,
         [volmexBaseToken.address, volmexBaseToken.address],
         [owner.address, account1.address],
       ],
@@ -182,8 +187,6 @@ describe("PerpetualOracle - Index Price Oracle", function () {
     await (await perpView.incrementPerpIndex()).wait();
     await (await volmexBaseToken.setMintBurnRole(positioning.address)).wait();
     await (await volmexQuoteToken.setMintBurnRole(positioning.address)).wait();
-
-    marketRegistry = await upgrades.deployProxy(MarketRegistry, [volmexQuoteToken.address]);
 
     await marketRegistry.connect(owner).addBaseToken(volmexBaseToken.address);
     await marketRegistry.connect(owner).setMakerFeeRatio(0.0004e6);
@@ -400,7 +403,7 @@ describe("PerpetualOracle - Index Price Oracle", function () {
           await perpetualOracle.addIndexObservations([0], [65000000], [proofHash]);
         }
         time.increase(28000);
-        console.log((await perpetualOracle.indexEpochs(0, i != 0 ? i - 1: 0)).toString());
+        console.log((await perpetualOracle.indexEpochs(0, i != 0 ? i - 1 : 0)).toString());
       }
       console.log("Totalepochs", (await perpetualOracle.indexPriceEpochsCount(0)).toString());
 

@@ -3,7 +3,7 @@ import { expect } from "chai";
 import { ethers, upgrades, waffle } from "hardhat";
 import { FakeContract, smock } from "@defi-wonderland/smock";
 
-describe("Vault", function () {
+describe.only("Vault", function () {
   let USDC;
   let positioningConfig;
   let accountBalance;
@@ -111,6 +111,7 @@ describe("Vault", function () {
         accountBalance.address,
         matchingEngine.address,
         perpetualOracle.address,
+        accountBalance.address,
         [alice.address, alice.address],
         [owner.address, alice.address],
       ],
@@ -477,6 +478,7 @@ describe("Vault", function () {
           accountBalance.address,
           matchingEngine.address,
           perpetualOracle.address,
+          perpetualOracle.address,
           [alice.address, alice.address],
           [owner.address, alice.address],
         ],
@@ -625,6 +627,7 @@ describe("Vault", function () {
           vaultController.address,
           accountBalance.address,
           matchingEngine.address,
+          perpetualOracle.address,
           perpetualOracle.address,
           [alice.address, alice.address],
           [owner.address, alice.address],

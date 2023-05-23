@@ -163,7 +163,11 @@ describe("Global", function () {
     ]);
     await vault.deployed();
     await (await perpView.incrementVaultIndex()).wait();
-
+    marketRegistry = await upgrades.deployProxy(MarketRegistry, [
+      volmexQuoteToken.address,
+      [volmexBaseToken.address, volmexBaseToken.address],
+    ]);
+    await marketRegistry.deployed();
     positioning = await upgrades.deployProxy(
       Positioning,
       [
@@ -172,6 +176,7 @@ describe("Global", function () {
         accountBalance.address,
         matchingEngine.address,
         perpetualOracle.address,
+        marketRegistry.address,
         [volmexBaseToken.address, volmexBaseToken.address],
         [owner.address, account1.address],
       ],

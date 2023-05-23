@@ -118,6 +118,7 @@ describe("Vault Controller tests for withdrawal", function () {
         accountBalance.address,
         matchingEngineFake.address,
         perpetualOracle.address,
+        perpetualOracle.address,
         [volmexBaseToken.address, volmexBaseToken.address],
         [owner.address, alice.address],
       ],

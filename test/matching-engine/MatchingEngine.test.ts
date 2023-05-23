@@ -142,6 +142,10 @@ describe("MatchingEngine", function () {
       initializer: "initialize",
     });
     await virtualToken.deployed();
+    marketRegistry = await upgrades.deployProxy(MarketRegistry, [
+      virtualToken.address,
+      [volmexBaseToken.address, volmexBaseToken.address],
+    ]);
     positioning = await upgrades.deployProxy(
       Positioning,
       [
@@ -150,6 +154,7 @@ describe("MatchingEngine", function () {
         accountBalance.address,
         matchingEngine.address,
         perpetualOracle.address,
+        marketRegistry.address,
         [volmexBaseToken.address, volmexBaseToken.address],
         [owner.address, account2.address],
       ],
@@ -169,7 +174,7 @@ describe("MatchingEngine", function () {
     await virtualToken.mint(account2.address, ten.toString());
     await (await volmexBaseToken.setMintBurnRole(positioning.address)).wait();
     await (await virtualToken.connect(owner).setMintBurnRole(positioning.address)).wait();
-    marketRegistry = await upgrades.deployProxy(MarketRegistry, [virtualToken.address]);
+
     perpViewFake = await smock.fake("VolmexPerpView");
     volmexPerpPeriphery = await upgrades.deployProxy(VolmexPerpPeriphery, [
       perpViewFake.address,
@@ -519,7 +524,7 @@ describe("MatchingEngine", function () {
           .withArgs(
             [account1.address, account2.address],
             [deadline, deadline],
-            ["10000000000000000000", "100000000000000000"]
+            ["10000000000000000000", "100000000000000000"],
           )
           .to.emit(matchingEngine, "OrdersFilled")
           .withArgs(
@@ -558,7 +563,7 @@ describe("MatchingEngine", function () {
           .withArgs(
             [account1.address, account2.address],
             [deadline, deadline],
-            ["10000000000000000000", "20000000000000000000"]
+            ["10000000000000000000", "20000000000000000000"],
           )
           .to.emit(matchingEngine, "OrdersFilled")
           .withArgs(
@@ -597,7 +602,7 @@ describe("MatchingEngine", function () {
           .withArgs(
             [account1.address, account2.address],
             [deadline, deadline],
-            ["100000000000000000000","10000000000000000000"]
+            ["100000000000000000000", "10000000000000000000"],
           )
           .to.emit(matchingEngine, "OrdersFilled")
           .withArgs(
@@ -1711,8 +1716,8 @@ describe("MatchingEngine", function () {
         );
         await expectRevert(
           matchingEngine.matchOrders(orderLeft, orderRight),
-          "V_PERP_M: fillRight: unable to fill"
-        )
+          "V_PERP_M: fillRight: unable to fill",
+        );
       });
       it("Should left and right complete fill", async () => {
         orderLeft = Order(
@@ -1738,8 +1743,8 @@ describe("MatchingEngine", function () {
         );
         await expectRevert(
           matchingEngine.matchOrders(orderLeft, orderRight),
-          "V_PERP_M: fillRight: unable to fill"
-        )
+          "V_PERP_M: fillRight: unable to fill",
+        );
       });
       it("Should left complete and right partial fill", async () => {
         orderLeft = Order(
@@ -1765,19 +1770,19 @@ describe("MatchingEngine", function () {
         );
         await expectRevert(
           matchingEngine.matchOrders(orderLeft, orderRight),
-          "V_PERP_M: fillLeft: unable to fill"
-        )
+          "V_PERP_M: fillLeft: unable to fill",
+        );
       });
     });
   });
 
-	describe("Right order - EVIV perp", () => {
+  describe("Right order - EVIV perp", () => {
     const isShort = true;
     let salt = 0;
     this.beforeEach(async () => {
       await (await matchingEngine.grantMatchOrders(owner.address)).wait();
     });
-		describe("Right order fill with better price", () => {
+    describe("Right order fill with better price", () => {
       it("Should left partial and right complete fill", async () => {
         orderLeft = Order(
           ORDER,
@@ -1861,7 +1866,7 @@ describe("MatchingEngine", function () {
       });
     });
 
-		describe("Left order fill with better price", () => {
+    describe("Left order fill with better price", () => {
       it("Should left partial and right complete fill", async () => {
         orderLeft = Order(
           ORDER,
@@ -1882,7 +1887,7 @@ describe("MatchingEngine", function () {
           Asset(virtualToken.address, convert(110)),
           ++salt,
           0,
-        	isShort,
+          isShort,
         );
         const receipt = await (await matchingEngine.matchOrders(orderLeft, orderRight)).wait();
         const newFills = matchedFills(receipt);
@@ -1913,7 +1918,7 @@ describe("MatchingEngine", function () {
         );
         await expectRevert(
           matchingEngine.matchOrders(orderLeft, orderRight),
-          "V_PERP_M: fillLeft: unable to fill"
+          "V_PERP_M: fillLeft: unable to fill",
         );
       });
       it("Should left complete and right partial fill", async () => {
@@ -1940,11 +1945,11 @@ describe("MatchingEngine", function () {
         );
         await expectRevert(
           matchingEngine.matchOrders(orderLeft, orderRight),
-          "V_PERP_M: fillLeft: unable to fill"
-        )
+          "V_PERP_M: fillLeft: unable to fill",
+        );
       });
     });
-	})
+  });
   async function getSignature(orderObj, signer) {
     return sign(orderObj, signer, positioning.address);
   }

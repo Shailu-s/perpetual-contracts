@@ -174,7 +174,10 @@ describe("PerpetualOracle - Last Price Oracle", function () {
 
     (await accountBalance1.grantSettleRealizedPnlRole(vault.address)).wait();
     (await accountBalance1.grantSettleRealizedPnlRole(vaultController.address)).wait();
-
+    marketRegistry = await upgrades.deployProxy(MarketRegistry, [
+      volmexQuoteToken.address,
+      [volmexBaseToken.address, volmexBaseToken1.address],
+    ]);
     positioning = await upgrades.deployProxy(
       Positioning,
       [
@@ -183,6 +186,7 @@ describe("PerpetualOracle - Last Price Oracle", function () {
         accountBalance1.address,
         matchingEngine.address,
         perpetualOracle.address,
+        marketRegistry.address,
         [volmexBaseToken.address, volmexBaseToken1.address],
         [owner.address, account1.address],
       ],
@@ -197,11 +201,6 @@ describe("PerpetualOracle - Last Price Oracle", function () {
     await (await perpView.incrementPerpIndex()).wait();
     await (await volmexBaseToken.setMintBurnRole(positioning.address)).wait();
     await (await volmexQuoteToken.setMintBurnRole(positioning.address)).wait();
-
-    marketRegistry = await upgrades.deployProxy(MarketRegistry, [volmexQuoteToken.address]);
-
-    await marketRegistry.connect(owner).addBaseToken(volmexBaseToken.address);
-    await marketRegistry.connect(owner).addBaseToken(volmexBaseToken1.address);
 
     await marketRegistry.connect(owner).setMakerFeeRatio(0.0004e6);
     await marketRegistry.connect(owner).setTakerFeeRatio(0.0009e6);

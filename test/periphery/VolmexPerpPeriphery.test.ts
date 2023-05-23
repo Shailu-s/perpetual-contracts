@@ -160,7 +160,10 @@ describe("VolmexPerpPeriphery", function () {
 
     (await accountBalance1.grantSettleRealizedPnlRole(vault.address)).wait();
     (await accountBalance1.grantSettleRealizedPnlRole(vaultController.address)).wait();
-
+    marketRegistry = await upgrades.deployProxy(MarketRegistry, [
+      volmexQuoteToken.address,
+      [volmexBaseToken.address, volmexBaseToken.address],
+    ]);
     positioning = await upgrades.deployProxy(
       Positioning,
       [
@@ -169,6 +172,7 @@ describe("VolmexPerpPeriphery", function () {
         accountBalance1.address,
         matchingEngine.address,
         perpetualOracle.address,
+        marketRegistry.address,
         [volmexBaseToken.address, volmexBaseToken.address],
         [owner.address, account1.address],
       ],
@@ -1910,8 +1914,8 @@ describe("VolmexPerpPeriphery", function () {
           signatureRight,
           liquidator,
         ),
-        "V_PERP_M: Order canceled"
-      )
+        "V_PERP_M: Order canceled",
+      );
     });
     describe("Bulk Methods", function () {
       it("should open position in batch", async () => {

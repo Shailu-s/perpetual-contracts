@@ -145,7 +145,10 @@ describe("Market Registry", function () {
     await virtualToken.deployed();
     await virtualToken.setMintBurnRole(owner.address);
 
-    marketRegistry = await upgrades.deployProxy(MarketRegistry, [virtualToken.address]);
+    marketRegistry = await upgrades.deployProxy(MarketRegistry, [
+      virtualToken.address,
+      [volmexBaseToken.address, volmexBaseToken.address],
+    ]);
 
     // await marketRegistry.connect(owner).addBaseToken(virtualToken.address)
     await marketRegistry.connect(owner).addBaseToken(volmexBaseToken.address);

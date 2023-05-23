@@ -202,7 +202,10 @@ describe("Realised pnl tests", function () {
       positioningConfig.address,
       accountBalance1.address,
     ]);
-
+    marketRegistry = await upgrades.deployProxy(MarketRegistry, [
+      virtualToken.address,
+      [volmexBaseToken.address, volmexBaseToken1.address],
+    ]);
     // vaultController = await upgrades.deployProxy(VaultController, [positioningConfig.address, accountBalance1.address])
 
     positioning = await upgrades.deployProxy(
@@ -213,6 +216,7 @@ describe("Realised pnl tests", function () {
         accountBalance1.address,
         matchingEngine.address,
         perpetualOracle.address,
+        marketRegistry.address,
         [volmexBaseToken.address, volmexBaseToken1.address],
         [owner.address, account2.address],
       ],
@@ -222,11 +226,7 @@ describe("Realised pnl tests", function () {
     );
     await (await volmexBaseToken.setMintBurnRole(positioning.address)).wait();
     await (await virtualToken.setMintBurnRole(positioning.address)).wait();
-    marketRegistry = await upgrades.deployProxy(MarketRegistry, [virtualToken.address]);
 
-    // await marketRegistry.connect(owner).addBaseToken(virtualToken.address)
-    await marketRegistry.connect(owner).addBaseToken(volmexBaseToken.address);
-    await marketRegistry.connect(owner).addBaseToken(volmexBaseToken1.address);
     // await marketRegistry.connect(owner).addBaseToken(baseToken.address)
     await marketRegistry.connect(owner).setMakerFeeRatio(0.0004e6);
     await marketRegistry.connect(owner).setTakerFeeRatio(0.0004e6);

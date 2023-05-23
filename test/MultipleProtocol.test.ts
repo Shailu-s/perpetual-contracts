@@ -6,7 +6,7 @@ const { Order, Asset, sign, encodeAddress } = require("./order");
 import { BigNumber } from "ethers";
 import { time } from "@nomicfoundation/hardhat-network-helpers";
 
-describe("Multiple protocols", function () {
+describe.only("Multiple protocols", function () {
   let MatchingEngine;
   let matchingEngine;
   let VirtualToken;
@@ -176,6 +176,10 @@ describe("Multiple protocols", function () {
 
     (await accountBalance1.grantSettleRealizedPnlRole(vault.address)).wait();
     (await accountBalance1.grantSettleRealizedPnlRole(vaultController.address)).wait();
+    marketRegistry = await upgrades.deployProxy(MarketRegistry, [
+      volmexQuoteToken.address,
+      [EVIV.address, BVIV.address],
+    ]);
 
     positioning = await upgrades.deployProxy(
       Positioning,
@@ -185,6 +189,7 @@ describe("Multiple protocols", function () {
         accountBalance1.address,
         matchingEngine.address,
         perpetualOracle.address,
+        marketRegistry.address,
         [EVIV.address, BVIV.address],
         [owner.address, account1.address],
       ],
@@ -199,8 +204,6 @@ describe("Multiple protocols", function () {
     await (await BVIV.setMintBurnRole(positioning.address)).wait();
 
     await (await volmexQuoteToken.setMintBurnRole(positioning.address)).wait();
-
-    marketRegistry = await upgrades.deployProxy(MarketRegistry, [volmexQuoteToken.address]);
 
     await marketRegistry.connect(owner).addBaseToken(EVIV.address);
     await marketRegistry.connect(owner).addBaseToken(BVIV.address);

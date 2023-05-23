@@ -202,7 +202,10 @@ describe("Positioning", function () {
       positioningConfig.address,
       accountBalance1.address,
     ]);
-
+    marketRegistry = await upgrades.deployProxy(MarketRegistry, [
+      virtualToken.address,
+      [volmexBaseToken.address, volmexBaseToken1.address],
+    ]);
     // vaultController = await upgrades.deployProxy(VaultController, [positioningConfig.address, accountBalance1.address])
 
     positioning = await upgrades.deployProxy(
@@ -213,6 +216,7 @@ describe("Positioning", function () {
         accountBalance1.address,
         matchingEngine.address,
         perpetualOracle.address,
+        marketRegistry.address,
         [volmexBaseToken.address, volmexBaseToken1.address],
         [owner.address, account2.address],
       ],
@@ -222,7 +226,6 @@ describe("Positioning", function () {
     );
     await (await volmexBaseToken.setMintBurnRole(positioning.address)).wait();
     await (await virtualToken.setMintBurnRole(positioning.address)).wait();
-    marketRegistry = await upgrades.deployProxy(MarketRegistry, [virtualToken.address]);
 
     // await marketRegistry.connect(owner).addBaseToken(virtualToken.address)
     await marketRegistry.connect(owner).addBaseToken(volmexBaseToken.address);
@@ -3119,6 +3122,10 @@ describe("Liquidation test in Positioning", function () {
       positioningConfig.address,
       accountBalance1.address,
     ]);
+    marketRegistry = await upgrades.deployProxy(MarketRegistry, [
+      virtualToken.address,
+      [volmexBaseToken.address, volmexBaseToken1.address],
+    ]);
     positioning = await upgrades.deployProxy(
       Positioning,
       [
@@ -3127,6 +3134,7 @@ describe("Liquidation test in Positioning", function () {
         accountBalance1.address,
         matchingEngine.address,
         perpetualOracle.address,
+        marketRegistry.address,
         [volmexBaseToken.address, volmexBaseToken1.address],
         [owner.address, account2.address],
       ],
@@ -3138,7 +3146,7 @@ describe("Liquidation test in Positioning", function () {
     await (await volmexBaseToken.setMintBurnRole(positioning.address)).wait();
     await (await volmexBaseToken1.setMintBurnRole(positioning.address)).wait();
     await (await virtualToken.setMintBurnRole(positioning.address)).wait();
-    marketRegistry = await upgrades.deployProxy(MarketRegistry, [virtualToken.address]);
+
     perpViewFake = await smock.fake("VolmexPerpView");
     volmexPerpPeriphery = await upgrades.deployProxy(VolmexPerpPeriphery, [
       perpViewFake.address,
