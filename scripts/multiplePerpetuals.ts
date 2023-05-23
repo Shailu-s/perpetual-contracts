@@ -158,7 +158,13 @@ const positioning = async () => {
   await vault.deployed();
   console.log(vault.address);
   await (await perpView.incrementVaultIndex()).wait();
-
+  console.log("Deploying MarketRegistry ...");
+  const marketRegistry = await upgrades.deployProxy(MarketRegistry, [
+    volmexQuoteToken.address,
+    [volmexBaseToken1.address, volmexBaseToken2.address],
+  ]);
+  await marketRegistry.deployed();
+  console.log(marketRegistry.address);
   console.log("Deploying Positioning ...");
   const positioning = await upgrades.deployProxy(
     Positioning,
@@ -168,6 +174,7 @@ const positioning = async () => {
       accountBalance.address,
       matchingEngine.address,
       perpetualOracle.address,
+      marketRegistry.address,
       [volmexBaseToken1.address, volmexBaseToken2.address],
       [owner.address, `${process.env.LIQUIDATOR}`],
     ],
@@ -193,16 +200,6 @@ const positioning = async () => {
   await (await volmexBaseToken2.setMintBurnRole(positioning.address)).wait();
   await (await volmexQuoteToken.setMintBurnRole(positioning.address)).wait();
 
-  console.log("Deploying MarketRegistry ...");
-  const marketRegistry = await upgrades.deployProxy(MarketRegistry, [volmexQuoteToken.address]);
-  await marketRegistry.deployed();
-  console.log(marketRegistry.address);
-  console.log("Add base token 1 ...");
-  await (await marketRegistry.addBaseToken(volmexBaseToken1.address)).wait();
-  console.log("Add base token 2 ...");
-  await (await marketRegistry.addBaseToken(volmexBaseToken2.address)).wait();
-  console.log("Set market ...");
-  await (await positioning.setMarketRegistry(marketRegistry.address)).wait();
   console.log("Set fee receiver ...");
   await (await positioning.setDefaultFeeReceiver(owner.address)).wait();
   console.log("Set positioning ...");
