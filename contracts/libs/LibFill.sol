@@ -37,18 +37,26 @@ library LibFill {
             return fillLeft(leftMakeValue, leftTakeValue, rightOrder.makeAsset.value, rightOrder.takeAsset.value); //lq,lb,rb,rq
         }
         //2st: right order should be fully filled or 3d: both should be fully filled if required values are the same
-        return fillRight(leftOrder.makeAsset.value, leftOrder.takeAsset.value, rightMakeValue, rightTakeValue); //lq,lb,rb,rq
+        return fillRight(leftOrder.makeAsset.value, leftOrder.takeAsset.value, rightMakeValue, rightTakeValue, isLeftMakeFill); //lq,lb,rb,rq
     }
 
     function fillRight(
         uint256 leftMakeValue,
         uint256 leftTakeValue,
         uint256 rightMakeValue,
-        uint256 rightTakeValue
+        uint256 rightTakeValue,
+        bool isLeftMakeFill
     ) internal pure returns (FillResult memory result) {
-        uint256 makerValue = LibMath.safeGetPartialAmountFloor(rightTakeValue, leftMakeValue, leftTakeValue); //rq * lb / lq
-        require(makerValue <= rightMakeValue, "V_PERP_M: fillRight: unable to fill");
-        return FillResult(rightTakeValue, makerValue); //rq, lb == left goes long ; rb, lq ==left goes short
+        uint256 makerQuoteValue;
+        if (isLeftMakeFill) {
+            makerQuoteValue = LibMath.safeGetPartialAmountFloor(rightTakeValue, leftMakeValue, leftTakeValue); //rq * lb / lq
+            require(makerQuoteValue <= rightMakeValue, "V_PERP_M: fillRight: unable to fill");
+            return FillResult(rightTakeValue, makerQuoteValue); //rq, lb == left goes long ; rb, lq ==left goes short
+        } else {
+            makerQuoteValue = LibMath.safeGetPartialAmountFloor(rightMakeValue, leftTakeValue, leftMakeValue);
+            require(makerQuoteValue <= leftMakeValue, "V_PERP_M: fillRight: unable to fill");
+            return FillResult(makerQuoteValue, rightMakeValue); //rq, lb == left goes long ; rb, lq ==left goes short
+        }
     }
 
     function fillLeft(

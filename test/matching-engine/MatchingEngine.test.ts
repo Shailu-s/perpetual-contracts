@@ -1799,8 +1799,8 @@ describe("MatchingEngine", function () {
         );
         const receipt = await (await matchingEngine.matchOrders(orderLeft, orderRight)).wait();
         const newFills = matchedFills(receipt);
-        expect(newFills.leftValue).equal(convert(100));
-        expect(newFills.rightValue).equal("9090909090909090909");
+        expect(newFills.leftValue).equal(convert(110));
+        expect(newFills.rightValue).equal(convert(10));
       });
       it("Should left and right complete fill", async () => {
         orderLeft = Order(
@@ -1826,8 +1826,8 @@ describe("MatchingEngine", function () {
         );
         const receipt = await (await matchingEngine.matchOrders(orderLeft, orderRight)).wait();
         const newFills = matchedFills(receipt);
-        expect(newFills.leftValue).equal(convert(100));
-        expect(newFills.rightValue).equal("9090909090909090909");
+        expect(newFills.leftValue).equal(convert(110));
+        expect(newFills.rightValue).equal(convert(10));
       });
       it("Should left complete and right partial fill", async () => {
         orderLeft = Order(
@@ -1881,10 +1881,10 @@ describe("MatchingEngine", function () {
           0,
         	isShort,
         );
-        await expectRevert(
-          matchingEngine.matchOrders(orderLeft, orderRight),
-          "V_PERP_M: fillRight: unable to fill"
-        );
+        const receipt = await (await matchingEngine.matchOrders(orderLeft, orderRight)).wait();
+        const newFills = matchedFills(receipt);
+        expect(newFills.leftValue).equal(convert(100));
+        expect(newFills.rightValue).equal(convert(10));
       });
       it("Should left and right complete fill", async () => {
         orderLeft = Order(
