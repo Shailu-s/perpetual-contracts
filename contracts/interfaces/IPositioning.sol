@@ -79,6 +79,7 @@ interface IPositioning is IFundingRate {
         address accountBalanceArg,
         address matchingEngineArg,
         address perpetualOracleArg,
+        address marketRegistryArg,
         address[2] calldata volmexBaseTokenArgs,
         address[2] calldata liquidators
     ) external;

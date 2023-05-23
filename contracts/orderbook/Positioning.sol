@@ -46,6 +46,7 @@ contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, 
         address accountBalanceArg,
         address matchingEngineArg,
         address perpetualOracleArg,
+        address marketRegistryArg,
         address[2] calldata volmexBaseTokenArgs,
         address[2] calldata liquidators
     ) external initializer {
@@ -57,7 +58,8 @@ contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, 
         require(accountBalanceArg.isContract(), "P_ABNC");
         // P_MENC: Matching Engine is not contract
         require(matchingEngineArg.isContract(), "P_MENC");
-
+        // P_MRNC:Market Registry  is not contract
+        require(marketRegistryArg.isContract(), "P_MENC");
         __ReentrancyGuard_init();
         __OwnerPausable_init();
         __FundingRate_init(perpetualOracleArg);
@@ -67,6 +69,7 @@ contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, 
         _vaultController = vaultControllerArg;
         _accountBalance = accountBalanceArg;
         _matchingEngine = matchingEngineArg;
+        _marketRegistry = marketRegistryArg;
         _smInterval = 28800;
         _smIntervalLiquidation = 3600;
         indexPriceAllowedInterval = 1800;

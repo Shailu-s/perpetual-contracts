@@ -154,6 +154,7 @@ contract PerpFactory is Initializable, IPerpFactory, AccessControlUpgradeable {
         address _matchingEngine,
         address _perpetualOracle,
         address _quoteToken,
+        address _marketRegistry,
         address[2] calldata volmexBaseTokenArgs,
         address[2] calldata _liquidators
     ) external returns (address[4] memory perpEcosystem) {
@@ -169,11 +170,12 @@ contract PerpFactory is Initializable, IPerpFactory, AccessControlUpgradeable {
                 _matchingEngine,
                 perpEcosystem[0],
                 _perpetualOracle,
+                _marketRegistry,
                 volmexBaseTokenArgs,
                 _liquidators
             )
         );
-        perpEcosystem[3] = address(_cloneMarketRegistry(perpIndex, _quoteToken));
+        perpEcosystem[3] = address(_cloneMarketRegistry(perpIndex, _quoteToken, volmexBaseTokenArgs));
         emit PerpSystemCreated(perpIndex, perpEcosystem[2], perpEcosystem[1], perpEcosystem[0], perpEcosystem[3]);
         perpViewRegistry.incrementPerpIndex();
     }
@@ -196,12 +198,22 @@ contract PerpFactory is Initializable, IPerpFactory, AccessControlUpgradeable {
         address _matchingEngine,
         address _accountBalance,
         address _perpetualOracle,
+        address _marketRegistry,
         address[2] calldata volmexBaseTokenArgs,
         address[2] calldata _liquidators
     ) private returns (IPositioning positioning) {
         bytes32 salt = keccak256(abi.encodePacked(_perpIndex, _positioningConfig));
         positioning = IPositioning(Clones.cloneDeterministic(positioningImplementation, salt));
-        positioning.initialize(_positioningConfig, address(_vaultController), _matchingEngine, _accountBalance, _perpetualOracle, volmexBaseTokenArgs, _liquidators);
+        positioning.initialize(
+            _positioningConfig,
+            address(_vaultController),
+            _matchingEngine,
+            _accountBalance,
+            _perpetualOracle,
+            _marketRegistry,
+            volmexBaseTokenArgs,
+            _liquidators
+        );
         _vaultController.setPositioning(address(positioning));
         perpViewRegistry.setPositioning(positioning);
     }
@@ -217,10 +229,14 @@ contract PerpFactory is Initializable, IPerpFactory, AccessControlUpgradeable {
         perpViewRegistry.setAccount(accountBalance);
     }
 
-    function _cloneMarketRegistry(uint256 _perpIndex, address _quoteToken) private returns (IMarketRegistry marketRegistry) {
+    function _cloneMarketRegistry(
+        uint256 _perpIndex,
+        address _quoteToken,
+        address[2] calldata volmexBaseTokenArgs
+    ) private returns (IMarketRegistry marketRegistry) {
         bytes32 salt = keccak256(abi.encodePacked(_perpIndex, _quoteToken));
         marketRegistry = IMarketRegistry(Clones.cloneDeterministic(marketRegistryImplementation, salt));
-        marketRegistry.initialize(_quoteToken);
+        marketRegistry.initialize(_quoteToken, volmexBaseTokenArgs);
         perpViewRegistry.setMarketRegistry(marketRegistry);
     }
 
