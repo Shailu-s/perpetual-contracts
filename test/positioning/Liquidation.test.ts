@@ -138,7 +138,10 @@ describe("Liquidation test in Positioning", function () {
     positioningConfig = await upgrades.deployProxy(PositioningConfig, [perpetualOracle.address]);
     await positioningConfig.deployed();
 
-    accountBalance = await upgrades.deployProxy(AccountBalance, [positioningConfig.address]);
+    accountBalance = await upgrades.deployProxy(AccountBalance, [
+      positioningConfig.address,
+      [volmexBaseToken.address, volmexBaseToken1.address],
+    ]);
     await accountBalance.deployed();
 
     USDC = await TestERC20.deploy();
@@ -168,7 +171,10 @@ describe("Liquidation test in Positioning", function () {
       accountBalance.address,
     ]);
 
-    accountBalance1 = await upgrades.deployProxy(AccountBalance, [positioningConfig.address]);
+    accountBalance1 = await upgrades.deployProxy(AccountBalance, [
+      positioningConfig.address,
+      [volmexBaseToken.address, volmexBaseToken1.address],
+    ]);
     vaultController = await upgrades.deployProxy(VaultController, [
       positioningConfig.address,
       accountBalance1.address,
@@ -181,7 +187,7 @@ describe("Liquidation test in Positioning", function () {
         accountBalance1.address,
         matchingEngine.address,
         perpetualOracle.address,
-        0,
+        [volmexBaseToken.address, volmexBaseToken1.address],
         [owner.address, account2.address],
       ],
       {

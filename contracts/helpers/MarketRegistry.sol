@@ -22,12 +22,14 @@ contract MarketRegistry is IMarketRegistry, PositioningCallee, MarketRegistrySto
         _;
     }
 
-    function initialize(address quoteTokenArg) external initializer {
+    function initialize(address quoteTokenArg, address[2] calldata volmexBaseTokenArgs) external initializer {
         __PositioningCallee_init();
 
         // QuoteToken is not contract
         require(quoteTokenArg.isContract(), "MR_QTNC");
-
+        for (uint256 index; index < 2; ++index) {
+            _baseTokensMarketMap.push(volmexBaseTokenArgs[index]);
+        }
         // update states
         _quoteToken = quoteTokenArg;
         _maxOrdersPerMarket = type(uint8).max;

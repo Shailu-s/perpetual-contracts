@@ -147,7 +147,10 @@ describe("Periodic Funding payment", function () {
     });
     await virtualToken.deployed();
 
-    accountBalance1 = await upgrades.deployProxy(AccountBalance, [positioningConfig.address]);
+    accountBalance1 = await upgrades.deployProxy(AccountBalance, [
+      positioningConfig.address,
+      [volmexBaseToken.address, volmexBaseToken1.address],
+    ]);
 
     await accountBalance1.deployed();
     await (await perpView.setAccount(accountBalance1.address)).wait();
@@ -178,7 +181,7 @@ describe("Periodic Funding payment", function () {
         accountBalance1.address,
         matchingEngine.address,
         perpetualOracle.address,
-        0,
+        [volmexBaseToken.address, volmexBaseToken1.address],
         [owner.address, account1.address],
       ],
       {
@@ -1483,7 +1486,10 @@ describe("Periodic Funding payment", function () {
       });
       await virtualToken.deployed();
 
-      accountBalance1 = await upgrades.deployProxy(AccountBalance, [positioningConfig.address]);
+      accountBalance1 = await upgrades.deployProxy(AccountBalance, [
+        positioningConfig.address,
+        [volmexBaseToken.address, volmexBaseToken1.address],
+      ]);
 
       await accountBalance1.deployed();
       await (await perpView.setAccount(accountBalance1.address)).wait();
@@ -1514,7 +1520,7 @@ describe("Periodic Funding payment", function () {
           accountBalance1.address,
           matchingEngine.address,
           perpetualOracle.address,
-          0,
+          [volmexBaseToken.address, volmexBaseToken1.address],
           [owner.address, account1.address],
         ],
         {
