@@ -30,15 +30,15 @@ contract PerpetualOracle is AccessControlUpgradeable, IPerpetualOracle {
     mapping(uint256 => uint256) public lastestMarkPrice;
     mapping(uint256 => uint256) public lastPriceTotalObservations;
     mapping(uint256 => uint256) public indexTotalObservations;
-    uint256 markPriceEpochCount;
-    uint256 indexPriceEpochCount;
     uint256 public smInterval;
     uint256 public markSmInterval;
-    uint256 public initialTimestamp;
     uint256 public fundingPeriod;
     IPositioning public positioning;
     mapping(uint256 => uint256) public currentIndexEpochEndTimestamp;
     mapping(uint256 => uint256) public currentMarkEpochEndTimestamp;
+    mapping(uint256 => uint256) public markPriceEpochsCount;
+    mapping(uint256 => uint256) public indexPriceEpochsCount;
+    mapping(uint256 => uint256) public initialTimestamps;
 
     function __PerpetualOracle_init(
         address[2] calldata _baseToken,
@@ -126,7 +126,7 @@ contract PerpetualOracle is AccessControlUpgradeable, IPerpetualOracle {
         for (uint256 index; index < numberOfPrices; ++index) {
             require(_prices[index] != 0, "PerpOracle: zero price");
             _pushIndexPrice(_indexes[index], _prices[index], _proofHashes[index]);
-            if (initialTimestamp > 0) {
+            if (initialTimestamps[_indexes[index]] > 0) {
                 _saveEpoch(_indexes[index], _prices[index], false);
             }
         }
@@ -194,7 +194,7 @@ contract PerpetualOracle is AccessControlUpgradeable, IPerpetualOracle {
         observations[nextIndex] = LastPriceObservation({ timestamp: block.timestamp, lastPrice: _price });
         ++lastPriceTotalObservations[_index];
         if (totalObservations == 1) {
-            initialTimestamp = block.timestamp;
+            initialTimestamps[_index] = block.timestamp;
         }
     }
 
@@ -218,8 +218,8 @@ contract PerpetualOracle is AccessControlUpgradeable, IPerpetualOracle {
         uint256 currentTimestamp = block.timestamp;
         (uint256 totalEpochs, PriceEpochs[_MAX_ALLOWED_EPOCHS] storage priceEpoch, uint256 endTimestamp) =
             _isMark
-                ? (markPriceEpochCount, markEpochs[_index], currentMarkEpochEndTimestamp[_index])
-                : (indexPriceEpochCount, indexEpochs[_index], currentIndexEpochEndTimestamp[_index]);
+                ? (markPriceEpochsCount[_index], markEpochs[_index], currentMarkEpochEndTimestamp[_index])
+                : (indexPriceEpochsCount[_index], indexEpochs[_index], currentIndexEpochEndTimestamp[_index]);
         uint256 currentEpochIndex;
         if (totalEpochs < _MAX_ALLOWED_EPOCHS) {
             currentEpochIndex = totalEpochs != 0 ? totalEpochs - 1 : 0;
@@ -240,12 +240,12 @@ contract PerpetualOracle is AccessControlUpgradeable, IPerpetualOracle {
         } else {
             currentEpochIndex = totalEpochs != 0 ? currentEpochIndex + 1 != _MAX_ALLOWED_EPOCHS ? currentEpochIndex + 1 : 0 : 0; // Note: Recheck again
             priceEpoch[currentEpochIndex] = PriceEpochs({ price: _price, timestamp: currentTimestamp, cardinality: 1 });
-            uint256 epochEndTimestamp = initialTimestamp + (((currentTimestamp - initialTimestamp) / smInterval) + 1) * smInterval;
+            uint256 epochEndTimestamp = initialTimestamps[_index] + (((currentTimestamp - initialTimestamps[_index]) / smInterval) + 1) * smInterval;
             if (_isMark) {
-                ++markPriceEpochCount;
+                ++markPriceEpochsCount[_index];
                 currentMarkEpochEndTimestamp[_index] = epochEndTimestamp;
             } else {
-                ++indexPriceEpochCount;
+                ++indexPriceEpochsCount[_index];
                 currentIndexEpochEndTimestamp[_index] = epochEndTimestamp;
             }
         }
@@ -347,16 +347,16 @@ contract PerpetualOracle is AccessControlUpgradeable, IPerpetualOracle {
     ) internal view returns (uint256 priceCumulative) {
         require(_endTimestamp > _startTimestamp, "PerpOracle: invalid timestamp");
         PriceEpochs[_MAX_ALLOWED_EPOCHS] storage priceEpochs = _isMark ? markEpochs[_index] : indexEpochs[_index];
-        uint256 totalEpochs = _isMark ? markPriceEpochCount : indexPriceEpochCount;
+        uint256 totalEpochs = _isMark ? markPriceEpochsCount[_index] : indexPriceEpochsCount[_index];
         if (totalEpochs == 0) {
-            return _isMark ? latestLastPrice(_index) : 0; // mark or last price should be used instead of zero price
+            return _isMark ? latestLastPrice(_index) : 0; // Note: mark or last price should be used instead of zero price
         }
         uint256 currentIndex = _getCurrentAllowedIndex(_MAX_ALLOWED_EPOCHS, totalEpochs);
         uint256 lastTimestamp = priceEpochs[currentIndex].timestamp;
         if (lastTimestamp == 0) return (0);
         if (lastTimestamp < _startTimestamp) {
             if (_isMark) {
-                _startTimestamp = initialTimestamp + (((lastTimestamp - initialTimestamp) / smInterval) * smInterval); // For mark, it is expected that mark price should not be zero
+                _startTimestamp = initialTimestamps[_index] + (((lastTimestamp - initialTimestamps[_index]) / smInterval) * smInterval); // For mark, it is expected that mark price should not be zero
             } else {
                 return (0);
             }
