@@ -474,7 +474,7 @@ describe("Global", function () {
     await expect(
       positioning
         .connect(account1)
-        .openPosition(orderLeft, signatureLeft, orderRight, signatureRight, liquidator),
+        .openPosition(orderRight, signatureRight, orderLeft, signatureLeft, liquidator),
     ).to.emit(positioning, "PositionChanged");
 
     let positionSize = await accountBalance.getPositionSize(
@@ -507,8 +507,8 @@ describe("Global", function () {
     console.log("observations", observations.toString());
     console.log("Another call \n");
 
-    expect(positionSize).to.be.equal("333333333333333333");
-    expect(positionSize1).to.be.equal("-333333333333333333");
+    expect(positionSize).to.be.equal("1000000000000000000");
+    expect(positionSize1).to.be.equal("-1000000000000000000");
 
     const proofHash = "0x6c00000000000000000000000000000000000000000000000000000000000000";
 
