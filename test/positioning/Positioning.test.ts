@@ -314,6 +314,7 @@ describe("Positioning", function () {
               accountBalance1.address,
               matchingEngine.address,
               perpetualOracle.address,
+              marketRegistry.address,
               [volmexBaseToken.address, volmexBaseToken.address],
               [owner.address, account2.address],
             ],
@@ -348,6 +349,7 @@ describe("Positioning", function () {
             accountBalance1.address,
             matchingEngine.address,
             perpetualOracle.address,
+            marketRegistry.address,
             [volmexBaseToken.address, volmexBaseToken1.address],
             [owner.address, account2.address],
           ),
@@ -365,6 +367,7 @@ describe("Positioning", function () {
               accountBalance1.address,
               matchingEngine.address,
               perpetualOracle.address,
+              marketRegistry.address,
               [volmexBaseToken.address, volmexBaseToken1.address],
               [owner.address, account2.address],
             ],
@@ -387,6 +390,7 @@ describe("Positioning", function () {
               account1.address,
               matchingEngine.address,
               perpetualOracle.address,
+              marketRegistry.address,
               [volmexBaseToken.address, volmexBaseToken1.address],
               [owner.address, account2.address],
             ],
@@ -409,6 +413,7 @@ describe("Positioning", function () {
               accountBalance1.address,
               account1.address,
               perpetualOracle.address,
+              marketRegistry.address,
               [volmexBaseToken.address, volmexBaseToken1.address],
               [owner.address, account2.address],
             ],
@@ -1800,7 +1805,7 @@ describe("Positioning", function () {
           deadline,
           account2.address,
           Asset(volmexBaseToken.address, convert("2")),
-          Asset(virtualToken.address, convert("50")),
+          Asset(virtualToken.address, convert("90")),
           2,
           0,
           true,
@@ -1813,8 +1818,9 @@ describe("Positioning", function () {
         await expect(
           positioning
             .connect(account1)
-            .openPosition(orderLeft, signatureLeft, orderRight, signatureRight, liquidator),
+            .openPosition(orderRight, signatureRight, orderLeft, signatureLeft, liquidator),
         ).to.emit(positioning, "PositionChanged");
+        console.log("here");
         const orderLeft1 = Order(
           ORDER,
           deadline,
@@ -1843,11 +1849,11 @@ describe("Positioning", function () {
         await expect(
           positioning
             .connect(account1)
-            .openPosition(orderLeft1, signatureLeft1, orderRight1, signatureRight1, liquidator),
+            .openPosition(orderRight1, signatureRight1, orderLeft1, signatureLeft1, liquidator),
         ).to.emit(positioning, "PositionChanged");
         const positionSizeAfter = await accountBalance1.getPositionSize(
           account2.address,
-          orderLeft1.makeAsset.virtualToken,
+          volmexBaseToken.address,
         );
 
         expect(positionSizeAfter.toString()).to.be.equal("0");
@@ -1943,11 +1949,11 @@ describe("Positioning", function () {
         await expect(
           positioning
             .connect(account1)
-            .openPosition(orderLeft1, signatureLeft1, orderRight1, signatureRight1, liquidator),
+            .openPosition(orderRight1, signatureRight1, orderLeft1, signatureLeft1, liquidator),
         ).to.emit(positioning, "PositionChanged");
         const positionSizeAfter = await accountBalance1.getPositionSize(
           account1.address,
-          orderLeft1.makeAsset.virtualToken,
+          volmexBaseToken.address,
         );
 
         expect(positionSizeAfter.toString()).to.be.equal("0");
@@ -2153,6 +2159,10 @@ describe("Positioning", function () {
         ]);
 
         // vaultController = await upgrades.deployProxy(VaultController, [positioningConfig.address, accountBalance1.address])
+        marketRegistry = await upgrades.deployProxy(MarketRegistry, [
+          virtualToken.address,
+          [volmexBaseToken.address, volmexBaseToken.address],
+        ]);
 
         positioning = await upgrades.deployProxy(
           Positioning,
@@ -2162,7 +2172,8 @@ describe("Positioning", function () {
             accountBalance1.address,
             matchingEngine.address,
             perpetualOracle.address,
-            [volmexBaseToken.address, volmexBaseToken.address],
+            marketRegistry.address,
+            marketRegistry[(volmexBaseToken.address, volmexBaseToken.address)],
             [owner.address, account2.address],
           ],
           {
@@ -2171,10 +2182,7 @@ describe("Positioning", function () {
         );
         await (await volmexBaseToken.setMintBurnRole(positioning.address)).wait();
         await (await virtualToken.setMintBurnRole(positioning.address)).wait();
-        marketRegistry = await upgrades.deployProxy(MarketRegistry, [virtualToken.address]);
 
-        // await marketRegistry.connect(owner).addBaseToken(virtualToken.address)
-        await marketRegistry.connect(owner).addBaseToken(volmexBaseToken.address);
         // await marketRegistry.connect(owner).addBaseToken(baseToken.address)
         await marketRegistry.connect(owner).setMakerFeeRatio(0.0004e6);
         await marketRegistry.connect(owner).setTakerFeeRatio(0.0009e6);
@@ -2455,10 +2463,10 @@ describe("Positioning", function () {
           positioning
             .connect(account1)
             .openPosition(
-              orderLeftLeverage,
-              signatureLeft,
               orderRightLeverage,
               signatureRight,
+              orderLeftLeverage,
+              signatureLeft,
               liquidator,
             ),
         ).to.emit(positioning, "PositionChanged");
@@ -2472,7 +2480,7 @@ describe("Positioning", function () {
           orderLeft.takeAsset.virtualToken,
         );
         await expect(
-          positioning.connect(account1).getOrderValidate(orderLeftLeverage),
+          positioning.connect(account2).getOrderValidate(orderRightLeverage),
         ).to.be.revertedWith("V_PERP_NF");
       });
 

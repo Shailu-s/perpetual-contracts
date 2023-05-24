@@ -3,7 +3,7 @@ import { expect } from "chai";
 import { ethers, upgrades, waffle } from "hardhat";
 import { FakeContract, smock } from "@defi-wonderland/smock";
 
-describe.only("Vault", function () {
+describe("Vault", function () {
   let USDC;
   let positioningConfig;
   let accountBalance;

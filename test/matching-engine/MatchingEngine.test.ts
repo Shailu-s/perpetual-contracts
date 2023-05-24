@@ -34,6 +34,7 @@ describe("MatchingEngine", function () {
   let marketRegistry;
   let volmexPerpPeriphery;
   let VolmexPerpPeriphery;
+  let volmexBaseToken1;
   let perpViewFake;
   let TestERC20;
   let USDC;
@@ -88,11 +89,24 @@ describe("MatchingEngine", function () {
       },
     );
     await volmexBaseToken.deployed();
+    volmexBaseToken1 = await upgrades.deployProxy(
+      VolmexBaseToken,
+      [
+        "VolmexBaseToken", // nameArg
+        "VBT", // symbolArg,
+        account1.address, // priceFeedArg
+        true, // isBase
+      ],
+      {
+        initializer: "initialize",
+      },
+    );
+    await volmexBaseToken.deployed();
 
     perpetualOracle = await upgrades.deployProxy(
       PerpetualOracle,
       [
-        [volmexBaseToken.address, volmexBaseToken.address],
+        [volmexBaseToken.address, volmexBaseToken1.address],
         [10000000, 10000000],
         [10000000, 10000000],
         [proofHash, proofHash],
@@ -102,12 +116,13 @@ describe("MatchingEngine", function () {
     );
 
     await volmexBaseToken.setPriceFeed(perpetualOracle.address);
+    await volmexBaseToken1.setPriceFeed(perpetualOracle.address);
     positioningConfig = await upgrades.deployProxy(PositioningConfig, [perpetualOracle.address]);
     await positioningConfig.deployed();
     await perpetualOracle.grantSmaIntervalRole(positioningConfig.address);
     accountBalance = await upgrades.deployProxy(AccountBalance, [
       positioningConfig.address,
-      [volmexBaseToken.address, volmexBaseToken.address],
+      [volmexBaseToken.address, volmexBaseToken1.address],
     ]);
     await accountBalance.deployed();
     vaultController = await upgrades.deployProxy(VaultController, [
@@ -144,7 +159,7 @@ describe("MatchingEngine", function () {
     await virtualToken.deployed();
     marketRegistry = await upgrades.deployProxy(MarketRegistry, [
       virtualToken.address,
-      [volmexBaseToken.address, volmexBaseToken.address],
+      [volmexBaseToken.address, volmexBaseToken1.address],
     ]);
     positioning = await upgrades.deployProxy(
       Positioning,
@@ -519,18 +534,18 @@ describe("MatchingEngine", function () {
 
         // price = 100
 
-        await expect(matchingEngine.matchOrders(orderLeft, orderRight)) //10,0.1
+        await expect(matchingEngine.matchOrders(orderRight, orderLeft)) //10,0.1
           .to.emit(matchingEngine, "Matched")
           .withArgs(
-            [account1.address, account2.address],
+            [account2.address, account1.address],
             [deadline, deadline],
-            ["10000000000000000000", "100000000000000000"],
+            ["1000000000000000000", "1000000000000000000"],
           )
           .to.emit(matchingEngine, "OrdersFilled")
           .withArgs(
-            [account1.address, account2.address],
-            [1, 2],
-            ["100000000000000000", "100000000000000000"],
+            [account2.address, account1.address],
+            [2, 1],
+            ["1000000000000000000", "1000000000000000000"],
           );
       });
       it("Should partial match orderLeft and full match order right", async () => {
@@ -740,7 +755,7 @@ describe("MatchingEngine", function () {
           0,
           true,
         );
-        await expect(matchingEngine.matchOrders(orderLeft, orderRight)).to.be.revertedWith(
+        await expect(matchingEngine.matchOrders(orderRight, orderLeft)).to.be.revertedWith(
           "rounding error",
         );
       });
@@ -767,7 +782,7 @@ describe("MatchingEngine", function () {
           0,
           true,
         );
-        await expect(matchingEngine.matchOrders(orderLeft, orderRight)).to.be.revertedWith(
+        await expect(matchingEngine.matchOrders(orderRight, orderLeft)).to.be.revertedWith(
           "V_PERP_M: fillRight: unable to fill",
         );
       });
@@ -912,7 +927,7 @@ describe("MatchingEngine", function () {
           ORDER,
           deadline,
           account1.address,
-          Asset(volmexBaseToken.address, "100"),
+          Asset(volmexBaseToken.address, "10"),
           Asset(virtualToken.address, "20"),
           1,
           0,
@@ -951,7 +966,7 @@ describe("MatchingEngine", function () {
           deadline,
           account2.address,
           Asset(virtualToken.address, "20"),
-          Asset(volmexBaseToken.address, "20"),
+          Asset(volmexBaseToken.address, "40"),
           2,
           0,
           true,
@@ -1023,12 +1038,12 @@ describe("MatchingEngine", function () {
           false,
         );
 
-        await expect(matchingEngine.matchOrders(buyOrder, sellOrder))
+        await expect(matchingEngine.matchOrders(sellOrder, buyOrder))
           .to.emit(matchingEngine, "Matched")
           .to.emit(matchingEngine, "OrdersFilled")
           .withArgs(
-            [account1.address, account2.address],
-            [2, 3],
+            [account2.address, account1.address],
+            [3, 2],
             ["9859154929577464788", "9859154929577464788"],
           );
       });
@@ -1046,12 +1061,12 @@ describe("MatchingEngine", function () {
           false,
         );
 
-        await expect(matchingEngine.matchOrders(buyOrder, sellOrder))
+        await expect(matchingEngine.matchOrders(sellOrder, buyOrder))
           .to.emit(matchingEngine, "Matched")
           .to.emit(matchingEngine, "OrdersFilled")
           .withArgs(
-            [account1.address, account2.address],
-            [2, 3],
+            [account2.address, account1.address],
+            [3, 2],
             ["5384615384615384615", "5384615384615384615"],
           );
       });
@@ -1068,8 +1083,8 @@ describe("MatchingEngine", function () {
           false,
         );
 
-        await expect(matchingEngine.matchOrders(buyOrder, sellOrder)).to.be.revertedWith(
-          "V_PERP_M: fillLeft: unable to fill",
+        await expect(matchingEngine.matchOrders(sellOrder, buyOrder)).to.be.revertedWith(
+          "V_PERP_M: fillRight: unable to fill",
         );
       });
       it("Should match stop loss with market order of price more than 70", async () => {
