@@ -2173,7 +2173,7 @@ describe("Positioning", function () {
             matchingEngine.address,
             perpetualOracle.address,
             marketRegistry.address,
-            marketRegistry[(volmexBaseToken.address, volmexBaseToken.address)],
+            [volmexBaseToken.address, volmexBaseToken.address],
             [owner.address, account2.address],
           ],
           {
