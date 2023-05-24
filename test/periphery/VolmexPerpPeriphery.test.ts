@@ -25,6 +25,7 @@ describe("VolmexPerpPeriphery", function () {
   let perpetualOracle;
   let VolmexBaseToken;
   let volmexBaseToken;
+  let volmexBaseToken1;
   let VolmexQuoteToken;
   let volmexQuoteToken;
   let VolmexPerpPeriphery;
@@ -93,12 +94,25 @@ describe("VolmexPerpPeriphery", function () {
       },
     );
     await volmexBaseToken.deployed();
+    volmexBaseToken1 = await upgrades.deployProxy(
+      VolmexBaseToken,
+      [
+        "VolmexBaseToken", // nameArg
+        "VBT", // symbolArg,
+        owner.address, // priceFeedArg
+        true, // isBase
+      ],
+      {
+        initializer: "initialize",
+      },
+    );
+    await volmexBaseToken.deployed();
     await (await perpView.setBaseToken(volmexBaseToken.address)).wait();
 
     perpetualOracle = await upgrades.deployProxy(
       PerpetualOracle,
       [
-        [volmexBaseToken.address, volmexBaseToken.address],
+        [volmexBaseToken.address, volmexBaseToken1.address],
         [100000000, 100000000],
         [100000000, 100000000],
         [proofHash, proofHash],
@@ -107,6 +121,7 @@ describe("VolmexPerpPeriphery", function () {
       { initializer: "__PerpetualOracle_init" },
     );
     await volmexBaseToken.setPriceFeed(perpetualOracle.address);
+    await volmexBaseToken1.setPriceFeed(perpetualOracle.address);
     volmexQuoteToken = await upgrades.deployProxy(
       VolmexQuoteToken,
       [
@@ -138,7 +153,7 @@ describe("VolmexPerpPeriphery", function () {
 
     accountBalance1 = await upgrades.deployProxy(AccountBalance, [
       positioningConfig.address,
-      [volmexBaseToken.address, volmexBaseToken.address],
+      [volmexBaseToken.address, volmexBaseToken1.address],
     ]);
     await accountBalance1.deployed();
     await (await perpView.setAccount(accountBalance1.address)).wait();
@@ -160,7 +175,10 @@ describe("VolmexPerpPeriphery", function () {
 
     (await accountBalance1.grantSettleRealizedPnlRole(vault.address)).wait();
     (await accountBalance1.grantSettleRealizedPnlRole(vaultController.address)).wait();
-
+    marketRegistry = await upgrades.deployProxy(MarketRegistry, [
+      volmexQuoteToken.address,
+      [volmexBaseToken.address, volmexBaseToken1.address],
+    ]);
     positioning = await upgrades.deployProxy(
       Positioning,
       [
@@ -169,7 +187,8 @@ describe("VolmexPerpPeriphery", function () {
         accountBalance1.address,
         matchingEngine.address,
         perpetualOracle.address,
-        [volmexBaseToken.address, volmexBaseToken.address],
+        marketRegistry.address,
+        [volmexBaseToken.address, volmexBaseToken1.address],
         [owner.address, account1.address],
       ],
       {
@@ -182,9 +201,6 @@ describe("VolmexPerpPeriphery", function () {
     await (await volmexBaseToken.setMintBurnRole(positioning.address)).wait();
     await (await volmexQuoteToken.setMintBurnRole(positioning.address)).wait();
 
-    marketRegistry = await upgrades.deployProxy(MarketRegistry, [volmexQuoteToken.address]);
-
-    await marketRegistry.connect(owner).addBaseToken(volmexBaseToken.address);
     await marketRegistry.connect(owner).setMakerFeeRatio(0.0004e6);
     await marketRegistry.connect(owner).setTakerFeeRatio(0.0009e6);
 
@@ -626,6 +642,7 @@ describe("VolmexPerpPeriphery", function () {
       }
       for (let index = 0; index <= 10; index++) {
         await perpetualOracle.addIndexObservations([0], [100000000], [proofHash]);
+        await perpetualOracle.addIndexObservations([1], [100000000], [proofHash]);
       }
 
       await perpetualOracle.setMarkObservationAdder(matchingEngine.address);
@@ -695,10 +712,10 @@ describe("VolmexPerpPeriphery", function () {
         1000000,
       );
       await perpetualOracle.setMarkObservationAdder(owner.address);
-      await time.increase(10000);
 
       for (let index = 0; index <= 10; index++) {
         await perpetualOracle.addIndexObservations([0], [100000000], [proofHash]);
+        await perpetualOracle.addIndexObservations([1], [100000000], [proofHash]);
       }
       for (let index = 0; index <= 10; index++) {
         await perpetualOracle.addMarkObservation(0, 1500000000);
@@ -787,7 +804,7 @@ describe("VolmexPerpPeriphery", function () {
         account3.address,
         volmexBaseToken.address,
       );
-      console.log(openNotional.toString(), " open notional");
+      console.log(openNotional.toString(), "open notional");
       // 1 * 0.73%  * 100
       // max funding payment of 0.73 USDT
       // max funding payment = position size in EVIV * max funding rate * indexsma 8 hour
@@ -1910,8 +1927,8 @@ describe("VolmexPerpPeriphery", function () {
           signatureRight,
           liquidator,
         ),
-        "V_PERP_M: Order canceled"
-      )
+        "V_PERP_M: Order canceled",
+      );
     });
     describe("Bulk Methods", function () {
       it("should open position in batch", async () => {

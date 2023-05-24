@@ -2,7 +2,6 @@ import { parseUnits } from "ethers/lib/utils";
 import { expect } from "chai";
 import { ethers, upgrades } from "hardhat";
 import { FakeContract, smock } from "@defi-wonderland/smock";
-import { sample } from "lodash";
 
 describe("Vault Controller deposit tests", function () {
   let USDC;
@@ -107,6 +106,7 @@ describe("Vault Controller deposit tests", function () {
         vaultController.address,
         accountBalance.address,
         matchingEngineFake.address,
+        perpetualOracle.address,
         perpetualOracle.address,
         [volmexBaseToken.address, volmexBaseToken.address],
         [owner.address, alice.address],

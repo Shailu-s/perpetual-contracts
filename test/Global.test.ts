@@ -163,7 +163,11 @@ describe("Global", function () {
     ]);
     await vault.deployed();
     await (await perpView.incrementVaultIndex()).wait();
-
+    marketRegistry = await upgrades.deployProxy(MarketRegistry, [
+      volmexQuoteToken.address,
+      [volmexBaseToken.address, volmexBaseToken.address],
+    ]);
+    await marketRegistry.deployed();
     positioning = await upgrades.deployProxy(
       Positioning,
       [
@@ -172,6 +176,7 @@ describe("Global", function () {
         accountBalance.address,
         matchingEngine.address,
         perpetualOracle.address,
+        marketRegistry.address,
         [volmexBaseToken.address, volmexBaseToken.address],
         [owner.address, account1.address],
       ],
@@ -185,9 +190,6 @@ describe("Global", function () {
     await (await volmexBaseToken.setMintBurnRole(positioning.address)).wait();
     await (await volmexQuoteToken.setMintBurnRole(positioning.address)).wait();
 
-    marketRegistry = await upgrades.deployProxy(MarketRegistry, [volmexQuoteToken.address]);
-    await marketRegistry.deployed();
-    await (await marketRegistry.addBaseToken(volmexBaseToken.address)).wait();
     await (await positioning.setMarketRegistry(marketRegistry.address)).wait();
     await (await positioning.setDefaultFeeReceiver(owner.address)).wait();
     await (await vaultController.setPositioning(positioning.address)).wait();
@@ -472,7 +474,7 @@ describe("Global", function () {
     await expect(
       positioning
         .connect(account1)
-        .openPosition(orderLeft, signatureLeft, orderRight, signatureRight, liquidator),
+        .openPosition(orderRight, signatureRight, orderLeft, signatureLeft, liquidator),
     ).to.emit(positioning, "PositionChanged");
 
     let positionSize = await accountBalance.getPositionSize(
@@ -505,8 +507,8 @@ describe("Global", function () {
     console.log("observations", observations.toString());
     console.log("Another call \n");
 
-    expect(positionSize).to.be.equal("333333333333333333");
-    expect(positionSize1).to.be.equal("-333333333333333333");
+    expect(positionSize).to.be.equal("1000000000000000000");
+    expect(positionSize1).to.be.equal("-1000000000000000000");
 
     const proofHash = "0x6c00000000000000000000000000000000000000000000000000000000000000";
 

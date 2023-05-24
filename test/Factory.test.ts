@@ -96,7 +96,10 @@ describe("PerpFactory", function () {
     await USDC.deployed();
 
     marketRegistry = await MarketRegistry.deploy();
-    marketRegistry.initialize(USDC.address);
+    await marketRegistry.initialize(USDC.address, [
+      volmexBaseToken.address,
+      volmexBaseToken.address,
+    ]);
 
     matchingEngine = await upgrades.deployProxy(MatchingEngine, [
       owner.address,
@@ -226,6 +229,7 @@ describe("PerpFactory", function () {
         matchingEngine.address,
         perpetualOracle.address,
         volmexQuoteToken.address,
+        marketRegistry.address,
         [volmexBaseToken.address, volmexBaseToken.address],
         [owner.address, alice.address],
       );
@@ -239,6 +243,7 @@ describe("PerpFactory", function () {
           matchingEngine.address,
           perpetualOracle.address,
           volmexQuoteToken.address,
+          marketRegistry.address,
           [volmexBaseToken.address, volmexBaseToken.address],
           [owner.address, alice.address],
         ),
@@ -260,6 +265,7 @@ describe("PerpFactory", function () {
         matchingEngine.address,
         perpetualOracle.address,
         volmexQuoteToken.address,
+        marketRegistry.address,
         [volmexBaseToken.address, volmexBaseToken.address],
         [owner.address, alice.address],
       );
@@ -283,6 +289,7 @@ describe("PerpFactory", function () {
             matchingEngine.address,
             perpetualOracle.address,
             volmexQuoteToken.address,
+            marketRegistry.address,
             [volmexBaseToken.address, volmexBaseToken.address],
             [owner.address, alice.address],
           ),
@@ -296,6 +303,7 @@ describe("PerpFactory", function () {
         matchingEngine.address,
         perpetualOracle.address,
         volmexQuoteToken.address,
+        marketRegistry.address,
         [volmexBaseToken.address, volmexBaseToken.address],
         [owner.address, alice.address],
       );

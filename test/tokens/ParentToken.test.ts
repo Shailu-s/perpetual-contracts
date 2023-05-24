@@ -1,6 +1,5 @@
 import { expect } from "chai";
 import { ethers, upgrades } from "hardhat";
-import { initial } from "lodash";
 
 describe("ParentToken", function () {
   let VolmexBaseToken;
