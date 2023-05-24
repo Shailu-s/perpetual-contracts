@@ -172,6 +172,10 @@ describe("Periodic Funding payment", function () {
 
     (await accountBalance1.grantSettleRealizedPnlRole(vault.address)).wait();
     (await accountBalance1.grantSettleRealizedPnlRole(vaultController.address)).wait();
+    marketRegistry = await upgrades.deployProxy(MarketRegistry, [
+      volmexQuoteToken.address,
+      [volmexBaseToken.address, volmexBaseToken1.address],
+    ]);
 
     positioning = await upgrades.deployProxy(
       Positioning,
@@ -181,6 +185,7 @@ describe("Periodic Funding payment", function () {
         accountBalance1.address,
         matchingEngine.address,
         perpetualOracle.address,
+        marketRegistry.address,
         [volmexBaseToken.address, volmexBaseToken1.address],
         [owner.address, account1.address],
       ],
@@ -193,8 +198,6 @@ describe("Periodic Funding payment", function () {
     await (await perpView.incrementPerpIndex()).wait();
     await (await volmexBaseToken.setMintBurnRole(positioning.address)).wait();
     await (await volmexQuoteToken.setMintBurnRole(positioning.address)).wait();
-
-    marketRegistry = await upgrades.deployProxy(MarketRegistry, [volmexQuoteToken.address]);
 
     await marketRegistry.connect(owner).addBaseToken(volmexBaseToken.address);
     await marketRegistry.connect(owner).setMakerFeeRatio(0.0004e6);
@@ -1725,7 +1728,7 @@ describe("Periodic Funding payment", function () {
       const traderCollateral = await vaultController.getFreeCollateralByRatio(account4.address, 1);
       await time.increase(28800);
 
-      expect(traderCollateral.toString()).to.be.equal("999839951919976000000");
+      expect(traderCollateral.toString()).to.be.equal("999839952000000000000");
     });
     // Fees deduction
     // user collateral = 1000
@@ -1846,9 +1849,9 @@ describe("Periodic Funding payment", function () {
         account3.address,
         1,
       );
-      expect(traderCollateral3.toString()).to.be.equal("999819951919976000000");
+      expect(traderCollateral3.toString()).to.be.equal("999819952000000000000");
       const traderCollateral = await vaultController.getFreeCollateralByRatio(account4.address, 1);
-      expect(traderCollateral.toString()).to.be.equal("999859951919976000000");
+      expect(traderCollateral.toString()).to.be.equal("999859952000000000000");
     });
     // Fees deduction
     // user collateral = 1000
@@ -1978,10 +1981,10 @@ describe("Periodic Funding payment", function () {
         account3.address,
         1,
       );
-      expect(traderCollateral3.toString()).to.be.equal("999799951919976000000");
+      expect(traderCollateral3.toString()).to.be.equal("999799952000000000000");
       const traderCollateral = await vaultController.getFreeCollateralByRatio(account4.address, 1);
 
-      expect(traderCollateral.toString()).to.be.equal("999879951919976000000");
+      expect(traderCollateral.toString()).to.be.equal("999879952000000000000");
     });
     // Fees deduction
     // user collateral = 1000
@@ -2108,7 +2111,7 @@ describe("Periodic Funding payment", function () {
         liquidator,
       );
       const traderCollateral = await vaultController.getFreeCollateralByRatio(account4.address, 1);
-      expect(traderCollateral.toString()).to.be.equal("999859951919976000000");
+      expect(traderCollateral.toString()).to.be.equal("999859952000000000000");
     });
     // Fees deduction
     // user collateral = 1000
@@ -2232,7 +2235,7 @@ describe("Periodic Funding payment", function () {
         liquidator,
       );
       const traderCollateral = await vaultController.getFreeCollateralByRatio(account4.address, 1);
-      expect(traderCollateral.toString()).to.be.equal("999850385586642666666");
+      expect(traderCollateral.toString()).to.be.equal("999850385666666666666");
     });
     // Fees deduction
     // user collateral = 1000
@@ -2367,7 +2370,7 @@ describe("Periodic Funding payment", function () {
         liquidator,
       );
       const traderCollateral = await vaultController.getFreeCollateralByRatio(account4.address, 1);
-      expect(traderCollateral.toString()).to.be.equal("999839951919976000000");
+      expect(traderCollateral.toString()).to.be.equal("999839952000000000000");
     });
 
     it("should reach maximum funding rate", async () => {

@@ -783,10 +783,10 @@ describe("MatchingEngine", function () {
           true,
         );
         await expect(matchingEngine.matchOrders(orderRight, orderLeft)).to.be.revertedWith(
-          "V_PERP_M: fillRight: unable to fill",
+          "V_PERP_M: fillLeft: unable to fill",
         );
       });
-      it(" should fail if trader for both the orders in same", async () => {
+      it("should fail if trader for both the orders in same", async () => {
         const [owner, account1] = await ethers.getSigners();
 
         await virtualToken.connect(account1).approve(matchingEngine.address, 1000000000000000);
@@ -947,7 +947,7 @@ describe("MatchingEngine", function () {
         await expect(matchingEngine.matchOrders(orderLeft, orderRight))
           .to.emit(matchingEngine, "Matched")
           .to.emit(matchingEngine, "OrdersFilled")
-          .withArgs([account1.address, account2.address], [1, 2], ["2", "2"]);
+          .withArgs([account1.address, account2.address], [1, 2], ["20", "20"]);
       });
       it("Should match orders when left order address is 0", async () => {
         const orderLeft = Order(
@@ -977,7 +977,7 @@ describe("MatchingEngine", function () {
           .withArgs(
             ["0x0000000000000000000000000000000000000000", account2.address],
             [1, 2],
-            ["10", "10"],
+            ["20", "20"],
           );
       });
     });
@@ -1044,7 +1044,7 @@ describe("MatchingEngine", function () {
           .withArgs(
             [account2.address, account1.address],
             [3, 2],
-            ["9859154929577464788", "9859154929577464788"],
+            ["10000000000000000000", "10000000000000000000"],
           );
       });
 
@@ -1067,7 +1067,7 @@ describe("MatchingEngine", function () {
           .withArgs(
             [account2.address, account1.address],
             [3, 2],
-            ["5384615384615384615", "5384615384615384615"],
+            ["10000000000000000000", "10000000000000000000"],
           );
       });
       it("Should not match orders with lower price than 70", async () => {
@@ -1106,7 +1106,7 @@ describe("MatchingEngine", function () {
           .withArgs(
             [account1.address, account2.address],
             [2, 3],
-            ["9859154929577464788", "9859154929577464788"],
+            ["10000000000000000000", "10000000000000000000"],
           );
       });
       it("Should match take profit with market order of price more than 70", async () => {
@@ -1128,7 +1128,7 @@ describe("MatchingEngine", function () {
           .withArgs(
             [account1.address, account2.address],
             [2, 3],
-            ["9859154929577464788", "9859154929577464788"],
+            ["10000000000000000000", "10000000000000000000"],
           );
       });
     });
@@ -1153,7 +1153,7 @@ describe("MatchingEngine", function () {
           .withArgs(
             [account1.address, account2.address],
             [2, 3],
-            ["9859154929577464788", "9859154929577464788"],
+            ["10000000000000000000", "10000000000000000000"],
           );
       });
 
@@ -1176,7 +1176,7 @@ describe("MatchingEngine", function () {
           .withArgs(
             [account1.address, account2.address],
             [2, 3],
-            ["5384615384615384615", "5384615384615384615"],
+            ["10000000000000000000", "10000000000000000000"],
           );
       });
       it("Should not match orders with lower price than 70", async () => {
@@ -1216,7 +1216,7 @@ describe("MatchingEngine", function () {
           .withArgs(
             [account1.address, account2.address],
             [2, 3],
-            ["9859154929577464788", "9859154929577464788"],
+            ["10000000000000000000", "10000000000000000000"],
           );
       });
       it("Should match stop loss with take profit order of price more than 70", async () => {
@@ -1238,7 +1238,7 @@ describe("MatchingEngine", function () {
           .withArgs(
             [account1.address, account2.address],
             [2, 3],
-            ["9859154929577464788", "9859154929577464788"],
+            ["10000000000000000000", "10000000000000000000"],
           );
       });
     });
@@ -1263,7 +1263,7 @@ describe("MatchingEngine", function () {
           .withArgs(
             [account1.address, account2.address],
             [2, 3],
-            ["9859154929577464788", "9859154929577464788"],
+            ["10000000000000000000", "10000000000000000000"],
           );
       });
 
@@ -1286,7 +1286,7 @@ describe("MatchingEngine", function () {
           .withArgs(
             [account1.address, account2.address],
             [2, 3],
-            ["5384615384615384615", "5384615384615384615"],
+            ["10000000000000000000", "10000000000000000000"],
           );
       });
       it("Should not match orders with lower price than 70", async () => {
@@ -1325,7 +1325,7 @@ describe("MatchingEngine", function () {
           .withArgs(
             [account1.address, account2.address],
             [2, 3],
-            ["9859154929577464788", "9859154929577464788"],
+            ["10000000000000000000", "10000000000000000000"],
           );
       });
       it("Should match take profit with take profit order of price more than 70", async () => {
@@ -1347,7 +1347,7 @@ describe("MatchingEngine", function () {
           .withArgs(
             [account1.address, account2.address],
             [2, 3],
-            ["9859154929577464788", "9859154929577464788"],
+            ["10000000000000000000", "10000000000000000000"],
           );
       });
     });

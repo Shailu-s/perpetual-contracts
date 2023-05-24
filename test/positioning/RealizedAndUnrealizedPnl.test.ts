@@ -403,22 +403,22 @@ describe("Realised pnl tests", function () {
       pnlTrader2 = await accountBalance1.getPnlAndPendingFee(account2.address);
       unrealisedPnlTrader1 = pnlTrader1[1].toString();
       unrealisedPnlTrader2 = pnlTrader1[1].toString();
-      expect(unrealisedPnlTrader1).to.be.equal("-100000000000000000");
-      expect(unrealisedPnlTrader2).to.be.equal("-100000000000000000");
+      expect(unrealisedPnlTrader1).to.be.equal("0");
+      expect(unrealisedPnlTrader2).to.be.equal("0");
       realisedPnlTrader2 = pnlTrader2[0].toString();
       realisedPnlTrader1 = pnlTrader1[0].toString();
-      expect(realisedPnlTrader2).to.be.equal("-50080000000000000000");
-      expect(realisedPnlTrader1).to.be.equal("49920000000000000000");
+      expect(realisedPnlTrader2).to.be.equal("-50180000000000000000");
+      expect(realisedPnlTrader1).to.be.equal("49820000000000000000");
       const freeCollateralTrader1 = await vaultController.getFreeCollateralByRatio(
         account1.address,
         1000000,
       );
-      expect(freeCollateralTrader1.toString()).to.be.equal("149720000000000000000");
+      expect(freeCollateralTrader1.toString()).to.be.equal("149820000000000000000");
       const freeCollateralTrader2 = await vaultController.getFreeCollateralByRatio(
         account2.address,
         1000000,
       );
-      expect(freeCollateralTrader2.toString()).to.be.equal("49720000000000000000");
+      expect(freeCollateralTrader2.toString()).to.be.equal("49820000000000000000");
     });
 
     /* Scenario 3 : After opening a long position and indextwap moves unfavorably, the user’s 
@@ -535,22 +535,22 @@ describe("Realised pnl tests", function () {
       pnlTrader2 = await accountBalance1.getPnlAndPendingFee(account2.address);
       unrealisedPnlTrader1 = pnlTrader1[1].toString();
       unrealisedPnlTrader2 = pnlTrader1[1].toString();
-      expect(unrealisedPnlTrader1).to.be.equal("-60000000000000000");
-      expect(unrealisedPnlTrader2).to.be.equal("-60000000000000000");
+      expect(unrealisedPnlTrader1).to.be.equal("0");
+      expect(unrealisedPnlTrader2).to.be.equal("0");
       realisedPnlTrader2 = pnlTrader2[0].toString();
       realisedPnlTrader1 = pnlTrader1[0].toString();
-      expect(realisedPnlTrader2).to.be.equal("49920000000000000000");
-      expect(realisedPnlTrader1).to.be.equal("-50080000000000000000");
+      expect(realisedPnlTrader2).to.be.equal("49860000000000000000");
+      expect(realisedPnlTrader1).to.be.equal("-50140000000000000000");
       const freeCollateralTrader1 = await vaultController.getFreeCollateralByRatio(
         account1.address,
         1000000,
       );
-      expect(freeCollateralTrader1.toString()).to.be.equal("49800000000000000000");
+      expect(freeCollateralTrader1.toString()).to.be.equal("49860000000000000000");
       const freeCollateralTrader2 = await vaultController.getFreeCollateralByRatio(
         account2.address,
         1000000,
       );
-      expect(freeCollateralTrader2.toString()).to.be.equal("149800000000000000000");
+      expect(freeCollateralTrader2.toString()).to.be.equal("149860000000000000000");
     });
   });
   async function getSignature(orderObj, signer) {
