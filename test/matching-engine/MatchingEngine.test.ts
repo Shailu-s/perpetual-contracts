@@ -1929,6 +1929,99 @@ describe("MatchingEngine", function () {
         expect(newFills.leftValue).equal(convert(100));
         expect(newFills.rightValue).equal(convert(10));
       });
+
+      it("playground", async () => {
+        // price = 0.1
+        const orderLeft = Order(
+          ORDER,
+          deadline,
+          account1.address,
+          Asset(volmexBaseToken.address, "100000000000000000000"), //100
+          Asset(virtualToken.address, "10000000000000000000"), //10
+          1,
+          0,
+          true,
+        );
+
+        // price = 0.5
+        const orderRight = Order(
+          STOP_LOSS_LIMIT_ORDER,
+          deadline,
+          account2.address,
+          Asset(virtualToken.address, "10000000000000000000"), //10
+          Asset(volmexBaseToken.address, "20000000000000000000"), //20
+          2,
+          0,
+          false,
+        );
+        // price = 0.666
+        const orderRight1 = Order(
+          STOP_LOSS_LIMIT_ORDER,
+          deadline,
+          account2.address,
+          Asset(virtualToken.address, "10000000000000000000"), //10
+          Asset(volmexBaseToken.address, "15000000000000000000"), //15
+          2,
+          0,
+          false,
+        );
+
+        // price = 0.66
+        const orderRight2 = Order(
+          STOP_LOSS_LIMIT_ORDER,
+          deadline,
+          account2.address,
+          Asset(virtualToken.address, "66000000000000000000"), //66
+          Asset(volmexBaseToken.address, "100000000000000000000"), //100
+          2,
+          0,
+          false,
+        );
+
+        // price < 0.03
+        const orderRightRight = Order(
+          STOP_LOSS_LIMIT_ORDER,
+          deadline,
+          account1.address,
+          Asset(volmexBaseToken.address, "35000000000000000000"), //35
+          Asset(virtualToken.address, "1000000000000000000"), //1
+          3,
+          0,
+          true,
+        );
+        // price = 0.1
+        await expect(matchingEngine.matchOrders(orderLeft, orderRight)) //20,2  10000000000000000000
+          .to.emit(matchingEngine, "OrdersFilled")
+          .withArgs(
+            [account1.address, account2.address],
+            [1, 2],
+            ["20000000000000000000", "20000000000000000000"],
+          );
+
+        await expect(matchingEngine.matchOrders(orderLeft, orderRight1))
+          .to.emit(matchingEngine, "OrdersFilled")
+          .withArgs(
+            [account1.address, account2.address],
+            [1, 2],
+            ["35000000000000000000", "15000000000000000000"],
+          );
+
+        await expect(matchingEngine.matchOrders(orderLeft, orderRight2))
+          .to.emit(matchingEngine, "OrdersFilled")
+          .withArgs(
+            [account1.address, account2.address],
+            [1, 2],
+            ["100000000000000000000", "65000000000000000000"],
+          );
+
+        await expect(matchingEngine.matchOrders(orderRight2, orderRightRight))
+          .to.emit(matchingEngine, "OrdersFilled")
+          .withArgs(
+            [account2.address, account1.address],
+            [2, 3],
+            ["100000000000000000000", "35000000000000000000"],
+          );
+      });
     });
   });
   async function getSignature(orderObj, signer) {
