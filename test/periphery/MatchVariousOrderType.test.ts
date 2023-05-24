@@ -125,7 +125,10 @@ describe("Various Order Types", function () {
     });
     await virtualToken.deployed();
 
-    accountBalance1 = await upgrades.deployProxy(AccountBalance, [positioningConfig.address]);
+    accountBalance1 = await upgrades.deployProxy(AccountBalance, [
+      positioningConfig.address,
+      [volmexBaseToken.address, volmexBaseToken.address],
+    ]);
     await accountBalance1.deployed();
     await (await perpView.setAccount(accountBalance1.address)).wait();
     vaultController = await upgrades.deployProxy(VaultController, [

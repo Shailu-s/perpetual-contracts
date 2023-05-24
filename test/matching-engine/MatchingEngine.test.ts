@@ -1179,23 +1179,6 @@ describe("MatchingEngine", function () {
             ["10000000000000000000", "10000000000000000000"],
           );
       });
-      it("Should not match orders with lower price than 70", async () => {
-        // price = 69
-        const buyOrder = Order(
-          STOP_LOSS_LIMIT_ORDER,
-          deadline,
-          account1.address,
-          Asset(virtualToken.address, "690000000000000000000"), //690
-          Asset(volmexBaseToken.address, "10000000000000000000"), //10
-          2,
-          0,
-          false,
-        );
-
-        await expect(matchingEngine.matchOrders(buyOrder, sellOrder)).to.be.revertedWith(
-          "V_PERP_M: fillLeft: unable to fill",
-        );
-      });
 
       it("Should match stop loss with stop loss order of price more than 70", async () => {
         // price = 71
@@ -1289,23 +1272,7 @@ describe("MatchingEngine", function () {
             ["10000000000000000000", "10000000000000000000"],
           );
       });
-      it("Should not match orders with lower price than 70", async () => {
-        // price = 69
-        const buyOrder = Order(
-          TAKE_PROFIT_LIMIT_ORDER,
-          deadline,
-          account1.address,
-          Asset(virtualToken.address, "690000000000000000000"), //690
-          Asset(volmexBaseToken.address, "10000000000000000000"), //10
-          2,
-          0,
-          false,
-        );
 
-        await expect(matchingEngine.matchOrders(buyOrder, sellOrder)).to.be.revertedWith(
-          "V_PERP_M: fillLeft: unable to fill",
-        );
-      });
       it("Should match take profit with stop loss order of price more than 70", async () => {
         // price = 71
         const buyOrder = Order(

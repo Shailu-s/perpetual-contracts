@@ -2152,7 +2152,6 @@ describe("Positioning", function () {
         const AccountBalance = await ethers.getContractFactory("AccountBalanceMock");
         const accountBalance1 = await upgrades.deployProxy(AccountBalance, [
           positioningConfig.address,
-          [volmexBaseToken.address, volmexBaseToken.address],
         ]);
         vaultController = await upgrades.deployProxy(VaultController, [
           positioningConfig.address,
