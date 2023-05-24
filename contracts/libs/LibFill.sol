@@ -34,7 +34,7 @@ library LibFill {
         //We have 3 cases here:
         if (rightTakeValue > leftMakeValue) {
             //1nd: left order should be fully filled
-            return fillLeft(leftMakeValue, leftTakeValue, rightOrder.makeAsset.value, rightOrder.takeAsset.value); //lq,lb,rb,rq
+            return fillLeft(leftMakeValue, leftTakeValue, rightOrder.makeAsset.value, rightOrder.takeAsset.value, isLeftMakeFill); //lq,lb,rb,rq
         }
         //2st: right order should be fully filled or 3d: both should be fully filled if required values are the same
         return fillRight(leftOrder.makeAsset.value, leftOrder.takeAsset.value, rightMakeValue, rightTakeValue, isLeftMakeFill); //lq,lb,rb,rq
@@ -63,10 +63,16 @@ library LibFill {
         uint256 leftMakeValue,
         uint256 leftTakeValue,
         uint256 rightMakeValue,
-        uint256 rightTakeValue
+        uint256 rightTakeValue,
+        bool isLeftMakeFill
     ) internal pure returns (FillResult memory result) {
-        uint256 rightTake = LibMath.safeGetPartialAmountFloor(leftTakeValue, rightMakeValue, rightTakeValue); //lb *rq / rb = rq
-        require(rightTake <= leftMakeValue, "V_PERP_M: fillLeft: unable to fill");
+        if (isLeftMakeFill) {
+            uint256 rightTake = LibMath.safeGetPartialAmountFloor(leftTakeValue, rightMakeValue, rightTakeValue); //lb *rq / rb = rq
+            require(rightTake <= leftMakeValue, "V_PERP_M: fillLeft: unable to fill");
+        } else {
+            uint256 rightTake = LibMath.safeGetPartialAmountFloor(leftMakeValue, rightTakeValue, rightMakeValue); //lb *rq / rb = rq
+            require(rightTake <= rightMakeValue, "V_PERP_M: fillLeft: unable to fill");
+        }
         return FillResult(leftMakeValue, leftTakeValue); //lq,lb
     }
 }
