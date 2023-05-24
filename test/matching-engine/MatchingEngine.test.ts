@@ -189,7 +189,6 @@ describe("MatchingEngine", function () {
     await virtualToken.mint(account2.address, ten.toString());
     await (await volmexBaseToken.setMintBurnRole(positioning.address)).wait();
     await (await virtualToken.connect(owner).setMintBurnRole(positioning.address)).wait();
-
     perpViewFake = await smock.fake("VolmexPerpView");
     volmexPerpPeriphery = await upgrades.deployProxy(VolmexPerpPeriphery, [
       perpViewFake.address,
@@ -1898,10 +1897,10 @@ describe("MatchingEngine", function () {
           0,
           isShort,
         );
-        await expectRevert(
-          matchingEngine.matchOrders(orderLeft, orderRight),
-          "V_PERP_M: fillLeft: unable to fill",
-        );
+        const receipt = await (await matchingEngine.matchOrders(orderLeft, orderRight)).wait();
+        const newFills = matchedFills(receipt);
+        expect(newFills.leftValue).equal(convert(100));
+        expect(newFills.rightValue).equal(convert(10));
       });
       it("Should left complete and right partial fill", async () => {
         orderLeft = Order(
@@ -1925,10 +1924,10 @@ describe("MatchingEngine", function () {
           0,
           isShort,
         );
-        await expectRevert(
-          matchingEngine.matchOrders(orderLeft, orderRight),
-          "V_PERP_M: fillLeft: unable to fill",
-        );
+        const receipt = await (await matchingEngine.matchOrders(orderLeft, orderRight)).wait();
+        const newFills = matchedFills(receipt);
+        expect(newFills.leftValue).equal(convert(100));
+        expect(newFills.rightValue).equal(convert(10));
       });
     });
   });
