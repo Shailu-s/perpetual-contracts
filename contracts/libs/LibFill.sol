@@ -54,7 +54,7 @@ library LibFill {
             return FillResult(rightTakeValue, makerQuoteValue); //rq, lb == left goes long ; rb, lq ==left goes short
         } else {
             makerQuoteValue = LibMath.safeGetPartialAmountFloor(rightMakeValue, leftTakeValue, leftMakeValue);
-            require(makerQuoteValue <= rightTakeValue, "V_PERP_M: fillRight: unable to fill");
+            require(makerQuoteValue <= leftMakeValue, "V_PERP_M: fillRight: unable to fill");
             return FillResult(makerQuoteValue, rightMakeValue); //rq, lb == left goes long ; rb, lq ==left goes short
         }
     }

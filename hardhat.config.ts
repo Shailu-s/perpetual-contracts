@@ -77,6 +77,14 @@ const config: HardhatUserConfig = {
       gasMultiplier: 1,
       timeout: 36000000,
     },
+    "base-goerli": {
+      url: `https://empty-soft-surf.base-goerli.discover.quiknode.pro/${process.env.BASE_GOERLI_QUICKNODE_API_KEY}/`,
+      accounts: [`0x${process.env.PRIVATE_KEY}`],
+      throwOnTransactionFailures: true,
+      loggingEnabled: true,
+      gasMultiplier: 1,
+      timeout: 36000000,
+    }
   },
   contractSizer: {
     alphaSort: true,
@@ -90,7 +98,22 @@ const config: HardhatUserConfig = {
     gasPrice: 21,
   },
   etherscan: {
-    apiKey: process.env.ETHERSCAN_API_KEY,
+    // apiKey: process.env.ETHERSCAN_API_KEY,
+    apiKey: {
+      // Basescan doesn't require an API key, however
+      // Hardhat still expects an arbitrary string to be provided.
+      "base-goerli": "PLACEHOLDER_STRING"
+     },
+     customChains: [
+       {
+         network: "base-goerli",
+         chainId: 84531,
+         urls: {
+          apiURL: "https://api-goerli.basescan.org/api",
+          browserURL: "https://goerli.basescan.org"
+         }
+       }
+     ]
   },
   defender: {
     apiKey: process.env.DEFENDER_TEAM_API_KEY,
