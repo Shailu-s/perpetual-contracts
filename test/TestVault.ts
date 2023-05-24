@@ -933,6 +933,7 @@ describe("Vault", function () {
           accountBalance.address,
           matchingEngine.address,
           perpetualOracle.address,
+          perpetualOracle.address,
           [alice.address, alice.address],
           [owner.address, alice.address],
         ],

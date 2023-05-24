@@ -190,9 +190,6 @@ describe("Global", function () {
     await (await volmexBaseToken.setMintBurnRole(positioning.address)).wait();
     await (await volmexQuoteToken.setMintBurnRole(positioning.address)).wait();
 
-    marketRegistry = await upgrades.deployProxy(MarketRegistry, [volmexQuoteToken.address]);
-    await marketRegistry.deployed();
-    await (await marketRegistry.addBaseToken(volmexBaseToken.address)).wait();
     await (await positioning.setMarketRegistry(marketRegistry.address)).wait();
     await (await positioning.setDefaultFeeReceiver(owner.address)).wait();
     await (await vaultController.setPositioning(positioning.address)).wait();

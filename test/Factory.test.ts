@@ -229,6 +229,7 @@ describe("PerpFactory", function () {
         matchingEngine.address,
         perpetualOracle.address,
         volmexQuoteToken.address,
+        marketRegistry.address,
         [volmexBaseToken.address, volmexBaseToken.address],
         [owner.address, alice.address],
       );
@@ -242,6 +243,7 @@ describe("PerpFactory", function () {
           matchingEngine.address,
           perpetualOracle.address,
           volmexQuoteToken.address,
+          marketRegistry.address,
           [volmexBaseToken.address, volmexBaseToken.address],
           [owner.address, alice.address],
         ),
@@ -263,6 +265,7 @@ describe("PerpFactory", function () {
         matchingEngine.address,
         perpetualOracle.address,
         volmexQuoteToken.address,
+        marketRegistry.address,
         [volmexBaseToken.address, volmexBaseToken.address],
         [owner.address, alice.address],
       );
@@ -286,6 +289,7 @@ describe("PerpFactory", function () {
             matchingEngine.address,
             perpetualOracle.address,
             volmexQuoteToken.address,
+            marketRegistry.address,
             [volmexBaseToken.address, volmexBaseToken.address],
             [owner.address, alice.address],
           ),
@@ -299,6 +303,7 @@ describe("PerpFactory", function () {
         matchingEngine.address,
         perpetualOracle.address,
         volmexQuoteToken.address,
+        marketRegistry.address,
         [volmexBaseToken.address, volmexBaseToken.address],
         [owner.address, alice.address],
       );

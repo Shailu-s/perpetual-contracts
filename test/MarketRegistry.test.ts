@@ -162,14 +162,20 @@ describe("Market Registry", function () {
       expect(receipt.confirmations).not.equal(0);
     });
     it("shoud fail to deploy when quote token is not contract", async () => {
-      await expect(upgrades.deployProxy(MarketRegistry, [ZERO_ADDR])).to.be.revertedWith(
-        "MR_QTNC",
-      );
+      await expect(
+        upgrades.deployProxy(MarketRegistry, [
+          ZERO_ADDR,
+          [volmexBaseToken.address, volmexBaseToken.address],
+        ]),
+      ).to.be.revertedWith("MR_QTNC");
     });
     it("shoud fail to initilaize again", async () => {
-      await expect(marketRegistry.initialize(virtualToken.address)).to.be.revertedWith(
-        "Initializable: contract is already initialized",
-      );
+      await expect(
+        marketRegistry.initialize(virtualToken.address, [
+          volmexBaseToken.address,
+          volmexBaseToken.address,
+        ]),
+      ).to.be.revertedWith("Initializable: contract is already initialized");
     });
   });
   describe("setters", async () => {
