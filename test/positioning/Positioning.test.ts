@@ -29,6 +29,7 @@ describe("Positioning", function () {
   let perpetualOracle;
   let VolmexBaseToken;
   let volmexBaseToken;
+  let volmexBaseToken1;
   let VolmexPerpPeriphery;
   let volmexPerpPeriphery;
 
@@ -51,6 +52,7 @@ describe("Positioning", function () {
   const five = ethers.constants.WeiPerEther.mul(BigNumber.from("5")); // 5e18
   const ten = ethers.constants.WeiPerEther.mul(BigNumber.from("10000")); // 10e18
   const ORDER = "0xf555eb98";
+  const TAKE_PROFIT_INDEX_PRICE = "0x67393efa";
   const STOP_LOSS_LIMIT_ORDER = "0xeeaed735";
   const TAKE_PROFIT_LIMIT_ORDER = "0xe0fc7f94";
   const ZERO_ADDR = "0x0000000000000000000000000000000000000000";
@@ -93,11 +95,23 @@ describe("Positioning", function () {
         initializer: "initialize",
       },
     );
+    volmexBaseToken1 = await upgrades.deployProxy(
+      VolmexBaseToken,
+      [
+        "VolmexBaseToken", // nameArg
+        "VBT", // symbolArg,
+        account1.address, // priceFeedArg
+        true, // isBase
+      ],
+      {
+        initializer: "initialize",
+      },
+    );
     await volmexBaseToken.deployed();
     perpetualOracle = await upgrades.deployProxy(
       PerpetualOracle,
       [
-        [volmexBaseToken.address, volmexBaseToken.address],
+        [volmexBaseToken.address, volmexBaseToken1.address],
         [200000000, 200000000],
         [200060000, 200060000],
         [proofHash, proofHash],
@@ -107,7 +121,7 @@ describe("Positioning", function () {
     );
 
     await volmexBaseToken.setPriceFeed(perpetualOracle.address);
-
+    await volmexBaseToken1.setPriceFeed(perpetualOracle.address);
     baseToken = await upgrades.deployProxy(
       VolmexBaseToken,
       [
@@ -132,7 +146,10 @@ describe("Positioning", function () {
     positioningConfig = await upgrades.deployProxy(PositioningConfig, [perpetualOracle.address]);
     await positioningConfig.deployed();
     await perpetualOracle.grantSmaIntervalRole(positioningConfig.address);
-    accountBalance = await upgrades.deployProxy(AccountBalance, [positioningConfig.address]);
+    accountBalance = await upgrades.deployProxy(AccountBalance, [
+      positioningConfig.address,
+      [volmexBaseToken.address, volmexBaseToken.address],
+    ]);
     await accountBalance.deployed();
 
     USDC = await TestERC20.deploy();
@@ -177,7 +194,10 @@ describe("Positioning", function () {
       },
     );
 
-    accountBalance1 = await upgrades.deployProxy(AccountBalance, [positioningConfig.address]);
+    accountBalance1 = await upgrades.deployProxy(AccountBalance, [
+      positioningConfig.address,
+      [volmexBaseToken.address, volmexBaseToken1.address],
+    ]);
     vaultController = await upgrades.deployProxy(VaultController, [
       positioningConfig.address,
       accountBalance1.address,
@@ -193,7 +213,7 @@ describe("Positioning", function () {
         accountBalance1.address,
         matchingEngine.address,
         perpetualOracle.address,
-        0,
+        [volmexBaseToken.address, volmexBaseToken1.address],
         [owner.address, account2.address],
       ],
       {
@@ -291,7 +311,7 @@ describe("Positioning", function () {
               accountBalance1.address,
               matchingEngine.address,
               perpetualOracle.address,
-              0,
+              [volmexBaseToken.address, volmexBaseToken.address],
               [owner.address, account2.address],
             ],
             {
@@ -301,14 +321,20 @@ describe("Positioning", function () {
         ).to.be.revertedWith("P_PCNC");
       });
       it("should fail to initialze account balance again", async () => {
-        await expect(accountBalance.initialize(positioningConfig.address)).to.be.revertedWith(
-          "Initializable: contract is already initialized",
-        );
+        await expect(
+          accountBalance.initialize(positioningConfig.address, [
+            volmexBaseToken.address,
+            volmexBaseToken.address,
+          ]),
+        ).to.be.revertedWith("Initializable: contract is already initialized");
       });
       it("should fail to initialze account balance again because invalid positionig config adderess", async () => {
-        await expect(upgrades.deployProxy(AccountBalance, [account1.address])).to.be.revertedWith(
-          "AB_VPMMCNC",
-        );
+        await expect(
+          upgrades.deployProxy(AccountBalance, [
+            account1.address,
+            [volmexBaseToken.address, volmexBaseToken1.address],
+          ]),
+        ).to.be.revertedWith("AB_VPMMCNC");
       });
       it("should fail to intialize again", async () => {
         const [owner, account1, account2] = await ethers.getSigners();
@@ -319,7 +345,7 @@ describe("Positioning", function () {
             accountBalance1.address,
             matchingEngine.address,
             perpetualOracle.address,
-            0,
+            [volmexBaseToken.address, volmexBaseToken1.address],
             [owner.address, account2.address],
           ),
         ).to.be.revertedWith("Initializable: contract is already initialized");
@@ -336,7 +362,7 @@ describe("Positioning", function () {
               accountBalance1.address,
               matchingEngine.address,
               perpetualOracle.address,
-              0,
+              [volmexBaseToken.address, volmexBaseToken1.address],
               [owner.address, account2.address],
             ],
             {
@@ -358,7 +384,7 @@ describe("Positioning", function () {
               account1.address,
               matchingEngine.address,
               perpetualOracle.address,
-              0,
+              [volmexBaseToken.address, volmexBaseToken1.address],
               [owner.address, account2.address],
             ],
             {
@@ -380,7 +406,7 @@ describe("Positioning", function () {
               accountBalance1.address,
               account1.address,
               perpetualOracle.address,
-              0,
+              [volmexBaseToken.address, volmexBaseToken1.address],
               [owner.address, account2.address],
             ],
             {
@@ -407,14 +433,16 @@ describe("Positioning", function () {
 
   describe("setUnderlying price index", async () => {
     it("should set index price oracle ", async () => {
-      expect(await accountBalance.connect(owner).setUnderlyingPriceIndex(1))
+      expect(
+        await accountBalance.connect(owner).setUnderlyingPriceIndex(volmexBaseToken.address, 0),
+      )
         .to.emit(accountBalance, "UnderlyingPriceIndexSet")
         .withArgs(1);
     });
     it("should fail to set index price oracle ", async () => {
-      await expect(accountBalance.connect(account1).setUnderlyingPriceIndex(1)).to.be.revertedWith(
-        "AccountBalance: Not admin",
-      );
+      await expect(
+        accountBalance.connect(account1).setUnderlyingPriceIndex(volmexBaseToken.address, 0),
+      ).to.be.revertedWith("AccountBalance: Not admin");
     });
   });
   describe("set twInterval for liquidation", async () => {
@@ -658,6 +686,7 @@ describe("Positioning", function () {
         await perpetualOracle.setIndexObservationAdder(owner.address);
         for (let i = 0; i < 10; i++) {
           await perpetualOracle.addIndexObservations([0], [100000000], [proofHash]);
+          await perpetualOracle.addIndexObservations([1], [100000000], [proofHash]);
         }
         await expect(
           positioning
@@ -1379,10 +1408,105 @@ describe("Positioning", function () {
 
         await expect(positionSizeAfter).to.be.equal("0");
       });
-      it("should not be allowed to close position", async () => {
-        // indexPriceOracle.getIndexSma.whenCalledWith(0).returns(['1000000000000000', '0', '0']);
-        // indexPriceOracle.getIndexSma.whenCalledWith(3600).returns(['1000000000000000', '0', '0']);
+      it("should close position for market order with limit order", async () => {
+        await perpetualOracle.setIndexObservationAdder(owner.address);
+        await matchingEngine.grantMatchOrders(positioning.address);
 
+        await virtualToken.mint(account1.address, convert("1000000000"));
+        await virtualToken.mint(account2.address, convert("1000000000"));
+
+        await virtualToken.connect(account1).approve(vault.address, convert("1000000000"));
+        await virtualToken.connect(account2).approve(vault.address, convert("1000000000"));
+        await virtualToken
+          .connect(account1)
+          .approve(volmexPerpPeriphery.address, convert("1000000000"));
+        await virtualToken
+          .connect(account2)
+          .approve(volmexPerpPeriphery.address, convert("1000000000"));
+        await vaultController
+          .connect(account1)
+          .deposit(
+            volmexPerpPeriphery.address,
+            virtualToken.address,
+            account1.address,
+            convert("1000000000"),
+          );
+        await vaultController
+          .connect(account2)
+          .deposit(
+            volmexPerpPeriphery.address,
+            virtualToken.address,
+            account2.address,
+            convert("1000000000"),
+          );
+        for (let i = 0; i < 10; i++) {
+          await perpetualOracle.addIndexObservations([0], [200000000], [proofHash]);
+        }
+        const orderLeft = Order(
+          ORDER,
+          deadline,
+          account1.address,
+          Asset(volmexBaseToken.address, "10000000000000000000"),
+          Asset(virtualToken.address, "1900000000000000000000"),
+          1,
+          0,
+          true,
+        );
+
+        const orderRight = Order(
+          ORDER,
+          deadline,
+          account2.address,
+          Asset(virtualToken.address, "1900000000000000000000"),
+          Asset(volmexBaseToken.address, "10000000000000000000"),
+          1,
+          0,
+          false,
+        );
+        let signatureLeft = await getSignature(orderLeft, account1.address);
+        let signatureRight = await getSignature(orderRight, account2.address);
+        // opening the position here
+        await expect(
+          positioning
+            .connect(account1)
+            .openPosition(orderLeft, signatureLeft, orderRight, signatureRight, liquidator),
+        ).to.emit(positioning, "PositionChanged");
+        const orderLeft1 = Order(
+          ORDER,
+          deadline,
+          account2.address,
+          Asset(volmexBaseToken.address, "10000000000000000000"),
+          Asset(virtualToken.address, "1900000000000000000000"),
+          78,
+          0,
+          true,
+        );
+
+        const orderRight1 = Order(
+          TAKE_PROFIT_INDEX_PRICE,
+          deadline,
+          account1.address,
+          Asset(virtualToken.address, "1999000000000000000000"),
+          Asset(volmexBaseToken.address, "10000000000000000000"),
+          89,
+          199000000,
+          false,
+        );
+        let signatureLeft1 = await getSignature(orderLeft1, account2.address);
+        let signatureRight1 = await getSignature(orderRight1, account1.address);
+        // closing the position here
+        await expect(
+          positioning
+            .connect(account1)
+            .openPosition(orderLeft1, signatureLeft1, orderRight1, signatureRight1, liquidator),
+        ).to.emit(positioning, "PositionChanged");
+        const positionSizeAfter1 = await accountBalance1.getPositionSize(
+          account2.address,
+          orderLeft1.makeAsset.virtualToken,
+        );
+        expect(positionSizeAfter1.toString()).to.be.equal("0");
+      });
+      it("should not be allowed to close position", async () => {
         await matchingEngine.grantMatchOrders(positioning.address);
 
         await virtualToken.mint(account1.address, convert("1000000000"));
@@ -1626,7 +1750,337 @@ describe("Positioning", function () {
         await expect(positionSizeAfter.toString()).to.be.equal("0");
         await expect(positionSizeAfter1.toString()).to.be.equal("0");
       });
+      it("should close position with complementary order scenario 1 ", async () => {
+        await matchingEngine.grantMatchOrders(positioning.address);
 
+        await virtualToken.mint(account1.address, convert("100000000000000"));
+        await virtualToken.mint(account2.address, convert("100000000000000"));
+
+        await virtualToken.connect(account1).approve(vault.address, convert("100000000000000"));
+        await virtualToken.connect(account2).approve(vault.address, convert("100000000000000"));
+        await virtualToken
+          .connect(account1)
+          .approve(volmexPerpPeriphery.address, convert("100000000000000"));
+        await virtualToken
+          .connect(account2)
+          .approve(volmexPerpPeriphery.address, convert("100000000000000"));
+        await vaultController
+          .connect(account1)
+          .deposit(
+            volmexPerpPeriphery.address,
+            virtualToken.address,
+            account1.address,
+            convert("100000000000000"),
+          );
+        await vaultController
+          .connect(account2)
+          .deposit(
+            volmexPerpPeriphery.address,
+            virtualToken.address,
+            account2.address,
+            convert("100000000000000"),
+          );
+
+        const orderLeft = Order(
+          ORDER,
+          deadline,
+          account1.address,
+          Asset(virtualToken.address, convert("100")),
+          Asset(volmexBaseToken.address, convert("2")),
+          1,
+          0,
+          false,
+        );
+
+        const orderRight = Order(
+          ORDER,
+          deadline,
+          account2.address,
+          Asset(volmexBaseToken.address, convert("2")),
+          Asset(virtualToken.address, convert("50")),
+          2,
+          0,
+          true,
+        );
+
+        let signatureLeft = await getSignature(orderLeft, account1.address);
+        let signatureRight = await getSignature(orderRight, account2.address);
+
+        // opening the position here
+        await expect(
+          positioning
+            .connect(account1)
+            .openPosition(orderLeft, signatureLeft, orderRight, signatureRight, liquidator),
+        ).to.emit(positioning, "PositionChanged");
+        const orderLeft1 = Order(
+          ORDER,
+          deadline,
+          account2.address,
+          Asset(virtualToken.address, convert("90")),
+          Asset(volmexBaseToken.address, convert("2")),
+          8,
+          0,
+          false,
+        );
+
+        const orderRight1 = Order(
+          ORDER,
+          deadline,
+          account1.address,
+          Asset(volmexBaseToken.address, convert("4")),
+          Asset(virtualToken.address, convert("70")),
+          9,
+          0,
+          true,
+        );
+        let signatureLeft1 = await getSignature(orderLeft1, account2.address);
+        let signatureRight1 = await getSignature(orderRight1, account1.address);
+
+        // opening the position here
+        await expect(
+          positioning
+            .connect(account1)
+            .openPosition(orderLeft1, signatureLeft1, orderRight1, signatureRight1, liquidator),
+        ).to.emit(positioning, "PositionChanged");
+        const positionSizeAfter = await accountBalance1.getPositionSize(
+          account2.address,
+          orderLeft1.makeAsset.virtualToken,
+        );
+
+        expect(positionSizeAfter.toString()).to.be.equal("0");
+      });
+      it("should close position with complementary order scenario 2", async () => {
+        await matchingEngine.grantMatchOrders(positioning.address);
+
+        await virtualToken.mint(account1.address, convert("100000000000000"));
+        await virtualToken.mint(account2.address, convert("100000000000000"));
+
+        await virtualToken.connect(account1).approve(vault.address, convert("100000000000000"));
+        await virtualToken.connect(account2).approve(vault.address, convert("100000000000000"));
+        await virtualToken
+          .connect(account1)
+          .approve(volmexPerpPeriphery.address, convert("100000000000000"));
+        await virtualToken
+          .connect(account2)
+          .approve(volmexPerpPeriphery.address, convert("100000000000000"));
+        await vaultController
+          .connect(account1)
+          .deposit(
+            volmexPerpPeriphery.address,
+            virtualToken.address,
+            account1.address,
+            convert("100000000000000"),
+          );
+        await vaultController
+          .connect(account2)
+          .deposit(
+            volmexPerpPeriphery.address,
+            virtualToken.address,
+            account2.address,
+            convert("100000000000000"),
+          );
+
+        const orderLeft = Order(
+          ORDER,
+          deadline,
+          account1.address,
+          Asset(virtualToken.address, convert("100")),
+          Asset(volmexBaseToken.address, convert("2")),
+          1,
+          0,
+          false,
+        );
+
+        const orderRight = Order(
+          ORDER,
+          deadline,
+          account2.address,
+          Asset(volmexBaseToken.address, convert("2")),
+          Asset(virtualToken.address, convert("50")),
+          2,
+          0,
+          true,
+        );
+
+        let signatureLeft = await getSignature(orderLeft, account1.address);
+        let signatureRight = await getSignature(orderRight, account2.address);
+
+        // opening the position here
+        await expect(
+          positioning
+            .connect(account1)
+            .openPosition(orderRight, signatureRight, orderLeft, signatureLeft, liquidator),
+        ).to.emit(positioning, "PositionChanged");
+
+        const orderLeft1 = Order(
+          ORDER,
+          deadline,
+          account2.address,
+          Asset(virtualToken.address, convert("200")),
+          Asset(volmexBaseToken.address, convert("4")),
+          8,
+          0,
+          false,
+        );
+
+        const orderRight1 = Order(
+          ORDER,
+          deadline,
+          account1.address,
+          Asset(volmexBaseToken.address, convert("2")),
+          Asset(virtualToken.address, convert("90")),
+          9,
+          0,
+          true,
+        );
+        let signatureLeft1 = await getSignature(orderLeft1, account2.address);
+        let signatureRight1 = await getSignature(orderRight1, account1.address);
+
+        // opening the position here
+        await expect(
+          positioning
+            .connect(account1)
+            .openPosition(orderLeft1, signatureLeft1, orderRight1, signatureRight1, liquidator),
+        ).to.emit(positioning, "PositionChanged");
+        const positionSizeAfter = await accountBalance1.getPositionSize(
+          account1.address,
+          orderLeft1.makeAsset.virtualToken,
+        );
+
+        expect(positionSizeAfter.toString()).to.be.equal("0");
+      });
+      it("should close position with complementary order scenario where order cannot be filled anymore", async () => {
+        await matchingEngine.grantMatchOrders(positioning.address);
+
+        await virtualToken.mint(account1.address, convert("100000000000000"));
+        await virtualToken.mint(account2.address, convert("100000000000000"));
+        await virtualToken.mint(account3.address, convert("100000000000000"));
+
+        await virtualToken.connect(account1).approve(vault.address, convert("100000000000000"));
+        await virtualToken.connect(account2).approve(vault.address, convert("100000000000000"));
+        await virtualToken.connect(account3).approve(vault.address, convert("100000000000000"));
+
+        await virtualToken
+          .connect(account1)
+          .approve(volmexPerpPeriphery.address, convert("100000000000000"));
+        await virtualToken
+          .connect(account2)
+          .approve(volmexPerpPeriphery.address, convert("100000000000000"));
+        await virtualToken
+          .connect(account3)
+          .approve(volmexPerpPeriphery.address, convert("100000000000000"));
+        await vaultController
+          .connect(account1)
+          .deposit(
+            volmexPerpPeriphery.address,
+            virtualToken.address,
+            account1.address,
+            convert("100000000000000"),
+          );
+        await vaultController
+          .connect(account3)
+          .deposit(
+            volmexPerpPeriphery.address,
+            virtualToken.address,
+            account3.address,
+            convert("100000000000000"),
+          );
+        await vaultController
+          .connect(account2)
+          .deposit(
+            volmexPerpPeriphery.address,
+            virtualToken.address,
+            account2.address,
+            convert("100000000000000"),
+          );
+
+        const orderLeft = Order(
+          ORDER,
+          deadline,
+          account1.address,
+          Asset(virtualToken.address, convert("100")),
+          Asset(volmexBaseToken.address, convert("2")),
+          1,
+          0,
+          false,
+        );
+
+        const orderRight = Order(
+          ORDER,
+          deadline,
+          account2.address,
+          Asset(volmexBaseToken.address, convert("2")),
+          Asset(virtualToken.address, convert("50")),
+          2,
+          0,
+          true,
+        );
+
+        let signatureLeft = await getSignature(orderLeft, account1.address);
+        let signatureRight = await getSignature(orderRight, account2.address);
+
+        // opening the position here
+        await expect(
+          positioning
+            .connect(account1)
+            .openPosition(orderRight, signatureRight, orderLeft, signatureLeft, liquidator),
+        ).to.emit(positioning, "PositionChanged");
+
+        const orderLeft1 = Order(
+          ORDER,
+          deadline,
+          account2.address,
+          Asset(virtualToken.address, convert("200")),
+          Asset(volmexBaseToken.address, convert("2")),
+          8,
+          0,
+          false,
+        );
+
+        const orderRight1 = Order(
+          ORDER,
+          deadline,
+          account1.address,
+          Asset(volmexBaseToken.address, convert("2")),
+          Asset(virtualToken.address, convert("200")),
+          9,
+          0,
+          true,
+        );
+        let signatureLeft1 = await getSignature(orderLeft1, account2.address);
+        let signatureRight1 = await getSignature(orderRight1, account1.address);
+
+        // opening the position here
+        await expect(
+          positioning
+            .connect(account1)
+            .openPosition(orderLeft1, signatureLeft1, orderRight1, signatureRight1, liquidator),
+        ).to.emit(positioning, "PositionChanged");
+
+        const positionSizeAfter = await accountBalance1.getPositionSize(
+          account1.address,
+          volmexBaseToken.address,
+        );
+        expect(positionSizeAfter.toString()).to.be.equal("0");
+        const orderRight2 = Order(
+          ORDER,
+          deadline,
+          account3.address,
+          Asset(volmexBaseToken.address, convert("4")),
+          Asset(virtualToken.address, convert("400")),
+          9,
+          0,
+          true,
+        );
+        let signatureRight2 = await getSignature(orderRight2, account3.address);
+
+        // opening the position here
+        await expect(
+          positioning
+            .connect(account1)
+            .openPosition(orderLeft1, signatureLeft1, orderRight2, signatureRight2, liquidator),
+        ).to.be.revertedWith("V_PERP_M: nothing to fill");
+      });
       it("test for get all funding payment", async () => {
         const [owner, account1, account2] = await ethers.getSigners();
 
@@ -1705,7 +2159,7 @@ describe("Positioning", function () {
             accountBalance1.address,
             matchingEngine.address,
             perpetualOracle.address,
-            0,
+            [volmexBaseToken.address, volmexBaseToken.address],
             [owner.address, account2.address],
           ],
           {
@@ -2624,7 +3078,10 @@ describe("Liquidation test in Positioning", function () {
     positioningConfig = await upgrades.deployProxy(PositioningConfig, [perpetualOracle.address]);
     await positioningConfig.deployed();
 
-    accountBalance = await upgrades.deployProxy(AccountBalance, [positioningConfig.address]);
+    accountBalance = await upgrades.deployProxy(AccountBalance, [
+      positioningConfig.address,
+      [volmexBaseToken.address, volmexBaseToken1.address],
+    ]);
     await accountBalance.deployed();
 
     USDC = await TestERC20.deploy();
@@ -2654,7 +3111,10 @@ describe("Liquidation test in Positioning", function () {
       accountBalance.address,
     ]);
 
-    accountBalance1 = await upgrades.deployProxy(AccountBalance, [positioningConfig.address]);
+    accountBalance1 = await upgrades.deployProxy(AccountBalance, [
+      positioningConfig.address,
+      [volmexBaseToken.address, volmexBaseToken1.address],
+    ]);
     vaultController = await upgrades.deployProxy(VaultController, [
       positioningConfig.address,
       accountBalance1.address,
@@ -2667,7 +3127,7 @@ describe("Liquidation test in Positioning", function () {
         accountBalance1.address,
         matchingEngine.address,
         perpetualOracle.address,
-        0,
+        [volmexBaseToken.address, volmexBaseToken1.address],
         [owner.address, account2.address],
       ],
       {

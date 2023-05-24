@@ -46,7 +46,8 @@ contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, 
         address accountBalanceArg,
         address matchingEngineArg,
         address perpetualOracleArg,
-        uint256 underlyingPriceIndex,
+        address marketRegistryArg,
+        address[2] calldata volmexBaseTokenArgs,
         address[2] calldata liquidators
     ) external initializer {
         // P_VANC: Vault address is not contract
@@ -57,7 +58,8 @@ contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, 
         require(accountBalanceArg.isContract(), "P_ABNC");
         // P_MENC: Matching Engine is not contract
         require(matchingEngineArg.isContract(), "P_MENC");
-
+        // P_MRNC:Market Registry  is not contract
+        require(marketRegistryArg.isContract(), "P_MENC");
         __ReentrancyGuard_init();
         __OwnerPausable_init();
         __FundingRate_init(perpetualOracleArg);
@@ -67,10 +69,13 @@ contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, 
         _vaultController = vaultControllerArg;
         _accountBalance = accountBalanceArg;
         _matchingEngine = matchingEngineArg;
-        _underlyingPriceIndex = underlyingPriceIndex;
+        _marketRegistry = marketRegistryArg;
         _smInterval = 28800;
         _smIntervalLiquidation = 3600;
         indexPriceAllowedInterval = 1800;
+        for (uint256 index = 0; index < 2; index++) {
+            _underlyingPriceIndexes[volmexBaseTokenArgs[index]] = index;
+        }
         for (uint256 index = 0; index < 2; index++) {
             isLiquidatorWhitelisted[liquidators[index]] = true;
         }
@@ -154,14 +159,14 @@ contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, 
         address baseToken,
         int256 positionSize
     ) external override whenNotPaused nonReentrant {
-        require(!isStaleIndexOracle(), "P_SIP"); // stale index price
+        require(!isStaleIndexOracle(baseToken), "P_SIP"); // stale index price
         _liquidate(trader, baseToken, positionSize);
     }
 
     ///Note for Auditor: Check full position liquidation even when partial was needed
     /// @inheritdoc IPositioning
     function liquidateFullPosition(address trader, address baseToken) external override whenNotPaused nonReentrant {
-        require(!isStaleIndexOracle(), "P_SIP"); // stale index price
+        require(!isStaleIndexOracle(baseToken), "P_SIP"); // stale index price
         // positionSizeToBeLiquidated = 0 means liquidating as much as possible
         _liquidate(trader, baseToken, 0);
     }
@@ -176,12 +181,12 @@ contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, 
         bytes memory signatureRight,
         bytes memory liquidator
     ) external override whenNotPaused nonReentrant {
-        require(!isStaleIndexOracle(), "P_SIP"); // stale index price
+        // short = selling base token
+        address baseToken = orderLeft.isShort ? orderLeft.makeAsset.virtualToken : orderLeft.takeAsset.virtualToken;
+        require(!isStaleIndexOracle(baseToken), "P_SIP"); // stale index price
         _validateFull(orderLeft, signatureLeft);
         _validateFull(orderRight, signatureRight);
 
-        // short = selling base token
-        address baseToken = orderLeft.isShort ? orderLeft.makeAsset.virtualToken : orderLeft.takeAsset.virtualToken;
         require(IMarketRegistry(_marketRegistry).checkBaseToken(baseToken), "V_PBRM"); // V_PERP: Basetoken not registered at market = V_PBRM
 
         // register base token for account balance calculations
@@ -240,7 +245,6 @@ contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, 
         return true;
     }
 
-
     ///@dev this function calculates total pending funding payment of a trader
     function getAllPendingFundingPayment(address trader) external view virtual override returns (int256 pendingFundingPayment) {
         address[] memory baseTokens = IAccountBalance(_accountBalance).getBaseTokens(trader);
@@ -268,8 +272,9 @@ contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, 
     }
 
     /// @dev Used to check for stale index oracle
-    function isStaleIndexOracle() public view returns (bool) {
-        uint256 lastUpdatedTimestamp = IPerpetualOracle(_perpetualOracleArg).lastestTimestamp(_underlyingPriceIndex, false);
+    function isStaleIndexOracle(address baseToken) public view returns (bool) {
+        uint256 index = _underlyingPriceIndexes[baseToken];
+        uint256 lastUpdatedTimestamp = IPerpetualOracle(_perpetualOracleArg).lastestTimestamp(index, false);
         return block.timestamp - lastUpdatedTimestamp >= indexPriceAllowedInterval;
     }
 
@@ -368,7 +373,6 @@ contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, 
     /// @dev Settle trader's funding payment to his/her realized pnl.
     function _settleFunding(address trader, address baseToken) internal {
         (int256 fundingPayment, int256 globalTwPremiumGrowth) = settleFunding(trader, baseToken);
-
         if (fundingPayment != 0) {
             IAccountBalance(_accountBalance).modifyOwedRealizedPnl(trader, fundingPayment.neg256(), baseToken);
             emit FundingPaymentSettled(trader, baseToken, fundingPayment);
@@ -417,8 +421,18 @@ contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, 
             );
 
         int256[2] memory realizedPnL;
-        realizedPnL[0] = _realizePnLChecks(orderLeft, baseToken, internalData.leftExchangedPositionSize, internalData.leftExchangedPositionNotional);
-        realizedPnL[1] = _realizePnLChecks(orderRight, baseToken, internalData.rightExchangedPositionSize, internalData.rightExchangedPositionNotional);
+        realizedPnL[0] = _realizePnLChecks(
+            orderLeft,
+            baseToken,
+            internalData.leftExchangedPositionSize,
+            internalData.leftExchangedPositionNotional - orderFees.orderLeftFee.toInt256()
+        );
+        realizedPnL[1] = _realizePnLChecks(
+            orderRight,
+            baseToken,
+            internalData.rightExchangedPositionSize,
+            internalData.rightExchangedPositionNotional - orderFees.orderRightFee.toInt256()
+        );
 
         // modifies PnL of fee receiver
         _modifyOwedRealizedPnl(_getFeeReceiver(), (orderFees.orderLeftFee + orderFees.orderRightFee).toInt256(), baseToken);
@@ -548,7 +562,6 @@ contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, 
         int256 takerPositionSize = _getTakerPosition(order.trader, baseToken);
         // get openNotional before swap
         int256 oldTakerOpenNotional = _getTakerOpenNotional(order.trader, baseToken);
-
         // when takerPositionSize < 0, it's a short position
         bool isReducingPosition = takerPositionSize == 0 ? false : takerPositionSize < 0 != order.isShort;
         // when reducing/not increasing the position size, it's necessary to realize pnl
@@ -601,8 +614,8 @@ contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, 
     }
 
     function _getIndexPrice(address baseToken, uint256 twInterval) internal view returns (uint256 price) {
-        price = IVolmexBaseToken(baseToken).getIndexPrice(_underlyingPriceIndex, twInterval);
-
+        uint256 index = _underlyingPriceIndexes[baseToken];
+        price = IVolmexBaseToken(baseToken).getIndexPrice(index, twInterval);
     }
 
     function _getTakerOpenNotional(address trader, address baseToken) internal view returns (int256) {

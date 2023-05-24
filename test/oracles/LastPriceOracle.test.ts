@@ -150,7 +150,10 @@ describe("PerpetualOracle - Last Price Oracle", function () {
     });
     await virtualToken.deployed();
 
-    accountBalance1 = await upgrades.deployProxy(AccountBalance, [positioningConfig.address]);
+    accountBalance1 = await upgrades.deployProxy(AccountBalance, [
+      positioningConfig.address,
+      [volmexBaseToken.address, volmexBaseToken1.address],
+    ]);
     await accountBalance1.deployed();
     await (await perpView.setAccount(accountBalance1.address)).wait();
     vaultController = await upgrades.deployProxy(VaultController, [
@@ -180,7 +183,7 @@ describe("PerpetualOracle - Last Price Oracle", function () {
         accountBalance1.address,
         matchingEngine.address,
         perpetualOracle.address,
-        0,
+        [volmexBaseToken.address, volmexBaseToken1.address],
         [owner.address, account1.address],
       ],
       {
@@ -198,6 +201,8 @@ describe("PerpetualOracle - Last Price Oracle", function () {
     marketRegistry = await upgrades.deployProxy(MarketRegistry, [volmexQuoteToken.address]);
 
     await marketRegistry.connect(owner).addBaseToken(volmexBaseToken.address);
+    await marketRegistry.connect(owner).addBaseToken(volmexBaseToken1.address);
+
     await marketRegistry.connect(owner).setMakerFeeRatio(0.0004e6);
     await marketRegistry.connect(owner).setTakerFeeRatio(0.0009e6);
 
@@ -403,6 +408,7 @@ describe("PerpetualOracle - Last Price Oracle", function () {
       expect(timestamp).to.be.equal(parseInt(await perpetualOracle.lastestTimestamp(0, true)));
     });
     it("Should get cumulative price with time delay", async () => {
+      await time.increase(1000);
       for (let i = 0; i < 9; i++) {
         await perpetualOracle.addMarkObservation(0, 60000000);
         await time.increase(1000);

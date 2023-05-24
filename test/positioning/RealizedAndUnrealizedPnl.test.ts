@@ -27,6 +27,7 @@ describe("Realised pnl tests", function () {
   let accountBalance;
   let VolmexBaseToken;
   let volmexBaseToken;
+  let volmexBaseToken1;
   let VolmexPerpPeriphery;
   let volmexPerpPeriphery;
   let PerpetualOracle;
@@ -94,10 +95,23 @@ describe("Realised pnl tests", function () {
       },
     );
     await volmexBaseToken.deployed();
+    volmexBaseToken1 = await upgrades.deployProxy(
+      VolmexBaseToken,
+      [
+        "VolmexBaseToken", // nameArg
+        "VBT", // symbolArg,
+        account1.address, // priceFeedArg
+        true, // isBase
+      ],
+      {
+        initializer: "initialize",
+      },
+    );
+    await volmexBaseToken.deployed();
     perpetualOracle = await upgrades.deployProxy(
       PerpetualOracle,
       [
-        [volmexBaseToken.address, volmexBaseToken.address],
+        [volmexBaseToken.address, volmexBaseToken1.address],
         [200000000, 200000000],
         [200000000, 200000000],
         [proofHash, proofHash],
@@ -107,7 +121,7 @@ describe("Realised pnl tests", function () {
     );
 
     await volmexBaseToken.setPriceFeed(perpetualOracle.address);
-
+    await volmexBaseToken1.setPriceFeed(perpetualOracle.address);
     baseToken = await upgrades.deployProxy(
       VolmexBaseToken,
       [
@@ -132,7 +146,10 @@ describe("Realised pnl tests", function () {
     positioningConfig = await upgrades.deployProxy(PositioningConfig, [perpetualOracle.address]);
     await positioningConfig.deployed();
     await perpetualOracle.grantSmaIntervalRole(positioningConfig.address);
-    accountBalance = await upgrades.deployProxy(AccountBalance, [positioningConfig.address]);
+    accountBalance = await upgrades.deployProxy(AccountBalance, [
+      positioningConfig.address,
+      [volmexBaseToken.address, volmexBaseToken1.address],
+    ]);
     await accountBalance.deployed();
 
     USDC = await TestERC20.deploy();
@@ -177,7 +194,10 @@ describe("Realised pnl tests", function () {
       },
     );
 
-    accountBalance1 = await upgrades.deployProxy(AccountBalance, [positioningConfig.address]);
+    accountBalance1 = await upgrades.deployProxy(AccountBalance, [
+      positioningConfig.address,
+      [volmexBaseToken.address, volmexBaseToken1.address],
+    ]);
     vaultController = await upgrades.deployProxy(VaultController, [
       positioningConfig.address,
       accountBalance1.address,
@@ -193,7 +213,7 @@ describe("Realised pnl tests", function () {
         accountBalance1.address,
         matchingEngine.address,
         perpetualOracle.address,
-        0,
+        [volmexBaseToken.address, volmexBaseToken1.address],
         [owner.address, account2.address],
       ],
       {
@@ -206,6 +226,7 @@ describe("Realised pnl tests", function () {
 
     // await marketRegistry.connect(owner).addBaseToken(virtualToken.address)
     await marketRegistry.connect(owner).addBaseToken(volmexBaseToken.address);
+    await marketRegistry.connect(owner).addBaseToken(volmexBaseToken1.address);
     // await marketRegistry.connect(owner).addBaseToken(baseToken.address)
     await marketRegistry.connect(owner).setMakerFeeRatio(0.0004e6);
     await marketRegistry.connect(owner).setTakerFeeRatio(0.0004e6);
@@ -264,6 +285,10 @@ describe("Realised pnl tests", function () {
         account2.address,
         convert("100"),
       );
+    for (let i = 0; i < 10; i++) {
+      await perpetualOracle.addIndexObservations([0], [200000000], [proofHash]);
+      await perpetualOracle.addIndexObservations([1], [200000000], [proofHash]);
+    }
   });
   describe("Testing scenarios for realized and unrealised pnl", async () => {
     /* Scenario 1 : After opening a long position and indextwap moves favorably, the user’s 
@@ -308,9 +333,13 @@ describe("Realised pnl tests", function () {
       );
 
       let pnlTrader1 = await accountBalance1.getPnlAndPendingFee(account1.address);
+      let realisedPnlTrader1 = pnlTrader1[0].toString();
       let unrealisedPnlTrader1 = pnlTrader1[1].toString();
       let pnlTrader2 = await accountBalance1.getPnlAndPendingFee(account2.address);
+      let realisedPnlTrader2 = pnlTrader2[0].toString();
       let unrealisedPnlTrader2 = pnlTrader2[1].toString();
+      expect(realisedPnlTrader1).to.be.equal("0");
+      expect(realisedPnlTrader2).to.be.equal("0");
       expect(unrealisedPnlTrader1).to.be.equal("-80000000000000000");
       expect(unrealisedPnlTrader2).to.be.equal("-80000000000000000");
 
@@ -320,9 +349,13 @@ describe("Realised pnl tests", function () {
       }
 
       pnlTrader1 = await accountBalance1.getPnlAndPendingFee(account1.address);
+      realisedPnlTrader1 = pnlTrader1[0].toString();
       unrealisedPnlTrader1 = pnlTrader1[1].toString();
       pnlTrader2 = await accountBalance1.getPnlAndPendingFee(account2.address);
+      realisedPnlTrader2 = pnlTrader2[0].toString();
       unrealisedPnlTrader2 = pnlTrader2[1].toString();
+      expect(realisedPnlTrader1).to.be.equal("0");
+      expect(realisedPnlTrader2).to.be.equal("0");
       expect(unrealisedPnlTrader1).to.be.equal("49920000000000000000");
       expect(unrealisedPnlTrader2).to.be.equal("-50080000000000000000");
       const orderLeft1 = Order(
@@ -368,20 +401,24 @@ describe("Realised pnl tests", function () {
       });
       pnlTrader1 = await accountBalance1.getPnlAndPendingFee(account1.address);
       pnlTrader2 = await accountBalance1.getPnlAndPendingFee(account2.address);
-      const realisedPnlTrader2 = pnlTrader2[0].toString();
-      const realisedPnlTrader1 = pnlTrader1[0].toString();
-      expect(realisedPnlTrader2).to.be.equal(realizedPnl[1]);
-      expect(realisedPnlTrader1).to.be.equal(realizedPnl[2]);
+      unrealisedPnlTrader1 = pnlTrader1[1].toString();
+      unrealisedPnlTrader2 = pnlTrader1[1].toString();
+      expect(unrealisedPnlTrader1).to.be.equal("-100000000000000000");
+      expect(unrealisedPnlTrader2).to.be.equal("-100000000000000000");
+      realisedPnlTrader2 = pnlTrader2[0].toString();
+      realisedPnlTrader1 = pnlTrader1[0].toString();
+      expect(realisedPnlTrader2).to.be.equal("-50080000000000000000");
+      expect(realisedPnlTrader1).to.be.equal("49920000000000000000");
       const freeCollateralTrader1 = await vaultController.getFreeCollateralByRatio(
         account1.address,
-        1,
+        1000000,
       );
-      expect(freeCollateralTrader1.toString()).to.be.equal("149819999900000000000");
+      expect(freeCollateralTrader1.toString()).to.be.equal("149720000000000000000");
       const freeCollateralTrader2 = await vaultController.getFreeCollateralByRatio(
         account2.address,
-        1,
+        1000000,
       );
-      expect(freeCollateralTrader2.toString()).to.be.equal("49819999900000000000");
+      expect(freeCollateralTrader2.toString()).to.be.equal("49720000000000000000");
     });
 
     /* Scenario 3 : After opening a long position and indextwap moves unfavorably, the user’s 
@@ -427,9 +464,13 @@ describe("Realised pnl tests", function () {
       );
 
       let pnlTrader1 = await accountBalance1.getPnlAndPendingFee(account1.address);
+      let realisedPnlTrader1 = pnlTrader1[0].toString();
       let unrealisedPnlTrader1 = pnlTrader1[1].toString();
       let pnlTrader2 = await accountBalance1.getPnlAndPendingFee(account2.address);
+      let realisedPnlTrader2 = pnlTrader2[0].toString();
       let unrealisedPnlTrader2 = pnlTrader2[1].toString();
+      expect(realisedPnlTrader1).to.be.equal("0");
+      expect(realisedPnlTrader2).to.be.equal("0");
       expect(unrealisedPnlTrader1).to.be.equal("-80000000000000000");
       expect(unrealisedPnlTrader2).to.be.equal("-80000000000000000");
 
@@ -439,9 +480,13 @@ describe("Realised pnl tests", function () {
       }
 
       pnlTrader1 = await accountBalance1.getPnlAndPendingFee(account1.address);
+      realisedPnlTrader1 = pnlTrader1[0].toString();
       unrealisedPnlTrader1 = pnlTrader1[1].toString();
       pnlTrader2 = await accountBalance1.getPnlAndPendingFee(account2.address);
+      realisedPnlTrader2 = pnlTrader2[0].toString();
       unrealisedPnlTrader2 = pnlTrader2[1].toString();
+      expect(realisedPnlTrader1).to.be.equal("0");
+      expect(realisedPnlTrader2).to.be.equal("0");
       expect(unrealisedPnlTrader1).to.be.equal("-50080000000000000000");
       expect(unrealisedPnlTrader2).to.be.equal("49920000000000000000");
       const orderLeft1 = Order(
@@ -485,22 +530,27 @@ describe("Realised pnl tests", function () {
           );
         }
       });
+
       pnlTrader1 = await accountBalance1.getPnlAndPendingFee(account1.address);
       pnlTrader2 = await accountBalance1.getPnlAndPendingFee(account2.address);
-      const realisedPnlTrader2 = pnlTrader2[0].toString();
-      const realisedPnlTrader1 = pnlTrader1[0].toString();
-      expect(realisedPnlTrader2).to.be.equal(realizedPnl[1]);
-      expect(realisedPnlTrader1).to.be.equal(realizedPnl[2]);
+      unrealisedPnlTrader1 = pnlTrader1[1].toString();
+      unrealisedPnlTrader2 = pnlTrader1[1].toString();
+      expect(unrealisedPnlTrader1).to.be.equal("-60000000000000000");
+      expect(unrealisedPnlTrader2).to.be.equal("-60000000000000000");
+      realisedPnlTrader2 = pnlTrader2[0].toString();
+      realisedPnlTrader1 = pnlTrader1[0].toString();
+      expect(realisedPnlTrader2).to.be.equal("49920000000000000000");
+      expect(realisedPnlTrader1).to.be.equal("-50080000000000000000");
       const freeCollateralTrader1 = await vaultController.getFreeCollateralByRatio(
         account1.address,
-        1,
+        1000000,
       );
-      expect(freeCollateralTrader1.toString()).to.be.equal("49859999940000000000");
+      expect(freeCollateralTrader1.toString()).to.be.equal("49800000000000000000");
       const freeCollateralTrader2 = await vaultController.getFreeCollateralByRatio(
         account2.address,
-        1,
+        1000000,
       );
-      expect(freeCollateralTrader2.toString()).to.be.equal("149859999940000000000");
+      expect(freeCollateralTrader2.toString()).to.be.equal("149800000000000000000");
     });
   });
   async function getSignature(orderObj, signer) {

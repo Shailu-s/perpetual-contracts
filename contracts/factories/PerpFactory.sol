@@ -154,12 +154,13 @@ contract PerpFactory is Initializable, IPerpFactory, AccessControlUpgradeable {
         address _matchingEngine,
         address _perpetualOracle,
         address _quoteToken,
-        uint256 _underlyingPriceIndex,
+        address _marketRegistry,
+        address[2] calldata volmexBaseTokenArgs,
         address[2] calldata _liquidators
     ) external returns (address[4] memory perpEcosystem) {
         _requireClonesDeployer();
         uint256 perpIndex = perpViewRegistry.perpIndexCount();
-        perpEcosystem[0] = address(_cloneAccountBalance(perpIndex, _positioningConfig));
+        perpEcosystem[0] = address(_cloneAccountBalance(perpIndex, _positioningConfig, volmexBaseTokenArgs));
         perpEcosystem[1] = address(_cloneVaultController(perpIndex, _positioningConfig, address(perpEcosystem[0])));
         perpEcosystem[2] = address(
             _clonePositioning(
@@ -169,11 +170,12 @@ contract PerpFactory is Initializable, IPerpFactory, AccessControlUpgradeable {
                 _matchingEngine,
                 perpEcosystem[0],
                 _perpetualOracle,
-                _underlyingPriceIndex,
+                _marketRegistry,
+                volmexBaseTokenArgs,
                 _liquidators
             )
         );
-        perpEcosystem[3] = address(_cloneMarketRegistry(perpIndex, _quoteToken));
+        perpEcosystem[3] = address(_cloneMarketRegistry(perpIndex, _quoteToken, volmexBaseTokenArgs));
         emit PerpSystemCreated(perpIndex, perpEcosystem[2], perpEcosystem[1], perpEcosystem[0], perpEcosystem[3]);
         perpViewRegistry.incrementPerpIndex();
     }
@@ -196,7 +198,8 @@ contract PerpFactory is Initializable, IPerpFactory, AccessControlUpgradeable {
         address _matchingEngine,
         address _accountBalance,
         address _perpetualOracle,
-        uint256 _underlyingPriceIndex,
+        address _marketRegistry,
+        address[2] calldata volmexBaseTokenArgs,
         address[2] calldata _liquidators
     ) private returns (IPositioning positioning) {
         bytes32 salt = keccak256(abi.encodePacked(_perpIndex, _positioningConfig));
@@ -207,24 +210,33 @@ contract PerpFactory is Initializable, IPerpFactory, AccessControlUpgradeable {
             _matchingEngine,
             _accountBalance,
             _perpetualOracle,
-            _underlyingPriceIndex,
+            _marketRegistry,
+            volmexBaseTokenArgs,
             _liquidators
         );
         _vaultController.setPositioning(address(positioning));
         perpViewRegistry.setPositioning(positioning);
     }
 
-    function _cloneAccountBalance(uint256 _perpIndex, address _positioningConfig) private returns (IAccountBalance accountBalance) {
+    function _cloneAccountBalance(
+        uint256 _perpIndex,
+        address _positioningConfig,
+        address[2] calldata volmexBaseTokenArgs
+    ) private returns (IAccountBalance accountBalance) {
         bytes32 salt = keccak256(abi.encodePacked(_perpIndex, _positioningConfig));
         accountBalance = IAccountBalance(Clones.cloneDeterministic(accountBalanceImplementation, salt));
-        accountBalance.initialize(_positioningConfig);
+        accountBalance.initialize(_positioningConfig, volmexBaseTokenArgs);
         perpViewRegistry.setAccount(accountBalance);
     }
 
-    function _cloneMarketRegistry(uint256 _perpIndex, address _quoteToken) private returns (IMarketRegistry marketRegistry) {
+    function _cloneMarketRegistry(
+        uint256 _perpIndex,
+        address _quoteToken,
+        address[2] calldata volmexBaseTokenArgs
+    ) private returns (IMarketRegistry marketRegistry) {
         bytes32 salt = keccak256(abi.encodePacked(_perpIndex, _quoteToken));
         marketRegistry = IMarketRegistry(Clones.cloneDeterministic(marketRegistryImplementation, salt));
-        marketRegistry.initialize(_quoteToken);
+        marketRegistry.initialize(_quoteToken, volmexBaseTokenArgs);
         perpViewRegistry.setMarketRegistry(marketRegistry);
     }
 
