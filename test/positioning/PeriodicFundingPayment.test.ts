@@ -176,7 +176,6 @@ describe("Periodic Funding payment", function () {
       volmexQuoteToken.address,
       [volmexBaseToken.address, volmexBaseToken1.address],
     ]);
-    console.log("here beofre ");
     positioning = await upgrades.deployProxy(
       Positioning,
       [
@@ -194,10 +193,8 @@ describe("Periodic Funding payment", function () {
         initializer: "initialize",
       },
     );
-    console.log("after");
-    console.log();
+
     await positioning.deployed();
-    console.log("deployed");
     await (await perpView.setPositioning(positioning.address)).wait();
     await (await perpView.incrementPerpIndex()).wait();
     await (await volmexBaseToken.setMintBurnRole(positioning.address)).wait();
@@ -276,7 +273,6 @@ describe("Periodic Funding payment", function () {
         .depositToVault(index, USDC.address, "1000000000000000000000000")
     ).wait();
     await perpetualOracle.setIndexObservationAdder(owner.address);
-    console.log("here at end");
     for (let i = 0; i < 10; i++) {
       await perpetualOracle.addIndexObservations([0], [75000000], [proofHash]);
     }

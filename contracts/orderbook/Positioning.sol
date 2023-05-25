@@ -28,7 +28,6 @@ import { BlockContext } from "../helpers/BlockContext.sol";
 import { FundingRate } from "../funding-rate/FundingRate.sol";
 import { OwnerPausable } from "../helpers/OwnerPausable.sol";
 import { OrderValidator } from "./OrderValidator.sol";
-import "hardhat/console.sol";
 
 // never inherit any new stateful contract. never change the orders of parent stateful contracts
 contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, OwnerPausable, FundingRate, EIP712Upgradeable, OrderValidator {
@@ -194,9 +193,9 @@ contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, 
         // short = selling base token
         address baseToken = orderLeft.isShort ? orderLeft.makeAsset.virtualToken : orderLeft.takeAsset.virtualToken;
         if (orderLeft.isShort) {
-            require(orderLeft.makeAsset.value >= minPositionSize || orderRight.takeAsset.value >= minPositionSize, "V_PERP: position size less than min Position size");
+            require(orderLeft.makeAsset.value >= minPositionSize && orderRight.takeAsset.value >= minPositionSize, "V_PERP: position size less than min Position size");
         } else {
-            require(orderLeft.takeAsset.value >= minPositionSize || orderRight.makeAsset.value >= minPositionSize, "V_PERP: position size less than min Position size");
+            require(orderLeft.takeAsset.value >= minPositionSize && orderRight.makeAsset.value >= minPositionSize, "V_PERP: position size less than min Position size");
         }
         require(!isStaleIndexOracle(baseToken), "P_SIP"); // stale index price
         _validateFull(orderLeft, signatureLeft);
