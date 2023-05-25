@@ -31,6 +31,7 @@ abstract contract PositioningStorageV1 {
     mapping(address => bool) public isLiquidatorWhitelisted;
     bool public isLiquidatorWhitelistEnabled;
     uint256 public indexPriceAllowedInterval;
+    uint256 public minPositionSize;
 
-    uint256[50] private __gap;
+    uint256[49] private __gap;
 }

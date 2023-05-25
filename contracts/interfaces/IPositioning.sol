@@ -81,7 +81,8 @@ interface IPositioning is IFundingRate {
         address perpetualOracleArg,
         address marketRegistryArg,
         address[2] calldata volmexBaseTokenArgs,
-        address[2] calldata liquidators
+        address[2] calldata liquidators,
+        uint256 _minPositionSize
     ) external;
 
     /// @notice Settle all markets fundingPayment to owedRealized Pnl

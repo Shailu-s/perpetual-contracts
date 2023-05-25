@@ -28,6 +28,7 @@ import { BlockContext } from "../helpers/BlockContext.sol";
 import { FundingRate } from "../funding-rate/FundingRate.sol";
 import { OwnerPausable } from "../helpers/OwnerPausable.sol";
 import { OrderValidator } from "./OrderValidator.sol";
+import "hardhat/console.sol";
 
 // never inherit any new stateful contract. never change the orders of parent stateful contracts
 contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, OwnerPausable, FundingRate, EIP712Upgradeable, OrderValidator {
@@ -48,7 +49,8 @@ contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, 
         address perpetualOracleArg,
         address marketRegistryArg,
         address[2] calldata volmexBaseTokenArgs,
-        address[2] calldata liquidators
+        address[2] calldata liquidators,
+        uint256 _minPositionSize
     ) external initializer {
         // P_VANC: Vault address is not contract
         require(vaultControllerArg.isContract(), "P_VANC");
@@ -73,6 +75,7 @@ contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, 
         _smInterval = 28800;
         _smIntervalLiquidation = 3600;
         indexPriceAllowedInterval = 1800;
+        minPositionSize = _minPositionSize;
         for (uint256 index = 0; index < 2; index++) {
             _underlyingPriceIndexes[volmexBaseTokenArgs[index]] = index;
         }
@@ -113,6 +116,13 @@ contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, 
         // P_AZ: Index price oracle is address zero
         require(perpetualOracleArg != address(0), "P_AZ");
         _perpetualOracleArg = perpetualOracleArg;
+    }
+
+    function setMinPositionSize(uint256 _minPositionSize) external {
+        _requirePositioningAdmin();
+        require(_minPositionSize >= 1e18, "P_MPSlT1");
+        // P_MPSGT1: Min position size less than 1e18
+        minPositionSize = _minPositionSize;
     }
 
     /// @inheritdoc IPositioning
@@ -183,6 +193,11 @@ contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, 
     ) external override whenNotPaused nonReentrant {
         // short = selling base token
         address baseToken = orderLeft.isShort ? orderLeft.makeAsset.virtualToken : orderLeft.takeAsset.virtualToken;
+        if (orderLeft.isShort) {
+            require(orderLeft.makeAsset.value >= minPositionSize || orderRight.takeAsset.value >= minPositionSize, "V_PERP: position size less than min Position size");
+        } else {
+            require(orderLeft.takeAsset.value >= minPositionSize || orderRight.makeAsset.value >= minPositionSize, "V_PERP: position size less than min Position size");
+        }
         require(!isStaleIndexOracle(baseToken), "P_SIP"); // stale index price
         _validateFull(orderLeft, signatureLeft);
         _validateFull(orderRight, signatureRight);
@@ -228,6 +243,9 @@ contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, 
     }
 
     function getOrderValidate(LibOrder.Order memory order) external view returns (bool) {
+        order.isShort
+            ? require(order.makeAsset.value >= minPositionSize, "V_PERP: position size less than min Position size")
+            : require(order.takeAsset.value >= minPositionSize, "V_PERP: position size less than min Position size");
         require(order.trader != address(0), "V_PERP_OVF"); // V_PERP_M: order verification failed
         require(order.salt != 0, "V_PERP_0S"); //V_PERP_M: 0 salt can't be used
         require(order.salt >= IMatchingEngine(_matchingEngine).makerMinSalt(order.trader), "V_PERP_LS"); // V_PERP_M: order salt lower
