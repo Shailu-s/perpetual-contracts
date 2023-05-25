@@ -114,6 +114,7 @@ describe("Vault", function () {
         accountBalance.address,
         [alice.address, alice.address],
         [owner.address, alice.address],
+        "1000000000000000000",
       ],
       {
         initializer: "initialize",
@@ -481,6 +482,7 @@ describe("Vault", function () {
           perpetualOracle.address,
           [alice.address, alice.address],
           [owner.address, alice.address],
+          "1000000000000000000",
         ],
         {
           initializer: "initialize",
@@ -631,6 +633,7 @@ describe("Vault", function () {
           perpetualOracle.address,
           [alice.address, alice.address],
           [owner.address, alice.address],
+          "1000000000000000000",
         ],
         {
           initializer: "initialize",
@@ -936,6 +939,7 @@ describe("Vault", function () {
           perpetualOracle.address,
           [alice.address, alice.address],
           [owner.address, alice.address],
+          "1000000000000000000",
         ],
         {
           initializer: "initialize",

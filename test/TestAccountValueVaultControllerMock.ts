@@ -89,6 +89,7 @@ describe("Vault Controller Mock tests for account value", function () {
         perpetualOracle.address,
         [alice.address, alice.address],
         [owner.address, alice.address],
+        "1000000000000000000",
       ],
       {
         initializer: "initialize",

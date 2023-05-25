@@ -190,6 +190,7 @@ describe("VolmexPerpPeriphery", function () {
         marketRegistry.address,
         [volmexBaseToken.address, volmexBaseToken1.address],
         [owner.address, account1.address],
+        "1000000000000000000",
       ],
       {
         initializer: "initialize",
@@ -242,8 +243,8 @@ describe("VolmexPerpPeriphery", function () {
 
   describe("Funding payment", () => {
     const depositAmount = BigNumber.from("100000000000000");
-    let baseAmount = "50000000000000"; //50
-    let quoteAmount = "100000000000000"; //100
+    let baseAmount = "5000000000000000000"; //50
+    let quoteAmount = "10000000000000000000"; //100
     this.beforeEach(async () => {
       // transfer balances
       for (let i = 0; i < 10; i++) {

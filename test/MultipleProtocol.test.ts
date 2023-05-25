@@ -192,6 +192,7 @@ describe("Multiple protocols", function () {
         marketRegistry.address,
         [EVIV.address, BVIV.address],
         [owner.address, account1.address],
+        "1000000000000000000",
       ],
       {
         initializer: "initialize",
