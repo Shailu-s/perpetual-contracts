@@ -192,10 +192,22 @@ contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, 
         // short = selling base token
         address baseToken = orderLeft.isShort ? orderLeft.makeAsset.virtualToken : orderLeft.takeAsset.virtualToken;
         uint256 minPositionSize = minPositionSizeByBaseToken[baseToken];
+        uint256 lastPositionSizeLeft;
+        uint256 lastPositionSizeRight;
+        int256 currentPositionSizeLeftTrader = _getTakerPosition(orderLeft.trader, baseToken);
+        int256 currentPositionSizeRightTrader = _getTakerPosition(orderRight.trader, baseToken);
         if (orderLeft.isShort) {
             require(orderLeft.makeAsset.value >= minPositionSize && orderRight.takeAsset.value >= minPositionSize, "V_PERP: position size less than min Position size");
+            lastPositionSizeLeft = currentPositionSizeLeftTrader - orderLeft.makeAsset.value.toInt256();
+            lastPositionSizeRight = currentPositionSizeRightTrader + orderRight.takeAsset.value.toInt256();
+            require(lastPositionSizeLeft.abs() >= minPositionSize || lastPositionSizeLeft == 0, "V_PERP: left order trader  below min postion size");
+            require(lastPositionSizeRight.abs() >= minPositionSize || lastPositionSizeRight == 0, "V_PERP: right order trader  below min postion size");
         } else {
             require(orderLeft.takeAsset.value >= minPositionSize && orderRight.makeAsset.value >= minPositionSize, "V_PERP: position size less than min Position size");
+            lastPositionSizeLeft = currentPositionSizeLeftTrader + orderLeft.takeAsset.value.toInt256();
+            lastPositionSizeRight = currentPositionSizeRightTrader - orderRight.makeAsset.value.toInt256();
+            require(lastPositionSizeLeft.abs() >= minPositionSize || lastPositionSizeLeft == 0, "V_PERP: left order trader  below min postion size");
+            require(lastPositionSizeRight.abs() >= minPositionSize || lastPositionSizeRight == 0, "V_PERP: right order trader  below min postion size");
         }
         require(!isStaleIndexOracle(baseToken), "P_SIP"); // stale index price
         _validateFull(orderLeft, signatureLeft);
@@ -242,9 +254,19 @@ contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, 
     }
 
     function getOrderValidate(LibOrder.Order memory order) external view returns (bool) {
-        order.isShort
-            ? require(order.makeAsset.value >= minPositionSize, "V_PERP: position size less than min Position size")
-            : require(order.takeAsset.value >= minPositionSize, "V_PERP: position size less than min Position size");
+        int256 finalPositionSize;
+        int256 currentTraderPositionSize;
+        if (order.isShort) {
+            require(order.makeAsset.value >= minPositionSizeByBaseToken[order.makeAsset.virtualToken], "V_PERP: position size less than min Position size");
+            currentTraderPositionSize = _getTakerPosition(order.trader, order.makeAsset.virtualToken);
+            finalPositionSize = currentTraderPositionSize - order.makeAsset.value.toInt256();
+            require(finalPositionSize.abs() >= minPositionSizeByBaseToken[order.makeAsset.virtualToken]);
+        } else {
+            require(order.takeAsset.value >= minPositionSizeByBaseToken[order.takeAsset.virtualToken], "V_PERP: position size less than min Position size");
+            currentTraderPositionSize = _getTakerPosition(order.trader, order.takeAsset.virtualToken);
+            finalPositionSize = currentTraderPositionSize + order.takeAsset.value.toInt256();
+            require(finalPositionSize.abs() >= minPositionSizeByBaseToken[order.takeAsset.virtualToken]);
+        }
         require(order.trader != address(0), "V_PERP_OVF"); // V_PERP_M: order verification failed
         require(order.salt != 0, "V_PERP_0S"); //V_PERP_M: 0 salt can't be used
         require(order.salt >= IMatchingEngine(_matchingEngine).makerMinSalt(order.trader), "V_PERP_LS"); // V_PERP_M: order salt lower
