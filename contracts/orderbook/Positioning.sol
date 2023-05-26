@@ -49,7 +49,7 @@ contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, 
         address marketRegistryArg,
         address[2] calldata volmexBaseTokenArgs,
         address[2] calldata liquidators,
-        uint256 _minPositionSize
+        uint256[2] _minPositionSizeByBaseToken
     ) external initializer {
         // P_VANC: Vault address is not contract
         require(vaultControllerArg.isContract(), "P_VANC");
