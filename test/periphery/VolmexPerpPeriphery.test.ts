@@ -190,7 +190,7 @@ describe("VolmexPerpPeriphery", function () {
         marketRegistry.address,
         [volmexBaseToken.address, volmexBaseToken1.address],
         [owner.address, account1.address],
-        "1000000000000000000",
+        ["10000000000000000000", "10000000000000000000"],
       ],
       {
         initializer: "initialize",
@@ -243,8 +243,8 @@ describe("VolmexPerpPeriphery", function () {
 
   describe("Funding payment", () => {
     const depositAmount = BigNumber.from("100000000000000");
-    let baseAmount = "5000000000000000000"; //50
-    let quoteAmount = "10000000000000000000"; //100
+    let baseAmount = "10000000000000000000"; //50
+    let quoteAmount = "100000000000000000000"; //100
     this.beforeEach(async () => {
       // transfer balances
       for (let i = 0; i < 10; i++) {
@@ -582,7 +582,7 @@ describe("VolmexPerpPeriphery", function () {
             deadline,
             alice.address,
             Asset(volmexQuoteToken.address, "1000000000000000000000"),
-            Asset(volmexBaseToken.address, "500000000000000000000"),
+            Asset(volmexBaseToken.address, "50000000000000000000"),
             salt++,
             0,
             false,
@@ -592,7 +592,7 @@ describe("VolmexPerpPeriphery", function () {
             ORDER,
             deadline,
             bob.address,
-            Asset(volmexBaseToken.address, "500000000000000000000"),
+            Asset(volmexBaseToken.address, "50000000000000000000"),
             Asset(volmexQuoteToken.address, "1000000000000000000000"),
             salt++,
             0,
@@ -656,10 +656,10 @@ describe("VolmexPerpPeriphery", function () {
       await volmexPerpPeriphery.whitelistTrader(account4.address, true);
 
       (
-        await volmexPerpPeriphery.connect(account4).depositToVault(0, USDC.address, "1000000000")
+        await volmexPerpPeriphery.connect(account4).depositToVault(0, USDC.address, "10000000000")
       ).wait();
       (
-        await volmexPerpPeriphery.connect(account3).depositToVault(0, USDC.address, "1000000000")
+        await volmexPerpPeriphery.connect(account3).depositToVault(0, USDC.address, "10000000000")
       ).wait();
 
       // account4 sell order 1 EVIV @ 100 USDT
@@ -667,7 +667,7 @@ describe("VolmexPerpPeriphery", function () {
         ORDER,
         deadline,
         account4.address,
-        Asset(volmexBaseToken.address, "1000000000000000000"), // 1
+        Asset(volmexBaseToken.address, "10000000000000000000"), // 1
         Asset(virtualToken.address, "100000000000000000000"), // 100
         256,
         (1e6).toString(),
@@ -679,7 +679,7 @@ describe("VolmexPerpPeriphery", function () {
         deadline,
         account3.address,
         Asset(virtualToken.address, "100000000000000000000"),
-        Asset(volmexBaseToken.address, "1000000000000000000"),
+        Asset(volmexBaseToken.address, "10000000000000000000"),
         890,
         (1e6).toString(),
         false,
@@ -706,8 +706,8 @@ describe("VolmexPerpPeriphery", function () {
         volmexBaseToken.address,
       );
 
-      expect(positionSize1.toString()).to.be.equal("1000000000000000000");
-      expect(positionSize2.toString()).to.be.equal("-1000000000000000000");
+      expect(positionSize1.toString()).to.be.equal("10000000000000000000");
+      expect(positionSize2.toString()).to.be.equal("-10000000000000000000");
       const traderCollateral1 = await vaultController.getFreeCollateralByRatio(
         account3.address,
         1000000,
@@ -741,8 +741,8 @@ describe("VolmexPerpPeriphery", function () {
         ORDER,
         deadline,
         account3.address,
-        Asset(volmexBaseToken.address, "1000000000000000000"), // 1 EVIV
-        Asset(virtualToken.address, "100000000000000000000"), // 100 USDT
+        Asset(volmexBaseToken.address, "100000000000000000000"), // 1 EVIV
+        Asset(virtualToken.address, "1000000000000000000000"), // 100 USDT
         256,
         (1e6).toString(),
         true,
@@ -753,7 +753,7 @@ describe("VolmexPerpPeriphery", function () {
         deadline,
         account4.address,
         Asset(virtualToken.address, "100000000000000000000"), // 100 USDT
-        Asset(volmexBaseToken.address, "1000000000000000000"), // 1 EVIV
+        Asset(volmexBaseToken.address, "10000000000000000000"), // 1 EVIV
         890,
         (1e6).toString(),
         false,
@@ -815,10 +815,10 @@ describe("VolmexPerpPeriphery", function () {
         200000,
       );
 
-      expect(traderCollateral.toString()).to.be.equal("999920000000000000000");
+      expect(traderCollateral.toString()).to.be.equal("9999920000000000000000");
       const tx = await volmexPerpPeriphery
         .connect(account3)
-        .withdrawFromVault("0", USDC.address, account3.address, "999920000");
+        .withdrawFromVault("0", USDC.address, account3.address, "9999920000");
     });
     it("should not close his position and goes long again", async () => {
       await positioningConfig.setMaxFundingRate("7300");
@@ -843,10 +843,10 @@ describe("VolmexPerpPeriphery", function () {
       await volmexPerpPeriphery.whitelistTrader(account4.address, true);
 
       (
-        await volmexPerpPeriphery.connect(account4).depositToVault(0, USDC.address, "1000000000")
+        await volmexPerpPeriphery.connect(account4).depositToVault(0, USDC.address, "10000000000")
       ).wait();
       (
-        await volmexPerpPeriphery.connect(account3).depositToVault(0, USDC.address, "1000000000")
+        await volmexPerpPeriphery.connect(account3).depositToVault(0, USDC.address, "10000000000")
       ).wait();
 
       // account4 sell order 1 EVIV @ 100 USDT
@@ -854,7 +854,7 @@ describe("VolmexPerpPeriphery", function () {
         ORDER,
         deadline,
         account4.address,
-        Asset(volmexBaseToken.address, "1000000000000000000"), // 1
+        Asset(volmexBaseToken.address, "10000000000000000000"), // 1
         Asset(virtualToken.address, "100000000000000000000"), // 100
         256,
         (1e6).toString(),
@@ -866,7 +866,7 @@ describe("VolmexPerpPeriphery", function () {
         deadline,
         account3.address,
         Asset(virtualToken.address, "100000000000000000000"),
-        Asset(volmexBaseToken.address, "1000000000000000000"),
+        Asset(volmexBaseToken.address, "10000000000000000000"),
         890,
         (1e6).toString(),
         false,
@@ -893,8 +893,8 @@ describe("VolmexPerpPeriphery", function () {
         volmexBaseToken.address,
       );
 
-      expect(positionSize1.toString()).to.be.equal("1000000000000000000");
-      expect(positionSize2.toString()).to.be.equal("-1000000000000000000");
+      expect(positionSize1.toString()).to.be.equal("10000000000000000000");
+      expect(positionSize2.toString()).to.be.equal("-10000000000000000000");
       const traderCollateral1 = await vaultController.getFreeCollateralByRatio(
         account3.address,
         200000,
@@ -979,9 +979,9 @@ describe("VolmexPerpPeriphery", function () {
       let unrealisedPnlTrader1 = pnlTrader1[1].toString();
       let realisedPnlTrader2 = pnlTrader2[0].toString();
       let realisedPnlTrader1 = pnlTrader1[0].toString();
-      expect(unrealisedPnlTrader1).to.be.equal("44640663977373737300");
+      expect(unrealisedPnlTrader1).to.be.equal("1305751428735353535354");
 
-      expect(unrealisedPnlTrader2).to.be.equal("-48405283497373737300");
+      expect(unrealisedPnlTrader2).to.be.equal("-1339295278335353535352");
       const positionSize3 = await accountBalance1.getPositionSize(
         account3.address,
         volmexBaseToken.address,
@@ -1010,7 +1010,7 @@ describe("VolmexPerpPeriphery", function () {
         200000,
       );
 
-      expect(traderCollateral.toString()).to.be.equal("58468658048000000000");
+      expect(traderCollateral.toString()).to.be.equal("1610683215040000000011");
     });
   });
   describe("VolmexPerpPeriphery deployment", async () => {
@@ -1159,8 +1159,8 @@ describe("VolmexPerpPeriphery", function () {
         STOP_LOSS_MARK_PRICE,
         deadline,
         account1.address,
-        Asset(volmexBaseToken.address, one.toString()),
-        Asset(virtualToken.address, one.toString()),
+        Asset(volmexBaseToken.address, "10000000000000000000"),
+        Asset(virtualToken.address, "100000000000000000000"),
         1,
         (1e8).toString(),
         true,
@@ -1170,8 +1170,8 @@ describe("VolmexPerpPeriphery", function () {
         STOP_LOSS_MARK_PRICE,
         deadline,
         account2.address,
-        Asset(virtualToken.address, two.toString()),
-        Asset(volmexBaseToken.address, two.toString()),
+        Asset(virtualToken.address, "100000000000000000000"),
+        Asset(volmexBaseToken.address, "10000000000000000000"),
         1,
         (1e5).toString(),
         false,
@@ -1266,8 +1266,8 @@ describe("VolmexPerpPeriphery", function () {
         ORDER,
         deadline,
         ZERO_ADDR,
-        Asset(volmexBaseToken.address, two.toString()),
-        Asset(virtualToken.address, two.toString()),
+        Asset(volmexBaseToken.address, "10000000000000000000"),
+        Asset(virtualToken.address, "100000000000000000000"),
         0,
         (60e6).toString(),
         true,
@@ -1277,8 +1277,8 @@ describe("VolmexPerpPeriphery", function () {
         ORDER,
         deadline,
         account2.address,
-        Asset(virtualToken.address, two.toString()),
-        Asset(volmexBaseToken.address, two.toString()),
+        Asset(virtualToken.address, "100000000000000000000"),
+        Asset(volmexBaseToken.address, "10000000000000000000"),
         1,
         (60e6).toString(),
         false,
@@ -1776,7 +1776,7 @@ describe("VolmexPerpPeriphery", function () {
         ORDER,
         deadline,
         account1.address,
-        Asset(volmexBaseToken.address, one.toString()),
+        Asset(volmexBaseToken.address, "10000000000000000000"),
         Asset(virtualToken.address, hundred.toString()),
         1,
         (1e6).toString(),
@@ -1788,7 +1788,7 @@ describe("VolmexPerpPeriphery", function () {
         deadline,
         account2.address,
         Asset(virtualToken.address, hundred.toString()),
-        Asset(volmexBaseToken.address, one.toString()),
+        Asset(volmexBaseToken.address, "10000000000000000000"),
         2,
         (1e6).toString(),
         false,
@@ -1798,21 +1798,21 @@ describe("VolmexPerpPeriphery", function () {
     it("Should open the position", async () => {
       await matchingEngine.grantMatchOrders(positioning.address);
 
-      await await USDC.transfer(account1.address, "1000000000");
-      await await USDC.transfer(account2.address, "1000000000");
-      await USDC.connect(account1).approve(volmexPerpPeriphery.address, "1000000000");
-      await USDC.connect(account2).approve(volmexPerpPeriphery.address, "1000000000");
+      await await USDC.transfer(account1.address, "10000000000");
+      await await USDC.transfer(account2.address, "10000000000");
+      await USDC.connect(account1).approve(volmexPerpPeriphery.address, "10000000000");
+      await USDC.connect(account2).approve(volmexPerpPeriphery.address, "10000000000");
       await volmexPerpPeriphery.whitelistTrader(account1.address, true);
       await volmexPerpPeriphery.whitelistTrader(account2.address, true);
       (
         await volmexPerpPeriphery
           .connect(account1)
-          .depositToVault(index, USDC.address, "1000000000")
+          .depositToVault(index, USDC.address, "10000000000")
       ).wait();
       (
         await volmexPerpPeriphery
           .connect(account2)
-          .depositToVault(index, USDC.address, "1000000000")
+          .depositToVault(index, USDC.address, "10000000000")
       ).wait();
 
       let signatureLeft = await getSignature(orderLeft, account1.address);
@@ -1839,28 +1839,28 @@ describe("VolmexPerpPeriphery", function () {
         orderLeft.makeAsset.virtualToken,
       );
 
-      expect(positionSize).to.be.equal("-1000000000000000000");
-      expect(positionSize1).to.be.equal("1000000000000000000");
+      expect(positionSize).to.be.equal("-10000000000000000000");
+      expect(positionSize1).to.be.equal("10000000000000000000");
     });
 
     it("Should fail after min salt is set", async () => {
       await matchingEngine.grantMatchOrders(positioning.address);
 
-      await await USDC.transfer(account1.address, "200000000");
-      await await USDC.transfer(account2.address, "200000000");
-      await USDC.connect(account1).approve(volmexPerpPeriphery.address, "200000000");
-      await USDC.connect(account2).approve(volmexPerpPeriphery.address, "200000000");
+      await await USDC.transfer(account1.address, "2000000000");
+      await await USDC.transfer(account2.address, "2000000000");
+      await USDC.connect(account1).approve(volmexPerpPeriphery.address, "2000000000");
+      await USDC.connect(account2).approve(volmexPerpPeriphery.address, "2000000000");
       await volmexPerpPeriphery.whitelistTrader(account1.address, true);
       await volmexPerpPeriphery.whitelistTrader(account2.address, true);
       (
         await volmexPerpPeriphery
           .connect(account1)
-          .depositToVault(index, USDC.address, "200000000")
+          .depositToVault(index, USDC.address, "2000000000")
       ).wait();
       (
         await volmexPerpPeriphery
           .connect(account2)
-          .depositToVault(index, USDC.address, "200000000")
+          .depositToVault(index, USDC.address, "2000000000")
       ).wait();
 
       let signatureLeft = await getSignature(orderLeft, account1.address);
@@ -1887,8 +1887,9 @@ describe("VolmexPerpPeriphery", function () {
         orderLeft.makeAsset.virtualToken,
       );
 
-      expect(positionSize).to.be.equal("-1000000000000000000");
-      expect(positionSize1).to.be.equal("1000000000000000000");
+      expect(positionSize).to.be.equal("-10000000000000000000");
+
+      expect(positionSize1).to.be.equal("10000000000000000000");
 
       await (await matchingEngine.connect(account1).cancelAllOrders(5)).wait();
       await (await matchingEngine.connect(account2).cancelAllOrders(6)).wait();
@@ -1897,8 +1898,8 @@ describe("VolmexPerpPeriphery", function () {
         ORDER,
         deadline,
         account1.address,
-        Asset(volmexBaseToken.address, one.toString()),
-        Asset(virtualToken.address, one.toString()),
+        Asset(volmexBaseToken.address, "10000000000000000000"),
+        Asset(virtualToken.address, "100000000000000000000"),
         4,
         (1e6).toString(),
         true,
@@ -1908,8 +1909,8 @@ describe("VolmexPerpPeriphery", function () {
         ORDER,
         deadline,
         account2.address,
-        Asset(virtualToken.address, one.toString()),
-        Asset(volmexBaseToken.address, one.toString()),
+        Asset(virtualToken.address, "100000000000000000000"),
+        Asset(volmexBaseToken.address, "10000000000000000000"),
         5,
         (1e6).toString(),
         false,
@@ -1938,28 +1939,28 @@ describe("VolmexPerpPeriphery", function () {
         const signaturesLeft = [];
         const signaturesRight = [];
         await matchingEngine.grantMatchOrders(positioning.address);
-        await await USDC.transfer(account1.address, "1000000000");
-        await await USDC.transfer(account2.address, "1000000000");
-        await USDC.connect(account1).approve(volmexPerpPeriphery.address, "1000000000");
-        await USDC.connect(account2).approve(volmexPerpPeriphery.address, "1000000000");
+        await await USDC.transfer(account1.address, "10000000000");
+        await await USDC.transfer(account2.address, "10000000000");
+        await USDC.connect(account1).approve(volmexPerpPeriphery.address, "10000000000");
+        await USDC.connect(account2).approve(volmexPerpPeriphery.address, "10000000000");
         await volmexPerpPeriphery.whitelistTrader(account1.address, true);
         await volmexPerpPeriphery.whitelistTrader(account2.address, true);
         (
           await volmexPerpPeriphery
             .connect(account1)
-            .depositToVault(index, USDC.address, "1000000000")
+            .depositToVault(index, USDC.address, "10000000000")
         ).wait();
         (
           await volmexPerpPeriphery
             .connect(account2)
-            .depositToVault(index, USDC.address, "1000000000")
+            .depositToVault(index, USDC.address, "10000000000")
         ).wait();
         const orderLeft = Order(
           ORDER,
           deadline,
           account1.address,
-          Asset(volmexBaseToken.address, two.toString()),
-          Asset(virtualToken.address, two.toString()),
+          Asset(volmexBaseToken.address, "10000000000000000000"),
+          Asset(virtualToken.address, "10000000000000000000"),
           1,
           (1e6).toString(),
           true,
@@ -1969,8 +1970,8 @@ describe("VolmexPerpPeriphery", function () {
           ORDER,
           deadline,
           account2.address,
-          Asset(virtualToken.address, two.toString()),
-          Asset(volmexBaseToken.address, two.toString()),
+          Asset(virtualToken.address, "10000000000000000000"),
+          Asset(volmexBaseToken.address, "10000000000000000000"),
           2,
           (1e6).toString(),
           false,
@@ -2013,8 +2014,8 @@ describe("VolmexPerpPeriphery", function () {
           ORDER,
           deadline,
           account1.address,
-          Asset(volmexBaseToken.address, two.toString()),
-          Asset(virtualToken.address, two.toString()),
+          Asset(volmexBaseToken.address, "10000000000000000000"),
+          Asset(virtualToken.address, "10000000000000000000"),
           1,
           (1e6).toString(),
           true,
@@ -2023,8 +2024,8 @@ describe("VolmexPerpPeriphery", function () {
           ORDER,
           deadline,
           account2.address,
-          Asset(virtualToken.address, two.toString()),
-          Asset(volmexBaseToken.address, two.toString()),
+          Asset(virtualToken.address, "10000000000000000000"),
+          Asset(volmexBaseToken.address, "10000000000000000000"),
           2,
           (1e6).toString(),
           false,
@@ -2034,8 +2035,8 @@ describe("VolmexPerpPeriphery", function () {
           ORDER,
           deadline,
           account2.address,
-          Asset(virtualToken.address, two.toString()),
-          Asset(volmexBaseToken.address, two.toString()),
+          Asset(virtualToken.address, "10000000000000000000"),
+          Asset(volmexBaseToken.address, "10000000000000000000"),
           0,
           (1e6).toString(),
           false,
@@ -2053,28 +2054,28 @@ describe("VolmexPerpPeriphery", function () {
         const limitOrdersRight = [];
         const signaturesLeft = [];
         const signaturesRight = [];
-        await await USDC.transfer(account1.address, "1000000000");
-        await await USDC.transfer(account2.address, "1000000000");
-        await USDC.connect(account1).approve(volmexPerpPeriphery.address, "1000000000");
-        await USDC.connect(account2).approve(volmexPerpPeriphery.address, "1000000000");
+        await await USDC.transfer(account1.address, "10000000000");
+        await await USDC.transfer(account2.address, "10000000000");
+        await USDC.connect(account1).approve(volmexPerpPeriphery.address, "10000000000");
+        await USDC.connect(account2).approve(volmexPerpPeriphery.address, "10000000000");
         await volmexPerpPeriphery.whitelistTrader(account1.address, true);
         await volmexPerpPeriphery.whitelistTrader(account2.address, true);
         (
           await volmexPerpPeriphery
             .connect(account1)
-            .depositToVault(index, USDC.address, "1000000000")
+            .depositToVault(index, USDC.address, "10000000000")
         ).wait();
         (
           await volmexPerpPeriphery
             .connect(account2)
-            .depositToVault(index, USDC.address, "1000000000")
+            .depositToVault(index, USDC.address, "10000000000")
         ).wait();
         const orderLeft = Order(
           STOP_LOSS_MARK_PRICE,
           deadline,
           account1.address,
-          Asset(volmexBaseToken.address, two.toString()),
-          Asset(virtualToken.address, two.toString()),
+          Asset(volmexBaseToken.address, "10000000000000000000"),
+          Asset(virtualToken.address, "10000000000000000000"),
           1,
           (1e8).toString(),
           true,
@@ -2084,8 +2085,8 @@ describe("VolmexPerpPeriphery", function () {
           STOP_LOSS_MARK_PRICE,
           deadline,
           account2.address,
-          Asset(virtualToken.address, two.toString()),
-          Asset(volmexBaseToken.address, two.toString()),
+          Asset(virtualToken.address, "10000000000000000000"),
+          Asset(volmexBaseToken.address, "10000000000000000000"),
           1,
           (1e5).toString(),
           false,
@@ -2111,28 +2112,28 @@ describe("VolmexPerpPeriphery", function () {
         const limitOrdersRight = [];
         const signaturesLeft = [];
         const signaturesRight = [];
-        await await USDC.transfer(account1.address, "1000000000");
-        await await USDC.transfer(account2.address, "1000000000");
-        await USDC.connect(account1).approve(volmexPerpPeriphery.address, "1000000000");
-        await USDC.connect(account2).approve(volmexPerpPeriphery.address, "1000000000");
+        await await USDC.transfer(account1.address, "10000000000");
+        await await USDC.transfer(account2.address, "10000000000");
+        await USDC.connect(account1).approve(volmexPerpPeriphery.address, "10000000000");
+        await USDC.connect(account2).approve(volmexPerpPeriphery.address, "10000000000");
         await volmexPerpPeriphery.whitelistTrader(account1.address, true);
         await volmexPerpPeriphery.whitelistTrader(account2.address, true);
         (
           await volmexPerpPeriphery
             .connect(account1)
-            .depositToVault(index, USDC.address, "1000000000")
+            .depositToVault(index, USDC.address, "10000000000")
         ).wait();
         (
           await volmexPerpPeriphery
             .connect(account2)
-            .depositToVault(index, USDC.address, "1000000000")
+            .depositToVault(index, USDC.address, "10000000000")
         ).wait();
         const orderLeft = Order(
           STOP_LOSS_INDEX_PRICE,
           deadline,
           account1.address,
-          Asset(volmexBaseToken.address, two.toString()),
-          Asset(virtualToken.address, two.toString()),
+          Asset(volmexBaseToken.address, "10000000000000000000"),
+          Asset(virtualToken.address, "10000000000000000000"),
           1,
           (1e8).toString(),
           true,
@@ -2142,8 +2143,8 @@ describe("VolmexPerpPeriphery", function () {
           STOP_LOSS_LAST_PRICE,
           deadline,
           account2.address,
-          Asset(virtualToken.address, two.toString()),
-          Asset(volmexBaseToken.address, two.toString()),
+          Asset(virtualToken.address, "10000000000000000000"),
+          Asset(volmexBaseToken.address, "10000000000000000000"),
           1,
           (1e5).toString(),
           false,
@@ -2169,28 +2170,28 @@ describe("VolmexPerpPeriphery", function () {
         const limitOrdersRight = [];
         const signaturesLeft = [];
         const signaturesRight = [];
-        await await USDC.transfer(account1.address, "1000000000");
-        await await USDC.transfer(account2.address, "1000000000");
-        await USDC.connect(account1).approve(volmexPerpPeriphery.address, "1000000000");
-        await USDC.connect(account2).approve(volmexPerpPeriphery.address, "1000000000");
+        await await USDC.transfer(account1.address, "10000000000");
+        await await USDC.transfer(account2.address, "10000000000");
+        await USDC.connect(account1).approve(volmexPerpPeriphery.address, "10000000000");
+        await USDC.connect(account2).approve(volmexPerpPeriphery.address, "10000000000");
         await volmexPerpPeriphery.whitelistTrader(account1.address, true);
         await volmexPerpPeriphery.whitelistTrader(account2.address, true);
         (
           await volmexPerpPeriphery
             .connect(account1)
-            .depositToVault(index, USDC.address, "1000000000")
+            .depositToVault(index, USDC.address, "10000000000")
         ).wait();
         (
           await volmexPerpPeriphery
             .connect(account2)
-            .depositToVault(index, USDC.address, "1000000000")
+            .depositToVault(index, USDC.address, "10000000000")
         ).wait();
         const orderLeft = Order(
           TAKE_PROFIT_INDEX_PRICE,
           deadline,
           account1.address,
-          Asset(volmexBaseToken.address, two.toString()),
-          Asset(virtualToken.address, two.toString()),
+          Asset(volmexBaseToken.address, "10000000000000000000"),
+          Asset(virtualToken.address, "10000000000000000000"),
           1,
           (1e5).toString(),
           true,
@@ -2200,8 +2201,8 @@ describe("VolmexPerpPeriphery", function () {
           TAKE_PROFIT_LAST_PRICE,
           deadline,
           account2.address,
-          Asset(virtualToken.address, two.toString()),
-          Asset(volmexBaseToken.address, two.toString()),
+          Asset(virtualToken.address, "10000000000000000000"),
+          Asset(volmexBaseToken.address, "10000000000000000000"),
           1,
           (1e8).toString(),
           false,
@@ -2227,26 +2228,26 @@ describe("VolmexPerpPeriphery", function () {
         const limitOrdersRight = [];
         const signaturesLeft = [];
         const signaturesRight = [];
-        await await USDC.transfer(account1.address, "1000000000");
-        await await USDC.transfer(account2.address, "1000000000");
-        await USDC.connect(account1).approve(volmexPerpPeriphery.address, "1000000000");
-        await USDC.connect(account2).approve(volmexPerpPeriphery.address, "1000000000");
+        await await USDC.transfer(account1.address, "10000000000");
+        await await USDC.transfer(account2.address, "10000000000");
+        await USDC.connect(account1).approve(volmexPerpPeriphery.address, "10000000000");
+        await USDC.connect(account2).approve(volmexPerpPeriphery.address, "10000000000");
         (
           await volmexPerpPeriphery
             .connect(account1)
-            .depositToVault(index, USDC.address, "1000000000")
+            .depositToVault(index, USDC.address, "10000000000")
         ).wait();
         (
           await volmexPerpPeriphery
             .connect(account2)
-            .depositToVault(index, USDC.address, "1000000000")
+            .depositToVault(index, USDC.address, "10000000000")
         ).wait();
         const orderLeft = Order(
           STOP_LOSS_MARK_PRICE,
           deadline,
           account1.address,
-          Asset(volmexBaseToken.address, two.toString()),
-          Asset(virtualToken.address, two.toString()),
+          Asset(volmexBaseToken.address, "10000000000000000000"),
+          Asset(virtualToken.address, "10000000000000000000"),
           1,
           (1e8).toString(),
           true,
@@ -2255,8 +2256,8 @@ describe("VolmexPerpPeriphery", function () {
           STOP_LOSS_MARK_PRICE,
           deadline,
           account2.address,
-          Asset(virtualToken.address, two.toString()),
-          Asset(volmexBaseToken.address, two.toString()),
+          Asset(virtualToken.address, "10000000000000000000"),
+          Asset(volmexBaseToken.address, "10000000000000000000"),
           1,
           (1e6).toString(),
           false,
@@ -2286,28 +2287,28 @@ describe("VolmexPerpPeriphery", function () {
         const signaturesLeft = [];
         const signaturesRight = [];
         await matchingEngine.grantMatchOrders(positioning.address);
-        await await USDC.transfer(account1.address, "1000000000");
-        await await USDC.transfer(account2.address, "1000000000");
-        await USDC.connect(account1).approve(volmexPerpPeriphery.address, "1000000000");
-        await USDC.connect(account2).approve(volmexPerpPeriphery.address, "1000000000");
+        await await USDC.transfer(account1.address, "10000000000");
+        await await USDC.transfer(account2.address, "10000000000");
+        await USDC.connect(account1).approve(volmexPerpPeriphery.address, "10000000000");
+        await USDC.connect(account2).approve(volmexPerpPeriphery.address, "10000000000");
         await volmexPerpPeriphery.whitelistTrader(account1.address, true);
         await volmexPerpPeriphery.whitelistTrader(account2.address, true);
         (
           await volmexPerpPeriphery
             .connect(account1)
-            .depositToVault(index, USDC.address, "1000000000")
+            .depositToVault(index, USDC.address, "10000000000")
         ).wait();
         (
           await volmexPerpPeriphery
             .connect(account2)
-            .depositToVault(index, USDC.address, "1000000000")
+            .depositToVault(index, USDC.address, "10000000000")
         ).wait();
         const orderLeft = Order(
           ORDER,
           deadline,
           account1.address,
-          Asset(volmexBaseToken.address, two.toString()),
-          Asset(virtualToken.address, two.toString()),
+          Asset(volmexBaseToken.address, "10000000000000000000"),
+          Asset(virtualToken.address, "10000000000000000000"),
           1,
           (1e6).toString(),
           true,
@@ -2317,8 +2318,8 @@ describe("VolmexPerpPeriphery", function () {
           ORDER,
           deadline,
           account2.address,
-          Asset(virtualToken.address, two.toString()),
-          Asset(volmexBaseToken.address, two.toString()),
+          Asset(virtualToken.address, "10000000000000000000"),
+          Asset(volmexBaseToken.address, "10000000000000000000"),
           2,
           (1e6).toString(),
           false,

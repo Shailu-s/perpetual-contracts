@@ -194,7 +194,7 @@ describe("Liquidation test in Positioning", function () {
         marketRegistry.address,
         [volmexBaseToken.address, volmexBaseToken1.address],
         [owner.address, account2.address],
-        "1000000000000000000",
+        ["1000000000000000000", "1000000000000000000"],
       ],
       {
         initializer: "initialize",

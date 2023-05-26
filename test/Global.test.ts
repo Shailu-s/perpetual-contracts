@@ -179,7 +179,7 @@ describe("Global", function () {
         marketRegistry.address,
         [volmexBaseToken.address, volmexBaseToken.address],
         [owner.address, account1.address],
-        "1000000000000000000",
+        ["1000000000000000000", "1000000000000000000"],
       ],
       {
         initializer: "initialize",

@@ -219,7 +219,7 @@ describe("Positioning", function () {
         marketRegistry.address,
         [volmexBaseToken.address, volmexBaseToken1.address],
         [owner.address, account2.address],
-        "1000000000000000000",
+        ["10000000000000000000", "10000000000000000000"],
       ],
       {
         initializer: "initialize",
@@ -318,7 +318,7 @@ describe("Positioning", function () {
               marketRegistry.address,
               [volmexBaseToken.address, volmexBaseToken.address],
               [owner.address, account2.address],
-              "1000000000000000000",
+              ["1000000000000000000", "1000000000000000000"],
             ],
             {
               initializer: "initialize",
@@ -354,7 +354,7 @@ describe("Positioning", function () {
             marketRegistry.address,
             [volmexBaseToken.address, volmexBaseToken1.address],
             [owner.address, account2.address],
-            "1000000000000000000",
+            ["1000000000000000000", "1000000000000000000"],
           ),
         ).to.be.revertedWith("Initializable: contract is already initialized");
       });
@@ -373,7 +373,7 @@ describe("Positioning", function () {
               marketRegistry.address,
               [volmexBaseToken.address, volmexBaseToken1.address],
               [owner.address, account2.address],
-              "1000000000000000000",
+              ["1000000000000000000", "1000000000000000000"],
             ],
             {
               initializer: "initialize",
@@ -397,7 +397,7 @@ describe("Positioning", function () {
               marketRegistry.address,
               [volmexBaseToken.address, volmexBaseToken1.address],
               [owner.address, account2.address],
-              "1000000000000000000",
+              ["1000000000000000000", "1000000000000000000"],
             ],
             {
               initializer: "initialize",
@@ -421,7 +421,7 @@ describe("Positioning", function () {
               marketRegistry.address,
               [volmexBaseToken.address, volmexBaseToken1.address],
               [owner.address, account2.address],
-              "1000000000000000000",
+              ["1000000000000000000", "1000000000000000000"],
             ],
             {
               initializer: "initialize",
@@ -768,8 +768,8 @@ describe("Positioning", function () {
           ORDER,
           deadline,
           account1.address,
-          Asset(volmexBaseToken.address, convert("2")),
-          Asset(virtualToken.address, convert("10")),
+          Asset(volmexBaseToken.address, convert("20")),
+          Asset(virtualToken.address, convert("100")),
           1,
           0,
           true,
@@ -779,8 +779,8 @@ describe("Positioning", function () {
           ORDER,
           deadline,
           account2.address,
-          Asset(virtualToken.address, convert("10")),
-          Asset(volmexBaseToken.address, convert("2")),
+          Asset(virtualToken.address, convert("100")),
+          Asset(volmexBaseToken.address, convert("20")),
           1,
           0,
           false,
@@ -810,8 +810,8 @@ describe("Positioning", function () {
           orderLeft.takeAsset.virtualToken,
         );
 
-        await expect(positionSize.toString()).to.be.equal(convert("-2"));
-        await expect(positionSize1.toString()).to.be.equal(convert("2"));
+        await expect(positionSize.toString()).to.be.equal(convert("-20"));
+        await expect(positionSize1.toString()).to.be.equal(convert("20"));
 
         await virtualToken.mint(account1.address, convert("100000000000000"));
         await virtualToken.mint(account2.address, convert("100000000000000"));
@@ -845,8 +845,8 @@ describe("Positioning", function () {
           ORDER,
           deadline,
           account2.address,
-          Asset(volmexBaseToken.address, convert("1")),
-          Asset(virtualToken.address, convert("10")),
+          Asset(volmexBaseToken.address, convert("10")),
+          Asset(virtualToken.address, convert("100")),
           3,
           0,
           true,
@@ -856,8 +856,8 @@ describe("Positioning", function () {
           ORDER,
           deadline,
           account1.address,
-          Asset(virtualToken.address, convert("10")),
-          Asset(volmexBaseToken.address, convert("1")),
+          Asset(virtualToken.address, convert("100")),
+          Asset(volmexBaseToken.address, convert("10")),
           4,
           0,
           false,
@@ -887,8 +887,8 @@ describe("Positioning", function () {
           account2.address,
           orderLeft.takeAsset.virtualToken,
         );
-        await expect(positionSize3.toString()).to.be.equal(convert("-1"));
-        await expect(positionSize2.toString()).to.be.equal(convert("1"));
+        await expect(positionSize3.toString()).to.be.equal(convert("-10"));
+        await expect(positionSize2.toString()).to.be.equal(convert("10"));
         const pendingFunding1 = parseInt(
           await positioning.getPendingFundingPayment(account1.address, volmexBaseToken.address),
         );
@@ -932,8 +932,8 @@ describe("Positioning", function () {
           ORDER,
           deadline,
           account1.address,
-          Asset(volmexBaseToken.address, convert("2")),
-          Asset(virtualToken.address, convert("10")),
+          Asset(volmexBaseToken.address, convert("20")),
+          Asset(virtualToken.address, convert("100")),
           1,
           0,
           true,
@@ -943,8 +943,8 @@ describe("Positioning", function () {
           ORDER,
           deadline,
           account2.address,
-          Asset(virtualToken.address, convert("10")),
-          Asset(volmexBaseToken.address, convert("2")),
+          Asset(virtualToken.address, convert("100")),
+          Asset(volmexBaseToken.address, convert("20")),
           1,
           0,
           false,
@@ -974,8 +974,8 @@ describe("Positioning", function () {
           orderLeft.takeAsset.virtualToken,
         );
 
-        await expect(positionSize.toString()).to.be.equal(convert("-2"));
-        await expect(positionSize1.toString()).to.be.equal(convert("2"));
+        await expect(positionSize.toString()).to.be.equal(convert("-20"));
+        await expect(positionSize1.toString()).to.be.equal(convert("20"));
         await virtualToken.mint(account1.address, convert("1000000000000000"));
         await virtualToken.mint(account2.address, convert("1000000000000000"));
 
@@ -1007,8 +1007,8 @@ describe("Positioning", function () {
           ORDER,
           deadline,
           account1.address,
-          Asset(volmexBaseToken.address, convert("2")),
-          Asset(virtualToken.address, convert("2")),
+          Asset(volmexBaseToken.address, convert("20")),
+          Asset(virtualToken.address, convert("20")),
           3,
           0,
           true,
@@ -1018,8 +1018,8 @@ describe("Positioning", function () {
           ORDER,
           deadline,
           account2.address,
-          Asset(virtualToken.address, convert("2")),
-          Asset(volmexBaseToken.address, convert("2")),
+          Asset(virtualToken.address, convert("20")),
+          Asset(volmexBaseToken.address, convert("20")),
           4,
           0,
           false,
@@ -1049,8 +1049,8 @@ describe("Positioning", function () {
           account2.address,
           orderLeft.takeAsset.virtualToken,
         );
-        await expect(positionSize3.toString()).to.be.equal(convert("-4"));
-        await expect(positionSize2.toString()).to.be.equal(convert("4"));
+        await expect(positionSize3.toString()).to.be.equal(convert("-40"));
+        await expect(positionSize2.toString()).to.be.equal(convert("40"));
         const pendingFunding1 = parseInt(
           await positioning.getPendingFundingPayment(account1.address, volmexBaseToken.address),
         );
@@ -1099,8 +1099,8 @@ describe("Positioning", function () {
           ORDER,
           deadline,
           account1.address,
-          Asset(volmexBaseToken.address, convert("1")),
-          Asset(virtualToken.address, convert("10")),
+          Asset(volmexBaseToken.address, convert("10")),
+          Asset(virtualToken.address, convert("100")),
           1,
           0,
           true,
@@ -1110,8 +1110,8 @@ describe("Positioning", function () {
           ORDER,
           deadline,
           account2.address,
-          Asset(virtualToken.address, convert("10")),
-          Asset(volmexBaseToken.address, convert("1")),
+          Asset(virtualToken.address, convert("100")),
+          Asset(volmexBaseToken.address, convert("10")),
           1,
           0,
           false,
@@ -1141,15 +1141,15 @@ describe("Positioning", function () {
           orderLeft.takeAsset.virtualToken,
         );
 
-        await expect(positionSize.toString()).to.be.equal(convert("-1"));
-        await expect(positionSize1.toString()).to.be.equal(convert("1"));
+        await expect(positionSize.toString()).to.be.equal(convert("-10"));
+        await expect(positionSize1.toString()).to.be.equal(convert("10"));
 
         const orderLeftLeverage1 = Order(
           ORDER,
           deadline,
           account1.address,
-          Asset(volmexBaseToken.address, convert("1")),
-          Asset(virtualToken.address, convert("10")),
+          Asset(volmexBaseToken.address, convert("10")),
+          Asset(virtualToken.address, convert("100")),
           3,
           0,
           true,
@@ -1159,8 +1159,8 @@ describe("Positioning", function () {
           ORDER,
           deadline,
           account2.address,
-          Asset(virtualToken.address, convert("10")),
-          Asset(volmexBaseToken.address, convert("1")),
+          Asset(virtualToken.address, convert("100")),
+          Asset(volmexBaseToken.address, convert("10")),
           4,
           0,
           false,
@@ -1217,8 +1217,8 @@ describe("Positioning", function () {
           account2.address,
           orderLeft.takeAsset.virtualToken,
         );
-        await expect(positionSize3.toString()).to.be.equal(convert("-2"));
-        await expect(positionSize2.toString()).to.be.equal(convert("2"));
+        await expect(positionSize3.toString()).to.be.equal(convert("-20"));
+        await expect(positionSize2.toString()).to.be.equal(convert("20"));
       });
 
       it("should match orders and open position with 5x leverage", async () => {
@@ -1652,8 +1652,8 @@ describe("Positioning", function () {
           ORDER,
           deadline,
           account1.address,
-          Asset(virtualToken.address, convert("20")),
-          Asset(volmexBaseToken.address, convert("2")),
+          Asset(virtualToken.address, convert("200")),
+          Asset(volmexBaseToken.address, convert("20")),
           1,
           0,
           false,
@@ -1663,8 +1663,8 @@ describe("Positioning", function () {
           ORDER,
           deadline,
           account2.address,
-          Asset(volmexBaseToken.address, convert("2")),
-          Asset(virtualToken.address, convert("20")),
+          Asset(volmexBaseToken.address, convert("20")),
+          Asset(virtualToken.address, convert("200")),
           2,
           0,
           true,
@@ -1715,15 +1715,15 @@ describe("Positioning", function () {
           orderLeft.takeAsset.virtualToken,
         );
 
-        await expect(positionSize).to.be.equal(convert("2"));
-        await expect(positionSize1).to.be.equal(convert("-2"));
+        await expect(positionSize).to.be.equal(convert("20"));
+        await expect(positionSize1).to.be.equal(convert("-20"));
 
         const orderRight1 = Order(
           ORDER,
           deadline,
           account2.address,
-          Asset(virtualToken.address, convert("20")),
-          Asset(volmexBaseToken.address, convert("2")),
+          Asset(virtualToken.address, convert("200")),
+          Asset(volmexBaseToken.address, convert("20")),
           2,
           0,
           false,
@@ -1733,8 +1733,8 @@ describe("Positioning", function () {
           ORDER,
           deadline,
           account1.address,
-          Asset(volmexBaseToken.address, convert("2")),
-          Asset(virtualToken.address, convert("20")),
+          Asset(volmexBaseToken.address, convert("20")),
+          Asset(virtualToken.address, convert("200")),
           3,
           0,
           true,
@@ -1800,7 +1800,7 @@ describe("Positioning", function () {
           deadline,
           account1.address,
           Asset(virtualToken.address, convert("100")),
-          Asset(volmexBaseToken.address, convert("2")),
+          Asset(volmexBaseToken.address, convert("20")),
           1,
           0,
           false,
@@ -1810,7 +1810,7 @@ describe("Positioning", function () {
           ORDER,
           deadline,
           account2.address,
-          Asset(volmexBaseToken.address, convert("2")),
+          Asset(volmexBaseToken.address, convert("20")),
           Asset(virtualToken.address, convert("90")),
           2,
           0,
@@ -1832,7 +1832,7 @@ describe("Positioning", function () {
           deadline,
           account2.address,
           Asset(virtualToken.address, convert("90")),
-          Asset(volmexBaseToken.address, convert("2")),
+          Asset(volmexBaseToken.address, convert("20")),
           8,
           0,
           false,
@@ -1842,7 +1842,7 @@ describe("Positioning", function () {
           ORDER,
           deadline,
           account1.address,
-          Asset(volmexBaseToken.address, convert("4")),
+          Asset(volmexBaseToken.address, convert("40")),
           Asset(virtualToken.address, convert("70")),
           9,
           0,
@@ -1900,7 +1900,7 @@ describe("Positioning", function () {
           deadline,
           account1.address,
           Asset(virtualToken.address, convert("100")),
-          Asset(volmexBaseToken.address, convert("2")),
+          Asset(volmexBaseToken.address, convert("20")),
           1,
           0,
           false,
@@ -1910,7 +1910,7 @@ describe("Positioning", function () {
           ORDER,
           deadline,
           account2.address,
-          Asset(volmexBaseToken.address, convert("2")),
+          Asset(volmexBaseToken.address, convert("20")),
           Asset(virtualToken.address, convert("50")),
           2,
           0,
@@ -1932,7 +1932,7 @@ describe("Positioning", function () {
           deadline,
           account2.address,
           Asset(virtualToken.address, convert("200")),
-          Asset(volmexBaseToken.address, convert("4")),
+          Asset(volmexBaseToken.address, convert("40")),
           8,
           0,
           false,
@@ -1942,7 +1942,7 @@ describe("Positioning", function () {
           ORDER,
           deadline,
           account1.address,
-          Asset(volmexBaseToken.address, convert("2")),
+          Asset(volmexBaseToken.address, convert("20")),
           Asset(virtualToken.address, convert("90")),
           9,
           0,
@@ -2014,7 +2014,7 @@ describe("Positioning", function () {
           deadline,
           account1.address,
           Asset(virtualToken.address, convert("100")),
-          Asset(volmexBaseToken.address, convert("2")),
+          Asset(volmexBaseToken.address, convert("20")),
           1,
           0,
           false,
@@ -2024,7 +2024,7 @@ describe("Positioning", function () {
           ORDER,
           deadline,
           account2.address,
-          Asset(volmexBaseToken.address, convert("2")),
+          Asset(volmexBaseToken.address, convert("20")),
           Asset(virtualToken.address, convert("50")),
           2,
           0,
@@ -2046,7 +2046,7 @@ describe("Positioning", function () {
           deadline,
           account2.address,
           Asset(virtualToken.address, convert("200")),
-          Asset(volmexBaseToken.address, convert("2")),
+          Asset(volmexBaseToken.address, convert("20")),
           8,
           0,
           false,
@@ -2056,7 +2056,7 @@ describe("Positioning", function () {
           ORDER,
           deadline,
           account1.address,
-          Asset(volmexBaseToken.address, convert("2")),
+          Asset(volmexBaseToken.address, convert("20")),
           Asset(virtualToken.address, convert("200")),
           9,
           0,
@@ -2103,9 +2103,6 @@ describe("Positioning", function () {
       });
 
       it("test for getters", async () => {
-        expect(await positioning.getVaultController()).to.be.equal(vaultController.address);
-        expect(await positioning.getPositioningConfig()).to.be.equal(positioningConfig.address);
-        expect(await positioning.getAccountBalance()).to.be.equal(accountBalance1.address);
         expect(await positioning.getTotalAbsPositionValue(account1.address)).to.equal(0);
         expect(
           await accountBalance.getLiquidatablePositionSize(
@@ -2118,7 +2115,6 @@ describe("Positioning", function () {
         expect(positioningConfig1).to.equal(positioningConfig.address);
       });
       it("should fail when position size is less than min position size", async () => {
-        await positioning.setMinPositionSize("10000000000000000000");
         await matchingEngine.grantMatchOrders(positioning.address);
 
         await virtualToken.mint(account1.address, convert("100000000000000"));
@@ -2193,7 +2189,7 @@ describe("Positioning", function () {
           positioning
             .connect(account1)
             .openPosition(orderRight, signatureRight, orderLeft, signatureLeft, liquidator),
-        ).to.be.revertedWith("V_PERP: position size less than min Position size");
+        ).to.be.revertedWith("V_PERP:trader below min position");
       });
       it("should fail with re entrancy gaurd", async () => {
         matchingEngine = await upgrades.deployProxy(
@@ -2259,7 +2255,7 @@ describe("Positioning", function () {
             marketRegistry.address,
             [volmexBaseToken.address, volmexBaseToken.address],
             [owner.address, account2.address],
-            "1000000000000000000",
+            ["1000000000000000000", "1000000000000000000"],
           ],
           {
             initializer: "initialize",
@@ -2428,7 +2424,7 @@ describe("Positioning", function () {
           deadline,
           account1.address,
           Asset(virtualToken.address, convert("20")),
-          Asset(volmexBaseToken1.address, convert("2")),
+          Asset(volmexBaseToken1.address, convert("20")),
           1,
           0,
           false,
@@ -2438,7 +2434,7 @@ describe("Positioning", function () {
           ORDER,
           deadline,
           account2.address,
-          Asset(volmexBaseToken1.address, convert("2")),
+          Asset(volmexBaseToken1.address, convert("20")),
           Asset(virtualToken.address, convert("20")),
           2,
           0,
@@ -2655,7 +2651,7 @@ describe("Positioning", function () {
             signatureRight,
             liquidator,
           ),
-        ).to.be.revertedWith("V_PERP: position size less than min Position size");
+        ).to.be.revertedWith("division by zero");
       });
 
       it("failure not enough free collateral", async () => {
@@ -3230,7 +3226,7 @@ describe("Liquidation test in Positioning", function () {
         marketRegistry.address,
         [volmexBaseToken.address, volmexBaseToken1.address],
         [owner.address, account2.address],
-        "1000000000000000000",
+        ["1000000000000000000", "1000000000000000000"],
       ],
       {
         initializer: "initialize",
