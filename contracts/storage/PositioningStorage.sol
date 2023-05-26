@@ -13,9 +13,9 @@ abstract contract PositioningStorageV1 {
     bytes32 public constant SM_INTERVAL_ROLE = keccak256("SM_INTERVAL_ROLE");
     mapping(address => uint256) internal _firstTradedTimestampMap;
     uint8 internal _settlementTokenDecimals;
-    address internal _positioningConfig;
-    address internal _vaultController;
-    address internal _accountBalance;
+    address public _positioningConfig;
+    address public _vaultController;
+    address public _accountBalance;
     address internal _matchingEngine;
     address internal _marketRegistry;
     uint256 internal _smInterval;
@@ -31,7 +31,7 @@ abstract contract PositioningStorageV1 {
     mapping(address => bool) public isLiquidatorWhitelisted;
     bool public isLiquidatorWhitelistEnabled;
     uint256 public indexPriceAllowedInterval;
-    mapping(address => uint256) public minPositionSizeByBaseToken;
+    mapping(address => uint256) internal minPositionSizeByBaseToken;
 
     uint256[49] private __gap;
 }

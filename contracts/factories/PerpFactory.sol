@@ -157,7 +157,7 @@ contract PerpFactory is Initializable, IPerpFactory, AccessControlUpgradeable {
         address _marketRegistry,
         address[2] calldata volmexBaseTokenArgs,
         address[2] calldata _liquidators,
-        uint256 _minPositionSize
+        uint256[2] calldata _minPositionSizeByBaseTokens
     ) external returns (address[4] memory perpEcosystem) {
         _requireClonesDeployer();
         uint256 perpIndex = perpViewRegistry.perpIndexCount();
@@ -174,7 +174,7 @@ contract PerpFactory is Initializable, IPerpFactory, AccessControlUpgradeable {
                 _marketRegistry,
                 volmexBaseTokenArgs,
                 _liquidators,
-                _minPositionSize
+                _minPositionSizeByBaseTokens
             )
         );
         perpEcosystem[3] = address(_cloneMarketRegistry(perpIndex, _quoteToken, volmexBaseTokenArgs));
@@ -203,7 +203,7 @@ contract PerpFactory is Initializable, IPerpFactory, AccessControlUpgradeable {
         address _marketRegistry,
         address[2] calldata volmexBaseTokenArgs,
         address[2] calldata _liquidators,
-        uint256 _minPositionSize
+        uint256[2] calldata _minPositionSizeByBaseTokens
     ) private returns (IPositioning positioning) {
         bytes32 salt = keccak256(abi.encodePacked(_perpIndex, _positioningConfig));
         positioning = IPositioning(Clones.cloneDeterministic(positioningImplementation, salt));
@@ -216,7 +216,7 @@ contract PerpFactory is Initializable, IPerpFactory, AccessControlUpgradeable {
             _marketRegistry,
             volmexBaseTokenArgs,
             _liquidators,
-            _minPositionSize
+            _minPositionSizeByBaseTokens
         );
         _vaultController.setPositioning(address(positioning));
         perpViewRegistry.setPositioning(positioning);

@@ -191,24 +191,7 @@ contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, 
     ) external override whenNotPaused nonReentrant {
         // short = selling base token
         address baseToken = orderLeft.isShort ? orderLeft.makeAsset.virtualToken : orderLeft.takeAsset.virtualToken;
-        uint256 minPositionSize = minPositionSizeByBaseToken[baseToken];
-        uint256 lastPositionSizeLeft;
-        uint256 lastPositionSizeRight;
-        int256 currentPositionSizeLeftTrader = _getTakerPosition(orderLeft.trader, baseToken);
-        int256 currentPositionSizeRightTrader = _getTakerPosition(orderRight.trader, baseToken);
-        if (orderLeft.isShort) {
-            require(orderLeft.makeAsset.value >= minPositionSize && orderRight.takeAsset.value >= minPositionSize, "V_PERP: position size less than min Position size");
-            lastPositionSizeLeft = currentPositionSizeLeftTrader - orderLeft.makeAsset.value.toInt256();
-            lastPositionSizeRight = currentPositionSizeRightTrader + orderRight.takeAsset.value.toInt256();
-            require(lastPositionSizeLeft.abs() >= minPositionSize || lastPositionSizeLeft == 0, "V_PERP: left order trader  below min postion size");
-            require(lastPositionSizeRight.abs() >= minPositionSize || lastPositionSizeRight == 0, "V_PERP: right order trader  below min postion size");
-        } else {
-            require(orderLeft.takeAsset.value >= minPositionSize && orderRight.makeAsset.value >= minPositionSize, "V_PERP: position size less than min Position size");
-            lastPositionSizeLeft = currentPositionSizeLeftTrader + orderLeft.takeAsset.value.toInt256();
-            lastPositionSizeRight = currentPositionSizeRightTrader - orderRight.makeAsset.value.toInt256();
-            require(lastPositionSizeLeft.abs() >= minPositionSize || lastPositionSizeLeft == 0, "V_PERP: left order trader  below min postion size");
-            require(lastPositionSizeRight.abs() >= minPositionSize || lastPositionSizeRight == 0, "V_PERP: right order trader  below min postion size");
-        }
+
         require(!isStaleIndexOracle(baseToken), "P_SIP"); // stale index price
         _validateFull(orderLeft, signatureLeft);
         _validateFull(orderRight, signatureRight);
@@ -238,35 +221,13 @@ contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, 
         return positionSize.abs().mulRatio(partialCloseRatio);
     }
 
-    /// @inheritdoc IPositioning
-    function getPositioningConfig() external view override returns (address) {
-        return _positioningConfig;
-    }
-
-    /// @inheritdoc IPositioning
-    function getVaultController() external view override returns (address) {
-        return _vaultController;
-    }
-
-    /// @inheritdoc IPositioning
-    function getAccountBalance() external view override returns (address) {
-        return _accountBalance;
-    }
-
     function getOrderValidate(LibOrder.Order memory order) external view returns (bool) {
-        int256 finalPositionSize;
-        int256 currentTraderPositionSize;
-        if (order.isShort) {
-            require(order.makeAsset.value >= minPositionSizeByBaseToken[order.makeAsset.virtualToken], "V_PERP: position size less than min Position size");
-            currentTraderPositionSize = _getTakerPosition(order.trader, order.makeAsset.virtualToken);
-            finalPositionSize = currentTraderPositionSize - order.makeAsset.value.toInt256();
-            require(finalPositionSize.abs() >= minPositionSizeByBaseToken[order.makeAsset.virtualToken]);
-        } else {
-            require(order.takeAsset.value >= minPositionSizeByBaseToken[order.takeAsset.virtualToken], "V_PERP: position size less than min Position size");
-            currentTraderPositionSize = _getTakerPosition(order.trader, order.takeAsset.virtualToken);
-            finalPositionSize = currentTraderPositionSize + order.takeAsset.value.toInt256();
-            require(finalPositionSize.abs() >= minPositionSizeByBaseToken[order.takeAsset.virtualToken]);
-        }
+        address baseToken = order.isShort ? order.makeAsset.virtualToken : order.takeAsset.virtualToken;
+        uint256 minPositionSize = minPositionSizeByBaseToken[baseToken];
+        int256 baseValue = order.isShort ? order.makeAsset.value.neg256() : order.takeAsset.value.toInt256();
+        int256 currentTraderPositionSize = _getTakerPosition(order.trader, baseToken);
+        int256 finalPositionSize = currentTraderPositionSize + baseValue;
+        require(baseValue.abs() >= minPositionSize && (finalPositionSize.abs() >= minPositionSize || finalPositionSize.abs() == 0), "V_PERP:min position size");
         require(order.trader != address(0), "V_PERP_OVF"); // V_PERP_M: order verification failed
         require(order.salt != 0, "V_PERP_0S"); //V_PERP_M: 0 salt can't be used
         require(order.salt >= IMatchingEngine(_matchingEngine).makerMinSalt(order.trader), "V_PERP_LS"); // V_PERP_M: order salt lower
@@ -293,21 +254,6 @@ contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, 
             pendingFundingPayment = pendingFundingPayment + (getPendingFundingPayment(trader, baseTokens[i]));
         }
         return pendingFundingPayment;
-    }
-
-    /// @dev this function is used to fetch index price of base token
-    function getIndexPrice(address baseToken, uint256 twInterval) external view returns (uint256 indexPrice) {
-        indexPrice = _getIndexPrice(baseToken, twInterval);
-    }
-
-    /// @dev this function is used to know the trader is liquidateable
-    function isAccountLiquidatable(address trader) external view returns (bool) {
-        return _isAccountLiquidatable(trader);
-    }
-
-    /// @dev Used to fetch account value of a trader
-    function getAccountValue(address trader) external view returns (int256 accountValue) {
-        accountValue = _getAccountValue(trader);
     }
 
     /// @dev Used to check for stale index oracle
@@ -347,7 +293,7 @@ contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, 
         int256 positionSizeToBeLiquidated
     ) internal {
         // P_EAV: enough account value
-        require(_isAccountLiquidatable(trader), "P_EAV");
+        require(isAccountLiquidatable(trader), "P_EAV");
         address liquidator = _msgSender();
         if (isLiquidatorWhitelistEnabled) {
             _requireWhitelistLiquidator(liquidator);
@@ -358,13 +304,13 @@ contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, 
         // P_WLD: wrong liquidation direction
         require(positionSize * positionSizeToBeLiquidated >= 0, "P_WLD");
 
-        _registerBaseToken(liquidator, baseToken);
+        IAccountBalance(_accountBalance).registerBaseToken(trader, baseToken);
 
         // must settle funding first
         _settleFunding(trader, baseToken);
         _settleFunding(liquidator, baseToken);
 
-        int256 accountValue = _getAccountValue(trader);
+        int256 accountValue = getAccountValue(trader);
 
         // trader's position is closed at index price and pnl realized
         (int256 liquidatedPositionSize, int256 liquidatedPositionNotional) = _getLiquidatedPositionSizeAndNotional(trader, baseToken, accountValue, positionSizeToBeLiquidated);
@@ -381,7 +327,7 @@ contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, 
             liquidationFeeToLiquidator = liquidationPenalty;
         } else {
             liquidationFeeToFR = liquidationPenalty - liquidationFeeToLiquidator;
-            _modifyOwedRealizedPnl(_getFeeReceiver(), liquidationFeeToFR.toInt256(), baseToken);
+            _modifyOwedRealizedPnl(defaultFeeReceiver, liquidationFeeToFR.toInt256(), baseToken);
         }
 
         // liquidator opens a position with liquidationFeeToLiquidator as a discount
@@ -474,7 +420,7 @@ contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, 
         );
 
         // modifies PnL of fee receiver
-        _modifyOwedRealizedPnl(_getFeeReceiver(), (orderFees.orderLeftFee + orderFees.orderRightFee).toInt256(), baseToken);
+        _modifyOwedRealizedPnl(defaultFeeReceiver, (orderFees.orderLeftFee + orderFees.orderRightFee).toInt256(), baseToken);
 
         // modifies positionSize and openNotional
         internalData.leftPositionSize = _settleBalanceAndDeregister(
@@ -580,10 +526,6 @@ contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, 
         return IAccountBalance(_accountBalance).settleBalanceAndDeregister(trader, baseToken, takerBase, takerQuote, realizedPnl, makerFee);
     }
 
-    function _registerBaseToken(address trader, address token) internal {
-        IAccountBalance(_accountBalance).registerBaseToken(trader, token);
-    }
-
     function _getLiquidationPenaltyRatio() internal view returns (uint24) {
         return IPositioningConfig(_positioningConfig).getLiquidationPenaltyRatio();
     }
@@ -599,6 +541,10 @@ contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, 
         int256 exchangedPositionNotional
     ) internal view returns (int256) {
         int256 takerPositionSize = _getTakerPosition(order.trader, baseToken);
+        uint256 minPositionSize = minPositionSizeByBaseToken[baseToken];
+        int256 baseValue = order.isShort ? order.makeAsset.value.neg256() : order.takeAsset.value.toInt256();
+        int256 finalPositionSize = baseValue + takerPositionSize;
+        require((finalPositionSize.abs() >= minPositionSize || finalPositionSize == 0) && baseValue.abs() >= minPositionSize, "V_PERP:trader below min position");
         // get openNotional before swap
         int256 oldTakerOpenNotional = _getTakerOpenNotional(order.trader, baseToken);
         // when takerPositionSize < 0, it's a short position
@@ -626,7 +572,7 @@ contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, 
             // shore the remaining positions and make sure traders having enough money to pay liquidation penalty.
 
             // CH_NEMRM : not enough minimum required margin after reducing/closing position
-            require(_getAccountValue(order.trader) >= _getTotalAbsPositionValue(order.trader).mulRatio(_getLiquidationPenaltyRatio()).toInt256(), "CH_NEMRM");
+            require(getAccountValue(order.trader) >= _getTotalAbsPositionValue(order.trader).mulRatio(_getLiquidationPenaltyRatio()).toInt256(), "CH_NEMRM");
         }
         return pnlToBeRealized;
     }
@@ -644,7 +590,7 @@ contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, 
             positionSizeToBeLiquidated = maxLiquidatablePositionSize;
         }
 
-        uint256 indexPrice = _getIndexPrice(baseToken, _smIntervalLiquidation);
+        uint256 indexPrice = getIndexPrice(baseToken, _smIntervalLiquidation);
         require(indexPrice != 0, "P_0IP"); // zero index price
         int256 liquidatedPositionSize = positionSizeToBeLiquidated.neg256();
         int256 liquidatedPositionNotional = positionSizeToBeLiquidated.mulDiv(indexPrice.toInt256(), _ORACLE_BASE);
@@ -652,7 +598,7 @@ contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, 
         return (liquidatedPositionSize, liquidatedPositionNotional);
     }
 
-    function _getIndexPrice(address baseToken, uint256 twInterval) internal view returns (uint256 price) {
+    function getIndexPrice(address baseToken, uint256 twInterval) public view returns (uint256 price) {
         uint256 index = _underlyingPriceIndexes[baseToken];
         price = IVolmexBaseToken(baseToken).getIndexPrice(index, twInterval);
     }
@@ -682,8 +628,8 @@ contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, 
     }
 
     /// @dev This function checks if account of trader is eligible for liquidation
-    function _isAccountLiquidatable(address trader) internal view returns (bool) {
-        return _getAccountValue(trader) < IAccountBalance(_accountBalance).getMarginRequirementForLiquidation(trader);
+    function isAccountLiquidatable(address trader) public view returns (bool) {
+        return getAccountValue(trader) < IAccountBalance(_accountBalance).getMarginRequirementForLiquidation(trader);
     }
 
     /// @dev This function returns position size of trader
@@ -697,13 +643,8 @@ contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, 
         require(_getFreeCollateralByRatio(trader, IPositioningConfig(_positioningConfig).getImRatio()) > 0, "P_NEFCI");
     }
 
-    /// @dev this function returns address of the fee receiver
-    function _getFeeReceiver() internal view returns (address) {
-        return defaultFeeReceiver;
-    }
-
     /// @dev this function returns total account value of the trader
-    function _getAccountValue(address trader) internal view returns (int256) {
+    function getAccountValue(address trader) public view returns (int256) {
         return IVaultController(_vaultController).getAccountValue(trader);
     }
 

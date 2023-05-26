@@ -155,22 +155,10 @@ interface IPositioning is IFundingRate {
     /// @return pnlToBeRealized The pnl that can be realized if trader reduce position
     function getPnlToBeRealized(RealizePnlParams memory params) external view returns (int256 pnlToBeRealized);
 
-    /// @notice Get PositioningConfig address
-    /// @return PositioningConfig PositioningConfig address
-    function getPositioningConfig() external view returns (address PositioningConfig);
-
     /// @notice Get total pending funding payment of trader
     /// @param trader address of the trader
     /// @return pendingFundingPayment  total pending funding
     function getAllPendingFundingPayment(address trader) external view returns (int256 pendingFundingPayment);
-
-    /// @notice Get `Vault` address
-    /// @return vault `Vault` address
-    function getVaultController() external view returns (address vault);
-
-    /// @notice Get AccountBalance address
-    /// @return accountBalance `AccountBalance` address
-    function getAccountBalance() external view returns (address accountBalance);
 
     /// @notice Check if order is valid
     /// @param order order
