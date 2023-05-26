@@ -82,7 +82,7 @@ interface IPositioning is IFundingRate {
         address marketRegistryArg,
         address[2] calldata volmexBaseTokenArgs,
         address[2] calldata liquidators,
-        uint256 _minPositionSize
+        uint256[2] calldata minPositionSizeByBaseToken
     ) external;
 
     /// @notice Settle all markets fundingPayment to owedRealized Pnl

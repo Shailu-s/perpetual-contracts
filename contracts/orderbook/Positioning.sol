@@ -49,7 +49,7 @@ contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, 
         address marketRegistryArg,
         address[2] calldata volmexBaseTokenArgs,
         address[2] calldata liquidators,
-        uint256[2] _minPositionSizeByBaseToken
+        uint256[2] calldata _minPositionSizeByBaseToken
     ) external initializer {
         // P_VANC: Vault address is not contract
         require(vaultControllerArg.isContract(), "P_VANC");
@@ -74,13 +74,12 @@ contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, 
         _smInterval = 28800;
         _smIntervalLiquidation = 3600;
         indexPriceAllowedInterval = 1800;
-        minPositionSize = _minPositionSize;
         for (uint256 index = 0; index < 2; index++) {
             _underlyingPriceIndexes[volmexBaseTokenArgs[index]] = index;
-        }
-        for (uint256 index = 0; index < 2; index++) {
             isLiquidatorWhitelisted[liquidators[index]] = true;
+            minPositionSizeByBaseToken[volmexBaseTokenArgs[index]] = _minPositionSizeByBaseToken[index];
         }
+
         isLiquidatorWhitelistEnabled = true;
         _grantRole(SM_INTERVAL_ROLE, positioningConfigArg);
         _grantRole(POSITIONING_ADMIN, _msgSender());
@@ -117,11 +116,11 @@ contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, 
         _perpetualOracleArg = perpetualOracleArg;
     }
 
-    function setMinPositionSize(uint256 _minPositionSize) external {
+    function setMinPositionSize(uint256 _minPositionSize, address baseToken) external {
         _requirePositioningAdmin();
         require(_minPositionSize >= 1e18, "P_MPSlT1");
         // P_MPSGT1: Min position size less than 1e18
-        minPositionSize = _minPositionSize;
+        minPositionSizeByBaseToken[baseToken] = _minPositionSize;
     }
 
     /// @inheritdoc IPositioning
@@ -192,6 +191,7 @@ contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, 
     ) external override whenNotPaused nonReentrant {
         // short = selling base token
         address baseToken = orderLeft.isShort ? orderLeft.makeAsset.virtualToken : orderLeft.takeAsset.virtualToken;
+        uint256 minPositionSize = minPositionSizeByBaseToken[baseToken];
         if (orderLeft.isShort) {
             require(orderLeft.makeAsset.value >= minPositionSize && orderRight.takeAsset.value >= minPositionSize, "V_PERP: position size less than min Position size");
         } else {
