@@ -252,21 +252,21 @@ describe("Various Order Types", function () {
 
       await matchingEngine.grantMatchOrders(positioning.address);
 
-      await await USDC.transfer(account1.address, "100000000");
-      await await USDC.transfer(account2.address, "100000000");
-      await USDC.connect(account1).approve(volmexPerpPeriphery.address, "100000000");
-      await USDC.connect(account2).approve(volmexPerpPeriphery.address, "100000000");
+      await await USDC.transfer(account1.address, "100000000000");
+      await await USDC.transfer(account2.address, "100000000000");
+      await USDC.connect(account1).approve(volmexPerpPeriphery.address, "100000000000");
+      await USDC.connect(account2).approve(volmexPerpPeriphery.address, "100000000000");
       await volmexPerpPeriphery.whitelistTrader(account1.address, true);
       await volmexPerpPeriphery.whitelistTrader(account2.address, true);
       (
         await volmexPerpPeriphery
           .connect(account1)
-          .depositToVault(index, USDC.address, "100000000")
+          .depositToVault(index, USDC.address, "100000000000")
       ).wait();
       (
         await volmexPerpPeriphery
           .connect(account2)
-          .depositToVault(index, USDC.address, "100000000")
+          .depositToVault(index, USDC.address, "100000000000")
       ).wait();
 
       signatureLeft = await getSignature(orderLeft, account1.address);

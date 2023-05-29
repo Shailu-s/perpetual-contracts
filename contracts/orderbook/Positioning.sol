@@ -227,7 +227,8 @@ contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, 
         int256 baseValue = order.isShort ? order.makeAsset.value.neg256() : order.takeAsset.value.toInt256();
         int256 currentTraderPositionSize = _getTakerPosition(order.trader, baseToken);
         int256 finalPositionSize = currentTraderPositionSize + baseValue;
-        require(baseValue.abs() >= minPositionSize && (finalPositionSize.abs() >= minPositionSize || finalPositionSize.abs() == 0), "V_PERP:min position size");
+        // V_PERP: Trader below min position size
+        require(baseValue.abs() >= minPositionSize && (finalPositionSize.abs() >= minPositionSize || finalPositionSize.abs() == 0), "V_PERP: TBMPS");
         require(order.trader != address(0), "V_PERP_OVF"); // V_PERP_M: order verification failed
         require(order.salt != 0, "V_PERP_0S"); //V_PERP_M: 0 salt can't be used
         require(order.salt >= IMatchingEngine(_matchingEngine).makerMinSalt(order.trader), "V_PERP_LS"); // V_PERP_M: order salt lower
@@ -544,7 +545,8 @@ contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, 
         uint256 minPositionSize = minPositionSizeByBaseToken[baseToken];
         int256 baseValue = order.isShort ? order.makeAsset.value.neg256() : order.takeAsset.value.toInt256();
         int256 finalPositionSize = baseValue + takerPositionSize;
-        require((finalPositionSize.abs() >= minPositionSize || finalPositionSize == 0) && baseValue.abs() >= minPositionSize, "V_PERP:trader below min position");
+        // V_PERP: Trader below min position size
+        require((finalPositionSize.abs() >= minPositionSize || finalPositionSize == 0) && baseValue.abs() >= minPositionSize, "V_PERP: TBMPS");
         // get openNotional before swap
         int256 oldTakerOpenNotional = _getTakerOpenNotional(order.trader, baseToken);
         // when takerPositionSize < 0, it's a short position

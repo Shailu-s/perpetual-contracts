@@ -1302,6 +1302,134 @@ describe("VolmexPerpPeriphery", function () {
           ),
       ).to.be.revertedWith("P_NEFCI");
     });
+    it.only("should fail when trader's try to hold a position less then min position size  ", async () => {
+      await matchingEngine.grantMatchOrders(positioning.address);
+      await await USDC.transfer(account1.address, "100000000000");
+      await volmexPerpPeriphery.setRelayer(account1.address);
+      await await USDC.transfer(account2.address, "100000000000");
+      await USDC.transfer(account3.address, "100000000000");
+      await USDC.connect(account1).approve(volmexPerpPeriphery.address, "100000000000");
+      await USDC.connect(account2).approve(volmexPerpPeriphery.address, "100000000000");
+      await USDC.connect(account3).approve(volmexPerpPeriphery.address, "100000000000");
+      (
+        await volmexPerpPeriphery.connect(account1).depositToVault(0, USDC.address, "100000000000")
+      ).wait();
+      (
+        await volmexPerpPeriphery.connect(account2).depositToVault(0, USDC.address, "100000000000")
+      ).wait();
+      (
+        await volmexPerpPeriphery.connect(account3).depositToVault(0, USDC.address, "100000000000")
+      ).wait();
+      await volmexPerpPeriphery.whitelistTrader(account1.address, true);
+      await volmexPerpPeriphery.whitelistTrader(account2.address, true);
+      await volmexPerpPeriphery.whitelistTrader(account3.address, true);
+      const orderLeft = Order(
+        ORDER,
+        deadline,
+        account1.address,
+        Asset(volmexBaseToken.address, "10000000000000000000"),
+        Asset(virtualToken.address, "100000000000000000000"),
+        1,
+        (1e8).toString(),
+        true,
+      );
+
+      const orderRight = Order(
+        ORDER,
+        deadline,
+        account2.address,
+        Asset(virtualToken.address, "100000000000000000000"),
+        Asset(volmexBaseToken.address, "10000000000000000000"),
+        1,
+        (1e6).toString(),
+        false,
+      );
+
+      const signatureLeftLimitOrder = await getSignature(orderLeft, account1.address);
+      const signatureRightLimitOrder = await getSignature(orderRight, account2.address);
+
+      await expect(
+        volmexPerpPeriphery.openPosition(
+          0,
+          orderLeft,
+          signatureLeftLimitOrder,
+          orderRight,
+          signatureRightLimitOrder,
+          owner.address,
+        ),
+      ).to.emit(positioning, "PositionChanged");
+
+      // When trader tries to go long on a short position of size 10 with a long position of size 9 which is less that min position size 10
+      const orderRight1 = Order(
+        ORDER,
+        deadline,
+        account1.address,
+        Asset(virtualToken.address, "90000000000000000000"),
+        Asset(volmexBaseToken.address, "9000000000000000000"),
+        6,
+        (1e6).toString(),
+        false,
+      );
+      const orderLeft1 = Order(
+        ORDER,
+        deadline,
+        account3.address,
+        Asset(volmexBaseToken.address, "9000000000000000000"),
+        Asset(virtualToken.address, "90000000000000000000"),
+        7,
+        (1e8).toString(),
+        true,
+      );
+      const signatureLeftLimitOrder1 = await getSignature(orderLeft1, account3.address);
+      const signatureRightLimitOrder1 = await getSignature(orderRight1, account1.address);
+
+      await expect(
+        volmexPerpPeriphery.openPosition(
+          0,
+          orderRight1,
+          signatureRightLimitOrder1,
+          orderLeft1,
+          signatureLeftLimitOrder1,
+          owner.address,
+        ),
+      ).to.be.revertedWith("V_PERP: TBMPS");
+
+      // When trader tries to go short  on a long position of size 10 with a short position of size 9 which is less that min position size 10
+
+      const orderRight2 = Order(
+        ORDER,
+        deadline,
+        account3.address,
+        Asset(virtualToken.address, "90000000000000000000"),
+        Asset(volmexBaseToken.address, "9000000000000000000"),
+        6,
+        (1e6).toString(),
+        false,
+      );
+      const orderLeft2 = Order(
+        ORDER,
+        deadline,
+        account2.address,
+        Asset(volmexBaseToken.address, "9000000000000000000"),
+        Asset(virtualToken.address, "90000000000000000000"),
+        7,
+        (1e8).toString(),
+        true,
+      );
+      const signatureLeftLimitOrder2 = await getSignature(orderLeft2, account2.address);
+      const signatureRightLimitOrder2 = await getSignature(orderRight2, account3.address);
+
+      await expect(
+        volmexPerpPeriphery.openPosition(
+          0,
+          orderLeft2,
+          signatureLeftLimitOrder2,
+          orderRight2,
+          signatureRightLimitOrder2,
+          owner.address,
+        ),
+      ).to.be.revertedWith("V_PERP: TBMPS");
+    });
     it("should fail when order trader is ZERO and no trader ", async () => {
       await await USDC.transfer(account1.address, "100000000000");
       await volmexPerpPeriphery.setRelayer(account1.address);

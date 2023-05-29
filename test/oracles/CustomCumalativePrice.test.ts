@@ -228,8 +228,8 @@ describe("Custom Cumulative Price", function () {
     ]);
     await volmexPerpPeriphery.deployed();
     const depositAmount = BigNumber.from("1000000000000000000000");
-    let baseAmount = "1000000000000000000"; //500
-    let quoteAmount = "70000000000000000000"; //100
+    let baseAmount = "10000000000000000000"; //500
+    let quoteAmount = "700000000000000000000"; //100
 
     // transfer balances
     await (await USDC.connect(owner).transfer(alice.address, depositAmount)).wait();
