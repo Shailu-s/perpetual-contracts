@@ -8,10 +8,10 @@ import "../interfaces/IAccountBalance.sol";
 
 contract PositioningTest is Positioning {
     function registerBaseToken(address trader, address token) external {
-        IAccountBalance(_accountBalance).registerBaseToken(trader, token);
+        IAccountBalance(accountBalance).registerBaseToken(trader, token);
     }
 
     function getTotalAbsPositionValue(address trader) external view returns (uint256) {
-        return IAccountBalance(_accountBalance).getTotalAbsPositionValue(trader);
+        return IAccountBalance(accountBalance).getTotalAbsPositionValue(trader);
     }
 }

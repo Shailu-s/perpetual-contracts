@@ -66,9 +66,9 @@ contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, 
         __FundingRate_init(perpetualOracleArg);
         __OrderValidator_init_unchained();
 
-        _positioningConfig = positioningConfigArg;
-        _vaultController = vaultControllerArg;
-        _accountBalance = accountBalanceArg;
+        positioningConfig = positioningConfigArg;
+        vaultController = vaultControllerArg;
+        accountBalance = accountBalanceArg;
         _matchingEngine = matchingEngineArg;
         _marketRegistry = marketRegistryArg;
         _smInterval = 28800;
@@ -94,7 +94,7 @@ contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, 
 
     /// @inheritdoc IPositioning
     function settleAllFunding(address trader) external virtual override {
-        address[] memory baseTokens = IAccountBalance(_accountBalance).getBaseTokens(trader);
+        address[] memory baseTokens = IAccountBalance(accountBalance).getBaseTokens(trader);
         uint256 baseTokenLength = baseTokens.length;
         for (uint256 i = 0; i < baseTokenLength; i++) {
             _settleFunding(trader, baseTokens[i]);
@@ -199,8 +199,8 @@ contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, 
         require(IMarketRegistry(_marketRegistry).checkBaseToken(baseToken), "V_PBRM"); // V_PERP: Basetoken not registered at market = V_PBRM
 
         // register base token for account balance calculations
-        IAccountBalance(_accountBalance).registerBaseToken(orderLeft.trader, baseToken);
-        IAccountBalance(_accountBalance).registerBaseToken(orderRight.trader, baseToken);
+        IAccountBalance(accountBalance).registerBaseToken(orderLeft.trader, baseToken);
+        IAccountBalance(accountBalance).registerBaseToken(orderRight.trader, baseToken);
 
         // must settle funding first
         _settleFunding(orderLeft.trader, baseToken);
@@ -216,7 +216,7 @@ contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, 
         // P_PSZ: position size is zero
         require(positionSize != 0, "P_PSZ");
 
-        uint24 partialCloseRatio = IPositioningConfig(_positioningConfig).getPartialLiquidationRatio();
+        uint24 partialCloseRatio = IPositioningConfig(positioningConfig).getPartialLiquidationRatio();
 
         return positionSize.abs().mulRatio(partialCloseRatio);
     }
@@ -237,7 +237,7 @@ contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, 
         require(fills < order.makeAsset.value, "V_PERP_NF"); //V_PERP_NF:  nothing to fill
         LibOrder.validate(order);
 
-        uint24 imRatio = IPositioningConfig(_positioningConfig).getImRatio();
+        uint24 imRatio = IPositioningConfig(positioningConfig).getImRatio();
 
         require(
             int256(order.isShort ? order.takeAsset.value : order.makeAsset.value) < (_getFreeCollateralByRatio(order.trader, imRatio) * 1e6) / uint256(imRatio).toInt256(),
@@ -248,7 +248,7 @@ contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, 
 
     ///@dev this function calculates total pending funding payment of a trader
     function getAllPendingFundingPayment(address trader) external view virtual override returns (int256 pendingFundingPayment) {
-        address[] memory baseTokens = IAccountBalance(_accountBalance).getBaseTokens(trader);
+        address[] memory baseTokens = IAccountBalance(accountBalance).getBaseTokens(trader);
         uint256 baseTokenLength = baseTokens.length;
 
         for (uint256 i = 0; i < baseTokenLength; i++) {
@@ -266,7 +266,7 @@ contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, 
 
     /// @inheritdoc IPositioning
     function getPnlToBeRealized(RealizePnlParams memory params) public view override returns (int256) {
-        LibAccountMarket.Info memory info = IAccountBalance(_accountBalance).getAccountInfo(params.trader, params.baseToken);
+        LibAccountMarket.Info memory info = IAccountBalance(accountBalance).getAccountInfo(params.trader, params.baseToken);
 
         int256 takerOpenNotional = info.openNotional;
         int256 takerPositionSize = info.positionSize;
@@ -305,7 +305,7 @@ contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, 
         // P_WLD: wrong liquidation direction
         require(positionSize * positionSizeToBeLiquidated >= 0, "P_WLD");
 
-        IAccountBalance(_accountBalance).registerBaseToken(trader, baseToken);
+        IAccountBalance(accountBalance).registerBaseToken(trader, baseToken);
 
         // must settle funding first
         _settleFunding(trader, baseToken);
@@ -360,11 +360,11 @@ contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, 
     function _settleFunding(address trader, address baseToken) internal {
         (int256 fundingPayment, int256 globalTwPremiumGrowth) = settleFunding(trader, baseToken);
         if (fundingPayment != 0) {
-            IAccountBalance(_accountBalance).modifyOwedRealizedPnl(trader, fundingPayment.neg256(), baseToken);
+            IAccountBalance(accountBalance).modifyOwedRealizedPnl(trader, fundingPayment.neg256(), baseToken);
             emit FundingPaymentSettled(trader, baseToken, fundingPayment);
         }
         if (globalTwPremiumGrowth != 0) {
-            IAccountBalance(_accountBalance).updateTwPremiumGrowthGlobal(trader, baseToken, globalTwPremiumGrowth);
+            IAccountBalance(accountBalance).updateTwPremiumGrowthGlobal(trader, baseToken, globalTwPremiumGrowth);
         }
     }
 
@@ -374,7 +374,7 @@ contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, 
         int256 amount,
         address baseToken
     ) internal {
-        IAccountBalance(_accountBalance).modifyOwedRealizedPnl(trader, amount, baseToken);
+        IAccountBalance(accountBalance).modifyOwedRealizedPnl(trader, amount, baseToken);
     }
 
     /// @dev this function matches the both orders and opens the position
@@ -524,15 +524,15 @@ contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, 
         int256 realizedPnl,
         int256 makerFee
     ) internal returns (int256) {
-        return IAccountBalance(_accountBalance).settleBalanceAndDeregister(trader, baseToken, takerBase, takerQuote, realizedPnl, makerFee);
+        return IAccountBalance(accountBalance).settleBalanceAndDeregister(trader, baseToken, takerBase, takerQuote, realizedPnl, makerFee);
     }
 
     function _getLiquidationPenaltyRatio() internal view returns (uint24) {
-        return IPositioningConfig(_positioningConfig).getLiquidationPenaltyRatio();
+        return IPositioningConfig(positioningConfig).getLiquidationPenaltyRatio();
     }
 
     function _getTotalAbsPositionValue(address trader) internal view returns (uint256) {
-        return IAccountBalance(_accountBalance).getTotalAbsPositionValue(trader);
+        return IAccountBalance(accountBalance).getTotalAbsPositionValue(trader);
     }
 
     function _realizePnLChecks(
@@ -586,7 +586,7 @@ contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, 
         int256 accountValue,
         int256 positionSizeToBeLiquidated
     ) internal view returns (int256, int256) {
-        int256 maxLiquidatablePositionSize = IAccountBalance(_accountBalance).getLiquidatablePositionSize(trader, baseToken, accountValue);
+        int256 maxLiquidatablePositionSize = IAccountBalance(accountBalance).getLiquidatablePositionSize(trader, baseToken, accountValue);
 
         if (positionSizeToBeLiquidated.abs() > maxLiquidatablePositionSize.abs() || positionSizeToBeLiquidated == 0) {
             positionSizeToBeLiquidated = maxLiquidatablePositionSize;
@@ -606,7 +606,7 @@ contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, 
     }
 
     function _getTakerOpenNotional(address trader, address baseToken) internal view returns (int256) {
-        return IAccountBalance(_accountBalance).getOpenNotional(trader, baseToken);
+        return IAccountBalance(accountBalance).getOpenNotional(trader, baseToken);
     }
 
     function _calculateFees(
@@ -631,28 +631,28 @@ contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, 
 
     /// @dev This function checks if account of trader is eligible for liquidation
     function isAccountLiquidatable(address trader) public view returns (bool) {
-        return getAccountValue(trader) < IAccountBalance(_accountBalance).getMarginRequirementForLiquidation(trader);
+        return getAccountValue(trader) < IAccountBalance(accountBalance).getMarginRequirementForLiquidation(trader);
     }
 
     /// @dev This function returns position size of trader
     function _getTakerPosition(address trader, address baseToken) internal view returns (int256) {
-        return IAccountBalance(_accountBalance).getPositionSize(trader, baseToken);
+        return IAccountBalance(accountBalance).getPositionSize(trader, baseToken);
     }
 
     /// @dev This function checks if free collateral of trader is available
     function _requireEnoughFreeCollateral(address trader) internal view {
         // P_NEFCI: not enough free collateral by imRatio
-        require(_getFreeCollateralByRatio(trader, IPositioningConfig(_positioningConfig).getImRatio()) > 0, "P_NEFCI");
+        require(_getFreeCollateralByRatio(trader, IPositioningConfig(positioningConfig).getImRatio()) > 0, "P_NEFCI");
     }
 
     /// @dev this function returns total account value of the trader
     function getAccountValue(address trader) public view returns (int256) {
-        return IVaultController(_vaultController).getAccountValue(trader);
+        return IVaultController(vaultController).getAccountValue(trader);
     }
 
     /// @dev this function returns total free collateral available of trader
     function _getFreeCollateralByRatio(address trader, uint24 ratio) internal view returns (int256) {
-        return IVaultController(_vaultController).getFreeCollateralByRatio(trader, ratio);
+        return IVaultController(vaultController).getFreeCollateralByRatio(trader, ratio);
     }
 
     function _msgSender() internal view override(OwnerPausable, ContextUpgradeable) returns (address) {

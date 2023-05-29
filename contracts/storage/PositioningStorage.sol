@@ -13,14 +13,13 @@ abstract contract PositioningStorageV1 {
     bytes32 public constant SM_INTERVAL_ROLE = keccak256("SM_INTERVAL_ROLE");
     mapping(address => uint256) internal _firstTradedTimestampMap;
     uint8 internal _settlementTokenDecimals;
-    address public _positioningConfig;
-    address public _vaultController;
-    address public _accountBalance;
     address internal _matchingEngine;
     address internal _marketRegistry;
     uint256 internal _smInterval;
     uint256 internal _smIntervalLiquidation;
-
+    address public positioningConfig;
+    address public vaultController;
+    address public accountBalance;
     address public defaultFeeReceiver;
 
     // the last timestamp when funding is settled
