@@ -4,10 +4,10 @@ import { BigNumber } from "ethers";
 const { Order, Asset, sign, encodeAddress } = require("../order");
 const { expectRevert } = require("@openzeppelin/test-helpers");
 
-const convert = (num) => {
+const convert = num => {
   const one = BigNumber.from(ethers.constants.WeiPerEther.toString()); // 1e18 in string
   return BigNumber.from(num).mul(one).toString();
-}
+};
 
 describe("Various Order Types", function () {
   let MatchingEngine;
@@ -125,7 +125,10 @@ describe("Various Order Types", function () {
     });
     await virtualToken.deployed();
 
-    accountBalance1 = await upgrades.deployProxy(AccountBalance, [positioningConfig.address]);
+    accountBalance1 = await upgrades.deployProxy(AccountBalance, [
+      positioningConfig.address,
+      [volmexBaseToken.address, volmexBaseToken.address],
+    ]);
     await accountBalance1.deployed();
     await (await perpView.setAccount(accountBalance1.address)).wait();
     vaultController = await upgrades.deployProxy(VaultController, [
@@ -146,7 +149,10 @@ describe("Various Order Types", function () {
 
     (await accountBalance1.grantSettleRealizedPnlRole(vault.address)).wait();
     (await accountBalance1.grantSettleRealizedPnlRole(vaultController.address)).wait();
-
+    marketRegistry = await upgrades.deployProxy(MarketRegistry, [
+      volmexQuoteToken.address,
+      [volmexBaseToken.address, volmexBaseToken.address],
+    ]);
     positioning = await upgrades.deployProxy(
       Positioning,
       [
@@ -155,7 +161,8 @@ describe("Various Order Types", function () {
         accountBalance1.address,
         matchingEngine.address,
         perpetualOracle.address,
-        0,
+        marketRegistry.address,
+        [volmexBaseToken.address, volmexBaseToken.address],
         [owner.address, account1.address],
       ],
       {
@@ -168,9 +175,6 @@ describe("Various Order Types", function () {
     await (await volmexBaseToken.setMintBurnRole(positioning.address)).wait();
     await (await volmexQuoteToken.setMintBurnRole(positioning.address)).wait();
 
-    marketRegistry = await upgrades.deployProxy(MarketRegistry, [volmexQuoteToken.address]);
-
-    await marketRegistry.connect(owner).addBaseToken(volmexBaseToken.address);
     await marketRegistry.connect(owner).setMakerFeeRatio(0.0004e6);
     await marketRegistry.connect(owner).setTakerFeeRatio(0.0009e6);
 
@@ -361,8 +365,8 @@ describe("Various Order Types", function () {
           signatureRight3,
           liquidator,
         ),
-        "V_PERP_M: nothing to fill"
-      )
+        "V_PERP_M: nothing to fill",
+      );
     });
   });
 

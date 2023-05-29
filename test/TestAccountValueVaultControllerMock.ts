@@ -2,6 +2,7 @@ import { parseUnits } from "ethers/lib/utils";
 import { expect } from "chai";
 import { ethers, upgrades } from "hardhat";
 import { FakeContract, smock } from "@defi-wonderland/smock";
+import { MarketRegistry } from "../typechain";
 
 describe("Vault Controller Mock tests for account value", function () {
   let USDC;
@@ -84,6 +85,7 @@ describe("Vault Controller Mock tests for account value", function () {
         vaultController.address,
         accountBalance.address,
         matchingEngineFake.address,
+        perpetualOracle.address,
         perpetualOracle.address,
         [alice.address, alice.address],
         [owner.address, alice.address],
