@@ -1302,7 +1302,7 @@ describe("VolmexPerpPeriphery", function () {
           ),
       ).to.be.revertedWith("P_NEFCI");
     });
-    it.only("should fail when trader's try to hold a position less then min position size  ", async () => {
+    it("should fail when trader's try to hold a position less then min position size  ", async () => {
       await matchingEngine.grantMatchOrders(positioning.address);
       await await USDC.transfer(account1.address, "100000000000");
       await volmexPerpPeriphery.setRelayer(account1.address);
