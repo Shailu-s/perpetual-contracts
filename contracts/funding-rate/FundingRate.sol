@@ -29,7 +29,7 @@ contract FundingRate is IFundingRate, BlockContext, PositioningCallee, FundingRa
         uint256 indexTwap;
         int256 fundingRate;
         (globalTwPremiumGrowth, markTwap, indexTwap, fundingRate) = _getFundingGlobalPremiumAndTwaps(baseToken);
-        int256 userTwPremium = IAccountBalance(_accountBalance).getAccountInfo(trader, baseToken).lastTwPremiumGrowthGlobal;
+        int256 userTwPremium = IAccountBalance(accountBalance).getAccountInfo(trader, baseToken).lastTwPremiumGrowthGlobal;
         fundingPayment = _getFundingPayment(trader, baseToken, globalTwPremiumGrowth, userTwPremium);
 
         uint256 timestamp = _blockTimestamp();
@@ -49,7 +49,7 @@ contract FundingRate is IFundingRate, BlockContext, PositioningCallee, FundingRa
     /// @inheritdoc IFundingRate
     function getPendingFundingPayment(address trader, address baseToken) public view virtual override returns (int256) {
         (int256 twPremium, , , ) = _getFundingGlobalPremiumAndTwaps(baseToken);
-        int256 userTwPremium = IAccountBalance(_accountBalance).getAccountInfo(trader, baseToken).lastTwPremiumGrowthGlobal;
+        int256 userTwPremium = IAccountBalance(accountBalance).getAccountInfo(trader, baseToken).lastTwPremiumGrowthGlobal;
         return _getFundingPayment(trader, baseToken, twPremium, userTwPremium);
     }
 
@@ -84,7 +84,7 @@ contract FundingRate is IFundingRate, BlockContext, PositioningCallee, FundingRa
     ) internal view virtual returns (int256 pendingFundingPayment) {
         if (twPremiumGrowthGlobal != 0 || userLastTwPremiumGrowthGlobal != 0) {
             int256 marketFundingRate = (twPremiumGrowthGlobal * _PRECISION_BASE) - (userLastTwPremiumGrowthGlobal * _PRECISION_BASE);
-            int256 positionSize = IAccountBalance(_accountBalance).getPositionSize(trader, baseToken);
+            int256 positionSize = IAccountBalance(accountBalance).getPositionSize(trader, baseToken);
             pendingFundingPayment = (positionSize * marketFundingRate) / (_PRECISION_BASE * 86400 * _IORACLE_BASE);
         }
     }
@@ -105,7 +105,7 @@ contract FundingRate is IFundingRate, BlockContext, PositioningCallee, FundingRa
             int256 fundingRate
         )
     {
-        uint256 twapInterval = IPositioningConfig(_positioningConfig).getTwapInterval();
+        uint256 twapInterval = IPositioningConfig(positioningConfig).getTwapInterval();
         uint256 timestamp = _blockTimestamp();
         uint256 baseTokenIndex = _underlyingPriceIndexes[baseToken];
         // shorten twapInterval if prior observations are not enough
@@ -135,7 +135,7 @@ contract FundingRate is IFundingRate, BlockContext, PositioningCallee, FundingRa
     }
 
     function _getDeltaTwap(uint256 markTwap, uint256 indexTwap) internal view virtual returns (int256 deltaTwap) {
-        uint24 maxFundingRate = IPositioningConfig(_positioningConfig).getMaxFundingRate();
+        uint24 maxFundingRate = IPositioningConfig(positioningConfig).getMaxFundingRate();
         uint256 maxDeltaTwap = indexTwap.mulRatio(maxFundingRate) * 3; // max funding rate comes out to be 7300 but ont diving by 3 due to calulation maxDelta twap * 28800/86400 so we need to multiply it by 3 here only
         uint256 absDeltaTwap;
         if (markTwap > indexTwap) {

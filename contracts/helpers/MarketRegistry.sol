@@ -109,4 +109,8 @@ contract MarketRegistry is IMarketRegistry, PositioningCallee, MarketRegistrySto
         }
         return false;
     }
+
+    function getBaseTokens() external view returns (address[] memory baseTokens) {
+        baseTokens = _baseTokensMarketMap;
+    }
 }

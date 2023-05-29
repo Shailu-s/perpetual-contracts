@@ -175,6 +175,7 @@ describe("PerpetualOracle - Index Price Oracle", function () {
         marketRegistry.address,
         [volmexBaseToken.address, volmexBaseToken.address],
         [owner.address, account1.address],
+        ["10000000000000000000", "10000000000000000000"],
       ],
       {
         initializer: "initialize",

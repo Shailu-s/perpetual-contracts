@@ -121,6 +121,7 @@ describe("Vault Controller tests for withdrawal", function () {
         perpetualOracle.address,
         [volmexBaseToken.address, volmexBaseToken.address],
         [owner.address, alice.address],
+        ["1000000000000000000", "1000000000000000000"],
       ],
       {
         initializer: "initialize",
@@ -174,6 +175,7 @@ describe("Vault Controller tests for withdrawal", function () {
         perpetualOracle.address,
         [volmexBaseToken.address, volmexBaseToken.address],
         [owner.address, alice.address],
+        ["1000000000000000000", "1000000000000000000"],
       ],
       {
         initializer: "initialize",
