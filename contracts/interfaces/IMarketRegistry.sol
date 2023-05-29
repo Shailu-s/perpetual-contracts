@@ -41,4 +41,6 @@ interface IMarketRegistry {
     /// @notice Get max allowed orders per market
     /// @return maxOrdersPerMarket The max allowed orders per market
     function getMaxOrdersPerMarket() external view returns (uint8 maxOrdersPerMarket);
+
+    function getBaseTokens() external view returns (address[] memory baseTokens);
 }

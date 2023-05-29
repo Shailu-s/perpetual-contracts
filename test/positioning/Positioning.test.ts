@@ -2189,7 +2189,7 @@ describe("Positioning", function () {
           positioning
             .connect(account1)
             .openPosition(orderRight, signatureRight, orderLeft, signatureLeft, liquidator),
-        ).to.be.revertedWith("V_PERP:trader below min position");
+        ).to.be.revertedWith("V_PERP: TBMPS");
       });
       it("should fail with re entrancy gaurd", async () => {
         matchingEngine = await upgrades.deployProxy(
