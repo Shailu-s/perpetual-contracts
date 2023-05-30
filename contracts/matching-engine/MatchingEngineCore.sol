@@ -10,7 +10,7 @@ import "../interfaces/IPerpetualOracle.sol";
 import "./AssetMatcher.sol";
 
 abstract contract MatchingEngineCore is PausableUpgradeable, AssetMatcher, AccessControlUpgradeable {
-    struct MaxFillInfo {
+    struct MaxOrderSizeInfo {
         uint256 value;
         uint256 timestamp;
     }
@@ -27,8 +27,9 @@ abstract contract MatchingEngineCore is PausableUpgradeable, AssetMatcher, Acces
     mapping(address => uint256) public makerMinSalt;
     //state of the orders
     mapping(bytes32 => uint256) public fills;
-    mapping(address => uint256) public fillInitialTimestamp; // initial timestamp of first fill by base token
-    MaxFillInfo public maxFill;
+    mapping(address => uint256) public fillStartTimestamp; // start timestamp of fill by base token
+    mapping(address => MaxOrderSizeInfo) public maxOrderSize;
+    uint256 public orderSizeInterval;
 
     //events
     event Canceled(bytes32 indexed hash, address trader, address baseToken, uint256 amount, uint256 salt);
@@ -107,6 +108,13 @@ abstract contract MatchingEngineCore is PausableUpgradeable, AssetMatcher, Acces
         return (newFill);
     }
 
+    function getMaxOrderSize(address baseToken) public view returns (uint256 size) {
+        MaxOrderSizeInfo memory maxOrder = maxOrderSize[baseToken];
+        if ((block.timestamp - maxOrder.timestamp) < orderSizeInterval) {
+            size = maxOrder.value;
+        }
+    }
+
     /**
         @notice matches valid orders and transfers their assets
         @param orderLeft the left order of the match
@@ -133,12 +141,27 @@ abstract contract MatchingEngineCore is PausableUpgradeable, AssetMatcher, Acces
         uint256 baseValue,
         address baseToken
     ) internal {
+        _updateMaxFill(baseToken, baseValue);
         uint256 index = perpetualOracle.indexByBaseToken(baseToken);
-        if(perpetualOracle.initialTimestamps(index) == 0) {
-            fillInitialTimestamp[baseToken] = block.timestamp;
-        }
         uint256 price = ((quoteValue * _ORACLE_BASE) / baseValue);
         perpetualOracle.addMarkObservation(index, price);
+    }
+
+    function _updateMaxFill(address baseToken, uint256 baseValue) internal {
+        /**
+         * case 1: first fill, when `fillStartTimestamp` is zero, set incoming value as max
+         * case 2: new epoch of fills, after completing an hour, set incoming value as max
+         * case 3: inside the epoch, check higher value and update
+         */
+        uint256 currentTimestamp = block.timestamp;
+        if ((currentTimestamp - fillStartTimestamp[baseToken]) < orderSizeInterval) {
+            if (maxOrderSize[baseToken].value < baseValue) {
+                maxOrderSize[baseToken] = MaxOrderSizeInfo({value: baseValue, timestamp: currentTimestamp});
+            }
+        } else {
+            fillStartTimestamp[baseToken] = currentTimestamp;
+            maxOrderSize[baseToken] = MaxOrderSizeInfo({value: baseValue, timestamp: currentTimestamp});
+        }
     }
 
     /**
