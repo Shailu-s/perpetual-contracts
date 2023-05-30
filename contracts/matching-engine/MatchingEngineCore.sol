@@ -27,15 +27,16 @@ abstract contract MatchingEngineCore is PausableUpgradeable, AssetMatcher, Acces
     mapping(address => uint256) public makerMinSalt;
     //state of the orders
     mapping(bytes32 => uint256) public fills;
-    mapping(address => uint256) public orderSizeInitialTimestampCache;
-    mapping(address => MaxOrderSizeInfo) public maxOrderSize;
-    uint256 public orderSizeInterval;
+    mapping(address => uint256) public orderSizeInitialTimestampCache; // stores initial timestamp of matched order by base token
+    mapping(address => MaxOrderSizeInfo) public maxOrderSize; // store max order size and timestamp of that update by base token
+    uint256 public orderSizeInterval; // used to store max order size interval, currently one hour
 
     //events
     event Canceled(bytes32 indexed hash, address trader, address baseToken, uint256 amount, uint256 salt);
     event CanceledAll(address indexed trader, uint256 minSalt);
     event Matched(address[2] traders, uint64[2] deadline, uint256[2] salt, uint256 newLeftFill, uint256 newRightFill);
     event OrdersFilled(address[2] traders, uint256[2] salts, uint256[2] fills);
+    event OrderSizeIntervalUpdated(uint256 interval);
 
     function grantMatchOrders(address account) external {
         _requireMatchingEngineAdmin();
@@ -108,9 +109,11 @@ abstract contract MatchingEngineCore is PausableUpgradeable, AssetMatcher, Acces
         return (newFill);
     }
 
-    function setOrderSizeInterval(uint256 _interval) external {
+    function updateOrderSizeInterval(uint256 _interval) external {
         _requireMatchingEngineAdmin();
+        require(_interval >= 600, "MEC_SMI"); // _interval value should not be less than 10 mins
         orderSizeInterval = _interval;
+        emit OrderSizeIntervalUpdated(_interval);
     }
 
     function getMaxOrderSize(address baseToken) external view returns (uint256 size) { // Note: default order size will be zero
