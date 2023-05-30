@@ -27,7 +27,7 @@ abstract contract MatchingEngineCore is PausableUpgradeable, AssetMatcher, Acces
     mapping(address => uint256) public makerMinSalt;
     //state of the orders
     mapping(bytes32 => uint256) public fills;
-    mapping(address => uint256) public orderSizeInitialTimestamp;
+    mapping(address => uint256) public orderSizeInitialTimestampCache;
     mapping(address => MaxOrderSizeInfo) public maxOrderSize;
     uint256 public orderSizeInterval;
 
@@ -116,8 +116,8 @@ abstract contract MatchingEngineCore is PausableUpgradeable, AssetMatcher, Acces
     function getMaxOrderSize(address baseToken) external view returns (uint256 size) { // Note: default order size will be zero
         MaxOrderSizeInfo memory maxOrder = maxOrderSize[baseToken];
         if (
-            (block.timestamp - orderSizeInitialTimestamp[baseToken]) / orderSizeInterval ==
-            (maxOrder.timestamp - orderSizeInitialTimestamp[baseToken]) / orderSizeInterval
+            (block.timestamp - orderSizeInitialTimestampCache[baseToken]) / orderSizeInterval ==
+            (maxOrder.timestamp - orderSizeInitialTimestampCache[baseToken]) / orderSizeInterval
         ) {
             size = maxOrder.value;
         }
@@ -148,7 +148,7 @@ abstract contract MatchingEngineCore is PausableUpgradeable, AssetMatcher, Acces
         _updateMaxFill(baseToken, baseValue);
         uint256 index = perpetualOracle.indexByBaseToken(baseToken);
         if (perpetualOracle.initialTimestamps(index) == 0) {
-            orderSizeInitialTimestamp[baseToken] = block.timestamp;
+            orderSizeInitialTimestampCache[baseToken] = block.timestamp;
         }
         uint256 price = ((quoteValue * _ORACLE_BASE) / baseValue);
         perpetualOracle.addMarkObservation(index, price);
@@ -158,8 +158,8 @@ abstract contract MatchingEngineCore is PausableUpgradeable, AssetMatcher, Acces
         uint256 currentTimestamp = block.timestamp;
         MaxOrderSizeInfo memory maxOrder = maxOrderSize[baseToken];
         if (
-            (currentTimestamp - orderSizeInitialTimestamp[baseToken]) / orderSizeInterval ==
-            (maxOrder.timestamp - orderSizeInitialTimestamp[baseToken]) / orderSizeInterval
+            (currentTimestamp - orderSizeInitialTimestampCache[baseToken]) / orderSizeInterval ==
+            (maxOrder.timestamp - orderSizeInitialTimestampCache[baseToken]) / orderSizeInterval
         ) {
             if (maxOrder.value < baseValue) {
                 maxOrderSize[baseToken] = MaxOrderSizeInfo({ value: baseValue, timestamp: currentTimestamp });
