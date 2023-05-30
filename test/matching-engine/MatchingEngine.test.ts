@@ -2192,7 +2192,7 @@ describe("MatchingEngine", function () {
     });
     it("Should set order size interval and further max order size should be fetched under new interval", async () => {
       // set order size interval to 2 hours
-      await matchingEngine.setOrderSizeInterval(7200);
+      await matchingEngine.updateOrderSizeInterval(7200);
       const orderLeft = Order(
         ORDER,
         deadline,
@@ -2249,7 +2249,6 @@ describe("MatchingEngine", function () {
         true,
       );
 
-      // price = 0.5
       const orderRight1 = Order(
         STOP_LOSS_LIMIT_ORDER,
         deadline,
