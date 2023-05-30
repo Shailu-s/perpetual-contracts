@@ -113,7 +113,7 @@ abstract contract MatchingEngineCore is PausableUpgradeable, AssetMatcher, Acces
         orderSizeInterval = _interval;
     }
 
-    function getMaxOrderSize(address baseToken) public view returns (uint256 size) { // Note: default order size will be zero
+    function getMaxOrderSize(address baseToken) external view returns (uint256 size) { // Note: default order size will be zero
         MaxOrderSizeInfo memory maxOrder = maxOrderSize[baseToken];
         if (
             (block.timestamp - orderSizeInitialTimestamp[baseToken]) / orderSizeInterval ==
