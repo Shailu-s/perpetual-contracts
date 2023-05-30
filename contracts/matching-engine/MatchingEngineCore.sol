@@ -15,7 +15,7 @@ abstract contract MatchingEngineCore is PausableUpgradeable, AssetMatcher, Acces
         uint256 timestamp;
     }
 
-    uint256 private constant _UINT256_MAX = 2**256 - 1;
+    uint256 private constant _UINT256_MAX = 2 ** 256 - 1;
     uint256 private constant _ORACLE_BASE = 1000000;
     // admin of matching engine
     bytes32 public constant MATCHING_ENGINE_CORE_ADMIN = keccak256("MATCHING_ENGINE_CORE_ADMIN");
@@ -27,7 +27,7 @@ abstract contract MatchingEngineCore is PausableUpgradeable, AssetMatcher, Acces
     mapping(address => uint256) public makerMinSalt;
     //state of the orders
     mapping(bytes32 => uint256) public fills;
-    mapping(address => uint256) public fillStartTimestamp; // start timestamp of fill by base token
+    mapping(address => uint256) public orderSizeInitialTimestamp;
     mapping(address => MaxOrderSizeInfo) public maxOrderSize;
     uint256 public orderSizeInterval;
 
@@ -38,7 +38,7 @@ abstract contract MatchingEngineCore is PausableUpgradeable, AssetMatcher, Acces
     event OrdersFilled(address[2] traders, uint256[2] salts, uint256[2] fills);
 
     function grantMatchOrders(address account) external {
-        require(hasRole(MATCHING_ENGINE_CORE_ADMIN, _msgSender()), "MatchingEngineCore: Not admin");
+        _requireMatchingEngineAdmin();
         _grantRole(CAN_MATCH_ORDERS, account);
     }
 
@@ -108,9 +108,17 @@ abstract contract MatchingEngineCore is PausableUpgradeable, AssetMatcher, Acces
         return (newFill);
     }
 
-    function getMaxOrderSize(address baseToken) public view returns (uint256 size) {
+    function setOrderSizeInterval(uint256 _interval) external {
+        _requireMatchingEngineAdmin();
+        orderSizeInterval = _interval;
+    }
+
+    function getMaxOrderSize(address baseToken) public view returns (uint256 size) { // Note: default order size will be zero
         MaxOrderSizeInfo memory maxOrder = maxOrderSize[baseToken];
-        if ((block.timestamp - maxOrder.timestamp) < orderSizeInterval) {
+        if (
+            (block.timestamp - orderSizeInitialTimestamp[baseToken]) / orderSizeInterval ==
+            (maxOrder.timestamp - orderSizeInitialTimestamp[baseToken]) / orderSizeInterval
+        ) {
             size = maxOrder.value;
         }
     }
@@ -136,31 +144,28 @@ abstract contract MatchingEngineCore is PausableUpgradeable, AssetMatcher, Acces
         emit OrdersFilled([orderLeft.trader, orderRight.trader], [orderLeft.salt, orderRight.salt], [fills[leftOrderKeyHash], fills[rightOrderKeyHash]]);
     }
 
-    function _updateObservation(
-        uint256 quoteValue,
-        uint256 baseValue,
-        address baseToken
-    ) internal {
+    function _updateObservation(uint256 quoteValue, uint256 baseValue, address baseToken) internal {
         _updateMaxFill(baseToken, baseValue);
         uint256 index = perpetualOracle.indexByBaseToken(baseToken);
+        if (perpetualOracle.initialTimestamps(index) == 0) {
+            orderSizeInitialTimestamp[baseToken] = block.timestamp;
+        }
         uint256 price = ((quoteValue * _ORACLE_BASE) / baseValue);
         perpetualOracle.addMarkObservation(index, price);
     }
 
     function _updateMaxFill(address baseToken, uint256 baseValue) internal {
-        /**
-         * case 1: first fill, when `fillStartTimestamp` is zero, set incoming value as max
-         * case 2: new epoch of fills, after completing an hour, set incoming value as max
-         * case 3: inside the epoch, check higher value and update
-         */
         uint256 currentTimestamp = block.timestamp;
-        if ((currentTimestamp - fillStartTimestamp[baseToken]) < orderSizeInterval) {
-            if (maxOrderSize[baseToken].value < baseValue) {
-                maxOrderSize[baseToken] = MaxOrderSizeInfo({value: baseValue, timestamp: currentTimestamp});
+        MaxOrderSizeInfo memory maxOrder = maxOrderSize[baseToken];
+        if (
+            (currentTimestamp - orderSizeInitialTimestamp[baseToken]) / orderSizeInterval ==
+            (maxOrder.timestamp - orderSizeInitialTimestamp[baseToken]) / orderSizeInterval
+        ) {
+            if (maxOrder.value < baseValue) {
+                maxOrderSize[baseToken] = MaxOrderSizeInfo({ value: baseValue, timestamp: currentTimestamp });
             }
         } else {
-            fillStartTimestamp[baseToken] = currentTimestamp;
-            maxOrderSize[baseToken] = MaxOrderSizeInfo({value: baseValue, timestamp: currentTimestamp});
+            maxOrderSize[baseToken] = MaxOrderSizeInfo({ value: baseValue, timestamp: currentTimestamp });
         }
     }
 
@@ -212,6 +217,11 @@ abstract contract MatchingEngineCore is PausableUpgradeable, AssetMatcher, Acces
     function _requireCanMatchOrders() internal view {
         // MatchingEngineCore: Not Can Match Orders
         require(hasRole(CAN_MATCH_ORDERS, _msgSender()), "MEC_NCMO");
+    }
+
+    function _requireMatchingEngineAdmin() internal view {
+        // MatchingEngineCore: Not Can Match Orders
+        require(hasRole(MATCHING_ENGINE_CORE_ADMIN, _msgSender()), "MEC_NA");
     }
 
     function _matchAssets(LibOrder.Order memory orderLeft, LibOrder.Order memory orderRight) internal pure returns (address matchToken) {
