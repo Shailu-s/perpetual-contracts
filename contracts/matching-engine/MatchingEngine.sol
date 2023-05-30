@@ -15,6 +15,7 @@ contract MatchingEngine is MatchingEngineCore {
         __Context_init_unchained();
         __Pausable_init_unchained();
         perpetualOracle = _perpetualOracle;
+        orderSizeInterval = 3600;
         _grantRole(MATCHING_ENGINE_CORE_ADMIN, _owner);
     }
 }
