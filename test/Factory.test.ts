@@ -232,6 +232,7 @@ describe("PerpFactory", function () {
         marketRegistry.address,
         [volmexBaseToken.address, volmexBaseToken.address],
         [owner.address, alice.address],
+        ["1000000000000000000", "1000000000000000000"],
       );
     });
 
@@ -246,6 +247,7 @@ describe("PerpFactory", function () {
           marketRegistry.address,
           [volmexBaseToken.address, volmexBaseToken.address],
           [owner.address, alice.address],
+          ["1000000000000000000", "1000000000000000000"],
         ),
       )
         .to.emit(factory, "")
@@ -268,6 +270,7 @@ describe("PerpFactory", function () {
         marketRegistry.address,
         [volmexBaseToken.address, volmexBaseToken.address],
         [owner.address, alice.address],
+        ["1000000000000000000", "1000000000000000000"],
       );
       const vaultClone = await factory.cloneVault(
         USDC.address,
@@ -292,6 +295,7 @@ describe("PerpFactory", function () {
             marketRegistry.address,
             [volmexBaseToken.address, volmexBaseToken.address],
             [owner.address, alice.address],
+            ["1000000000000000000", "1000000000000000000"],
           ),
       ).to.be.revertedWith("PF_NCD");
     });
@@ -306,6 +310,7 @@ describe("PerpFactory", function () {
         marketRegistry.address,
         [volmexBaseToken.address, volmexBaseToken.address],
         [owner.address, alice.address],
+        ["1000000000000000000", "1000000000000000000"],
       );
       await expect(
         factory.cloneVault(

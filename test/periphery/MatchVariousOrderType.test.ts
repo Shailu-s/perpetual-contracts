@@ -164,6 +164,7 @@ describe("Various Order Types", function () {
         marketRegistry.address,
         [volmexBaseToken.address, volmexBaseToken.address],
         [owner.address, account1.address],
+        ["10000000000000000000", "10000000000000000000"],
       ],
       {
         initializer: "initialize",
@@ -231,8 +232,8 @@ describe("Various Order Types", function () {
         ORDER,
         deadline,
         account1.address,
-        Asset(volmexBaseToken.address, convert(1)),
-        Asset(virtualToken.address, convert(2)),
+        Asset(volmexBaseToken.address, convert(10)),
+        Asset(virtualToken.address, convert(20)),
         1,
         (1e6).toString(),
         true,
@@ -242,8 +243,8 @@ describe("Various Order Types", function () {
         ORDER,
         deadline,
         account2.address,
-        Asset(virtualToken.address, convert(2)),
-        Asset(volmexBaseToken.address, convert(1)),
+        Asset(virtualToken.address, convert(20)),
+        Asset(volmexBaseToken.address, convert(10)),
         2,
         (1e6).toString(),
         false,
@@ -251,21 +252,21 @@ describe("Various Order Types", function () {
 
       await matchingEngine.grantMatchOrders(positioning.address);
 
-      await await USDC.transfer(account1.address, "100000000");
-      await await USDC.transfer(account2.address, "100000000");
-      await USDC.connect(account1).approve(volmexPerpPeriphery.address, "100000000");
-      await USDC.connect(account2).approve(volmexPerpPeriphery.address, "100000000");
+      await await USDC.transfer(account1.address, "100000000000");
+      await await USDC.transfer(account2.address, "100000000000");
+      await USDC.connect(account1).approve(volmexPerpPeriphery.address, "100000000000");
+      await USDC.connect(account2).approve(volmexPerpPeriphery.address, "100000000000");
       await volmexPerpPeriphery.whitelistTrader(account1.address, true);
       await volmexPerpPeriphery.whitelistTrader(account2.address, true);
       (
         await volmexPerpPeriphery
           .connect(account1)
-          .depositToVault(index, USDC.address, "100000000")
+          .depositToVault(index, USDC.address, "100000000000")
       ).wait();
       (
         await volmexPerpPeriphery
           .connect(account2)
-          .depositToVault(index, USDC.address, "100000000")
+          .depositToVault(index, USDC.address, "100000000000")
       ).wait();
 
       signatureLeft = await getSignature(orderLeft, account1.address);
@@ -290,8 +291,8 @@ describe("Various Order Types", function () {
         ORDER,
         deadline,
         account1.address,
-        Asset(virtualToken.address, convert(6)),
-        Asset(volmexBaseToken.address, convert(4)),
+        Asset(virtualToken.address, convert(60)),
+        Asset(volmexBaseToken.address, convert(40)),
         4,
         (1e6).toString(),
         false,
@@ -302,8 +303,8 @@ describe("Various Order Types", function () {
         ORDER,
         deadline,
         account2.address,
-        Asset(volmexBaseToken.address, convert(2)),
-        Asset(virtualToken.address, convert(3)),
+        Asset(volmexBaseToken.address, convert(20)),
+        Asset(virtualToken.address, convert(30)),
         3,
         (1e6).toString(),
         true,
@@ -325,8 +326,8 @@ describe("Various Order Types", function () {
         ORDER,
         deadline,
         account2.address,
-        Asset(volmexBaseToken.address, convert(2)),
-        Asset(virtualToken.address, convert(3)),
+        Asset(volmexBaseToken.address, convert(20)),
+        Asset(virtualToken.address, convert(30)),
         5,
         (1e6).toString(),
         true,
