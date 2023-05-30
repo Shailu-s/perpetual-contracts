@@ -10,6 +10,11 @@ import "../interfaces/IPerpetualOracle.sol";
 import "./AssetMatcher.sol";
 
 abstract contract MatchingEngineCore is PausableUpgradeable, AssetMatcher, AccessControlUpgradeable {
+    struct MaxFillInfo {
+        uint256 value;
+        uint256 timestamp;
+    }
+
     uint256 private constant _UINT256_MAX = 2**256 - 1;
     uint256 private constant _ORACLE_BASE = 1000000;
     // admin of matching engine
@@ -22,6 +27,8 @@ abstract contract MatchingEngineCore is PausableUpgradeable, AssetMatcher, Acces
     mapping(address => uint256) public makerMinSalt;
     //state of the orders
     mapping(bytes32 => uint256) public fills;
+    mapping(address => uint256) public fillInitialTimestamp; // initial timestamp of first fill by base token
+    MaxFillInfo public maxFill;
 
     //events
     event Canceled(bytes32 indexed hash, address trader, address baseToken, uint256 amount, uint256 salt);
@@ -126,8 +133,11 @@ abstract contract MatchingEngineCore is PausableUpgradeable, AssetMatcher, Acces
         uint256 baseValue,
         address baseToken
     ) internal {
-        uint256 price = ((quoteValue * _ORACLE_BASE) / baseValue);
         uint256 index = perpetualOracle.indexByBaseToken(baseToken);
+        if(perpetualOracle.initialTimestamps(index) == 0) {
+            fillInitialTimestamp[baseToken] = block.timestamp;
+        }
+        uint256 price = ((quoteValue * _ORACLE_BASE) / baseValue);
         perpetualOracle.addMarkObservation(index, price);
     }
 
