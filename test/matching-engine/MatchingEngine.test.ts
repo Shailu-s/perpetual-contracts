@@ -2025,6 +2025,29 @@ describe("MatchingEngine", function () {
       });
     });
   });
+
+  describe("Max order size - fills", () => {
+    it("Should update max order size", async () => {});
+    it("Should get max order size of last one hour", async () => {});
+    it("Should set order size interval and further max order size should be fetched under new interval", async () => {});
+    it("Should set multiple order size and update max order size when previous value is smaller", async () => {});
+    it("Should set current fill size when new hour has just began", async () => {});
+    it("Should set the max order size only for that hour", async () => {
+      // at 11AM, first order size set
+      // at 11:30 AM, the same will get updated if size is larger than previous one
+      // at 11:50 AM, again recheck the larger value and update if required
+      // at 12:00 PM, set the new size to the struct
+
+      // getter
+      // Consider above shared updates
+      // at 12:10 PM, getter is called, the order size it returns should be in 12:00PM to 12:10PM
+    });
+    it("Should fetch the max order size of that hour only", async () => {
+      // Check using `orderSizeInitialTimestamp` var to understand hours calculation.
+      // if orderSizeInitialTimestamp = 11:34AM, then hour is started from this value only for all max order size calculation
+      // Next hour will start at 12:34PM, and similar further.
+    });
+  })
   async function getSignature(orderObj, signer) {
     return sign(orderObj, signer, positioning.address);
   }
