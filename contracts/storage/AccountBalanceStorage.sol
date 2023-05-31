@@ -25,4 +25,5 @@ abstract contract AccountBalanceStorageV1 {
     mapping(address => mapping(address => LibAccountMarket.Info)) internal _accountMarketMap;
     // Index price oracle underlying index
     mapping(address => uint256) _underlyingPriceIndexes;
+    mapping(address => uint256) public nextLiquidationTime;
 }

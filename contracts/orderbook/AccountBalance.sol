@@ -285,12 +285,15 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
         return _baseTokensMap[trader];
     }
 
-    function getLiquidationTimeToWait(address trader, address baseToken, int256 accountValue, uint256 minOrderSize, uint256 maxOrderSize, int256 availableCollateral, int256 sigmaViv) external view returns (uint256 timeToWait) {
+    function checkAndUpdateLiquidationTimeToWait(address trader, address baseToken, int256 accountValue, uint256 minOrderSize, uint256 maxOrderSize, int256 availableCollateral, int256 sigmaViv) external {
+        _requireOnlyPositioning();
         int256 liquidatablePositionSize = getLiquidatablePositionSize(trader, baseToken, accountValue);
         int256 nLiquidate = (liquidatablePositionSize.min(_getFuzzyMaxOrderSize(minOrderSize, maxOrderSize))).max(minOrderSize.toInt256());
         int256 totalPositionNotional = getTotalAbsPositionValue(trader).toInt256();
         int256 maxTimeBound = (availableCollateral / (6 * sigmaViv * totalPositionNotional)) ** 2;
-        timeToWait = uint256((nLiquidate * maxTimeBound) / liquidatablePositionSize);
+        uint256 timeToWait = uint256((nLiquidate * maxTimeBound) / liquidatablePositionSize);
+        require(nextLiquidationTime[trader] <= block.timestamp, "AB_ELT"); // early liquidation triggered
+        nextLiquidationTime[trader] = block.timestamp + timeToWait;
     }
 
     function _modifyTakerBalance(

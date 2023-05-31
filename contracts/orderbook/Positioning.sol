@@ -5,6 +5,7 @@ import { AddressUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/Ad
 import { ContextUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol";
 import { EIP712Upgradeable } from "@openzeppelin/contracts-upgradeable/utils/cryptography/draft-EIP712Upgradeable.sol";
 import { ReentrancyGuardUpgradeable } from "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
+import { PausableUpgradeable } from "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
 
 import { LibAccountMarket } from "../libs/LibAccountMarket.sol";
 import { LibOrder } from "../libs/LibOrder.sol";
@@ -30,7 +31,7 @@ import { OwnerPausable } from "../helpers/OwnerPausable.sol";
 import { OrderValidator } from "./OrderValidator.sol";
 
 // never inherit any new stateful contract. never change the orders of parent stateful contracts
-contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, OwnerPausable, FundingRate, EIP712Upgradeable, OrderValidator {
+contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, PausableUpgradeable, FundingRate, EIP712Upgradeable, OrderValidator {
     using AddressUpgradeable for address;
     using LibSafeCastUint for uint256;
     using LibSafeCastInt for int256;
@@ -62,7 +63,7 @@ contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, 
         // P_MRNC:Market Registry  is not contract
         require(marketRegistryArg.isContract(), "P_MENC");
         __ReentrancyGuard_init();
-        __OwnerPausable_init();
+        __Pausable_init_unchained();
         __FundingRate_init(perpetualOracleArg);
         __OrderValidator_init_unchained();
 
@@ -102,7 +103,8 @@ contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, 
     }
 
     /// @inheritdoc IPositioning
-    function setDefaultFeeReceiver(address newDefaultFeeReceiver) external onlyOwner {
+    function setDefaultFeeReceiver(address newDefaultFeeReceiver) external {
+        _requirePositioningAdmin();
         // Default Fee Receiver is zero
         require(newDefaultFeeReceiver != address(0), "PC_DFRZ");
         defaultFeeReceiver = newDefaultFeeReceiver;
@@ -293,9 +295,7 @@ contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, 
         (, int256 unrealizedPnl) = accounts.getPnlAndPendingFee(trader);
         uint256 maxOrderSize = IMatchingEngine(_matchingEngine).getMaxOrderSize(baseToken);
         uint256 sigmaViv = IPerpetualOracle(_perpetualOracleArg).sigmaVivs(_underlyingPriceIndexes[baseToken]);
-        uint256 timeToWait = accounts.getLiquidationTimeToWait(trader, baseToken, accountValue, minPositionSizeByBaseToken[baseToken], maxOrderSize, accountValue - unrealizedPnl, sigmaViv.toInt256());
-        require(nextLiquidationTime[trader] <= block.timestamp, "P_EL"); // early liquidation triggered
-        nextLiquidationTime[trader] = block.timestamp + timeToWait;
+        accounts.checkAndUpdateLiquidationTimeToWait(trader, baseToken, accountValue, minPositionSizeByBaseToken[baseToken], maxOrderSize, accountValue - unrealizedPnl, sigmaViv.toInt256());
     }
 
     function _liquidate(
@@ -662,10 +662,6 @@ contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, 
     /// @dev this function returns total free collateral available of trader
     function _getFreeCollateralByRatio(address trader, uint24 ratio) internal view returns (int256) {
         return IVaultController(vaultController).getFreeCollateralByRatio(trader, ratio);
-    }
-
-    function _msgSender() internal view override(OwnerPausable, ContextUpgradeable) returns (address) {
-        return super._msgSender();
     }
 
     function _requirePositioningAdmin() internal view {
