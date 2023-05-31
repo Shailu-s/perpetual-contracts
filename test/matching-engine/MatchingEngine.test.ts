@@ -5,6 +5,7 @@ import { smock } from "@defi-wonderland/smock";
 import { BigNumber } from "ethers";
 const { expectRevert } = require("@openzeppelin/test-helpers");
 const { Order, Asset, sign, encodeAddress } = require("../order");
+import { time } from "@nomicfoundation/hardhat-network-helpers";
 const libDeal = require("../libDeal");
 
 describe("MatchingEngine", function () {
@@ -2027,27 +2028,658 @@ describe("MatchingEngine", function () {
   });
 
   describe("Max order size - fills", () => {
-    it("Should update max order size", async () => {});
-    it("Should get max order size of last one hour", async () => {});
-    it("Should set order size interval and further max order size should be fetched under new interval", async () => {});
-    it("Should set multiple order size and update max order size when previous value is smaller", async () => {});
-    it("Should set current fill size when new hour has just began", async () => {});
-    it("Should set the max order size only for that hour", async () => {
-      // at 11AM, first order size set
-      // at 11:30 AM, the same will get updated if size is larger than previous one
-      // at 11:50 AM, again recheck the larger value and update if required
-      // at 12:00 PM, set the new size to the struct
+    it("Should update max order size", async () => {
+      const orderLeft = Order(
+        ORDER,
+        deadline,
+        account1.address,
+        Asset(volmexBaseToken.address, "10000000000000000000"), //10
+        Asset(virtualToken.address, "100000000000000000000"), //100
+        1,
+        0,
+        true,
+      );
 
-      // getter
-      // Consider above shared updates
+      // price = 0.5
+      const orderRight = Order(
+        STOP_LOSS_LIMIT_ORDER,
+        deadline,
+        account2.address,
+        Asset(virtualToken.address, "100000000000000000000"), //100
+        Asset(volmexBaseToken.address, "10000000000000000000"), //10
+        2,
+        0,
+        false,
+      );
+      await expect(matchingEngine.matchOrders(orderLeft, orderRight)) //20,2  10000000000000000000
+        .to.emit(matchingEngine, "OrdersFilled")
+        .withArgs(
+          [account1.address, account2.address],
+          [1, 2],
+          ["10000000000000000000", "10000000000000000000"],
+        );
+      const maxOrderSizeBefore = await matchingEngine.getMaxOrderSize(volmexBaseToken.address);
+      expect(maxOrderSizeBefore.toString()).to.be.equal("10000000000000000000");
+      const orderLeft1 = Order(
+        ORDER,
+        deadline,
+        account1.address,
+        Asset(volmexBaseToken.address, "35000000000000000000"), //10
+        Asset(virtualToken.address, "100000000000000000000"), //100
+        3,
+        0,
+        true,
+      );
+
+      // price = 0.5
+      const orderRight1 = Order(
+        STOP_LOSS_LIMIT_ORDER,
+        deadline,
+        account2.address,
+        Asset(virtualToken.address, "100000000000000000000"), //100
+        Asset(volmexBaseToken.address, "35000000000000000000"), //10
+        4,
+        0,
+        false,
+      );
+      await expect(matchingEngine.matchOrders(orderLeft1, orderRight1)) //20,2  10000000000000000000
+        .to.emit(matchingEngine, "OrdersFilled")
+        .withArgs(
+          [account1.address, account2.address],
+          [3, 4],
+          ["35000000000000000000", "35000000000000000000"],
+        );
+      const maxOrderSizeAfter = await matchingEngine.getMaxOrderSize(volmexBaseToken.address);
+      expect(maxOrderSizeAfter.toString()).to.be.equal("35000000000000000000");
+    });
+    it("Should get max order size of last one hour", async () => {
+      const orderLeft = Order(
+        ORDER,
+        deadline,
+        account1.address,
+        Asset(volmexBaseToken.address, "10000000000000000000"), //10
+        Asset(virtualToken.address, "100000000000000000000"), //100
+        1,
+        0,
+        true,
+      );
+
+      // price = 0.5
+      const orderRight = Order(
+        STOP_LOSS_LIMIT_ORDER,
+        deadline,
+        account2.address,
+        Asset(virtualToken.address, "100000000000000000000"), //100
+        Asset(volmexBaseToken.address, "10000000000000000000"), //10
+        2,
+        0,
+        false,
+      );
+      await expect(matchingEngine.matchOrders(orderLeft, orderRight)) //20,2  10000000000000000000
+        .to.emit(matchingEngine, "OrdersFilled")
+        .withArgs(
+          [account1.address, account2.address],
+          [1, 2],
+          ["10000000000000000000", "10000000000000000000"],
+        );
+
+      // increase time by  3400 seconds < one hou
+      await time.increase(3400);
+      const maxOrderSizeBefore = await matchingEngine.getMaxOrderSize(volmexBaseToken.address);
+      expect(maxOrderSizeBefore.toString()).to.be.equal("10000000000000000000");
+      await time.increase(100);
+      const orderLeft1 = Order(
+        ORDER,
+        deadline,
+        account1.address,
+        Asset(volmexBaseToken.address, "3000000000000000000"), //3
+        Asset(virtualToken.address, "100000000000000000000"), //100
+        3,
+        0,
+        true,
+      );
+
+      // price = 0.5
+      const orderRight1 = Order(
+        STOP_LOSS_LIMIT_ORDER,
+        deadline,
+        account2.address,
+        Asset(virtualToken.address, "100000000000000000000"), //100
+        Asset(volmexBaseToken.address, "3000000000000000000"), //3
+        4,
+        0,
+        false,
+      );
+      await expect(matchingEngine.matchOrders(orderLeft1, orderRight1)) //20,2  10000000000000000000
+        .to.emit(matchingEngine, "OrdersFilled")
+        .withArgs(
+          [account1.address, account2.address],
+          [3, 4],
+          ["3000000000000000000", "3000000000000000000"],
+        );
+      const orderLeft2 = Order(
+        ORDER,
+        deadline,
+        account1.address,
+        Asset(volmexBaseToken.address, "60000000000000000000"), //6
+        Asset(virtualToken.address, "100000000000000000000"), //100
+        6,
+        0,
+        true,
+      );
+
+      // price = 0.5
+      const orderRight2 = Order(
+        STOP_LOSS_LIMIT_ORDER,
+        deadline,
+        account2.address,
+        Asset(virtualToken.address, "100000000000000000000"), //100
+        Asset(volmexBaseToken.address, "60000000000000000000"), //6
+        7,
+        0,
+        false,
+      );
+      await expect(matchingEngine.matchOrders(orderLeft2, orderRight2))
+        .to.emit(matchingEngine, "OrdersFilled")
+        .withArgs(
+          [account1.address, account2.address],
+          [6, 7],
+          ["60000000000000000000", "60000000000000000000"],
+        );
+
+      const maxOrderSizeAfter = await matchingEngine.getMaxOrderSize(volmexBaseToken.address);
+      expect(maxOrderSizeAfter.toString()).to.be.equal("60000000000000000000");
+    });
+    it("Should set order size interval and further max order size should be fetched under new interval", async () => {
+      // set order size interval to 2 hours
+      await matchingEngine.updateOrderSizeInterval(7200);
+      const orderLeft = Order(
+        ORDER,
+        deadline,
+        account1.address,
+        Asset(volmexBaseToken.address, "10000000000000000000"), //10
+        Asset(virtualToken.address, "100000000000000000000"), //100
+        1,
+        0,
+        true,
+      );
+
+      // price = 0.5
+      const orderRight = Order(
+        STOP_LOSS_LIMIT_ORDER,
+        deadline,
+        account2.address,
+        Asset(virtualToken.address, "100000000000000000000"), //100
+        Asset(volmexBaseToken.address, "10000000000000000000"), //10
+        2,
+        0,
+        false,
+      );
+      await expect(matchingEngine.matchOrders(orderLeft, orderRight)) //20,2  10000000000000000000
+        .to.emit(matchingEngine, "OrdersFilled")
+        .withArgs(
+          [account1.address, account2.address],
+          [1, 2],
+          ["10000000000000000000", "10000000000000000000"],
+        );
+      const maxOrderSizeBefore = await matchingEngine.getMaxOrderSize(volmexBaseToken.address);
+      expect(maxOrderSizeBefore.toString()).to.be.equal("10000000000000000000");
+      // increase time by one hour
+      await time.increase(3600);
+      const maxOrderSizeAfterOneHour = await matchingEngine.getMaxOrderSize(
+        volmexBaseToken.address,
+      );
+      // max order size should not change before 2 hours to zero
+      expect(maxOrderSizeAfterOneHour.toString()).to.be.equal(maxOrderSizeBefore.toString());
+      // increase time by one hour
+      await time.increase(3600);
+      const maxOrderSizeAfterTwoHour = await matchingEngine.getMaxOrderSize(
+        volmexBaseToken.address,
+      );
+      // max order size should not change before 2 hours to zero
+      expect(maxOrderSizeAfterTwoHour.toString()).to.be.equal("0");
+      const orderLeft1 = Order(
+        ORDER,
+        deadline,
+        account1.address,
+        Asset(volmexBaseToken.address, "3000000000000000000"), //3
+        Asset(virtualToken.address, "100000000000000000000"), //100
+        3,
+        0,
+        true,
+      );
+
+      const orderRight1 = Order(
+        STOP_LOSS_LIMIT_ORDER,
+        deadline,
+        account2.address,
+        Asset(virtualToken.address, "100000000000000000000"), //100
+        Asset(volmexBaseToken.address, "3000000000000000000"), //3
+        4,
+        0,
+        false,
+      );
+      await expect(matchingEngine.matchOrders(orderLeft1, orderRight1)) //20,2  10000000000000000000
+        .to.emit(matchingEngine, "OrdersFilled")
+        .withArgs(
+          [account1.address, account2.address],
+          [3, 4],
+          ["3000000000000000000", "3000000000000000000"],
+        );
+      const orderLeft2 = Order(
+        ORDER,
+        deadline,
+        account1.address,
+        Asset(volmexBaseToken.address, "6000000000000000000"), //6
+        Asset(virtualToken.address, "100000000000000000000"), //100
+        6,
+        0,
+        true,
+      );
+
+      // price = 0.5
+      const orderRight2 = Order(
+        STOP_LOSS_LIMIT_ORDER,
+        deadline,
+        account2.address,
+        Asset(virtualToken.address, "100000000000000000000"), //100
+        Asset(volmexBaseToken.address, "6000000000000000000"), //6
+        7,
+        0,
+        false,
+      );
+      await expect(matchingEngine.matchOrders(orderLeft2, orderRight2))
+        .to.emit(matchingEngine, "OrdersFilled")
+        .withArgs(
+          [account1.address, account2.address],
+          [6, 7],
+          ["6000000000000000000", "6000000000000000000"],
+        );
+
+      const maxOrderSizeUpdatedAfterTwohours = await matchingEngine.getMaxOrderSize(
+        volmexBaseToken.address,
+      );
+      expect(maxOrderSizeUpdatedAfterTwohours.toString()).to.be.equal("6000000000000000000");
+    });
+    it("Should set multiple order size and update max order size when previous value is smaller", async () => {
+      const orderLeft1 = Order(
+        ORDER,
+        deadline,
+        account1.address,
+        Asset(volmexBaseToken.address, "3000000000000000000"), //3
+        Asset(virtualToken.address, "100000000000000000000"), //100
+        3,
+        0,
+        true,
+      );
+
+      // price = 0.5
+      const orderRight1 = Order(
+        STOP_LOSS_LIMIT_ORDER,
+        deadline,
+        account2.address,
+        Asset(virtualToken.address, "100000000000000000000"), //100
+        Asset(volmexBaseToken.address, "3000000000000000000"), //3
+        4,
+        0,
+        false,
+      );
+      await expect(matchingEngine.matchOrders(orderLeft1, orderRight1))
+        .to.emit(matchingEngine, "OrdersFilled")
+        .withArgs(
+          [account1.address, account2.address],
+          [3, 4],
+          ["3000000000000000000", "3000000000000000000"],
+        );
+      const previousValue = await matchingEngine.getMaxOrderSize(volmexBaseToken.address);
+      expect(previousValue.toString()).to.be.equal("3000000000000000000");
+      const orderLeft2 = Order(
+        ORDER,
+        deadline,
+        account1.address,
+        Asset(volmexBaseToken.address, "6000000000000000000"), //6
+        Asset(virtualToken.address, "100000000000000000000"), //100
+        6,
+        0,
+        true,
+      );
+
+      // price = 0.5
+      const orderRight2 = Order(
+        STOP_LOSS_LIMIT_ORDER,
+        deadline,
+        account2.address,
+        Asset(virtualToken.address, "100000000000000000000"), //100
+        Asset(volmexBaseToken.address, "6000000000000000000"), //6
+        7,
+        0,
+        false,
+      );
+      await expect(matchingEngine.matchOrders(orderLeft2, orderRight2))
+        .to.emit(matchingEngine, "OrdersFilled")
+        .withArgs(
+          [account1.address, account2.address],
+          [6, 7],
+          ["6000000000000000000", "6000000000000000000"],
+        );
+
+      const maxOrderSizeUpdatedAfterNewOrder = await matchingEngine.getMaxOrderSize(
+        volmexBaseToken.address,
+      );
+      expect(maxOrderSizeUpdatedAfterNewOrder.toString()).to.be.equal("6000000000000000000");
+      // previous value is smaller
+      expect(parseInt(previousValue)).to.be.lessThan(parseInt(maxOrderSizeUpdatedAfterNewOrder));
+    });
+    it("Should set current fill size when new hour has just began", async () => {
+      const orderLeft = Order(
+        ORDER,
+        deadline,
+        account1.address,
+        Asset(volmexBaseToken.address, "10000000000000000000"), //10
+        Asset(virtualToken.address, "100000000000000000000"), //100
+        1,
+        0,
+        true,
+      );
+
+      // price = 0.5
+      const orderRight = Order(
+        STOP_LOSS_LIMIT_ORDER,
+        deadline,
+        account2.address,
+        Asset(virtualToken.address, "100000000000000000000"), //100
+        Asset(volmexBaseToken.address, "10000000000000000000"), //10
+        2,
+        0,
+        false,
+      );
+      await expect(matchingEngine.matchOrders(orderLeft, orderRight)) //20,2  10000000000000000000
+        .to.emit(matchingEngine, "OrdersFilled")
+        .withArgs(
+          [account1.address, account2.address],
+          [1, 2],
+          ["10000000000000000000", "10000000000000000000"],
+        );
+      const maxOrderSizeBefore = await matchingEngine.getMaxOrderSize(volmexBaseToken.address);
+      expect(maxOrderSizeBefore.toString()).to.be.equal("10000000000000000000");
+      // increase time by  3400 seconds < one hou
+      await time.increase(3600);
+      // new hour has just begun
+      const orderLeft1 = Order(
+        ORDER,
+        deadline,
+        account1.address,
+        Asset(volmexBaseToken.address, "3000000000000000000"), //3
+        Asset(virtualToken.address, "100000000000000000000"), //100
+        3,
+        0,
+        true,
+      );
+
+      // price = 0.5
+      const orderRight1 = Order(
+        STOP_LOSS_LIMIT_ORDER,
+        deadline,
+        account2.address,
+        Asset(virtualToken.address, "100000000000000000000"), //100
+        Asset(volmexBaseToken.address, "3000000000000000000"), //3
+        4,
+        0,
+        false,
+      );
+      await expect(matchingEngine.matchOrders(orderLeft1, orderRight1))
+        .to.emit(matchingEngine, "OrdersFilled")
+        .withArgs(
+          [account1.address, account2.address],
+          [3, 4],
+          ["3000000000000000000", "3000000000000000000"],
+        );
+      // new fill on the begining of new hour 3000000000000000000
+      const updatedMaxOrderSize = await matchingEngine.getMaxOrderSize(volmexBaseToken.address);
+      expect(updatedMaxOrderSize.toString()).to.be.equal("3000000000000000000");
+    });
+    it("Should set the max order size only for that hour", async () => {
+      //  first order size set
+      const orderLeft = Order(
+        ORDER,
+        deadline,
+        account1.address,
+        Asset(volmexBaseToken.address, "12000000000000000000"), //12
+        Asset(virtualToken.address, "100000000000000000000"), //100
+        1,
+        0,
+        true,
+      );
+
+      const orderRight = Order(
+        STOP_LOSS_LIMIT_ORDER,
+        deadline,
+        account2.address,
+        Asset(virtualToken.address, "100000000000000000000"), //100
+        Asset(volmexBaseToken.address, "12000000000000000000"), //12
+        2,
+        0,
+        false,
+      );
+      await expect(matchingEngine.matchOrders(orderLeft, orderRight)) //20,2  10000000000000000000
+        .to.emit(matchingEngine, "OrdersFilled")
+        .withArgs(
+          [account1.address, account2.address],
+          [1, 2],
+          ["12000000000000000000", "12000000000000000000"],
+        );
+      const maxOrderSizeBefore = await matchingEngine.getMaxOrderSize(volmexBaseToken.address);
+      expect(maxOrderSizeBefore.toString()).to.be.equal("12000000000000000000");
+
+      // increasing time by 30 minutes
+      await time.increase(1800);
+      const orderLeft1 = Order(
+        ORDER,
+        deadline,
+        account1.address,
+        Asset(volmexBaseToken.address, "20000000000000000000"), //3
+        Asset(virtualToken.address, "100000000000000000000"), //100
+        3,
+        0,
+        true,
+      );
+
+      // price = 0.5
+      const orderRight1 = Order(
+        STOP_LOSS_LIMIT_ORDER,
+        deadline,
+        account2.address,
+        Asset(virtualToken.address, "100000000000000000000"), //100
+        Asset(volmexBaseToken.address, "20000000000000000000"), //3
+        4,
+        0,
+        false,
+      );
+      await expect(matchingEngine.matchOrders(orderLeft1, orderRight1))
+        .to.emit(matchingEngine, "OrdersFilled")
+        .withArgs(
+          [account1.address, account2.address],
+          [3, 4],
+          ["20000000000000000000", "20000000000000000000"],
+        );
+      let maxOrderSizeUpdated = await matchingEngine.getMaxOrderSize(volmexBaseToken.address);
+      expect(maxOrderSizeUpdated.toString()).to.be.equal("20000000000000000000");
+      // since  new fill is greater than previous one
+
+      // after 20 minutes
+      await time.increase(1200);
+      const orderLeft2 = Order(
+        ORDER,
+        deadline,
+        account1.address,
+        Asset(volmexBaseToken.address, "30000000000000000000"), //3
+        Asset(virtualToken.address, "100000000000000000000"), //100
+        6,
+        0,
+        true,
+      );
+
+      const orderRight2 = Order(
+        STOP_LOSS_LIMIT_ORDER,
+        deadline,
+        account2.address,
+        Asset(virtualToken.address, "100000000000000000000"), //100
+        Asset(volmexBaseToken.address, "30000000000000000000"), //3
+        7,
+        0,
+        false,
+      );
+      await expect(matchingEngine.matchOrders(orderLeft2, orderRight2))
+        .to.emit(matchingEngine, "OrdersFilled")
+        .withArgs(
+          [account1.address, account2.address],
+          [6, 7],
+          ["30000000000000000000", "30000000000000000000"],
+        );
+      maxOrderSizeUpdated = await matchingEngine.getMaxOrderSize(volmexBaseToken.address);
+      expect(maxOrderSizeUpdated.toString()).to.be.equal("30000000000000000000");
+      await time.increase(600);
+      console.log((await time.latest()).toString(), "new hour start");
+      // at 12:00 PM, set the new size to the struct
+      const orderLeft3 = Order(
+        ORDER,
+        deadline,
+        account1.address,
+        Asset(volmexBaseToken.address, "4000000000000000000"), //3
+        Asset(virtualToken.address, "100000000000000000000"), //100
+        6,
+        0,
+        true,
+      );
+
+      const orderRight3 = Order(
+        STOP_LOSS_LIMIT_ORDER,
+        deadline,
+        account2.address,
+        Asset(virtualToken.address, "100000000000000000000"), //100
+        Asset(volmexBaseToken.address, "4000000000000000000"), //3
+        7,
+        0,
+        false,
+      );
+      await expect(matchingEngine.matchOrders(orderLeft3, orderRight3))
+        .to.emit(matchingEngine, "OrdersFilled")
+        .withArgs(
+          [account1.address, account2.address],
+          [6, 7],
+          ["4000000000000000000", "4000000000000000000"],
+        );
+      await time.increase(600);
+      console.log((await time.latest()).toString(), "10 minutes after new hour");
       // at 12:10 PM, getter is called, the order size it returns should be in 12:00PM to 12:10PM
+      maxOrderSizeUpdated = await matchingEngine.getMaxOrderSize(volmexBaseToken.address);
+      expect(maxOrderSizeUpdated.toString()).to.be.equal("4000000000000000000");
     });
     it("Should fetch the max order size of that hour only", async () => {
+      const orderLeft = Order(
+        ORDER,
+        deadline,
+        account1.address,
+        Asset(volmexBaseToken.address, "12000000000000000000"), //12
+        Asset(virtualToken.address, "100000000000000000000"), //100
+        1,
+        0,
+        true,
+      );
+
+      const orderRight = Order(
+        STOP_LOSS_LIMIT_ORDER,
+        deadline,
+        account2.address,
+        Asset(virtualToken.address, "100000000000000000000"), //100
+        Asset(volmexBaseToken.address, "12000000000000000000"), //12
+        2,
+        0,
+        false,
+      );
+      await expect(matchingEngine.matchOrders(orderLeft, orderRight))
+        .to.emit(matchingEngine, "OrdersFilled")
+        .withArgs(
+          [account1.address, account2.address],
+          [1, 2],
+          ["12000000000000000000", "12000000000000000000"],
+        );
+      const maxOrderSizeBefore = await matchingEngine.getMaxOrderSize(volmexBaseToken.address);
+      expect(maxOrderSizeBefore.toString()).to.be.equal("12000000000000000000");
+
+      const orderLeft1 = Order(
+        ORDER,
+        deadline,
+        account1.address,
+        Asset(volmexBaseToken.address, "20000000000000000000"), //20
+        Asset(virtualToken.address, "100000000000000000000"), //100
+        3,
+        0,
+        true,
+      );
+
+      const orderRight1 = Order(
+        STOP_LOSS_LIMIT_ORDER,
+        deadline,
+        account2.address,
+        Asset(virtualToken.address, "100000000000000000000"), //100
+        Asset(volmexBaseToken.address, "20000000000000000000"), //20
+        4,
+        0,
+        false,
+      );
+      await expect(matchingEngine.matchOrders(orderLeft1, orderRight1))
+        .to.emit(matchingEngine, "OrdersFilled")
+        .withArgs(
+          [account1.address, account2.address],
+          [3, 4],
+          ["20000000000000000000", "20000000000000000000"],
+        );
+      const maxOrderSizeUpdatedPreviousHour = await matchingEngine.getMaxOrderSize(
+        volmexBaseToken.address,
+      );
+      expect(maxOrderSizeUpdatedPreviousHour.toString()).to.be.equal("20000000000000000000");
+      await time.increase(3600);
+      // in new hours
+      const orderLeft2 = Order(
+        ORDER,
+        deadline,
+        account1.address,
+        Asset(volmexBaseToken.address, "30000000000000000000"), //3
+        Asset(virtualToken.address, "100000000000000000000"), //100
+        9,
+        0,
+        true,
+      );
+
+      const orderRight2 = Order(
+        STOP_LOSS_LIMIT_ORDER,
+        deadline,
+        account2.address,
+        Asset(virtualToken.address, "100000000000000000000"), //100
+        Asset(volmexBaseToken.address, "30000000000000000000"), //3
+        10,
+        0,
+        false,
+      );
+      await expect(matchingEngine.matchOrders(orderLeft2, orderRight2))
+        .to.emit(matchingEngine, "OrdersFilled")
+        .withArgs(
+          [account1.address, account2.address],
+          [9, 10],
+          ["30000000000000000000", "30000000000000000000"],
+        );
+      const maxOrderSizeUpdatedCurrentHour = await matchingEngine.getMaxOrderSize(
+        volmexBaseToken.address,
+      );
+
+      expect(maxOrderSizeUpdatedCurrentHour.toString()).to.be.equal("30000000000000000000");
+
       // Check using `orderSizeInitialTimestamp` var to understand hours calculation.
       // if orderSizeInitialTimestamp = 11:34AM, then hour is started from this value only for all max order size calculation
       // Next hour will start at 12:34PM, and similar further.
     });
-  })
+  });
   async function getSignature(orderObj, signer) {
     return sign(orderObj, signer, positioning.address);
   }
