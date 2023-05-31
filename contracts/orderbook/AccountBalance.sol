@@ -13,7 +13,6 @@ import { IAccountBalance } from "../interfaces/IAccountBalance.sol";
 import { IVolmexBaseToken } from "../interfaces/IVolmexBaseToken.sol";
 import { IPositioningConfig } from "../interfaces/IPositioningConfig.sol";
 import { IVirtualToken } from "../interfaces/IVirtualToken.sol";
-import { IMatchingEngine } from "../interfaces/IMatchingEngine.sol";
 
 import { AccountBalanceStorageV1 } from "../storage/AccountBalanceStorage.sol";
 import { BlockContext } from "../helpers/BlockContext.sol";
@@ -29,7 +28,7 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
     using LibPerpMath for uint160;
     using LibAccountMarket for LibAccountMarket.Info;
 
-    function initialize(address positioningConfigArg, address[2] calldata volmexBaseTokenArgs, IMatchingEngine _matchingEngine) external initializer {
+    function initialize(address positioningConfigArg, address[2] calldata volmexBaseTokenArgs) external initializer {
         // IPositioningConfig address is not contract
         require(positioningConfigArg.isContract(), "AB_VPMMCNC");
 
@@ -41,7 +40,6 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
         for (uint256 index; index < 2; index++) {
             _underlyingPriceIndexes[volmexBaseTokenArgs[index]] = index;
         }
-        matchingEngine = _matchingEngine;
         _grantRole(SM_INTERVAL_ROLE, positioningConfigArg);
         _grantRole(ACCOUNT_BALANCE_ADMIN, _msgSender());
     }
@@ -360,6 +358,13 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
             totalTakerQuoteBalance = totalTakerQuoteBalance + (_accountMarketMap[trader][baseToken].openNotional);
         }
         return (totalTakerQuoteBalance);
+    }
+
+    function _getFuzzyMaxOrderSize(uint256 minOrderSize, uint256 maxOrderSize) internal view returns (uint256 fuzzyMaxOrderSize) {
+        uint256 pseudoRandomNumber = uint256(keccak256(abi.encodePacked(block.difficulty,blockhash(block.number - 1),block.timestamp)));
+        pseudoRandomNumber = maxOrderSize > 10 ? pseudoRandomNumber % (2 * maxOrderSize / 10) : pseudoRandomNumber % ( 1 + maxOrderSize);
+        uint256 randomOrderSize = ((8 * maxOrderSize) / 10 + pseudoRandomNumber);
+        fuzzyMaxOrderSize = uint256(LibPerpMath.max(minOrderSize.toInt256(), randomOrderSize.toInt256()));
     }
 
     function _requireAccountBalanceAdmin() internal view {
