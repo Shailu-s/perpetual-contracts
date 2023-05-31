@@ -2,6 +2,7 @@
 pragma solidity =0.8.18;
 
 import { LibAccountMarket } from "../libs/LibAccountMarket.sol";
+import { IMatchingEngine } from "../interfaces/IMatchingEngine.sol";
 
 interface IAccountBalance {
     /// @param vault The address of the vault contract
@@ -13,7 +14,7 @@ interface IAccountBalance {
     /// @dev Emit when underlying price index is set
     event UnderlyingPriceIndexSet(uint256 indexed underlyingIndex, address baseToken);
 
-    function initialize(address positioningConfigArg, address[2] calldata volmexBaseTokenArgs) external;
+    function initialize(address positioningConfigArg, address[2] calldata volmexBaseTokenArgs, IMatchingEngine matchingEngine) external;
 
     /// @notice Modify trader owedRealizedPnl
     /// @dev Only used by `Positioning` contract
