@@ -2,7 +2,6 @@
 pragma solidity =0.8.18;
 
 import { LibAccountMarket } from "../libs/LibAccountMarket.sol";
-import { IMatchingEngine } from "../interfaces/IMatchingEngine.sol";
 
 /// @notice For future upgrades, do not change AccountBalanceStorageV1. Create a new
 /// contract which implements AccountBalanceStorageV1 and following the naming convention
@@ -26,5 +25,4 @@ abstract contract AccountBalanceStorageV1 {
     mapping(address => mapping(address => LibAccountMarket.Info)) internal _accountMarketMap;
     // Index price oracle underlying index
     mapping(address => uint256) _underlyingPriceIndexes;
-    IMatchingEngine public matchingEngine;
 }
