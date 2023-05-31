@@ -372,7 +372,7 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
     }
 
     function _getFuzzyMaxOrderSize(uint256 minOrderSize, uint256 maxOrderSize) internal view returns (int256 fuzzyMaxOrderSize) {
-        uint256 pseudoRandomNumber = uint256(keccak256(abi.encodePacked(block.difficulty,blockhash(block.number - 1),block.timestamp)));
+        uint256 pseudoRandomNumber = uint256(keccak256(abi.encodePacked(block.difficulty, blockhash(block.number - 1), block.timestamp)));
         pseudoRandomNumber = maxOrderSize > 10 ? pseudoRandomNumber % (2 * maxOrderSize / 10) : pseudoRandomNumber % ( 1 + maxOrderSize);
         uint256 randomOrderSize = ((8 * maxOrderSize) / 10 + pseudoRandomNumber);
         fuzzyMaxOrderSize = LibPerpMath.max(minOrderSize.toInt256(), randomOrderSize.toInt256());

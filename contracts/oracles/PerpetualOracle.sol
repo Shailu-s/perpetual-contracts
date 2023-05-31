@@ -134,6 +134,7 @@ contract PerpetualOracle is AccessControlUpgradeable, IPerpetualOracle {
         _requireAddIndexObservationRole();
         uint256 totalIndex = _indexes.length;
         for (uint256 index; index < totalIndex; ++index) {
+            require(sigmaVivs[index] > 0, "PerpOracle: not zero");
             sigmaVivs[index] = _sigmaVivs[index];
         }
         emit SigmaVivsUpdated(_indexes, _sigmaVivs);
