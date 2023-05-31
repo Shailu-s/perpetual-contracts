@@ -2,7 +2,6 @@
 pragma solidity =0.8.18;
 
 import { LibAccountMarket } from "../libs/LibAccountMarket.sol";
-import { IMatchingEngine } from "../interfaces/IMatchingEngine.sol";
 
 interface IAccountBalance {
     /// @param vault The address of the vault contract
