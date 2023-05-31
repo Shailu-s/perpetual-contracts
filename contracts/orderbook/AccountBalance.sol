@@ -149,7 +149,7 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
         address trader,
         address baseToken,
         int256 accountValue
-    ) external view override returns (int256) {
+    ) public view override returns (int256) {
         int256 marginRequirement = getMarginRequirementForLiquidation(trader);
         int256 positionSize = getPositionSize(trader, baseToken);
 
@@ -285,6 +285,14 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
         return _baseTokensMap[trader];
     }
 
+    function getLiquidationTimeToWait(address trader, address baseToken, int256 accountValue, uint256 minOrderSize, uint256 maxOrderSize, int256 availableCollateral, int256 sigmaViv) external view returns (uint256 timeToWait) {
+        int256 liquidatablePositionSize = getLiquidatablePositionSize(trader, baseToken, accountValue);
+        int256 nLiquidate = (liquidatablePositionSize.min(_getFuzzyMaxOrderSize(minOrderSize, maxOrderSize))).max(minOrderSize.toInt256());
+        int256 totalPositionNotional = getTotalAbsPositionValue(trader).toInt256();
+        int256 maxTimeBound = (availableCollateral / (6 * sigmaViv * totalPositionNotional)) ** 2;
+        timeToWait = uint256((nLiquidate * maxTimeBound) / liquidatablePositionSize);
+    }
+
     function _modifyTakerBalance(
         address trader,
         address baseToken,
@@ -360,11 +368,11 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
         return (totalTakerQuoteBalance);
     }
 
-    function _getFuzzyMaxOrderSize(uint256 minOrderSize, uint256 maxOrderSize) internal view returns (uint256 fuzzyMaxOrderSize) {
+    function _getFuzzyMaxOrderSize(uint256 minOrderSize, uint256 maxOrderSize) internal view returns (int256 fuzzyMaxOrderSize) {
         uint256 pseudoRandomNumber = uint256(keccak256(abi.encodePacked(block.difficulty,blockhash(block.number - 1),block.timestamp)));
         pseudoRandomNumber = maxOrderSize > 10 ? pseudoRandomNumber % (2 * maxOrderSize / 10) : pseudoRandomNumber % ( 1 + maxOrderSize);
         uint256 randomOrderSize = ((8 * maxOrderSize) / 10 + pseudoRandomNumber);
-        fuzzyMaxOrderSize = uint256(LibPerpMath.max(minOrderSize.toInt256(), randomOrderSize.toInt256()));
+        fuzzyMaxOrderSize = LibPerpMath.max(minOrderSize.toInt256(), randomOrderSize.toInt256());
     }
 
     function _requireAccountBalanceAdmin() internal view {
