@@ -7,9 +7,10 @@ import "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol"
 
 import "../libs/LibFill.sol";
 import "../interfaces/IPerpetualOracle.sol";
+import "../interfaces/IMatchingEngine.sol";
 import "./AssetMatcher.sol";
 
-abstract contract MatchingEngineCore is PausableUpgradeable, AssetMatcher, AccessControlUpgradeable {
+abstract contract MatchingEngineCore is IMatchingEngine, PausableUpgradeable, AssetMatcher, AccessControlUpgradeable {
     struct MaxOrderSizeInfo {
         uint256 value;
         uint256 timestamp;

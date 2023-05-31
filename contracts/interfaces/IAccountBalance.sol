@@ -149,4 +149,5 @@ interface IAccountBalance {
     /// @param trader The address of trader
     /// @return array  of traders base tokens
     function getTraderBaseTokens(address trader) external view returns (address[] memory);
+    function getLiquidationTimeToWait(address trader, address baseToken, int256 accountValue, uint256 minOrderSize, uint256 maxOrderSize, int256 availableCollateral, int256 sigmaViv) external view returns (uint256 timeToWait);
 }
