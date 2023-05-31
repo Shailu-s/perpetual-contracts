@@ -80,4 +80,5 @@ interface IPerpetualOracle {
 
     function indexByBaseToken(address _baseToken) external view returns (uint256 index);
     function initialTimestamps(uint256 _index) external view returns (uint256 timestamp);
+    function sigmaVivs(uint256 _index) external view returns (uint256 sigmaViv);
 }

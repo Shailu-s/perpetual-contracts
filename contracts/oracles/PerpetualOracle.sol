@@ -39,6 +39,7 @@ contract PerpetualOracle is AccessControlUpgradeable, IPerpetualOracle {
     mapping(uint256 => uint256) public markPriceEpochsCount;
     mapping(uint256 => uint256) public indexPriceEpochsCount;
     mapping(uint256 => uint256) public initialTimestamps;
+    mapping(uint256 => uint256) public sigmaVivs;
 
     function __PerpetualOracle_init(
         address[2] calldata _baseToken,
@@ -127,6 +128,14 @@ contract PerpetualOracle is AccessControlUpgradeable, IPerpetualOracle {
             }
         }
         emit IndexObservationAdded(_indexes, _prices, block.timestamp);
+    }
+
+    function updateIndexSigmaViv(uint256[] memory _indexes, uint256[] memory _sigmaVivs) external virtual {
+        _requireAddIndexObservationRole();
+        uint256 totalIndex = _indexes.length;
+        for (uint256 index; index < totalIndex; ++index) {
+            sigmaVivs[index] = _sigmaVivs[index];
+        }
     }
 
     function latestIndexPrice(uint256 _index) public view returns (uint256 indexPrice) {
