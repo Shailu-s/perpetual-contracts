@@ -136,6 +136,7 @@ contract PerpetualOracle is AccessControlUpgradeable, IPerpetualOracle {
         for (uint256 index; index < totalIndex; ++index) {
             sigmaVivs[index] = _sigmaVivs[index];
         }
+        emit SigmaVivsUpdated(_indexes, _sigmaVivs);
     }
 
     function latestIndexPrice(uint256 _index) public view returns (uint256 indexPrice) {
