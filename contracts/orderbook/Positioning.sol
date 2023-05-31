@@ -288,6 +288,16 @@ contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, 
                 : int256(0);
     }
 
+    function _checkTimeToWait(address trader, address baseToken, int256 accountValue) internal {
+        IAccountBalance accounts = IAccountBalance(accountBalance);
+        (, int256 unrealizedPnl) = accounts.getPnlAndPendingFee(trader);
+        uint256 maxOrderSize = IMatchingEngine(_matchingEngine).getMaxOrderSize(baseToken);
+        uint256 sigmaViv = IPerpetualOracle(_perpetualOracleArg).sigmaVivs(_underlyingPriceIndexes[baseToken]);
+        uint256 timeToWait = accounts.getLiquidationTimeToWait(trader, baseToken, accountValue, minPositionSizeByBaseToken[baseToken], maxOrderSize, accountValue - unrealizedPnl, sigmaViv.toInt256());
+        require(nextLiquidationTime[trader] <= block.timestamp, "P_EL"); // early liquidation triggered
+        nextLiquidationTime[trader] = block.timestamp + timeToWait;
+    }
+
     function _liquidate(
         address trader,
         address baseToken,
@@ -304,14 +314,13 @@ contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, 
 
         // P_WLD: wrong liquidation direction
         require(positionSize * positionSizeToBeLiquidated >= 0, "P_WLD");
-
+        int256 accountValue = getAccountValue(trader);
         IAccountBalance(accountBalance).registerBaseToken(trader, baseToken);
+        _checkTimeToWait(trader, baseToken, accountValue);
 
         // must settle funding first
         _settleFunding(trader, baseToken);
         _settleFunding(liquidator, baseToken);
-
-        int256 accountValue = getAccountValue(trader);
 
         // trader's position is closed at index price and pnl realized
         (int256 liquidatedPositionSize, int256 liquidatedPositionNotional) = _getLiquidatedPositionSizeAndNotional(trader, baseToken, accountValue, positionSizeToBeLiquidated);
