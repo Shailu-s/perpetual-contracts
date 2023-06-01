@@ -163,6 +163,16 @@ contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, 
         isLiquidatorWhitelistEnabled = !isLiquidatorWhitelistEnabled;
     }
 
+    function pause() external {
+        _requirePositioningAdmin();
+        _pause();
+    }
+
+    function unpause() external {
+        _requirePositioningAdmin();
+        _unpause();
+    }
+
     /// @inheritdoc IPositioning
     function liquidate(
         address trader,
@@ -296,7 +306,7 @@ contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, 
         int256 positionSizeToBeLiquidated
     ) internal {
         // P_EAV: enough account value
-        require(isAccountLiquidatable(trader), "P_EAV");
+        require(isAccountLiquidatable(trader, baseToken), "P_EAV");
         address liquidator = _msgSender();
         if (isLiquidatorWhitelistEnabled) {
             _requireWhitelistLiquidator(liquidator);
@@ -631,8 +641,11 @@ contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, 
     }
 
     /// @dev This function checks if account of trader is eligible for liquidation
-    function isAccountLiquidatable(address trader) public view returns (bool) {
-        return getAccountValue(trader) < IAccountBalance(accountBalance).getMarginRequirementForLiquidation(trader);
+    function isAccountLiquidatable(address trader, address baseToken) public view returns (bool isLiquidatable) {
+        int256 accountValue = getAccountValue(trader);
+        IAccountBalance(accountBalance).getLiquidationTimeToWait(trader, baseToken, accountValue, minPositionSizeByBaseToken[baseToken]);
+        if (IAccountBalance(accountBalance).getNextLiquidationTime(trader) <= block.timestamp) isLiquidatable = true;
+        isLiquidatable = accountValue < IAccountBalance(accountBalance).getMarginRequirementForLiquidation(trader);
     }
 
     /// @dev This function returns position size of trader
