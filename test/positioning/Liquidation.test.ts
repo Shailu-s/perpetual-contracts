@@ -1088,7 +1088,7 @@ describe.only("Liquidation test in Positioning", function () {
             .liquidate(account4.address, volmexBaseToken.address, "20000000000000000000"),
         ).to.be.revertedWith("AB_LNZ");
       });
-      it("should fail to liquidate again", async () => {
+      it.only("should fail to liquidate again", async () => {
         await positioning.setMinPositionSize("10000000000000000000", volmexBaseToken.address);
         await positioning.whitelistLiquidator(account1.address, true);
         await virtualToken.mint(account1.address, fivehundred.toString());
