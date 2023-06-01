@@ -131,7 +131,8 @@ const positioning = async () => {
   const accountBalance = await upgrades.deployProxy(AccountBalance, [
     positioningConfig.address,
     [volmexBaseToken1.address, volmexBaseToken2.address],
-    matchingEngine.address
+    matchingEngine.address,
+    process.env.VOLMEX_MULTISIG ? process.env.VOLMEX_MULTISIG : owner.address
   ]);
   await accountBalance.deployed();
   console.log(accountBalance.address);
