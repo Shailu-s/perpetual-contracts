@@ -305,8 +305,10 @@ contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, 
         address baseToken,
         int256 positionSizeToBeLiquidated
     ) internal {
+        IAccountBalance accountBalanceInst = IAccountBalance(accountBalance);
+        int256 accountValue = getAccountValue(trader);
         // P_EAV: enough account value
-        require(isAccountLiquidatable(trader, baseToken), "P_EAV");
+        require(accountBalanceInst.isAccountLiquidatable(trader, baseToken, minPositionSizeByBaseToken[baseToken], accountValue), "P_EAV");
         address liquidator = _msgSender();
         if (isLiquidatorWhitelistEnabled) {
             _requireWhitelistLiquidator(liquidator);
@@ -316,9 +318,8 @@ contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, 
 
         // P_WLD: wrong liquidation direction
         require(positionSize * positionSizeToBeLiquidated >= 0, "P_WLD");
-        int256 accountValue = getAccountValue(trader);
-        IAccountBalance(accountBalance).registerBaseToken(trader, baseToken);
-        IAccountBalance(accountBalance).checkAndUpdateLiquidationTimeToWait(trader, baseToken, accountValue, minPositionSizeByBaseToken[baseToken]);
+        accountBalanceInst.registerBaseToken(trader, baseToken);
+        accountBalanceInst.checkAndUpdateLiquidationTimeToWait(trader, baseToken, accountValue, minPositionSizeByBaseToken[baseToken]);
 
         // must settle funding first
         _settleFunding(trader, baseToken);
@@ -638,14 +639,6 @@ contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, 
     function _validateFull(LibOrder.Order memory order, bytes memory signature) internal view {
         LibOrder.validate(order);
         _validate(order, signature);
-    }
-
-    /// @dev This function checks if account of trader is eligible for liquidation
-    function isAccountLiquidatable(address trader, address baseToken) public view returns (bool isLiquidatable) {
-        int256 accountValue = getAccountValue(trader);
-        IAccountBalance(accountBalance).getLiquidationTimeToWait(trader, baseToken, accountValue, minPositionSizeByBaseToken[baseToken]);
-        if (IAccountBalance(accountBalance).getNextLiquidationTime(trader) <= block.timestamp) isLiquidatable = true;
-        isLiquidatable = accountValue < IAccountBalance(accountBalance).getMarginRequirementForLiquidation(trader);
     }
 
     /// @dev This function returns position size of trader
