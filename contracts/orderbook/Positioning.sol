@@ -290,14 +290,6 @@ contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, 
                 : int256(0);
     }
 
-    function _checkTimeToWait(address trader, address baseToken, int256 accountValue) internal {
-        IAccountBalance accounts = IAccountBalance(accountBalance);
-        (, int256 unrealizedPnl) = accounts.getPnlAndPendingFee(trader);
-        uint256 maxOrderSize = IMatchingEngine(_matchingEngine).getMaxOrderSize(baseToken);
-        uint256 sigmaViv = IPerpetualOracle(_perpetualOracleArg).sigmaVivs(_underlyingPriceIndexes[baseToken]);
-        accounts.checkAndUpdateLiquidationTimeToWait(trader, baseToken, accountValue, minPositionSizeByBaseToken[baseToken], maxOrderSize, accountValue - unrealizedPnl, sigmaViv.toInt256());
-    }
-
     function _liquidate(
         address trader,
         address baseToken,
@@ -316,7 +308,7 @@ contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, 
         require(positionSize * positionSizeToBeLiquidated >= 0, "P_WLD");
         int256 accountValue = getAccountValue(trader);
         IAccountBalance(accountBalance).registerBaseToken(trader, baseToken);
-        _checkTimeToWait(trader, baseToken, accountValue);
+        IAccountBalance(accountBalance).checkAndUpdateLiquidationTimeToWait(trader, baseToken, accountValue, minPositionSizeByBaseToken[baseToken]);
 
         // must settle funding first
         _settleFunding(trader, baseToken);
