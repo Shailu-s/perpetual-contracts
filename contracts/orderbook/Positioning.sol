@@ -163,6 +163,16 @@ contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, 
         isLiquidatorWhitelistEnabled = !isLiquidatorWhitelistEnabled;
     }
 
+    function pause() external {
+        _requirePositioningAdmin();
+        _pause();
+    }
+
+    function unpause() external {
+        _requirePositioningAdmin();
+        _unpause();
+    }
+
     /// @inheritdoc IPositioning
     function liquidate(
         address trader,
