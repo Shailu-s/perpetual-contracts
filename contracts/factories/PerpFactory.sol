@@ -161,7 +161,7 @@ contract PerpFactory is Initializable, IPerpFactory, AccessControlUpgradeable {
     ) external returns (address[4] memory perpEcosystem) {
         _requireClonesDeployer();
         uint256 perpIndex = perpViewRegistry.perpIndexCount();
-        perpEcosystem[0] = address(_cloneAccountBalance(perpIndex, _positioningConfig, volmexBaseTokenArgs, _matchingEngine));
+        perpEcosystem[0] = address(_cloneAccountBalance(perpIndex, _positioningConfig, volmexBaseTokenArgs, _matchingEngine, _msgSender()));
         perpEcosystem[1] = address(_cloneVaultController(perpIndex, _positioningConfig, address(perpEcosystem[0])));
         perpEcosystem[2] = address(
             _clonePositioning(
@@ -226,11 +226,12 @@ contract PerpFactory is Initializable, IPerpFactory, AccessControlUpgradeable {
         uint256 _perpIndex,
         address _positioningConfig,
         address[2] calldata volmexBaseTokenArgs,
-        address _matchingEngine
+        address _matchingEngine,
+        address _admin
     ) private returns (IAccountBalance accountBalance) {
         bytes32 salt = keccak256(abi.encodePacked(_perpIndex, _positioningConfig));
         accountBalance = IAccountBalance(Clones.cloneDeterministic(accountBalanceImplementation, salt));
-        accountBalance.initialize(_positioningConfig, volmexBaseTokenArgs, IMatchingEngine(_matchingEngine));
+        accountBalance.initialize(_positioningConfig, volmexBaseTokenArgs, IMatchingEngine(_matchingEngine), _admin);
         perpViewRegistry.setAccount(accountBalance);
     }
 
