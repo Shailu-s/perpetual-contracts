@@ -29,7 +29,7 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
     using LibPerpMath for uint160;
     using LibAccountMarket for LibAccountMarket.Info;
 
-    function initialize(address positioningConfigArg, address[2] calldata volmexBaseTokenArgs, IMatchingEngine matchingEngineArg) external initializer {
+    function initialize(address positioningConfigArg, address[2] calldata volmexBaseTokenArgs, IMatchingEngine matchingEngineArg, address adminArg) external initializer {
         // IPositioningConfig address is not contract
         require(positioningConfigArg.isContract(), "AB_VPMMCNC");
 
@@ -46,6 +46,7 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
         sigmaVolmexIvs[1] = 13300; // 0.0133
         _grantRole(SM_INTERVAL_ROLE, positioningConfigArg);
         _grantRole(ACCOUNT_BALANCE_ADMIN, _msgSender());
+        _grantRole(SIGMA_IV_ROLE, adminArg);
     }
 
     function grantSettleRealizedPnlRole(address account) external {
@@ -137,7 +138,7 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
         _requireSigmaIvRole();
         uint256 totalIndex = _indexes.length;
         for (uint256 index; index < totalIndex; ++index) {
-            require(sigmaVolmexIvs[index] > 0, "PerpOracle: not zero");
+            require(sigmaVolmexIvs[index] > 0, "AccountBalance: not zero");
             sigmaVolmexIvs[index] = _sigmaVivs[index];
         }
         emit SigmaVolmexIvsUpdated(_indexes, _sigmaVivs);
@@ -409,7 +410,7 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
     }
 
     function _requireSigmaIvRole() internal view {
-        require(hasRole(SIGMA_IV_ROLE, _msgSender()), "AccountBalance: Not sm interval role");
+        require(hasRole(SIGMA_IV_ROLE, _msgSender()), "AccountBalance: Not sigma IV role");
     }
 
     function _hasBaseToken(address[] memory baseTokens, address baseToken) internal pure returns (bool) {
