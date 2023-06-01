@@ -117,7 +117,7 @@ abstract contract MatchingEngineCore is IMatchingEngine, PausableUpgradeable, As
         emit OrderSizeIntervalUpdated(_interval);
     }
 
-    function getMaxOrderSize(address baseToken) external view returns (uint256 size) { // Note: default order size will be zero
+    function getMaxOrderSizeInHr(address baseToken) external view returns (uint256 size) { // Note: default order size will be zero
         MaxOrderSizeInfo memory maxOrder = maxOrderSize[baseToken];
         if (
             (block.timestamp - orderSizeInitialTimestampCache[baseToken]) / orderSizeInterval ==

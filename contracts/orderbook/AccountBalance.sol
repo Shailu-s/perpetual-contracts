@@ -29,7 +29,7 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
     using LibPerpMath for uint160;
     using LibAccountMarket for LibAccountMarket.Info;
 
-    function initialize(address positioningConfigArg, address[2] calldata volmexBaseTokenArgs, IMatchingEngine matchingEngineArg) external initializer {
+    function initialize(address positioningConfigArg, address[2] calldata volmexBaseTokenArgs, IMatchingEngine matchingEngineArg, address adminArg) external initializer {
         // IPositioningConfig address is not contract
         require(positioningConfigArg.isContract(), "AB_VPMMCNC");
 
@@ -42,10 +42,12 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
             _underlyingPriceIndexes[volmexBaseTokenArgs[index]] = index;
         }
         matchingEngine = matchingEngineArg;
-        sigmaVolmexIvs[0] = 126; // 0.0126
-        sigmaVolmexIvs[1] = 133; // 0.0133
+        sigmaVolmexIvs[0] = 12600; // 0.0126
+        sigmaVolmexIvs[1] = 13300; // 0.0133
+        minTimeBound = 600; // 10 minutes
         _grantRole(SM_INTERVAL_ROLE, positioningConfigArg);
         _grantRole(ACCOUNT_BALANCE_ADMIN, _msgSender());
+        _grantRole(SIGMA_IV_ROLE, adminArg);
     }
 
     function grantSettleRealizedPnlRole(address account) external {
@@ -67,6 +69,12 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
     function setSmIntervalLiquidation(uint256 smIntervalLiquidation) external virtual {
         _requireSmIntervalRole();
         _smIntervalLiquidation = smIntervalLiquidation;
+    }
+
+    function setMinTimeBound(uint256 minTimeBoundArg) external virtual {
+        _requireSigmaIvRole();
+        require(minTimeBoundArg > 300, "AB_NS5"); // not smaller than 5 mins
+        minTimeBound = minTimeBoundArg;
     }
 
     /// @inheritdoc IAccountBalance
@@ -137,7 +145,7 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
         _requireSigmaIvRole();
         uint256 totalIndex = _indexes.length;
         for (uint256 index; index < totalIndex; ++index) {
-            require(sigmaVolmexIvs[index] > 0, "PerpOracle: not zero");
+            require(sigmaVolmexIvs[index] > 0, "AccountBalance: not zero");
             sigmaVolmexIvs[index] = _sigmaVivs[index];
         }
         emit SigmaVolmexIvsUpdated(_indexes, _sigmaVivs);
@@ -299,20 +307,25 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
         return _baseTokensMap[trader];
     }
 
+    function getNLiquidate(uint256 liquidatablePositionSize, uint256 minOrderSize, uint256 maxOrderSize) public view returns (uint256 nLiquidate) {
+        nLiquidate = (liquidatablePositionSize.umin((_getFuzzyMaxOrderSize(minOrderSize, maxOrderSize))).umax(minOrderSize));
+    }
+
     function checkAndUpdateLiquidationTimeToWait(address trader, address baseToken, int256 accountValue, uint256 minOrderSize) external {
         _requireOnlyPositioning();
-        (, int256 unrealizedPnl) = getPnlAndPendingFee(trader);
-        int256 availableCollateral = accountValue - unrealizedPnl;
-        uint256 maxOrderSize = matchingEngine.getMaxOrderSize(baseToken);
-        int256 sigmaVolmexIv = (sigmaVolmexIvs[_underlyingPriceIndexes[baseToken]]).toInt256();
-        int256 liquidatablePositionSize = getLiquidatablePositionSize(trader, baseToken, accountValue);
-        int256 totalPositionNotional = getTotalAbsPositionValue(trader).toInt256();
-
-        int256 nLiquidate = (liquidatablePositionSize.min(_getFuzzyMaxOrderSize(minOrderSize, maxOrderSize))).max(minOrderSize.toInt256());
-        int256 maxTimeBound = ((availableCollateral * _SIGMA_IV_BASE) / (6 * sigmaVolmexIv * totalPositionNotional))**2;
-        uint256 timeToWait = uint256((nLiquidate * maxTimeBound) / liquidatablePositionSize);
-
         require(nextLiquidationTime[trader] <= block.timestamp, "AB_ELT"); // early liquidation triggered
+
+        (, int256 unrealizedPnl) = getPnlAndPendingFee(trader);
+        int256 availableCollateral = (accountValue - unrealizedPnl);
+        uint256 maxOrderSize = matchingEngine.getMaxOrderSizeInHr(baseToken);
+        uint256 sigmaVolmexIv = (sigmaVolmexIvs[_underlyingPriceIndexes[baseToken]]);
+        int256 idealAmountToLiquidate = getLiquidatablePositionSize(trader, baseToken, accountValue);
+        require(idealAmountToLiquidate > 0, "AB_LNZ"); // liquidate amount should be gt zero
+
+        uint256 totalPositionNotional = getTotalAbsPositionValue(trader);
+        uint256 nLiquidate = getNLiquidate(idealAmountToLiquidate.abs(), minOrderSize, maxOrderSize);
+        uint256 maxTimeBound = ((uint256(availableCollateral) * _SIGMA_IV_BASE) / (6 * sigmaVolmexIv * totalPositionNotional))**2;
+        uint256 timeToWait = maxTimeBound > minTimeBound ? (nLiquidate * maxTimeBound) / uint256(idealAmountToLiquidate) : 0;
         nextLiquidationTime[trader] = block.timestamp + timeToWait;
     }
 
@@ -391,13 +404,12 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
         return (totalTakerQuoteBalance);
     }
 
-    function _getFuzzyMaxOrderSize(uint256 minOrderSize, uint256 maxOrderSize) internal view returns (int256 fuzzyMaxOrderSize) {
-        uint256 pseudoRandomNumber = uint256(keccak256(abi.encodePacked(block.difficulty, blockhash(block.number - 1), block.timestamp)));
+    function _getFuzzyMaxOrderSize(uint256 minOrderSize, uint256 maxOrderSize) internal view returns (uint256 fuzzyMaxOrderSize) {
         uint128 uint128Max = type(uint128).max;
-        uint256 pseudoRandomNumberMasked = uint128(uint128Max & pseudoRandomNumber);
-        uint256 randomOrderSize = (maxOrderSize * (((pseudoRandomNumberMasked * 2 * 10 ** 17)/uint128Max) + 8 * 10**17)) / 10**18;
+        uint256 pseudoRandomNumber128Bits = uint128(uint128Max & uint256(keccak256(abi.encodePacked(block.difficulty, blockhash(block.number - 1), block.timestamp))));
+        uint256 pseudoRandomOrderSize = (maxOrderSize * (((pseudoRandomNumber128Bits * 2 * 10 ** 17)/uint128Max) + 8 * 10**17)) / 10**18;
 
-        fuzzyMaxOrderSize = LibPerpMath.max(minOrderSize.toInt256(), randomOrderSize.toInt256());
+        fuzzyMaxOrderSize = LibPerpMath.umax(minOrderSize, pseudoRandomOrderSize);
     }
 
     function _requireAccountBalanceAdmin() internal view {
@@ -409,7 +421,7 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
     }
 
     function _requireSigmaIvRole() internal view {
-        require(hasRole(SIGMA_IV_ROLE, _msgSender()), "AccountBalance: Not sm interval role");
+        require(hasRole(SIGMA_IV_ROLE, _msgSender()), "AccountBalance: Not sigma IV role");
     }
 
     function _hasBaseToken(address[] memory baseTokens, address baseToken) internal pure returns (bool) {
