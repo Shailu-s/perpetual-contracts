@@ -131,6 +131,7 @@ const positioning = async () => {
   const accountBalance = await upgrades.deployProxy(AccountBalance, [
     positioningConfig.address,
     [volmexBaseToken1.address, volmexBaseToken2.address],
+    matchingEngine.address
   ]);
   await accountBalance.deployed();
   console.log(accountBalance.address);
@@ -177,6 +178,7 @@ const positioning = async () => {
       marketRegistry.address,
       [volmexBaseToken1.address, volmexBaseToken2.address],
       [owner.address, `${process.env.LIQUIDATOR}`],
+      ["10000000000000000", "10000000000000000"]
     ],
     {
       initializer: "initialize",
