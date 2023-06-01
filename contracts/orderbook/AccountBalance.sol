@@ -44,6 +44,7 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
         matchingEngine = matchingEngineArg;
         sigmaVolmexIvs[0] = 12600; // 0.0126
         sigmaVolmexIvs[1] = 13300; // 0.0133
+        minTimeBound = 600; // 10 minutes
         _grantRole(SM_INTERVAL_ROLE, positioningConfigArg);
         _grantRole(ACCOUNT_BALANCE_ADMIN, _msgSender());
         _grantRole(SIGMA_IV_ROLE, adminArg);
@@ -68,6 +69,11 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
     function setSmIntervalLiquidation(uint256 smIntervalLiquidation) external virtual {
         _requireSmIntervalRole();
         _smIntervalLiquidation = smIntervalLiquidation;
+    }
+
+    function setMinTimeBound(uint256 minTimeBoundArg) external virtual {
+        _requireSigmaIvRole();
+        minTimeBound = minTimeBoundArg;
     }
 
     /// @inheritdoc IAccountBalance
@@ -317,7 +323,7 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
 
         uint256 nLiquidate = getNLiquidate(idealAmountToLiquidate.abs(), minOrderSize, maxOrderSize);
         uint256 maxTimeBound = ((availableCollateral * _SIGMA_IV_BASE) / (6 * sigmaVolmexIv * totalPositionNotional))**2;
-        uint256 timeToWait = (nLiquidate * maxTimeBound) / idealAmountToLiquidate.abs();
+        uint256 timeToWait = maxTimeBound > minTimeBound ? (nLiquidate * maxTimeBound) / idealAmountToLiquidate.abs() : 0;
         nextLiquidationTime[trader] = block.timestamp + timeToWait;
     }
 

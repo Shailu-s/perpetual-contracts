@@ -31,4 +31,5 @@ abstract contract AccountBalanceStorageV1 {
     mapping(address => uint256) public nextLiquidationTime;
     mapping(uint256 => uint256) public sigmaVolmexIvs;
     IMatchingEngine public matchingEngine;
+    uint256 public minTimeBound;
 }
