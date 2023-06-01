@@ -13,6 +13,7 @@ import { IAccountBalance } from "../interfaces/IAccountBalance.sol";
 import { IVolmexBaseToken } from "../interfaces/IVolmexBaseToken.sol";
 import { IPositioningConfig } from "../interfaces/IPositioningConfig.sol";
 import { IVirtualToken } from "../interfaces/IVirtualToken.sol";
+import { IMatchingEngine } from "../interfaces/IMatchingEngine.sol";
 
 import { AccountBalanceStorageV1 } from "../storage/AccountBalanceStorage.sol";
 import { BlockContext } from "../helpers/BlockContext.sol";
@@ -28,7 +29,7 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
     using LibPerpMath for uint160;
     using LibAccountMarket for LibAccountMarket.Info;
 
-    function initialize(address positioningConfigArg, address[2] calldata volmexBaseTokenArgs) external initializer {
+    function initialize(address positioningConfigArg, address[2] calldata volmexBaseTokenArgs, IMatchingEngine matchingEngineArg) external initializer {
         // IPositioningConfig address is not contract
         require(positioningConfigArg.isContract(), "AB_VPMMCNC");
 
@@ -40,6 +41,7 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
         for (uint256 index; index < 2; index++) {
             _underlyingPriceIndexes[volmexBaseTokenArgs[index]] = index;
         }
+        matchingEngine = matchingEngineArg;
         sigmaVolmexIvs[0] = 126; // 0.0126
         sigmaVolmexIvs[1] = 133; // 0.0133
         _grantRole(SM_INTERVAL_ROLE, positioningConfigArg);
