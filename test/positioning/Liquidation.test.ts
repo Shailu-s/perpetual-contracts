@@ -4,7 +4,7 @@ const { Order, Asset, sign, encodeAddress } = require("../order");
 import { FakeContract, smock } from "@defi-wonderland/smock";
 import { BigNumber } from "ethers";
 const { expectRevert, time } = require("@openzeppelin/test-helpers");
-describe("Liquidation test in Positioning", function () {
+describe.only("Liquidation test in Positioning", function () {
   let MatchingEngine;
   let matchingEngine;
   let VirtualToken;
@@ -47,7 +47,7 @@ describe("Liquidation test in Positioning", function () {
 
   const one = ethers.constants.WeiPerEther; // 1e18
   const two = ethers.constants.WeiPerEther.mul(BigNumber.from("2")); // 2e18
-  const fivehundred = ethers.constants.WeiPerEther.mul(BigNumber.from("500")); // 5e18
+  const fivehundred = ethers.constants.WeiPerEther.mul(BigNumber.from("5000")); // 5e18
   const ten = ethers.constants.WeiPerEther.mul(BigNumber.from("100")); // 10e18
   const nine = ethers.constants.WeiPerEther.mul(BigNumber.from("4")); // 10e18
 
@@ -161,6 +161,7 @@ describe("Liquidation test in Positioning", function () {
       positioningConfig.address,
       [volmexBaseToken.address, volmexBaseToken1.address],
       matchingEngine.address,
+      owner.address,
     ]);
     vault = await upgrades.deployProxy(Vault, [
       positioningConfig.address,
@@ -342,7 +343,7 @@ describe("Liquidation test in Positioning", function () {
 
         const accountValue = await vaultController.getAccountValue(account1.address);
 
-        const liquidatbalePositionSize = await accountBalance.getLiquidatablePositionSize(
+        const liquidatbalePositionSize = await accountBalance1.getLiquidatablePositionSize(
           account1.address,
           volmexBaseToken.address,
           accountValue.toString(),
@@ -411,7 +412,7 @@ describe("Liquidation test in Positioning", function () {
         }
         const accountValue = await vaultController.getAccountValue(account1.address);
 
-        const liquidatbalePositionSize = await accountBalance.getLiquidatablePositionSize(
+        const liquidatbalePositionSize = await accountBalance1.getLiquidatablePositionSize(
           account1.address,
           volmexBaseToken.address,
           accountValue.toString(),
@@ -423,7 +424,7 @@ describe("Liquidation test in Positioning", function () {
           await (await perpetualOracle.addIndexObservations([1], [250000000], [proofHash])).wait();
         }
 
-        const liquidatbalePositionSize1 = await accountBalance.getLiquidatablePositionSize(
+        const liquidatbalePositionSize1 = await accountBalance1.getLiquidatablePositionSize(
           account1.address,
           volmexBaseToken1.address,
           accountValue.toString(),
@@ -952,7 +953,8 @@ describe("Liquidation test in Positioning", function () {
             .liquidate(account1.address, volmexBaseToken.address, "1000000000000000000"),
         ).to.be.revertedWith("P_WLD");
       });
-      it.only("should fail to liquidate again", async () => {
+      it("should not fail when liquidation triggered again after min time to liquidate ", async () => {
+        await positioning.setMinPositionSize("10000000000000000000", volmexBaseToken.address);
         await positioning.whitelistLiquidator(account1.address, true);
         await virtualToken.mint(account1.address, fivehundred.toString());
         await virtualToken.mint(account3.address, fivehundred.toString());
@@ -997,8 +999,8 @@ describe("Liquidation test in Positioning", function () {
           ORDER,
           87654321987654,
           account3.address,
-          Asset(volmexBaseToken.address, BigNumber.from("10").mul(one).toString()),
-          Asset(virtualToken.address, BigNumber.from("1000").mul(one).toString()),
+          Asset(volmexBaseToken.address, BigNumber.from("100").mul(one).toString()),
+          Asset(virtualToken.address, BigNumber.from("10000").mul(one).toString()),
           1,
           0,
           true,
@@ -1008,8 +1010,8 @@ describe("Liquidation test in Positioning", function () {
           ORDER,
           87654321987654,
           account4.address,
-          Asset(virtualToken.address, BigNumber.from("1000").mul(one).toString()),
-          Asset(volmexBaseToken.address, BigNumber.from("10").mul(one).toString()),
+          Asset(virtualToken.address, BigNumber.from("10000").mul(one).toString()),
+          Asset(volmexBaseToken.address, BigNumber.from("100").mul(one).toString()),
           1,
           0,
           false,
@@ -1036,8 +1038,8 @@ describe("Liquidation test in Positioning", function () {
           orderLeft.makeAsset.virtualToken,
         );
 
-        expect(positionSize.toString()).to.be.equal("-10000000000000000000");
-        expect(positionSize1.toString()).to.be.equal("10000000000000000000");
+        expect(positionSize.toString()).to.be.equal("-100000000000000000000");
+        expect(positionSize1.toString()).to.be.equal("100000000000000000000");
 
         const accountValue = await vaultController.getAccountValue(account4.address);
 
@@ -1053,8 +1055,8 @@ describe("Liquidation test in Positioning", function () {
         }
         await time.increase(30000);
         for (let index = 0; index < 10; index++) {
-          await (await perpetualOracle.addIndexObservations([0], [60000000], [proofHash])).wait();
-          await (await perpetualOracle.addIndexObservations([1], [60000000], [proofHash])).wait();
+          await (await perpetualOracle.addIndexObservations([0], [25000000], [proofHash])).wait();
+          await (await perpetualOracle.addIndexObservations([1], [25000000], [proofHash])).wait();
         }
         const accountValueafter = await vaultController.getAccountValue(account4.address);
         console.log(accountValueafter.toString(), " account value after");
@@ -1072,15 +1074,146 @@ describe("Liquidation test in Positioning", function () {
         await expect(
           positioning
             .connect(account1)
-            .liquidate(account4.address, volmexBaseToken.address, "2000000000000000000"),
+            .liquidate(account4.address, volmexBaseToken.address, "20000000000000000000"),
         ).to.emit(positioning, "PositionLiquidated");
         console.log("done first liquidation");
-        await time.increase(15);
+        await time.increase(1000);
         await expect(
           positioning
             .connect(account1)
-            .liquidate(account4.address, volmexBaseToken.address, "2000000000000000000"),
+            .liquidate(account4.address, volmexBaseToken.address, "20000000000000000000"),
         ).to.emit(positioning, "PositionLiquidated");
+      });
+      it("should fail to liquidate again", async () => {
+        await positioning.setMinPositionSize("10000000000000000000", volmexBaseToken.address);
+        await positioning.whitelistLiquidator(account1.address, true);
+        await virtualToken.mint(account1.address, fivehundred.toString());
+        await virtualToken.mint(account3.address, fivehundred.toString());
+        await virtualToken.mint(account4.address, fivehundred.toString());
+        await virtualToken.connect(account1).approve(vault.address, fivehundred.toString());
+        await virtualToken.connect(account4).approve(vault.address, fivehundred.toString());
+        await virtualToken.connect(account3).approve(vault.address, fivehundred.toString());
+        await virtualToken
+          .connect(account1)
+          .approve(volmexPerpPeriphery.address, fivehundred.toString());
+        await virtualToken
+          .connect(account3)
+          .approve(volmexPerpPeriphery.address, fivehundred.toString());
+        await virtualToken
+          .connect(account4)
+          .approve(volmexPerpPeriphery.address, fivehundred.toString());
+        await vaultController
+          .connect(account3)
+          .deposit(
+            volmexPerpPeriphery.address,
+            virtualToken.address,
+            account3.address,
+            fivehundred.toString(),
+          );
+        await vaultController
+          .connect(account4)
+          .deposit(
+            volmexPerpPeriphery.address,
+            virtualToken.address,
+            account4.address,
+            fivehundred.toString(),
+          );
+        await vaultController
+          .connect(account1)
+          .deposit(
+            volmexPerpPeriphery.address,
+            virtualToken.address,
+            account1.address,
+            fivehundred.toString(),
+          );
+        const orderLeft = Order(
+          ORDER,
+          87654321987654,
+          account3.address,
+          Asset(volmexBaseToken.address, BigNumber.from("100").mul(one).toString()),
+          Asset(virtualToken.address, BigNumber.from("10000").mul(one).toString()),
+          1,
+          0,
+          true,
+        );
+
+        const orderRight = Order(
+          ORDER,
+          87654321987654,
+          account4.address,
+          Asset(virtualToken.address, BigNumber.from("10000").mul(one).toString()),
+          Asset(volmexBaseToken.address, BigNumber.from("100").mul(one).toString()),
+          1,
+          0,
+          false,
+        );
+        let signatureLeft = await getSignature(orderLeft, account3.address);
+        let signatureRight = await getSignature(orderRight, account4.address);
+
+        await expect(
+          positioning.openPosition(
+            orderLeft,
+            signatureLeft,
+            orderRight,
+            signatureRight,
+            liquidator,
+          ),
+        ).to.emit(positioning, "PositionChanged");
+
+        const positionSize = await accountBalance1.getPositionSize(
+          account3.address,
+          orderLeft.makeAsset.virtualToken,
+        );
+        const positionSize1 = await accountBalance1.getPositionSize(
+          account4.address,
+          orderLeft.makeAsset.virtualToken,
+        );
+
+        expect(positionSize.toString()).to.be.equal("-100000000000000000000");
+        expect(positionSize1.toString()).to.be.equal("100000000000000000000");
+
+        const accountValue = await vaultController.getAccountValue(account4.address);
+
+        const liquidatbalePositionSize = await accountBalance1.getLiquidatablePositionSize(
+          account4.address,
+          volmexBaseToken.address,
+          accountValue.toString(),
+        );
+        expect(liquidatbalePositionSize.toString()).to.be.equal("0");
+        for (let index = 0; index < 10; index++) {
+          await (await perpetualOracle.addIndexObservations([0], [70000000], [proofHash])).wait();
+          await (await perpetualOracle.addIndexObservations([1], [70000000], [proofHash])).wait();
+        }
+        await time.increase(30000);
+        for (let index = 0; index < 10; index++) {
+          await (await perpetualOracle.addIndexObservations([0], [25000000], [proofHash])).wait();
+          await (await perpetualOracle.addIndexObservations([1], [25000000], [proofHash])).wait();
+        }
+        const accountValueafter = await vaultController.getAccountValue(account4.address);
+        console.log(accountValueafter.toString(), " account value after");
+        console.log(
+          (await vaultController.getFreeCollateralByRatio(account4.address, "200000")).toString(),
+          "free collateral by ratio",
+        );
+        // liquidating the position
+        const liquidatbalePositionSize1 = await accountBalance1.getLiquidatablePositionSize(
+          account4.address,
+          volmexBaseToken.address,
+          accountValueafter.toString(),
+        );
+        console.log(liquidatbalePositionSize1.toString(), " position size liquidatable after");
+        await expect(
+          positioning
+            .connect(account1)
+            .liquidate(account4.address, volmexBaseToken.address, "20000000000000000000"),
+        ).to.emit(positioning, "PositionLiquidated");
+
+        // liquidating again before before next liquidation
+        await expect(
+          positioning
+            .connect(account1)
+            .liquidate(account4.address, volmexBaseToken.address, "20000000000000000000"),
+        ).to.be.revertedWith("AB_ELT");
       });
       it("should get liquidatable position of a trader", async () => {
         let signatureLeft = await getSignature(orderLeft, account1.address);
