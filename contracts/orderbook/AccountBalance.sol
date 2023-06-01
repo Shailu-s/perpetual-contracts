@@ -255,8 +255,11 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
         indexPrice = _getIndexPrice(baseToken, twInterval);
     }
 
-    function getNextLiquidationTime(address trader) external view returns (uint256) {
-        return nextLiquidationTime[trader];
+    /// @dev This function checks if account of trader is eligible for liquidation
+    function isAccountLiquidatable(address trader, address baseToken, uint256 minOrderSize, int256 accountValue) external view returns (bool isLiquidatable) {
+        uint256 timeToWait = getLiquidationTimeToWait(trader, baseToken, accountValue, minOrderSize);
+        if (nextLiquidationTime[trader] + timeToWait > block.timestamp) return false;
+        return accountValue < getMarginRequirementForLiquidation(trader);
     }
 
     /// @inheritdoc IAccountBalance
