@@ -129,6 +129,16 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
         _deregisterBaseToken(trader, baseToken);
     }
 
+    function updateSigmaVolmexIvs(uint256[] memory _indexes, uint256[] memory _sigmaVivs) external virtual {
+        _requireSigmaIvRole();
+        uint256 totalIndex = _indexes.length;
+        for (uint256 index; index < totalIndex; ++index) {
+            require(sigmaVolmexIvs[index] > 0, "PerpOracle: not zero");
+            sigmaVolmexIvs[index] = _sigmaVivs[index];
+        }
+        emit SigmaVolmexIvsUpdated(_indexes, _sigmaVivs);
+    }
+
     /// @inheritdoc IAccountBalance
     function getPositioningConfig() external view override returns (address) {
         return _positioningConfig;
@@ -384,6 +394,10 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
 
     function _requireSmIntervalRole() internal view {
         require(hasRole(SM_INTERVAL_ROLE, _msgSender()), "AccountBalance: Not sm interval role");
+    }
+
+    function _requireSigmaIvRole() internal view {
+        require(hasRole(SIGMA_IV_ROLE, _msgSender()), "AccountBalance: Not sm interval role");
     }
 
     function _hasBaseToken(address[] memory baseTokens, address baseToken) internal pure returns (bool) {

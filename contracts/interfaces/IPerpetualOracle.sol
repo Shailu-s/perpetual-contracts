@@ -23,7 +23,6 @@ interface IPerpetualOracle {
     event ObservationAdderSet(address indexed matchingEngine);
     event IndexObservationAdded(uint256[] index, uint256[] underlyingPrice, uint256 timestamp);
     event MarkObservationAdded(uint256 indexed index, uint256 lastPrice, uint256 markPrice, uint256 timestamp);
-    event SigmaVivsUpdated(uint256[] index, uint256[] sigmaVivs);
 
     function __PerpetualOracle_init(
         address[2] calldata _baseToken,
@@ -81,5 +80,4 @@ interface IPerpetualOracle {
 
     function indexByBaseToken(address _baseToken) external view returns (uint256 index);
     function initialTimestamps(uint256 _index) external view returns (uint256 timestamp);
-    function sigmaVivs(uint256 _index) external view returns (uint256 sigmaViv);
 }

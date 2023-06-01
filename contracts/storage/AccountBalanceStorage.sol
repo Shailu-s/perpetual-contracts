@@ -13,6 +13,7 @@ abstract contract AccountBalanceStorageV1 {
     bytes32 public constant ACCOUNT_BALANCE_ADMIN = keccak256("ACCOUNT_BALANCE_ADMIN");
     bytes32 public constant CAN_SETTLE_REALIZED_PNL = keccak256("CAN_SETTLE_REALIZED_PNL");
     bytes32 public constant SM_INTERVAL_ROLE = keccak256("SM_INTERVAL_ROLE");
+    bytes32 public constant SIGMA_IV_ROLE = keccak256("SIGMA_IV_ROLE");
     address internal _positioningConfig;
     address internal _orderBook;
     uint256 internal _smInterval;
@@ -26,4 +27,5 @@ abstract contract AccountBalanceStorageV1 {
     // Index price oracle underlying index
     mapping(address => uint256) _underlyingPriceIndexes;
     mapping(address => uint256) public nextLiquidationTime;
+    mapping(uint256 => uint256) public sigmaVolmexIvs;
 }
