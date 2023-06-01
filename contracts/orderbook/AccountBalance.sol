@@ -300,20 +300,24 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
         return _baseTokensMap[trader];
     }
 
+    function getNLiquidate(uint256 liquidatablePositionSize, uint256 minOrderSize, uint256 maxOrderSize) public view returns (uint256 nLiquidate) {
+        nLiquidate = (liquidatablePositionSize.umin((_getFuzzyMaxOrderSize(minOrderSize, maxOrderSize))).umax(minOrderSize));
+    }
+
     function checkAndUpdateLiquidationTimeToWait(address trader, address baseToken, int256 accountValue, uint256 minOrderSize) external {
         _requireOnlyPositioning();
         require(nextLiquidationTime[trader] <= block.timestamp, "AB_ELT"); // early liquidation triggered
 
         (, int256 unrealizedPnl) = getPnlAndPendingFee(trader);
-        int256 availableCollateral = accountValue - unrealizedPnl;
+        uint256 availableCollateral = (accountValue - unrealizedPnl).abs();
         uint256 maxOrderSize = matchingEngine.getMaxOrderSizeInHr(baseToken);
-        int256 sigmaVolmexIv = (sigmaVolmexIvs[_underlyingPriceIndexes[baseToken]]).toInt256();
-        int256 liquidatablePositionSize = getLiquidatablePositionSize(trader, baseToken, accountValue);
-        int256 totalPositionNotional = getTotalAbsPositionValue(trader).toInt256();
+        uint256 sigmaVolmexIv = (sigmaVolmexIvs[_underlyingPriceIndexes[baseToken]]);
+        int256 idealAmountToLiquidate = getLiquidatablePositionSize(trader, baseToken, accountValue);
+        uint256 totalPositionNotional = getTotalAbsPositionValue(trader);
 
-        int256 nLiquidate = (liquidatablePositionSize.min(_getFuzzyMaxOrderSize(minOrderSize, maxOrderSize))).max(minOrderSize.toInt256());
-        int256 maxTimeBound = ((availableCollateral * _SIGMA_IV_BASE) / (6 * sigmaVolmexIv * totalPositionNotional))**2;
-        uint256 timeToWait = uint256((nLiquidate * maxTimeBound) / liquidatablePositionSize);
+        uint256 nLiquidate = getNLiquidate(idealAmountToLiquidate.abs(), minOrderSize, maxOrderSize);
+        uint256 maxTimeBound = ((availableCollateral * _SIGMA_IV_BASE) / (6 * sigmaVolmexIv * totalPositionNotional))**2;
+        uint256 timeToWait = (nLiquidate * maxTimeBound) / idealAmountToLiquidate.abs();
         nextLiquidationTime[trader] = block.timestamp + timeToWait;
     }
 
@@ -392,12 +396,12 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
         return (totalTakerQuoteBalance);
     }
 
-    function _getFuzzyMaxOrderSize(uint256 minOrderSize, uint256 maxOrderSize) internal view returns (int256 fuzzyMaxOrderSize) {
+    function _getFuzzyMaxOrderSize(uint256 minOrderSize, uint256 maxOrderSize) internal view returns (uint256 fuzzyMaxOrderSize) {
         uint128 uint128Max = type(uint128).max;
         uint256 pseudoRandomNumber128Bits = uint128(uint128Max & uint256(keccak256(abi.encodePacked(block.difficulty, blockhash(block.number - 1), block.timestamp))));
         uint256 pseudoRandomOrderSize = (maxOrderSize * (((pseudoRandomNumber128Bits * 2 * 10 ** 17)/uint128Max) + 8 * 10**17)) / 10**18;
 
-        fuzzyMaxOrderSize = LibPerpMath.max(minOrderSize.toInt256(), pseudoRandomOrderSize.toInt256());
+        fuzzyMaxOrderSize = LibPerpMath.umax(minOrderSize, pseudoRandomOrderSize);
     }
 
     function _requireAccountBalanceAdmin() internal view {
