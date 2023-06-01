@@ -72,7 +72,7 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
     }
 
     function setMinTimeBound(uint256 minTimeBoundArg) external virtual {
-        _requireSigmaIvRole();
+        _requireMinTimeBoundRole();
         require(minTimeBoundArg > 300, "AB_NS5"); // not smaller than 5 mins
         minTimeBound = minTimeBoundArg;
     }
@@ -180,13 +180,7 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
             return 0;
         }
 
-        // Liquidate the entire position if its value is small enough
-        // to prevent tiny positions left in the system
         uint256 positionValueAbs = getTotalPositionValue(trader, baseToken, _smIntervalLiquidation).abs();
-        if (positionValueAbs <= _MIN_PARTIAL_LIQUIDATE_POSITION_VALUE) {
-            return positionSize;
-        }
-
         // Liquidator can only take over partial position if margin ratio is ≥ 3.125% (aka the half of mmRatio).
         // If margin ratio < 3.125%, liquidator can take over the entire position.
         //
@@ -428,6 +422,10 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
     }
 
     function _requireSigmaIvRole() internal view {
+        require(hasRole(SIGMA_IV_ROLE, _msgSender()), "AccountBalance: Not sigma IV role");
+    }
+
+    function _requireMinTimeBoundRole() internal view {
         require(hasRole(SIGMA_IV_ROLE, _msgSender()), "AccountBalance: Not sigma IV role");
     }
 
