@@ -233,7 +233,7 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
     }
 
     /// @inheritdoc IAccountBalance
-    function getPnlAndPendingFee(address trader) external view virtual override returns (int256, int256) {
+    function getPnlAndPendingFee(address trader) public view virtual override returns (int256, int256) {
         int256 totalPositionValue;
         uint256 tokenLen = _baseTokensMap[trader].length;
         for (uint256 i = 0; i < tokenLen; i++) {
@@ -299,13 +299,19 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
         return _baseTokensMap[trader];
     }
 
-    function checkAndUpdateLiquidationTimeToWait(address trader, address baseToken, int256 accountValue, uint256 minOrderSize, uint256 maxOrderSize, int256 availableCollateral, int256 sigmaViv) external {
+    function checkAndUpdateLiquidationTimeToWait(address trader, address baseToken, int256 accountValue, uint256 minOrderSize) external {
         _requireOnlyPositioning();
+        (, int256 unrealizedPnl) = getPnlAndPendingFee(trader);
+        int256 availableCollateral = accountValue - unrealizedPnl;
+        uint256 maxOrderSize = matchingEngine.getMaxOrderSize(baseToken);
+        int256 sigmaVolmexIv = (sigmaVolmexIvs[_underlyingPriceIndexes[baseToken]]).toInt256();
         int256 liquidatablePositionSize = getLiquidatablePositionSize(trader, baseToken, accountValue);
-        int256 nLiquidate = (liquidatablePositionSize.min(_getFuzzyMaxOrderSize(minOrderSize, maxOrderSize))).max(minOrderSize.toInt256());
         int256 totalPositionNotional = getTotalAbsPositionValue(trader).toInt256();
-        int256 maxTimeBound = (availableCollateral / (6 * sigmaViv * totalPositionNotional)) ** 2;
+
+        int256 nLiquidate = (liquidatablePositionSize.min(_getFuzzyMaxOrderSize(minOrderSize, maxOrderSize))).max(minOrderSize.toInt256());
+        int256 maxTimeBound = (availableCollateral / (6 * sigmaVolmexIv * totalPositionNotional)) ** 2;
         uint256 timeToWait = uint256((nLiquidate * maxTimeBound) / liquidatablePositionSize);
+
         require(nextLiquidationTime[trader] <= block.timestamp, "AB_ELT"); // early liquidation triggered
         nextLiquidationTime[trader] = block.timestamp + timeToWait;
     }
