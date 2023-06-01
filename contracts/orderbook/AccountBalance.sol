@@ -29,7 +29,12 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
     using LibPerpMath for uint160;
     using LibAccountMarket for LibAccountMarket.Info;
 
-    function initialize(address positioningConfigArg, address[2] calldata volmexBaseTokenArgs, IMatchingEngine matchingEngineArg, address adminArg) external initializer {
+    function initialize(
+        address positioningConfigArg,
+        address[2] calldata volmexBaseTokenArgs,
+        IMatchingEngine matchingEngineArg,
+        address adminArg
+    ) external initializer {
         // IPositioningConfig address is not contract
         require(positioningConfigArg.isContract(), "AB_VPMMCNC");
 
@@ -305,17 +310,26 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
         return _baseTokensMap[trader];
     }
 
-    function getNLiquidate(uint256 liquidatablePositionSize, uint256 minOrderSize, uint256 maxOrderSize) public view returns (uint256 nLiquidate) {
+    function getNLiquidate(
+        uint256 liquidatablePositionSize,
+        uint256 minOrderSize,
+        uint256 maxOrderSize
+    ) public view returns (uint256 nLiquidate) {
         nLiquidate = (liquidatablePositionSize.umin((_getFuzzyMaxOrderSize(minOrderSize, maxOrderSize))).umax(minOrderSize));
     }
 
-    function getLiquidationTimeToWait(address trader, address baseToken, int256 accountValue, uint256 minOrderSize) public view returns (uint256 timeToWait) {
+    function getLiquidationTimeToWait(
+        address trader,
+        address baseToken,
+        int256 accountValue,
+        uint256 minOrderSize
+    ) public view returns (uint256 timeToWait) {
         (, int256 unrealizedPnl) = getPnlAndPendingFee(trader);
         int256 availableCollateral = (accountValue - unrealizedPnl);
         uint256 maxOrderSize = matchingEngine.getMaxOrderSizeInHr(baseToken);
         uint256 sigmaVolmexIv = (sigmaVolmexIvs[_underlyingPriceIndexes[baseToken]]);
         int256 idealAmountToLiquidate = getLiquidatablePositionSize(trader, baseToken, accountValue);
-        require(idealAmountToLiquidate > 0, "AB_LNZ"); // liquidate amount should be gt zero
+        require(idealAmountToLiquidate.abs() > 0, "AB_LNZ"); // liquidate amount should be gt zero
 
         uint256 totalPositionNotional = getTotalAbsPositionValue(trader);
         uint256 nLiquidate = getNLiquidate(idealAmountToLiquidate.abs(), minOrderSize, maxOrderSize);
@@ -323,7 +337,12 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
         timeToWait = maxTimeBound > minTimeBound ? (nLiquidate * maxTimeBound) / uint256(idealAmountToLiquidate) : 0;
     }
 
-    function checkAndUpdateLiquidationTimeToWait(address trader, address baseToken, int256 accountValue, uint256 minOrderSize) external {
+    function checkAndUpdateLiquidationTimeToWait(
+        address trader,
+        address baseToken,
+        int256 accountValue,
+        uint256 minOrderSize
+    ) external {
         _requireOnlyPositioning();
         uint256 timeToWait = getLiquidationTimeToWait(trader, baseToken, accountValue, minOrderSize);
         if (timeToWait > 0) require(nextLiquidationTime[trader] <= block.timestamp, "AB_ELT"); // early liquidation triggered
@@ -408,7 +427,7 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
     function _getFuzzyMaxOrderSize(uint256 minOrderSize, uint256 maxOrderSize) internal view returns (uint256 fuzzyMaxOrderSize) {
         uint128 uint128Max = type(uint128).max;
         uint256 pseudoRandomNumber128Bits = uint128(uint128Max & uint256(keccak256(abi.encodePacked(block.difficulty, blockhash(block.number - 1), block.timestamp))));
-        uint256 pseudoRandomOrderSize = (maxOrderSize * (((pseudoRandomNumber128Bits * 2 * 10 ** 17)/uint128Max) + 8 * 10**17)) / 10**18;
+        uint256 pseudoRandomOrderSize = (maxOrderSize * (((pseudoRandomNumber128Bits * 2 * 10**17) / uint128Max) + 8 * 10**17)) / 10**18;
 
         fuzzyMaxOrderSize = LibPerpMath.umax(minOrderSize, pseudoRandomOrderSize);
     }
