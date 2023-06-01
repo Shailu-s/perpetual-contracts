@@ -309,7 +309,7 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
         int256 totalPositionNotional = getTotalAbsPositionValue(trader).toInt256();
 
         int256 nLiquidate = (liquidatablePositionSize.min(_getFuzzyMaxOrderSize(minOrderSize, maxOrderSize))).max(minOrderSize.toInt256());
-        int256 maxTimeBound = ((availableCollateral / (6 * sigmaVolmexIv * totalPositionNotional)) ** 2) / _SIGMA_IV_BASE;
+        int256 maxTimeBound = ((availableCollateral * _SIGMA_IV_BASE) / (6 * sigmaVolmexIv * totalPositionNotional))**2;
         uint256 timeToWait = uint256((nLiquidate * maxTimeBound) / liquidatablePositionSize);
 
         require(nextLiquidationTime[trader] <= block.timestamp, "AB_ELT"); // early liquidation triggered
