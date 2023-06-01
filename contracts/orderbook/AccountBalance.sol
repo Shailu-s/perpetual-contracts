@@ -42,8 +42,8 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
             _underlyingPriceIndexes[volmexBaseTokenArgs[index]] = index;
         }
         matchingEngine = matchingEngineArg;
-        sigmaVolmexIvs[0] = 126; // 0.0126
-        sigmaVolmexIvs[1] = 133; // 0.0133
+        sigmaVolmexIvs[0] = 12600; // 0.0126
+        sigmaVolmexIvs[1] = 13300; // 0.0133
         _grantRole(SM_INTERVAL_ROLE, positioningConfigArg);
         _grantRole(ACCOUNT_BALANCE_ADMIN, _msgSender());
     }
@@ -301,9 +301,11 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
 
     function checkAndUpdateLiquidationTimeToWait(address trader, address baseToken, int256 accountValue, uint256 minOrderSize) external {
         _requireOnlyPositioning();
+        require(nextLiquidationTime[trader] <= block.timestamp, "AB_ELT"); // early liquidation triggered
+
         (, int256 unrealizedPnl) = getPnlAndPendingFee(trader);
         int256 availableCollateral = accountValue - unrealizedPnl;
-        uint256 maxOrderSize = matchingEngine.getMaxOrderSize(baseToken);
+        uint256 maxOrderSize = matchingEngine.getMaxOrderSizeInHr(baseToken);
         int256 sigmaVolmexIv = (sigmaVolmexIvs[_underlyingPriceIndexes[baseToken]]).toInt256();
         int256 liquidatablePositionSize = getLiquidatablePositionSize(trader, baseToken, accountValue);
         int256 totalPositionNotional = getTotalAbsPositionValue(trader).toInt256();
@@ -311,8 +313,6 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
         int256 nLiquidate = (liquidatablePositionSize.min(_getFuzzyMaxOrderSize(minOrderSize, maxOrderSize))).max(minOrderSize.toInt256());
         int256 maxTimeBound = ((availableCollateral * _SIGMA_IV_BASE) / (6 * sigmaVolmexIv * totalPositionNotional))**2;
         uint256 timeToWait = uint256((nLiquidate * maxTimeBound) / liquidatablePositionSize);
-
-        require(nextLiquidationTime[trader] <= block.timestamp, "AB_ELT"); // early liquidation triggered
         nextLiquidationTime[trader] = block.timestamp + timeToWait;
     }
 
