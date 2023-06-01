@@ -11,7 +11,7 @@ abstract contract AccountBalanceStorageV1 {
     int256 internal constant _ORACLE_BASE = 1000000;
     uint256 internal constant _DUST = 10 wei;
     uint256 internal constant _MIN_PARTIAL_LIQUIDATE_POSITION_VALUE = 100e18 wei; // 100 USD in decimal 18
-    uint256 internal constant _SIGMA_IV_BASE = 10000;
+    int256 internal constant _SIGMA_IV_BASE = 10000;
     bytes32 public constant ACCOUNT_BALANCE_ADMIN = keccak256("ACCOUNT_BALANCE_ADMIN");
     bytes32 public constant CAN_SETTLE_REALIZED_PNL = keccak256("CAN_SETTLE_REALIZED_PNL");
     bytes32 public constant SM_INTERVAL_ROLE = keccak256("SM_INTERVAL_ROLE");
