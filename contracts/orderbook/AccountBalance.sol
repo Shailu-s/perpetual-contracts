@@ -150,8 +150,8 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
         _requireSigmaIvRole();
         uint256 totalIndex = _indexes.length;
         for (uint256 index; index < totalIndex; ++index) {
-            require(sigmaVolmexIvs[index] > 0, "AccountBalance: not zero");
-            sigmaVolmexIvs[index] = _sigmaVivs[index];
+            require(_sigmaVivs[index] > 0, "AccountBalance: not zero");
+            sigmaVolmexIvs[_indexes[index]] = _sigmaVivs[index];
         }
         emit SigmaVolmexIvsUpdated(_indexes, _sigmaVivs);
     }
@@ -261,7 +261,12 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
     }
 
     /// @dev This function checks if account of trader is eligible for liquidation
-    function isAccountLiquidatable(address trader, address baseToken, uint256 minOrderSize, int256 accountValue) external view returns (bool isLiquidatable) {
+    function isAccountLiquidatable(
+        address trader,
+        address baseToken,
+        uint256 minOrderSize,
+        int256 accountValue
+    ) external view returns (bool isLiquidatable) {
         uint256 timeToWait = getLiquidationTimeToWait(trader, baseToken, accountValue, minOrderSize);
         if (nextLiquidationTime[trader] + timeToWait > block.timestamp) return false;
         return accountValue < getMarginRequirementForLiquidation(trader);
