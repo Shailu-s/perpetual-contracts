@@ -432,7 +432,7 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
         uint256 pseudoRandomNumber128Bits = uint128(uint128Max & uint256(keccak256(abi.encodePacked(block.difficulty, blockhash(block.number - 1), block.timestamp))));
         uint256 pseudoRandomOrderSize = (maxOrderSize * (((pseudoRandomNumber128Bits * 2 * 10**17) / uint128Max) + 8 * 10**17)) / 10**18;
 
-        fuzzyMaxOrderSize = LibPerpMath.umax(minOrderSize, pseudoRandomOrderSize);
+        fuzzyMaxOrderSize = minOrderSize.umax(pseudoRandomOrderSize);
     }
 
     function _requireAccountBalanceAdmin() internal view {
