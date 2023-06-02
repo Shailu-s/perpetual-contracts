@@ -144,6 +144,8 @@ describe("Global", function () {
     accountBalance = await upgrades.deployProxy(AccountBalance, [
       positioningConfig.address,
       [volmexBaseToken.address, volmexBaseToken.address],
+      matchingEngine.address,
+      owner.address,
     ]);
     await accountBalance.deployed();
     await (await perpView.setAccount(accountBalance.address)).wait();

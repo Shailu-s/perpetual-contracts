@@ -119,16 +119,6 @@ describe("Market Registry", function () {
     positioningConfig = await upgrades.deployProxy(PositioningConfig, [perpetualOracle.address]);
     await positioningConfig.deployed();
     await perpetualOracle.grantSmaIntervalRole(positioningConfig.address);
-    accountBalance = await upgrades.deployProxy(AccountBalance, [
-      positioningConfig.address,
-      [volmexBaseToken.address, volmexBaseToken.address],
-    ]);
-    await accountBalance.deployed();
-
-    USDC = await TestERC20.deploy();
-    await USDC.__TestERC20_init("TestUSDC", "USDC", 6);
-    await USDC.deployed();
-
     matchingEngine = await upgrades.deployProxy(
       MatchingEngine,
       [owner.address, perpetualOracle.address],
@@ -136,6 +126,17 @@ describe("Market Registry", function () {
         initializer: "__MatchingEngineTest_init",
       },
     );
+    accountBalance = await upgrades.deployProxy(AccountBalance, [
+      positioningConfig.address,
+      [volmexBaseToken.address, volmexBaseToken.address],
+      matchingEngine.address,
+      owner.address,
+    ]);
+    await accountBalance.deployed();
+
+    USDC = await TestERC20.deploy();
+    await USDC.__TestERC20_init("TestUSDC", "USDC", 6);
+    await USDC.deployed();
 
     await perpetualOracle.setMarkObservationAdder(matchingEngine.address);
 

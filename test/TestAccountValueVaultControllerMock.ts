@@ -60,6 +60,8 @@ describe("Vault Controller Mock tests for account value", function () {
     accountBalance = await upgrades.deployProxy(accountBalanceFactory, [
       positioningConfig.address,
       [alice.address, alice.address],
+      alice.address,
+      owner.address,
     ]);
 
     const vaultControllerFactory = await ethers.getContractFactory("VaultController");

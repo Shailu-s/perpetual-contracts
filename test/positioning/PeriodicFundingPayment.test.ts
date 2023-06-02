@@ -151,6 +151,8 @@ describe("Periodic Funding payment", function () {
     accountBalance1 = await upgrades.deployProxy(AccountBalance, [
       positioningConfig.address,
       [volmexBaseToken.address, volmexBaseToken1.address],
+      matchingEngine.address,
+      owner.address,
     ]);
 
     await accountBalance1.deployed();
@@ -1497,6 +1499,8 @@ describe("Periodic Funding payment", function () {
       accountBalance1 = await upgrades.deployProxy(AccountBalance, [
         positioningConfig.address,
         [volmexBaseToken.address, volmexBaseToken1.address],
+        matchingEngine.address,
+        owner.address,
       ]);
 
       await accountBalance1.deployed();
