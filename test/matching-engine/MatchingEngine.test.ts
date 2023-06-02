@@ -121,9 +121,18 @@ describe("MatchingEngine", function () {
     positioningConfig = await upgrades.deployProxy(PositioningConfig, [perpetualOracle.address]);
     await positioningConfig.deployed();
     await perpetualOracle.grantSmaIntervalRole(positioningConfig.address);
+    matchingEngine = await upgrades.deployProxy(
+      MatchingEngine,
+      [owner.address, perpetualOracle.address],
+      {
+        initializer: "__MatchingEngineTest_init",
+      },
+    );
     accountBalance = await upgrades.deployProxy(AccountBalance, [
       positioningConfig.address,
       [volmexBaseToken.address, volmexBaseToken1.address],
+      matchingEngine.address,
+      owner.address,
     ]);
     await accountBalance.deployed();
     vaultController = await upgrades.deployProxy(VaultController, [
@@ -135,14 +144,6 @@ describe("MatchingEngine", function () {
     USDC = await TestERC20.deploy();
     await USDC.__TestERC20_init("TestUSDC", "USDC", 6);
     await USDC.deployed();
-
-    matchingEngine = await upgrades.deployProxy(
-      MatchingEngine,
-      [owner.address, perpetualOracle.address],
-      {
-        initializer: "__MatchingEngineTest_init",
-      },
-    );
 
     await perpetualOracle.setMarkObservationAdder(matchingEngine.address);
 
@@ -2058,7 +2059,9 @@ describe("MatchingEngine", function () {
           [1, 2],
           ["10000000000000000000", "10000000000000000000"],
         );
-      const maxOrderSizeBefore = await matchingEngine.getMaxOrderSizeOverTime(volmexBaseToken.address);
+      const maxOrderSizeBefore = await matchingEngine.getMaxOrderSizeOverTime(
+        volmexBaseToken.address,
+      );
       expect(maxOrderSizeBefore.toString()).to.be.equal("10000000000000000000");
       const orderLeft1 = Order(
         ORDER,
@@ -2089,7 +2092,9 @@ describe("MatchingEngine", function () {
           [3, 4],
           ["35000000000000000000", "35000000000000000000"],
         );
-      const maxOrderSizeAfter = await matchingEngine.getMaxOrderSizeOverTime(volmexBaseToken.address);
+      const maxOrderSizeAfter = await matchingEngine.getMaxOrderSizeOverTime(
+        volmexBaseToken.address,
+      );
       expect(maxOrderSizeAfter.toString()).to.be.equal("35000000000000000000");
     });
     it("Should get max order size of last one hour", async () => {
@@ -2125,7 +2130,9 @@ describe("MatchingEngine", function () {
 
       // increase time by  3400 seconds < one hou
       await time.increase(3400);
-      const maxOrderSizeBefore = await matchingEngine.getMaxOrderSizeOverTime(volmexBaseToken.address);
+      const maxOrderSizeBefore = await matchingEngine.getMaxOrderSizeOverTime(
+        volmexBaseToken.address,
+      );
       expect(maxOrderSizeBefore.toString()).to.be.equal("10000000000000000000");
       await time.increase(100);
       const orderLeft1 = Order(
@@ -2187,7 +2194,9 @@ describe("MatchingEngine", function () {
           ["60000000000000000000", "60000000000000000000"],
         );
 
-      const maxOrderSizeAfter = await matchingEngine.getMaxOrderSizeOverTime(volmexBaseToken.address);
+      const maxOrderSizeAfter = await matchingEngine.getMaxOrderSizeOverTime(
+        volmexBaseToken.address,
+      );
       expect(maxOrderSizeAfter.toString()).to.be.equal("60000000000000000000");
     });
     it("Should set order size interval and further max order size should be fetched under new interval", async () => {
@@ -2222,7 +2231,9 @@ describe("MatchingEngine", function () {
           [1, 2],
           ["10000000000000000000", "10000000000000000000"],
         );
-      const maxOrderSizeBefore = await matchingEngine.getMaxOrderSizeOverTime(volmexBaseToken.address);
+      const maxOrderSizeBefore = await matchingEngine.getMaxOrderSizeOverTime(
+        volmexBaseToken.address,
+      );
       expect(maxOrderSizeBefore.toString()).to.be.equal("10000000000000000000");
       // increase time by one hour
       await time.increase(3600);
@@ -2400,7 +2411,9 @@ describe("MatchingEngine", function () {
           [1, 2],
           ["10000000000000000000", "10000000000000000000"],
         );
-      const maxOrderSizeBefore = await matchingEngine.getMaxOrderSizeOverTime(volmexBaseToken.address);
+      const maxOrderSizeBefore = await matchingEngine.getMaxOrderSizeOverTime(
+        volmexBaseToken.address,
+      );
       expect(maxOrderSizeBefore.toString()).to.be.equal("10000000000000000000");
       // increase time by  3400 seconds < one hou
       await time.increase(3600);
@@ -2435,7 +2448,9 @@ describe("MatchingEngine", function () {
           ["3000000000000000000", "3000000000000000000"],
         );
       // new fill on the begining of new hour 3000000000000000000
-      const updatedMaxOrderSize = await matchingEngine.getMaxOrderSizeOverTime(volmexBaseToken.address);
+      const updatedMaxOrderSize = await matchingEngine.getMaxOrderSizeOverTime(
+        volmexBaseToken.address,
+      );
       expect(updatedMaxOrderSize.toString()).to.be.equal("3000000000000000000");
     });
     it("Should set the max order size only for that hour", async () => {
@@ -2468,7 +2483,9 @@ describe("MatchingEngine", function () {
           [1, 2],
           ["12000000000000000000", "12000000000000000000"],
         );
-      const maxOrderSizeBefore = await matchingEngine.getMaxOrderSizeOverTime(volmexBaseToken.address);
+      const maxOrderSizeBefore = await matchingEngine.getMaxOrderSizeOverTime(
+        volmexBaseToken.address,
+      );
       expect(maxOrderSizeBefore.toString()).to.be.equal("12000000000000000000");
 
       // increasing time by 30 minutes
@@ -2502,7 +2519,9 @@ describe("MatchingEngine", function () {
           [3, 4],
           ["20000000000000000000", "20000000000000000000"],
         );
-      let maxOrderSizeUpdated = await matchingEngine.getMaxOrderSizeOverTime(volmexBaseToken.address);
+      let maxOrderSizeUpdated = await matchingEngine.getMaxOrderSizeOverTime(
+        volmexBaseToken.address,
+      );
       expect(maxOrderSizeUpdated.toString()).to.be.equal("20000000000000000000");
       // since  new fill is greater than previous one
 
@@ -2604,7 +2623,9 @@ describe("MatchingEngine", function () {
           [1, 2],
           ["12000000000000000000", "12000000000000000000"],
         );
-      const maxOrderSizeBefore = await matchingEngine.getMaxOrderSizeOverTime(volmexBaseToken.address);
+      const maxOrderSizeBefore = await matchingEngine.getMaxOrderSizeOverTime(
+        volmexBaseToken.address,
+      );
       expect(maxOrderSizeBefore.toString()).to.be.equal("12000000000000000000");
 
       const orderLeft1 = Order(
