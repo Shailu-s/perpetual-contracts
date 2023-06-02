@@ -30,7 +30,7 @@ abstract contract MatchingEngineCore is IMatchingEngine, PausableUpgradeable, As
     mapping(bytes32 => uint256) public fills;
     mapping(address => uint256) public orderSizeInitialTimestampCache; // stores initial timestamp of matched order by base token
     mapping(address => MaxOrderSizeInfo) public maxOrderSize; // store max order size and timestamp of that update by base token
-    uint256 public orderSizeInterval; // used to store max order size interval, currently one hour
+    uint256 public orderSizeLookBackWindow; // used to store max order size interval, currently one hour
 
     //events
     event Canceled(bytes32 indexed hash, address trader, address baseToken, uint256 amount, uint256 salt);
@@ -113,7 +113,7 @@ abstract contract MatchingEngineCore is IMatchingEngine, PausableUpgradeable, As
     function updateOrderSizeInterval(uint256 _interval) external {
         _requireMatchingEngineAdmin();
         require(_interval >= 600, "MEC_SMI"); // _interval value should not be less than 10 mins
-        orderSizeInterval = _interval;
+        orderSizeLookBackWindow = _interval;
         emit OrderSizeIntervalUpdated(_interval);
     }
 
@@ -121,8 +121,8 @@ abstract contract MatchingEngineCore is IMatchingEngine, PausableUpgradeable, As
     function getMaxOrderSizeOverTime(address baseToken) external view returns (uint256 size) { /// @dev default order size will be zero
         MaxOrderSizeInfo memory maxOrder = maxOrderSize[baseToken];
         if (
-            (block.timestamp - orderSizeInitialTimestampCache[baseToken]) / orderSizeInterval ==
-            (maxOrder.timestamp - orderSizeInitialTimestampCache[baseToken]) / orderSizeInterval
+            (block.timestamp - orderSizeInitialTimestampCache[baseToken]) / orderSizeLookBackWindow ==
+            (maxOrder.timestamp - orderSizeInitialTimestampCache[baseToken]) / orderSizeLookBackWindow
         ) {
             size = maxOrder.value;
         }
@@ -163,8 +163,8 @@ abstract contract MatchingEngineCore is IMatchingEngine, PausableUpgradeable, As
         uint256 currentTimestamp = block.timestamp;
         MaxOrderSizeInfo memory maxOrder = maxOrderSize[baseToken];
         if (
-            (currentTimestamp - orderSizeInitialTimestampCache[baseToken]) / orderSizeInterval ==
-            (maxOrder.timestamp - orderSizeInitialTimestampCache[baseToken]) / orderSizeInterval
+            (currentTimestamp - orderSizeInitialTimestampCache[baseToken]) / orderSizeLookBackWindow ==
+            (maxOrder.timestamp - orderSizeInitialTimestampCache[baseToken]) / orderSizeLookBackWindow
         ) {
             if (maxOrder.value < baseValue) {
                 maxOrderSize[baseToken] = MaxOrderSizeInfo({ value: baseValue, timestamp: currentTimestamp });
