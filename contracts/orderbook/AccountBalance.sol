@@ -329,7 +329,7 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
     ) public view returns (uint256 timeToWait) {
         (, int256 unrealizedPnl) = getPnlAndPendingFee(trader);
         int256 availableCollateral = (accountValue - unrealizedPnl);
-        uint256 maxOrderSize = matchingEngine.getMaxOrderSizeInHr(baseToken);
+        uint256 maxOrderSize = matchingEngine.getMaxOrderSizeOverTime(baseToken);
         uint256 sigmaVolmexIv = (sigmaVolmexIvs[_underlyingPriceIndexes[baseToken]]);
         int256 idealAmountToLiquidate = getLiquidatablePositionSize(trader, baseToken, accountValue);
         require(idealAmountToLiquidate.abs() > 0, "AB_LNZ"); // liquidate amount should be gt zero

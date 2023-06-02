@@ -13,5 +13,5 @@ interface IMatchingEngine {
     function grantMatchOrders(address account) external;
     function fills(bytes32 orderHashKey) external view returns (uint256);
     function makerMinSalt(address trader) external view returns (uint256);
-    function getMaxOrderSizeInHr(address baseToken) external view returns (uint256 size);
+    function getMaxOrderSizeOverTime(address baseToken) external view returns (uint256 size);
 }
