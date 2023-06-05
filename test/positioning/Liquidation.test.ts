@@ -775,18 +775,11 @@ describe("Liquidation test in Positioning", function () {
         await expect(positionSize.toString()).to.be.equal("-2000000000000000000");
         await expect(positionSize1.toString()).to.be.equal("2000000000000000000");
 
-        await time.increase(14400);
         const proofHash = "0x6c00000000000000000000000000000000000000000000000000000000000000";
 
         for (let index = 0; index < 10; index++) {
-          await (await perpetualOracle.addIndexObservations([0], [200000000], [proofHash])).wait();
-          await (await perpetualOracle.addIndexObservations([1], [200000000], [proofHash])).wait();
-        }
-
-        await time.increase(28800);
-        for (let index = 0; index < 10; index++) {
-          await (await perpetualOracle.addIndexObservations([0], [250000000], [proofHash])).wait();
-          await (await perpetualOracle.addIndexObservations([1], [250000000], [proofHash])).wait();
+          await (await perpetualOracle.addIndexObservations([0], [150000000], [proofHash])).wait();
+          await (await perpetualOracle.addIndexObservations([1], [150000000], [proofHash])).wait();
         }
         // liquidating the position
         await expect(
@@ -805,8 +798,8 @@ describe("Liquidation test in Positioning", function () {
           volmexBaseToken.address,
         );
 
-        await expect(positionSizeAfter.toString()).to.be.equal("0");
-        await expect(positionSizeLiquidator.toString()).to.be.equal("0");
+        await expect(positionSizeAfter.toString()).to.be.equal("-1000000000000000000");
+        await expect(positionSizeLiquidator.toString()).to.be.equal("1000000000000000000");
       });
       it("should not when contract is paused liquidate whole position", async () => {
         let signatureLeft = await getSignature(orderLeft, account1.address);
@@ -1060,6 +1053,7 @@ describe("Liquidation test in Positioning", function () {
           await (await perpetualOracle.addIndexObservations([0], [15000000], [proofHash])).wait();
           await (await perpetualOracle.addIndexObservations([1], [15000000], [proofHash])).wait();
         }
+
         const accountValueafter = await vaultController.getAccountValue(account4.address);
         console.log(accountValueafter.toString(), " account value after");
         console.log(
@@ -1089,7 +1083,7 @@ describe("Liquidation test in Positioning", function () {
             .liquidate(account4.address, volmexBaseToken.address, "20000000000000000000"),
         ).to.be.revertedWith("AB_LNZ");
       });
-      it("should fail to liquidate again", async () => {
+      it("should fail to liquidate again if liquidation triggered bofore time to liquidate", async () => {
         await positioning.setMinPositionSize("10000000000000000000", volmexBaseToken.address);
         await positioning.whitelistLiquidator(account1.address, true);
         await virtualToken.mint(account1.address, fivehundred.toString());
@@ -1207,13 +1201,20 @@ describe("Liquidation test in Positioning", function () {
           accountValueafter.toString(),
         );
         console.log(liquidatbalePositionSize1.toString(), " position size liquidatable after");
-        await expect(
-          positioning
-            .connect(account1)
-            .liquidate(account4.address, volmexBaseToken.address, "20000000000000000000"),
-        ).to.emit(positioning, "PositionLiquidated");
-
+        const liquidation = await positioning
+          .connect(account1)
+          .liquidate(
+            account4.address,
+            volmexBaseToken.address,
+            liquidatbalePositionSize1.toString(),
+          );
         // liquidating again before before next liquidation
+        const nextTimeForLiquidation = parseInt(
+          await accountBalance1.nextLiquidationTime(account4.address),
+        );
+        const currentTimeStamp = parseInt(await time.latest());
+        console.log("liquidation triggered before next time for liquidation");
+        expect(currentTimeStamp).to.be.lessThan(nextTimeForLiquidation);
         await expect(
           positioning
             .connect(account1)
@@ -1223,12 +1224,18 @@ describe("Liquidation test in Positioning", function () {
       it("should liquidate ideal amount to liquidate", async () => {
         await positioning.setMinPositionSize("10000000000000000000", volmexBaseToken.address);
         await positioning.whitelistLiquidator(account1.address, true);
+        await virtualToken.mint(account2.address, fivehundred.toString());
+
         await virtualToken.mint(account1.address, fivehundred.toString());
         await virtualToken.mint(account3.address, fivehundred.toString());
         await virtualToken.mint(account4.address, fivehundred.toString());
+        await virtualToken.connect(account2).approve(vault.address, fivehundred.toString());
         await virtualToken.connect(account1).approve(vault.address, fivehundred.toString());
         await virtualToken.connect(account4).approve(vault.address, fivehundred.toString());
         await virtualToken.connect(account3).approve(vault.address, fivehundred.toString());
+        await virtualToken
+          .connect(account2)
+          .approve(volmexPerpPeriphery.address, fivehundred.toString());
         await virtualToken
           .connect(account1)
           .approve(volmexPerpPeriphery.address, fivehundred.toString());
@@ -1252,6 +1259,14 @@ describe("Liquidation test in Positioning", function () {
             volmexPerpPeriphery.address,
             virtualToken.address,
             account4.address,
+            fivehundred.toString(),
+          );
+        await vaultController
+          .connect(account2)
+          .deposit(
+            volmexPerpPeriphery.address,
+            virtualToken.address,
+            account2.address,
             fivehundred.toString(),
           );
         await vaultController
@@ -1325,6 +1340,40 @@ describe("Liquidation test in Positioning", function () {
           await (await perpetualOracle.addIndexObservations([0], [25000000], [proofHash])).wait();
           await (await perpetualOracle.addIndexObservations([1], [25000000], [proofHash])).wait();
         }
+        const orderLeft1 = Order(
+          ORDER,
+          87654321987654,
+          account1.address,
+          Asset(volmexBaseToken.address, BigNumber.from("500").mul(one).toString()),
+          Asset(virtualToken.address, BigNumber.from("10000").mul(one).toString()),
+          1,
+          0,
+          true,
+        );
+
+        const orderRight1 = Order(
+          ORDER,
+          87654321987654,
+          account2.address,
+          Asset(virtualToken.address, BigNumber.from("10000").mul(one).toString()),
+          Asset(volmexBaseToken.address, BigNumber.from("500").mul(one).toString()),
+          1,
+          0,
+          false,
+        );
+        let signatureLeft1 = await getSignature(orderLeft1, account1.address);
+        let signatureRight1 = await getSignature(orderRight1, account2.address);
+
+        await expect(
+          positioning.openPosition(
+            orderLeft1,
+            signatureLeft1,
+            orderRight1,
+            signatureRight1,
+            liquidator,
+          ),
+        ).to.emit(positioning, "PositionChanged");
+
         const accountValueafter = await vaultController.getAccountValue(account4.address);
         console.log(accountValueafter.toString(), " account value after");
         console.log(
@@ -1338,15 +1387,29 @@ describe("Liquidation test in Positioning", function () {
           accountValueafter.toString(),
         );
         console.log(liquidatbalePositionSize1.toString(), " position size liquidatable after");
-        await expect(
-          positioning
-            .connect(account1)
-            .liquidate(
-              account4.address,
-              volmexBaseToken.address,
-              liquidatbalePositionSize1.toString(),
-            ),
-        ).to.emit(positioning, "PositionLiquidated");
+        const liquidation = await positioning
+          .connect(account1)
+          .liquidate(
+            account4.address,
+            volmexBaseToken.address,
+            liquidatbalePositionSize1.toString(),
+          );
+        const { events } = await liquidation.wait();
+
+        let data;
+        events.forEach((log: any) => {
+          if (log["event"] == "PositionLiquidated") {
+            data = log["data"];
+          }
+        });
+        const logData = ethers.utils.defaultAbiCoder.decode(
+          ["uint256", "uint256", "uint256"],
+          data,
+        );
+        const liquidatedPositionSize = logData[1];
+        expect(liquidatedPositionSize.toString()).to.be.equal(
+          liquidatbalePositionSize1.toString(),
+        );
       });
       it("should liquidate 0.8 of N_max_order", async () => {
         await positioning.setMinPositionSize("10000000000000000000", volmexBaseToken.address);

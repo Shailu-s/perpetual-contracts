@@ -847,6 +847,13 @@ describe("Positioning", function () {
           account2.address,
           orderLeft.takeAsset.virtualToken,
         );
+        // get 0 position size for base token 2
+        const positionSize2 = await accountBalance1.getTotalPositionValue(
+          account2.address,
+          volmexBaseToken1.address,
+          3600,
+        );
+
         const pnltoBerealized = await positioning.getPnlToBeRealized({
           trader: account1.address,
           baseToken: volmexBaseToken.address,
