@@ -355,6 +355,7 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
         uint256 timeToWait = getLiquidationTimeToWait(trader, baseToken, accountValue, minOrderSize);
         if (timeToWait > 0) require(nextLiquidationTime[trader] <= block.timestamp, "AB_ELT"); // early liquidation triggered
         nextLiquidationTime[trader] = block.timestamp + timeToWait;
+        emit TraderNextLiquidationUpdated(trader, baseToken, nextLiquidationTime[trader], timeToWait);
     }
 
     function _modifyTakerBalance(
