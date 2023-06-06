@@ -151,7 +151,7 @@ interface IAccountBalance {
     /// @param trader The address of trader
     /// @return array  of traders base tokens
     function getTraderBaseTokens(address trader) external view returns (address[] memory);
-    function getLiquidationTimeToWait(address trader, address baseToken, int256 accountValue, uint256 minOrderSize) external view returns (uint256 timeToWait);
+    function getLiquidationTimeToWait(address trader, address baseToken, int256 accountValue, uint256 minOrderSize) external view returns (uint256 timeToWait, bool);
     function isAccountLiquidatable(address trader, address baseToken, uint256 minOrderSize, int256 accountValue) external view returns (bool isLiquidatable);
     function checkAndUpdateLiquidationTimeToWait(address trader, address baseToken, int256 accountValue, uint256 minOrderSize) external;
     function getNLiquidate(uint256 liquidatablePositionSize, uint256 minOrderSize, uint256 maxOrderSize) external view returns (uint256 nLiquidate);
