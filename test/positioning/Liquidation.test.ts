@@ -658,6 +658,7 @@ describe("Liquidation test in Positioning", function () {
         await expect(positionSizeAfter.toString()).to.be.equal("-1000000000000000000");
         await expect(positionSizeLiquidator.toString()).to.be.equal("1000000000000000000");
       });
+
       it("when user opens position with multiple base tokens then getLiquidatablePositionSize > 0", async () => {
         let signatureLeft = await getSignature(orderLeft, account1.address);
         let signatureRight = await getSignature(orderRight, account2.address);
@@ -1526,7 +1527,7 @@ describe("Liquidation test in Positioning", function () {
           ORDER,
           87654321987654,
           account3.address,
-          Asset(volmexBaseToken.address, BigNumber.from("10").mul(one).toString()),
+          Asset(volmexBaseToken.address, BigNumber.from("20").mul(one).toString()),
           Asset(virtualToken.address, BigNumber.from("500").mul(one).toString()),
           1,
           0,
@@ -1538,7 +1539,7 @@ describe("Liquidation test in Positioning", function () {
           87654321987654,
           account4.address,
           Asset(virtualToken.address, BigNumber.from("500").mul(one).toString()),
-          Asset(volmexBaseToken.address, BigNumber.from("10").mul(one).toString()),
+          Asset(volmexBaseToken.address, BigNumber.from("20").mul(one).toString()),
           1,
           0,
           false,
@@ -1557,8 +1558,8 @@ describe("Liquidation test in Positioning", function () {
         ).to.emit(positioning, "PositionChanged");
         await time.increase(1000);
         for (let index = 0; index < 10; index++) {
-          await (await perpetualOracle.addIndexObservations([0], [45000000], [proofHash])).wait();
-          await (await perpetualOracle.addIndexObservations([1], [45000000], [proofHash])).wait();
+          await (await perpetualOracle.addIndexObservations([0], [25000000], [proofHash])).wait();
+          await (await perpetualOracle.addIndexObservations([1], [25000000], [proofHash])).wait();
         }
         const n_maxOrderSize = await matchingEngine.getMaxOrderSizeOverTime(
           volmexBaseToken.address,
@@ -1593,6 +1594,7 @@ describe("Liquidation test in Positioning", function () {
           data,
         );
         const liquidatedPositionSize = parseInt(logData[1]);
+        console.log(liquidatedPositionSize, " liquidated size");
         expect(liquidatedPositionSize).to.be.lessThan(parseInt(liquidatbalePositionSize1));
       });
       it("should fail to liquidate for stale pracle price", async () => {
