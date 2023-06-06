@@ -267,7 +267,7 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
         uint256 minOrderSize,
         int256 accountValue
     ) external view returns (bool isLiquidatable) {
-        uint256 timeToWait = getLiquidationTimeToWait(trader, baseToken, accountValue, minOrderSize);
+        (uint256 timeToWait,) = getLiquidationTimeToWait(trader, baseToken, accountValue, minOrderSize);
         if (nextLiquidationTime[trader] + timeToWait > block.timestamp) return false;
         return accountValue < getMarginRequirementForLiquidation(trader);
     }
@@ -331,12 +331,14 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
         address baseToken,
         int256 accountValue,
         uint256 minOrderSize
-    ) public view returns (uint256 timeToWait) {
+    ) public view returns (uint256 timeToWait, bool isLiquidationPossible) {
         (, int256 unrealizedPnl) = getPnlAndPendingFee(trader);
         int256 availableCollateral = (accountValue - unrealizedPnl);
         uint256 maxOrderSize = matchingEngine.getMaxOrderSizeOverTime(baseToken);
         int256 idealAmountToLiquidate = getLiquidatablePositionSize(trader, baseToken, accountValue);
-        require(idealAmountToLiquidate.abs() > 0, "AB_LNZ"); // liquidate amount should be gt zero
+        if(idealAmountToLiquidate.abs() > 0) { // liquidate amount should be gt zero
+            isLiquidationPossible = true;
+        }
 
         uint256 totalPositionNotional = getTotalAbsPositionValue(trader);
         uint256 nLiquidate = getNLiquidate(idealAmountToLiquidate.abs(), minOrderSize, maxOrderSize);
@@ -352,7 +354,8 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
         uint256 minOrderSize
     ) external {
         _requireOnlyPositioning();
-        uint256 timeToWait = getLiquidationTimeToWait(trader, baseToken, accountValue, minOrderSize);
+        (uint256 timeToWait, bool isLiquidationPossible) = getLiquidationTimeToWait(trader, baseToken, accountValue, minOrderSize);
+        require(isLiquidationPossible, "AB_LNZ");
         if (timeToWait > 0) require(nextLiquidationTime[trader] <= block.timestamp, "AB_ELT"); // early liquidation triggered
         nextLiquidationTime[trader] = block.timestamp + timeToWait;
         emit TraderNextLiquidationUpdated(trader, baseToken, nextLiquidationTime[trader]);
