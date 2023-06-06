@@ -101,9 +101,8 @@ const config: HardhatUserConfig = {
     apiKey: {
       "mainnet": process.env.ETHERSCAN_API_KEY,
       "goerli": process.env.ETHERSCAN_API_KEY,
-      "mumbai": process.env.POLYGONSCAN_API_KEY,
-      "zkEvm": process.env.POLYGONSCAN_API_KEY,
-      "arbitrum-goerli": process.env.ARBISCAN_API_KEY,
+      "polygonMumbai": process.env.POLYGONSCAN_API_KEY,
+      "arbitrumGoerli": process.env.ARBISCAN_API_KEY,
       "base-goerli": "PLACEHOLDER_STRING"
      },
      customChains: [
