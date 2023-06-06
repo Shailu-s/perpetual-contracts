@@ -267,7 +267,8 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
         uint256 minOrderSize,
         int256 accountValue
     ) external view returns (bool isLiquidatable) {
-        (uint256 timeToWait,) = getLiquidationTimeToWait(trader, baseToken, accountValue, minOrderSize);
+        (uint256 timeToWait, bool isLiquidationPossible) = getLiquidationTimeToWait(trader, baseToken, accountValue, minOrderSize);
+        if(!isLiquidationPossible) return false;
         if (nextLiquidationTime[trader] + timeToWait > block.timestamp) return false;
         return accountValue < getMarginRequirementForLiquidation(trader);
     }
@@ -338,6 +339,8 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
         int256 idealAmountToLiquidate = getLiquidatablePositionSize(trader, baseToken, accountValue);
         if(idealAmountToLiquidate.abs() > 0) { // liquidate amount should be gt zero
             isLiquidationPossible = true;
+        } else {
+            return (0, false);
         }
 
         uint256 totalPositionNotional = getTotalAbsPositionValue(trader);
