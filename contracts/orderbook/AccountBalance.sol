@@ -346,7 +346,7 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
         uint256 totalPositionNotional = getTotalAbsPositionValue(trader);
         uint256 nLiquidate = getNLiquidate(idealAmountToLiquidate.abs(), minOrderSize, maxOrderSize);
         uint256 sigmaVolmexIv = (sigmaVolmexIvs[_underlyingPriceIndexes[baseToken]]);
-        uint256 maxTimeBound = (((uint256(freeCollateralByRatio) * _SIGMA_IV_BASE * 1e18) / (6 * sigmaVolmexIv * totalPositionNotional))**2) / 1e36;
+        uint256 maxTimeBound = (((freeCollateralByRatio.abs() * _SIGMA_IV_BASE * 1e18) / (6 * sigmaVolmexIv * totalPositionNotional))**2) / 1e36;
         timeToWait = maxTimeBound > minTimeBound ? (nLiquidate * maxTimeBound) / uint256(idealAmountToLiquidate) : 0;
     }
 
