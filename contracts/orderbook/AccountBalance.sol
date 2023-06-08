@@ -265,9 +265,10 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
         address trader,
         address baseToken,
         uint256 minOrderSize,
-        int256 accountValue
+        int256 accountValue,
+        int256 freeCollateralByRatio
     ) external view returns (bool isLiquidatable) {
-        (uint256 timeToWait, bool isLiquidationPossible) = getLiquidationTimeToWait(trader, baseToken, accountValue, minOrderSize);
+        (uint256 timeToWait, bool isLiquidationPossible) = getLiquidationTimeToWait(trader, baseToken, accountValue, minOrderSize, freeCollateralByRatio);
         if(!isLiquidationPossible) return false;
         if (nextLiquidationTime[trader] + timeToWait > block.timestamp) return false;
         return accountValue < getMarginRequirementForLiquidation(trader);
@@ -331,10 +332,9 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
         address trader,
         address baseToken,
         int256 accountValue,
-        uint256 minOrderSize
+        uint256 minOrderSize,
+        int256 freeCollateralByRatio
     ) public view returns (uint256 timeToWait, bool isLiquidationPossible) {
-        (, int256 unrealizedPnl) = getPnlAndPendingFee(trader);
-        int256 availableCollateral = (accountValue - unrealizedPnl);
         uint256 maxOrderSize = matchingEngine.getMaxOrderSizeOverTime(baseToken);
         int256 idealAmountToLiquidate = getLiquidatablePositionSize(trader, baseToken, accountValue);
         if(idealAmountToLiquidate.abs() > 0) { // liquidate amount should be gt zero
@@ -346,7 +346,7 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
         uint256 totalPositionNotional = getTotalAbsPositionValue(trader);
         uint256 nLiquidate = getNLiquidate(idealAmountToLiquidate.abs(), minOrderSize, maxOrderSize);
         uint256 sigmaVolmexIv = (sigmaVolmexIvs[_underlyingPriceIndexes[baseToken]]);
-        uint256 maxTimeBound = ((uint256(availableCollateral) * _SIGMA_IV_BASE) / (6 * sigmaVolmexIv * totalPositionNotional))**2;
+        uint256 maxTimeBound = (((uint256(freeCollateralByRatio) * _SIGMA_IV_BASE * 1e18) / (6 * sigmaVolmexIv * totalPositionNotional))**2) / 1e36;
         timeToWait = maxTimeBound > minTimeBound ? (nLiquidate * maxTimeBound) / uint256(idealAmountToLiquidate) : 0;
     }
 
@@ -354,10 +354,11 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
         address trader,
         address baseToken,
         int256 accountValue,
-        uint256 minOrderSize
+        uint256 minOrderSize,
+        int256 freeCollateralByRatio
     ) external {
         _requireOnlyPositioning();
-        (uint256 timeToWait, bool isLiquidationPossible) = getLiquidationTimeToWait(trader, baseToken, accountValue, minOrderSize);
+        (uint256 timeToWait, bool isLiquidationPossible) = getLiquidationTimeToWait(trader, baseToken, accountValue, minOrderSize, freeCollateralByRatio);
         require(isLiquidationPossible, "AB_LNZ");
         if (timeToWait > 0) require(nextLiquidationTime[trader] <= block.timestamp, "AB_ELT"); // early liquidation triggered
         nextLiquidationTime[trader] = block.timestamp + timeToWait;
