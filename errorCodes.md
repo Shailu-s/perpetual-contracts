@@ -2,16 +2,6 @@
 
 >
 
-## Perp Factory Contract
-
-> **PerpFactory: Vault Controller Not Found**
-
-    When zero address is passed as vault controller address in clone vault methods
-
-> **PF_NCD**
-
-    msg.sender do not have Clone deployer role when we call clone perp eco system
-
 ## Funding Rate contract
 
 > **P_IZ**
