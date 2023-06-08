@@ -307,8 +307,9 @@ contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, 
     ) internal {
         IAccountBalance accountBalanceInst = IAccountBalance(accountBalance);
         int256 accountValue = getAccountValue(trader);
+        int256 feeCollateralByRatio = _getFreeCollateralByRatio(trader, IPositioningConfig(positioningConfig).getImRatio());
         // P_EAV: enough account value
-        require(accountBalanceInst.isAccountLiquidatable(trader, baseToken, minPositionSizeByBaseToken[baseToken], accountValue), "P_EAV");
+        require(accountBalanceInst.isAccountLiquidatable(trader, baseToken, minPositionSizeByBaseToken[baseToken], accountValue, feeCollateralByRatio), "P_EAV");
         address liquidator = _msgSender();
         if (isLiquidatorWhitelistEnabled) {
             _requireWhitelistLiquidator(liquidator);
@@ -319,7 +320,7 @@ contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, 
         // P_WLD: wrong liquidation direction
         require(positionSize * positionSizeToBeLiquidated >= 0, "P_WLD");
         accountBalanceInst.registerBaseToken(trader, baseToken);
-        accountBalanceInst.checkAndUpdateLiquidationTimeToWait(trader, baseToken, accountValue, minPositionSizeByBaseToken[baseToken]);
+        accountBalanceInst.checkAndUpdateLiquidationTimeToWait(trader, baseToken, accountValue, minPositionSizeByBaseToken[baseToken], feeCollateralByRatio);
 
         // must settle funding first
         _settleFunding(trader, baseToken);
