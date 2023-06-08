@@ -2,8 +2,6 @@
 pragma solidity =0.8.18;
 
 import { AddressUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol";
-import { ContextUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol";
-import { EIP712Upgradeable } from "@openzeppelin/contracts-upgradeable/utils/cryptography/draft-EIP712Upgradeable.sol";
 import { ReentrancyGuardUpgradeable } from "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 import { PausableUpgradeable } from "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
 
@@ -25,13 +23,11 @@ import { IVirtualToken } from "../interfaces/IVirtualToken.sol";
 import { IVaultController } from "../interfaces/IVaultController.sol";
 import { IPerpetualOracle } from "../interfaces/IPerpetualOracle.sol";
 
-import { BlockContext } from "../helpers/BlockContext.sol";
 import { FundingRate } from "../funding-rate/FundingRate.sol";
-import { OwnerPausable } from "../helpers/OwnerPausable.sol";
 import { OrderValidator } from "./OrderValidator.sol";
 
 // never inherit any new stateful contract. never change the orders of parent stateful contracts
-contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, PausableUpgradeable, FundingRate, EIP712Upgradeable, OrderValidator {
+contract Positioning is IPositioning, ReentrancyGuardUpgradeable, PausableUpgradeable, FundingRate, OrderValidator {
     using AddressUpgradeable for address;
     using LibSafeCastUint for uint256;
     using LibSafeCastInt for int256;
@@ -335,13 +331,10 @@ contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, 
         _modifyOwedRealizedPnl(trader, liquidationPenalty.neg256(), baseToken);
 
         // if there is bad debt, liquidation fees all go to liquidator; otherwise, split between liquidator & FR
-        uint256 liquidationFeeToLiquidator = liquidationPenalty / 2;
-        uint256 liquidationFeeToFR;
-        if (accountValue < 0) {
-            liquidationFeeToLiquidator = liquidationPenalty;
-        } else {
-            liquidationFeeToFR = liquidationPenalty - liquidationFeeToLiquidator;
-            _modifyOwedRealizedPnl(defaultFeeReceiver, liquidationFeeToFR.toInt256(), baseToken);
+        uint256 liquidationFeeToLiquidator = liquidationPenalty;
+        if (accountValue >= 0) {
+            liquidationFeeToLiquidator = liquidationPenalty.mulRatio(IPositioningConfig(positioningConfig).getLiquidatorFeeRatio());
+            _modifyOwedRealizedPnl(defaultFeeReceiver, (liquidationPenalty - liquidationFeeToLiquidator).toInt256(), baseToken);
         }
 
         // liquidator opens a position with liquidationFeeToLiquidator as a discount
@@ -456,7 +449,7 @@ contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, 
         );
 
         if (_firstTradedTimestampMap[baseToken] == 0) {
-            _firstTradedTimestampMap[baseToken] = _blockTimestamp();
+            _firstTradedTimestampMap[baseToken] = block.timestamp;
         }
 
         // if not closing a position, check margin ratio after swap
