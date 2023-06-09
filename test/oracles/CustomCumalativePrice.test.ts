@@ -143,6 +143,8 @@ describe("Custom Cumulative Price", function () {
     accountBalance1 = await upgrades.deployProxy(AccountBalance, [
       positioningConfig.address,
       [volmexBaseToken.address, volmexBaseToken.address],
+      matchingEngine.address,
+      owner.address,
     ]);
     await accountBalance1.deployed();
     await (await perpView.setAccount(accountBalance1.address)).wait();

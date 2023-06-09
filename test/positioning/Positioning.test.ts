@@ -146,16 +146,6 @@ describe("Positioning", function () {
     positioningConfig = await upgrades.deployProxy(PositioningConfig, [perpetualOracle.address]);
     await positioningConfig.deployed();
     await perpetualOracle.grantSmaIntervalRole(positioningConfig.address);
-    accountBalance = await upgrades.deployProxy(AccountBalance, [
-      positioningConfig.address,
-      [volmexBaseToken.address, volmexBaseToken.address],
-    ]);
-    await accountBalance.deployed();
-
-    USDC = await TestERC20.deploy();
-    await USDC.__TestERC20_init("TestUSDC", "USDC", 6);
-    await USDC.deployed();
-
     matchingEngine = await upgrades.deployProxy(
       MatchingEngine,
       [owner.address, perpetualOracle.address],
@@ -163,6 +153,17 @@ describe("Positioning", function () {
         initializer: "__MatchingEngineTest_init",
       },
     );
+    accountBalance = await upgrades.deployProxy(AccountBalance, [
+      positioningConfig.address,
+      [volmexBaseToken.address, volmexBaseToken.address],
+      matchingEngine.address,
+      owner.address,
+    ]);
+    await accountBalance.deployed();
+
+    USDC = await TestERC20.deploy();
+    await USDC.__TestERC20_init("TestUSDC", "USDC", 6);
+    await USDC.deployed();
 
     await perpetualOracle.setMarkObservationAdder(matchingEngine.address);
 
@@ -197,6 +198,8 @@ describe("Positioning", function () {
     accountBalance1 = await upgrades.deployProxy(AccountBalance, [
       positioningConfig.address,
       [volmexBaseToken.address, volmexBaseToken1.address],
+      matchingEngine.address,
+      owner.address,
     ]);
     vaultController = await upgrades.deployProxy(VaultController, [
       positioningConfig.address,
@@ -326,19 +329,47 @@ describe("Positioning", function () {
           ),
         ).to.be.revertedWith("P_PCNC");
       });
+
+      it("wrong market registry", async () => {
+        const [owner, account1, account2] = await ethers.getSigners();
+        await expect(
+          upgrades.deployProxy(
+            Positioning,
+            [
+              positioningConfig.address,
+              vaultController.address,
+              accountBalance1.address,
+              matchingEngine.address,
+              perpetualOracle.address,
+              account1.address,
+              [volmexBaseToken.address, volmexBaseToken.address],
+              [owner.address, account2.address],
+              ["1000000000000000000", "1000000000000000000"],
+            ],
+            {
+              initializer: "initialize",
+            },
+          ),
+        ).to.be.revertedWith("P_MENC");
+      });
       it("should fail to initialze account balance again", async () => {
         await expect(
           accountBalance.initialize(positioningConfig.address, [
             volmexBaseToken.address,
             volmexBaseToken.address,
+            matchingEngine.address,
+            owner.address,
           ]),
         ).to.be.revertedWith("Initializable: contract is already initialized");
       });
+
       it("should fail to initialze account balance again because invalid positionig config adderess", async () => {
         await expect(
           upgrades.deployProxy(AccountBalance, [
             account1.address,
             [volmexBaseToken.address, volmexBaseToken1.address],
+            matchingEngine.address,
+            owner.address,
           ]),
         ).to.be.revertedWith("AB_VPMMCNC");
       });
@@ -438,6 +469,7 @@ describe("Positioning", function () {
         "PC_DFRZ",
       );
     });
+
     it("should fail to set default fee receiver as caaler is not owner", async () => {
       await expect(
         positioning.connect(account1).setDefaultFeeReceiver(account1.address),
@@ -445,13 +477,47 @@ describe("Positioning", function () {
     });
   });
 
-  describe("setUnderlying price index", async () => {
+  describe("setters", async () => {
     it("should set index price oracle ", async () => {
       expect(
         await accountBalance.connect(owner).setUnderlyingPriceIndex(volmexBaseToken.address, 0),
       )
         .to.emit(accountBalance, "UnderlyingPriceIndexSet")
         .withArgs(1);
+    });
+    it("should set min time bound in account balance", async () => {
+      await accountBalance.setMinTimeBound(1000);
+      const minTimeBound = await accountBalance.minTimeBound();
+      expect(minTimeBound.toString()).to.be.equal("1000");
+    });
+    it("should fail to set min time bound in account balance", async () => {
+      await expect(accountBalance.connect(account1).setMinTimeBound(1000)).to.be.revertedWith(
+        "AccountBalance: Not sigma IV role",
+      );
+    });
+    it("should fail to set min time bound less than five min in account balance", async () => {
+      await expect(accountBalance.setMinTimeBound(10)).to.be.revertedWith("AB_NS5");
+    });
+    it("should update sigva viv ", async () => {
+      await accountBalance.updateSigmaVolmexIvs([0, 1], [300, 500]);
+      const sigmaVIv = await accountBalance.sigmaVolmexIvs(1);
+      expect(sigmaVIv.toString()).to.be.equal("500");
+    });
+    it("should update 0 sigva viv ", async () => {
+      await expect(accountBalance.updateSigmaVolmexIvs([0, 1], [300, 0])).to.be.revertedWith(
+        "AccountBalance: not zero",
+      );
+    });
+    it("should set index price allowed interval", async () => {
+      await positioning.setIndexOracleInterval(5000);
+      const interval = await positioning.indexPriceAllowedInterval();
+      expect(interval.toString()).to.be.equal("5000");
+    });
+    it("should set perp oracle", async () => {
+      await positioning.setPerpetualOracle(perpetualOracle.address);
+    });
+    it("should fail to set perp oracle", async () => {
+      await expect(positioning.setPerpetualOracle(ZERO_ADDR)).to.be.revertedWith("P_AZ");
     });
     it("should fail to set index price oracle ", async () => {
       await expect(
@@ -564,6 +630,47 @@ describe("Positioning", function () {
         await expect(positionSize).to.be.equal(convert("24"));
         await expect(positionSize1).to.be.equal(convert("-24"));
       });
+      it("should fail when oracle is stale", async () => {
+        await matchingEngine.grantMatchOrders(positioning.address);
+
+        await virtualToken.mint(account1.address, convert("10000"));
+        await virtualToken.mint(account2.address, convert("10000"));
+
+        await virtualToken.connect(account1).approve(vault.address, convert("10000"));
+        await virtualToken.connect(account2).approve(vault.address, convert("10000"));
+        await virtualToken
+          .connect(account1)
+          .approve(volmexPerpPeriphery.address, convert("10000"));
+        await virtualToken
+          .connect(account2)
+          .approve(volmexPerpPeriphery.address, convert("10000"));
+
+        await vaultController
+          .connect(account1)
+          .deposit(
+            volmexPerpPeriphery.address,
+            virtualToken.address,
+            account1.address,
+            convert("10000"),
+          );
+        await vaultController
+          .connect(account2)
+          .deposit(
+            volmexPerpPeriphery.address,
+            virtualToken.address,
+            account2.address,
+            convert("10000"),
+          );
+
+        let signatureLeft = await getSignature(orderLeft, account1.address);
+        let signatureRight = await getSignature(orderRight, account2.address);
+        await time.increase(3600);
+        await expect(
+          positioning
+            .connect(account1)
+            .openPosition(orderLeft, signatureLeft, orderRight, signatureRight, liquidator),
+        ).to.be.revertedWith("P_SIP");
+      });
       it("should fail to open position when contract is paused", async () => {
         // indexPriceOracle.getIndexSma.whenCalledWith(0).returns(['1000000000000000', '0', '0']);
         // indexPriceOracle.getIndexSma.whenCalledWith(3600).returns(['1000000000000000', '0', '0']);
@@ -610,6 +717,11 @@ describe("Positioning", function () {
             .connect(account1)
             .openPosition(orderLeft, signatureLeft, orderRight, signatureRight, liquidator),
         ).to.be.revertedWith("Pausable: paused");
+
+        await positioning.unpause();
+        await positioning
+          .connect(account1)
+          .openPosition(orderLeft, signatureLeft, orderRight, signatureRight, liquidator);
       });
       it("should fail to validate orders", async () => {
         let orderLeftLeverage = Order(
@@ -637,6 +749,19 @@ describe("Positioning", function () {
         );
         await expect(positioning.getOrderValidate(orderLeftLeverage1)).to.be.revertedWith(
           "V_PERP_0S",
+        );
+        const orderLeftLeverage2 = Order(
+          ORDER,
+          deadline,
+          ZERO_ADDR,
+          Asset(virtualToken.address, convert("200")),
+          Asset(volmexBaseToken.address, convert("1")),
+          2,
+          0,
+          false,
+        );
+        await expect(positioning.getOrderValidate(orderLeftLeverage2)).to.be.revertedWith(
+          "V_PERP: TBMPS",
         );
       });
 
@@ -722,6 +847,13 @@ describe("Positioning", function () {
           account2.address,
           orderLeft.takeAsset.virtualToken,
         );
+        // get 0 position size for base token 2
+        const positionSize2 = await accountBalance1.getTotalPositionValue(
+          account2.address,
+          volmexBaseToken1.address,
+          3600,
+        );
+
         const pnltoBerealized = await positioning.getPnlToBeRealized({
           trader: account1.address,
           baseToken: volmexBaseToken.address,
@@ -3173,6 +3305,8 @@ describe("Liquidation test in Positioning", function () {
     accountBalance = await upgrades.deployProxy(AccountBalance, [
       positioningConfig.address,
       [volmexBaseToken.address, volmexBaseToken1.address],
+      matchingEngine.address,
+      owner.address,
     ]);
     await accountBalance.deployed();
 
@@ -3202,10 +3336,18 @@ describe("Liquidation test in Positioning", function () {
       virtualToken.address,
       accountBalance.address,
     ]);
-
+    accountBalance = await upgrades.deployProxy(AccountBalance, [
+      positioningConfig.address,
+      [volmexBaseToken.address, volmexBaseToken1.address],
+      matchingEngine.address,
+      owner.address,
+    ]);
+    await accountBalance.deployed();
     accountBalance1 = await upgrades.deployProxy(AccountBalance, [
       positioningConfig.address,
       [volmexBaseToken.address, volmexBaseToken1.address],
+      matchingEngine.address,
+      owner.address,
     ]);
     vaultController = await upgrades.deployProxy(VaultController, [
       positioningConfig.address,

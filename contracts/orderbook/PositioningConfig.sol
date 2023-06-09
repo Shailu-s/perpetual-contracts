@@ -19,6 +19,7 @@ contract PositioningConfig is IPositioningConfig, PositioningConfigStorageV1, Ac
     event InitialMarginChanged(uint24 imRatio);
     event MaintenanceMarginChanged(uint24 mmRatio);
     event PartialLiquidationRatioChanged(uint24 partialLiquidationRatio);
+    event LiquidatorFeeRatioChanged(uint24 protocolFeeRatio);
 
     modifier checkRatio(uint24 ratio) {
         // PositioningConfig: ratio overflow
@@ -31,6 +32,7 @@ contract PositioningConfig is IPositioningConfig, PositioningConfigStorageV1, Ac
         _imRatio = 0.2e6; // initial-margin ratio, 20% in decimal 6
         _mmRatio = 0.2e6; // minimum-margin ratio, 20% in decimal 6
         _liquidationPenaltyRatio = 0.025e6; // initial penalty ratio, 2.5% in decimal 6
+        _liquidatorFeeRatio = 0.5e6; // liquidator fee ratio for which will be part of liquidation fee of _liquidationPenaltyRatio
         _partialCloseRatio = 0.25e6; // partial close ratio, 25% in decimal 6
         _partialLiquidationRatio = 0.1e6; // partial liquidation ratio, 10% in decimal 6
         _maxFundingRate = 0.0073e6; // max funding rate, 0.73% in decimal 6
@@ -45,6 +47,12 @@ contract PositioningConfig is IPositioningConfig, PositioningConfigStorageV1, Ac
         _requirePositioningConfigAdmin();
         _liquidationPenaltyRatio = liquidationPenaltyRatioArg;
         emit LiquidationPenaltyRatioChanged(liquidationPenaltyRatioArg);
+    }
+
+    function setLiquidatorFeeRatio(uint24 protocolFeeRatioArg) external checkRatio(protocolFeeRatioArg) {
+        _requirePositioningConfigAdmin();
+        _liquidatorFeeRatio = protocolFeeRatioArg;
+        emit LiquidatorFeeRatioChanged(protocolFeeRatioArg);
     }
 
     function setPartialCloseRatio(uint24 partialCloseRatioArg) external checkRatio(partialCloseRatioArg) {
@@ -151,6 +159,10 @@ contract PositioningConfig is IPositioningConfig, PositioningConfigStorageV1, Ac
     /// @inheritdoc IPositioningConfig
     function getLiquidationPenaltyRatio() external view override returns (uint24) {
         return _liquidationPenaltyRatio;
+    }
+
+    function getLiquidatorFeeRatio() external view returns (uint24) {
+        return _liquidatorFeeRatio;
     }
 
     /// @inheritdoc IPositioningConfig

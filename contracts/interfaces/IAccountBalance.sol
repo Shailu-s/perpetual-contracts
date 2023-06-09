@@ -2,6 +2,7 @@
 pragma solidity =0.8.18;
 
 import { LibAccountMarket } from "../libs/LibAccountMarket.sol";
+import { IMatchingEngine } from "../interfaces/IMatchingEngine.sol";
 
 interface IAccountBalance {
     /// @param vault The address of the vault contract
@@ -12,8 +13,10 @@ interface IAccountBalance {
     event PnlRealized(address indexed trader, address indexed baseToken, int256 amount);
     /// @dev Emit when underlying price index is set
     event UnderlyingPriceIndexSet(uint256 indexed underlyingIndex, address baseToken);
+    event SigmaVolmexIvsUpdated(uint256[] index, uint256[] sigmaVivs);
+    event TraderNextLiquidationUpdated(address indexed trader, address indexed baseToken, uint256 nextLiquidateTime);
 
-    function initialize(address positioningConfigArg, address[2] calldata volmexBaseTokenArgs) external;
+    function initialize(address positioningConfigArg, address[2] calldata volmexBaseTokenArgs, IMatchingEngine matchingEngineArg, address adminArg) external;
 
     /// @notice Modify trader owedRealizedPnl
     /// @dev Only used by `Positioning` contract
@@ -148,4 +151,8 @@ interface IAccountBalance {
     /// @param trader The address of trader
     /// @return array  of traders base tokens
     function getTraderBaseTokens(address trader) external view returns (address[] memory);
+    function getLiquidationTimeToWait(address trader, address baseToken, int256 accountValue, uint256 minOrderSize, int256 freeCollateralByRatio) external view returns (uint256 timeToWait, bool);
+    function isAccountLiquidatable(address trader, address baseToken, uint256 minOrderSize, int256 accountValue, int256 freeCollateralByRatio) external view returns (bool isLiquidatable);
+    function checkAndUpdateLiquidationTimeToWait(address trader, address baseToken, int256 accountValue, uint256 minOrderSize, int256 freeCollateralByRatio) external;
+    function getNLiquidate(uint256 liquidatablePositionSize, uint256 minOrderSize, uint256 maxOrderSize) external view returns (uint256 nLiquidate);
 }

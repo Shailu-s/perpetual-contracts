@@ -84,6 +84,8 @@ describe("Vault Controller tests for withdrawal", function () {
     accountBalance = await upgrades.deployProxy(accountBalanceFactory, [
       positioningConfig.address,
       [volmexBaseToken.address, volmexBaseToken.address],
+      matchingEngineFake.address,
+      owner.address,
     ]);
 
     const vaultContractFactory = await ethers.getContractFactory("VaultController");

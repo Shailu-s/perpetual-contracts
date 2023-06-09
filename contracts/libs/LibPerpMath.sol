@@ -17,6 +17,14 @@ library LibPerpMath {
         return a < b ? a : b;
     }
 
+    function umax(uint256 a, uint256 b) internal pure returns (uint256) {
+        return a >= b ? a : b;
+    }
+
+    function umin(uint256 a, uint256 b) internal pure returns (uint256) {
+        return a < b ? a : b;
+    }
+
     function abs(int256 value) internal pure returns (uint256) {
         return value >= 0 ? value.toUint256() : neg256(value).toUint256();
     }

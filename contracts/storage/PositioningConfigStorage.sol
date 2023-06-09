@@ -22,4 +22,5 @@ abstract contract PositioningConfigStorageV1 {
     IPerpetualOracle public perpetualOracle;
     IPositioning public positioning;
     IAccountBalance public accountBalance;
+    uint24 internal _liquidatorFeeRatio;
 }

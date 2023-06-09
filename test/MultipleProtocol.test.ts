@@ -155,6 +155,8 @@ describe("Multiple protocols", function () {
     accountBalance1 = await upgrades.deployProxy(AccountBalance, [
       positioningConfig.address,
       [EVIV.address, BVIV.address],
+      matchingEngine.address,
+      owner.address,
     ]);
     await accountBalance1.deployed();
     await (await perpView.setAccount(accountBalance1.address)).wait();

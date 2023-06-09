@@ -154,6 +154,8 @@ describe("VolmexPerpPeriphery", function () {
     accountBalance1 = await upgrades.deployProxy(AccountBalance, [
       positioningConfig.address,
       [volmexBaseToken.address, volmexBaseToken1.address],
+      matchingEngine.address,
+      owner.address,
     ]);
     await accountBalance1.deployed();
     await (await perpView.setAccount(accountBalance1.address)).wait();
@@ -1923,6 +1925,59 @@ describe("VolmexPerpPeriphery", function () {
       );
     });
 
+    it("Should open the position but fail to with draw", async () => {
+      await matchingEngine.grantMatchOrders(positioning.address);
+
+      await await USDC.transfer(account1.address, "10000000000");
+      await await USDC.transfer(account2.address, "10000000000");
+      await USDC.connect(account1).approve(volmexPerpPeriphery.address, "10000000000");
+      await USDC.connect(account2).approve(volmexPerpPeriphery.address, "10000000000");
+      await volmexPerpPeriphery.whitelistTrader(account1.address, true);
+      await volmexPerpPeriphery.whitelistTrader(account2.address, true);
+      (
+        await volmexPerpPeriphery
+          .connect(account1)
+          .depositToVault(index, USDC.address, "10000000000")
+      ).wait();
+      (
+        await volmexPerpPeriphery
+          .connect(account2)
+          .depositToVault(index, USDC.address, "10000000000")
+      ).wait();
+
+      let signatureLeft = await getSignature(orderLeft, account1.address);
+      let signatureRight = await getSignature(orderRight, account2.address);
+
+      // opening the positions here
+      await expect(
+        volmexPerpPeriphery.openPosition(
+          index,
+          orderLeft,
+          signatureLeft,
+          orderRight,
+          signatureRight,
+          liquidator,
+        ),
+      ).to.emit(positioning, "PositionChanged");
+
+      const positionSize = await accountBalance1.getPositionSize(
+        account1.address,
+        orderLeft.makeAsset.virtualToken,
+      );
+      const positionSize1 = await accountBalance1.getPositionSize(
+        account2.address,
+        orderLeft.makeAsset.virtualToken,
+      );
+
+      expect(positionSize).to.be.equal("-10000000000000000000");
+      expect(positionSize1).to.be.equal("10000000000000000000");
+      await time.increase(3600);
+      await expect(
+        volmexPerpPeriphery
+          .connect(account1)
+          .withdrawFromVault(index, USDC.address, account1.address, amount),
+      ).to.be.revertedWith("VC_SIP");
+    });
     it("Should open the position", async () => {
       await matchingEngine.grantMatchOrders(positioning.address);
 
@@ -1970,7 +2025,6 @@ describe("VolmexPerpPeriphery", function () {
       expect(positionSize).to.be.equal("-10000000000000000000");
       expect(positionSize1).to.be.equal("10000000000000000000");
     });
-
     it("Should fail after min salt is set", async () => {
       await matchingEngine.grantMatchOrders(positioning.address);
 

@@ -7,10 +7,16 @@ import "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol"
 
 import "../libs/LibFill.sol";
 import "../interfaces/IPerpetualOracle.sol";
+import "../interfaces/IMatchingEngine.sol";
 import "./AssetMatcher.sol";
 
-abstract contract MatchingEngineCore is PausableUpgradeable, AssetMatcher, AccessControlUpgradeable {
-    uint256 private constant _UINT256_MAX = 2**256 - 1;
+abstract contract MatchingEngineCore is IMatchingEngine, PausableUpgradeable, AssetMatcher, AccessControlUpgradeable {
+    struct MaxOrderSizeInfo {
+        uint256 value;
+        uint256 timestamp;
+    }
+
+    uint256 private constant _UINT256_MAX = 2 ** 256 - 1;
     uint256 private constant _ORACLE_BASE = 1000000;
     // admin of matching engine
     bytes32 public constant MATCHING_ENGINE_CORE_ADMIN = keccak256("MATCHING_ENGINE_CORE_ADMIN");
@@ -22,15 +28,19 @@ abstract contract MatchingEngineCore is PausableUpgradeable, AssetMatcher, Acces
     mapping(address => uint256) public makerMinSalt;
     //state of the orders
     mapping(bytes32 => uint256) public fills;
+    mapping(address => uint256) public orderSizeInitialTimestampCache; // stores initial timestamp of matched order by base token
+    mapping(address => MaxOrderSizeInfo) public maxOrderSize; // store max order size and timestamp of that update by base token
+    uint256 public orderSizeLookBackWindow; // used to store max order size interval, currently one hour
 
     //events
     event Canceled(bytes32 indexed hash, address trader, address baseToken, uint256 amount, uint256 salt);
     event CanceledAll(address indexed trader, uint256 minSalt);
     event Matched(address[2] traders, uint64[2] deadline, uint256[2] salt, uint256 newLeftFill, uint256 newRightFill);
     event OrdersFilled(address[2] traders, uint256[2] salts, uint256[2] fills);
+    event OrderSizeIntervalUpdated(uint256 interval);
 
     function grantMatchOrders(address account) external {
-        require(hasRole(MATCHING_ENGINE_CORE_ADMIN, _msgSender()), "MatchingEngineCore: Not admin");
+        _requireMatchingEngineAdmin();
         _grantRole(CAN_MATCH_ORDERS, account);
     }
 
@@ -100,6 +110,24 @@ abstract contract MatchingEngineCore is PausableUpgradeable, AssetMatcher, Acces
         return (newFill);
     }
 
+    function updateOrderSizeInterval(uint256 _interval) external {
+        _requireMatchingEngineAdmin();
+        require(_interval >= 600, "MEC_SMI"); // _interval value should not be less than 10 mins
+        orderSizeLookBackWindow = _interval;
+        emit OrderSizeIntervalUpdated(_interval);
+    }
+
+    /// @dev Retrieves the maximum order size amongst all orders that were filled within the last hour
+    function getMaxOrderSizeOverTime(address baseToken) external view returns (uint256 size) { /// @dev default order size will be zero
+        MaxOrderSizeInfo memory maxOrder = maxOrderSize[baseToken];
+        if (
+            (block.timestamp - orderSizeInitialTimestampCache[baseToken]) / orderSizeLookBackWindow ==
+            (maxOrder.timestamp - orderSizeInitialTimestampCache[baseToken]) / orderSizeLookBackWindow
+        ) {
+            size = maxOrder.value;
+        }
+    }
+
     /**
         @notice matches valid orders and transfers their assets
         @param orderLeft the left order of the match
@@ -121,14 +149,29 @@ abstract contract MatchingEngineCore is PausableUpgradeable, AssetMatcher, Acces
         emit OrdersFilled([orderLeft.trader, orderRight.trader], [orderLeft.salt, orderRight.salt], [fills[leftOrderKeyHash], fills[rightOrderKeyHash]]);
     }
 
-    function _updateObservation(
-        uint256 quoteValue,
-        uint256 baseValue,
-        address baseToken
-    ) internal {
-        uint256 price = ((quoteValue * _ORACLE_BASE) / baseValue);
+    function _updateObservation(uint256 quoteValue, uint256 baseValue, address baseToken) internal {
+        _updateMaxFill(baseToken, baseValue);
         uint256 index = perpetualOracle.indexByBaseToken(baseToken);
+        if (perpetualOracle.initialTimestamps(index) == 0) {
+            orderSizeInitialTimestampCache[baseToken] = block.timestamp;
+        }
+        uint256 price = ((quoteValue * _ORACLE_BASE) / baseValue);
         perpetualOracle.addMarkObservation(index, price);
+    }
+
+    function _updateMaxFill(address baseToken, uint256 baseValue) internal {
+        uint256 currentTimestamp = block.timestamp;
+        MaxOrderSizeInfo memory maxOrder = maxOrderSize[baseToken];
+        if (
+            (currentTimestamp - orderSizeInitialTimestampCache[baseToken]) / orderSizeLookBackWindow ==
+            (maxOrder.timestamp - orderSizeInitialTimestampCache[baseToken]) / orderSizeLookBackWindow
+        ) {
+            if (maxOrder.value < baseValue) {
+                maxOrderSize[baseToken] = MaxOrderSizeInfo({ value: baseValue, timestamp: currentTimestamp });
+            }
+        } else {
+            maxOrderSize[baseToken] = MaxOrderSizeInfo({ value: baseValue, timestamp: currentTimestamp });
+        }
     }
 
     /**
@@ -179,6 +222,11 @@ abstract contract MatchingEngineCore is PausableUpgradeable, AssetMatcher, Acces
     function _requireCanMatchOrders() internal view {
         // MatchingEngineCore: Not Can Match Orders
         require(hasRole(CAN_MATCH_ORDERS, _msgSender()), "MEC_NCMO");
+    }
+
+    function _requireMatchingEngineAdmin() internal view {
+        // MatchingEngineCore: Not Can Match Orders
+        require(hasRole(MATCHING_ENGINE_CORE_ADMIN, _msgSender()), "MEC_NA");
     }
 
     function _matchAssets(LibOrder.Order memory orderLeft, LibOrder.Order memory orderRight) internal pure returns (address matchToken) {
