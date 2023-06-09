@@ -7,7 +7,6 @@ describe("Global", function () {
   let owner;
   let account1, account2;
   let MatchingEngine;
-  let PerpFactory;
   let VolmexBaseToken;
   let VolmexQuoteToken;
   let PerpetualOracle;
@@ -27,31 +26,21 @@ describe("Global", function () {
   let positioningConfig;
   let accountBalance;
   let vaultController;
-  let vaultController2;
   let vault;
   let positioning;
-  let positioning2;
   let marketRegistry;
   let periphery;
   let perpView;
-  let factory;
   let matchingEngine;
   let orderLeft, orderRight;
   let liquidator;
 
   const ORDER = "0xf555eb98";
-  const STOP_LOSS_LIMIT_ORDER = "0xeeaed735";
-  const TAKE_PROFIT_LIMIT_ORDER = "0xe0fc7f94";
   const one = ethers.constants.WeiPerEther; // 1e18
   const two = ethers.constants.WeiPerEther.mul(BigNumber.from("2")); // 2e18
   const three = ethers.constants.WeiPerEther.mul(BigNumber.from("3")); // 2e18
-  const five = ethers.constants.WeiPerEther.mul(BigNumber.from("5")); // 2e18
-  const ten = ethers.constants.WeiPerEther.mul(BigNumber.from("10")); // 2e18
-  const seven = ethers.constants.WeiPerEther.mul(BigNumber.from("7")); // 2e18
-  const nine = ethers.constants.WeiPerEther.mul(BigNumber.from("9")); // 2e18
   const deadline = 87654321987654;
   const proofHash = "0x6c00000000000000000000000000000000000000000000000000000000000000";
-  const capRatio = "4000000000";
 
   this.beforeAll(async () => {
     [owner, account1, account2] = await ethers.getSigners();
@@ -60,7 +49,6 @@ describe("Global", function () {
     liquidator = encodeAddress(owner.address);
 
     MatchingEngine = await ethers.getContractFactory("MatchingEngine");
-    PerpFactory = await ethers.getContractFactory("PerpFactory");
     VolmexBaseToken = await ethers.getContractFactory("VolmexBaseToken");
     VolmexQuoteToken = await ethers.getContractFactory("VolmexQuoteToken");
     PerpetualOracle = await ethers.getContractFactory("PerpetualOracle");
@@ -144,6 +132,8 @@ describe("Global", function () {
     accountBalance = await upgrades.deployProxy(AccountBalance, [
       positioningConfig.address,
       [volmexBaseToken.address, volmexBaseToken.address],
+      matchingEngine.address,
+      owner.address,
     ]);
     await accountBalance.deployed();
     await (await perpView.setAccount(accountBalance.address)).wait();
@@ -211,25 +201,6 @@ describe("Global", function () {
       owner.address, // replace with relayer
     ]);
     await periphery.deployed();
-
-    const proxyAdmin = await upgrades.admin.getInstance();
-    factory = await upgrades.deployProxy(
-      PerpFactory,
-      [
-        await proxyAdmin.getProxyImplementation(volmexBaseToken.address),
-        await proxyAdmin.getProxyImplementation(volmexQuoteToken.address),
-        await proxyAdmin.getProxyImplementation(vaultController.address),
-        await proxyAdmin.getProxyImplementation(vault.address),
-        await proxyAdmin.getProxyImplementation(positioning.address),
-        await proxyAdmin.getProxyImplementation(accountBalance.address),
-        perpView.address,
-        await proxyAdmin.getProxyImplementation(marketRegistry.address),
-      ],
-      {
-        initializer: "initialize",
-      },
-    );
-    await factory.deployed();
   });
 
   it("should match orders and open position", async () => {

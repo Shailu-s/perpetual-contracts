@@ -70,9 +70,18 @@ describe("Vault", function () {
       perpetualOracle.address,
     ]);
     const accountBalanceFactory = await ethers.getContractFactory("AccountBalance");
+    matchingEngine = await upgrades.deployProxy(
+      MatchingEngine,
+      [owner.address, perpetualOracle.address],
+      {
+        initializer: "__MatchingEngineTest_init",
+      },
+    );
     accountBalance = await upgrades.deployProxy(accountBalanceFactory, [
       positioningConfig.address,
       [alice.address, alice.address],
+      matchingEngine.address,
+      owner.address,
     ]);
 
     const vaultContractFactory = await ethers.getContractFactory("VaultController");
@@ -95,13 +104,6 @@ describe("Vault", function () {
       vaultController.address,
     ]);
 
-    matchingEngine = await upgrades.deployProxy(
-      MatchingEngine,
-      [owner.address, perpetualOracle.address],
-      {
-        initializer: "__MatchingEngineTest_init",
-      },
-    );
     Positioning = await ethers.getContractFactory("PositioningTest");
     positioning = await upgrades.deployProxy(
       Positioning,
@@ -438,9 +440,18 @@ describe("Vault", function () {
         perpetualOracle.address,
       ]);
       const accountBalanceFactory = await ethers.getContractFactory("AccountBalance");
+      matchingEngine = await upgrades.deployProxy(
+        MatchingEngine,
+        [owner.address, perpetualOracle.address],
+        {
+          initializer: "__MatchingEngineTest_init",
+        },
+      );
       accountBalance = await upgrades.deployProxy(accountBalanceFactory, [
         positioningConfig.address,
         [alice.address, alice.address],
+        matchingEngine.address,
+        owner.address,
       ]);
 
       const vaultContractFactory = await ethers.getContractFactory("VaultController");
@@ -463,13 +474,6 @@ describe("Vault", function () {
         vaultController.address,
       ]);
 
-      matchingEngine = await upgrades.deployProxy(
-        MatchingEngine,
-        [owner.address, perpetualOracle.address],
-        {
-          initializer: "__MatchingEngineTest_init",
-        },
-      );
       Positioning = await ethers.getContractFactory("PositioningTest");
       positioning = await upgrades.deployProxy(
         Positioning,
@@ -589,9 +593,18 @@ describe("Vault", function () {
         perpetualOracle.address,
       ]);
       const accountBalanceFactory = await ethers.getContractFactory("AccountBalance");
+      matchingEngine = await upgrades.deployProxy(
+        MatchingEngine,
+        [owner.address, perpetualOracle.address],
+        {
+          initializer: "__MatchingEngineTest_init",
+        },
+      );
       accountBalance = await upgrades.deployProxy(accountBalanceFactory, [
         positioningConfig.address,
         [alice.address, alice.address],
+        matchingEngine.address,
+        owner.address,
       ]);
 
       const vaultContractFactory = await ethers.getContractFactory("VaultController");
@@ -614,13 +627,6 @@ describe("Vault", function () {
         vaultController.address,
       ]);
 
-      matchingEngine = await upgrades.deployProxy(
-        MatchingEngine,
-        [owner.address, perpetualOracle.address],
-        {
-          initializer: "__MatchingEngineTest_init",
-        },
-      );
       Positioning = await ethers.getContractFactory("PositioningTest");
       positioning = await upgrades.deployProxy(
         Positioning,
@@ -894,10 +900,19 @@ describe("Vault", function () {
       positioningConfig = await upgrades.deployProxy(positioningConfigFactory, [
         perpViewFake.address,
       ]);
+      matchingEngine = await upgrades.deployProxy(
+        MatchingEngine,
+        [owner.address, perpetualOracle.address],
+        {
+          initializer: "__MatchingEngineTest_init",
+        },
+      );
       const accountBalanceFactory = await ethers.getContractFactory("AccountBalance");
       accountBalance = await upgrades.deployProxy(accountBalanceFactory, [
         positioningConfig.address,
         [alice.address, alice.address],
+        matchingEngine.address,
+        owner.address,
       ]);
 
       const vaultContractFactory = await ethers.getContractFactory("VaultController");
@@ -920,13 +935,6 @@ describe("Vault", function () {
         vaultController.address,
       ]);
 
-      matchingEngine = await upgrades.deployProxy(
-        MatchingEngine,
-        [owner.address, perpetualOracle.address],
-        {
-          initializer: "__MatchingEngineTest_init",
-        },
-      );
       Positioning = await ethers.getContractFactory("PositioningTest");
       positioning = await upgrades.deployProxy(
         Positioning,

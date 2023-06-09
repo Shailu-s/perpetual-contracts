@@ -7,7 +7,6 @@ const positioning = async () => {
   console.log("Balance: ", (await owner.getBalance()).toString());
 
   const MatchingEngine = await ethers.getContractFactory("MatchingEngine");
-  const PerpFactory = await ethers.getContractFactory("PerpFactory");
   const VolmexBaseToken = await ethers.getContractFactory("VolmexBaseToken");
   const VolmexQuoteToken = await ethers.getContractFactory("VolmexQuoteToken");
   const PerpetualOracle = await ethers.getContractFactory("PerpetualOracle");
@@ -131,6 +130,8 @@ const positioning = async () => {
   const accountBalance = await upgrades.deployProxy(AccountBalance, [
     positioningConfig.address,
     [volmexBaseToken1.address, volmexBaseToken2.address],
+    matchingEngine.address,
+    process.env.VOLMEX_MULTISIG ? process.env.VOLMEX_MULTISIG : owner.address
   ]);
   await accountBalance.deployed();
   console.log(accountBalance.address);
@@ -177,6 +178,7 @@ const positioning = async () => {
       marketRegistry.address,
       [volmexBaseToken1.address, volmexBaseToken2.address],
       [owner.address, `${process.env.LIQUIDATOR}`],
+      ["10000000000000000", "10000000000000000"]
     ],
     {
       initializer: "initialize",
@@ -223,33 +225,12 @@ const positioning = async () => {
   console.log(periphery.address);
 
   const proxyAdmin = await upgrades.admin.getInstance();
-
-  console.log("Deploying Perpetual Factory ...");
-  const factory = await upgrades.deployProxy(
-    PerpFactory,
-    [
-      await proxyAdmin.getProxyImplementation(volmexBaseToken1.address),
-      await proxyAdmin.getProxyImplementation(volmexQuoteToken.address),
-      await proxyAdmin.getProxyImplementation(vaultController.address),
-      await proxyAdmin.getProxyImplementation(vault.address),
-      await proxyAdmin.getProxyImplementation(positioning.address),
-      await proxyAdmin.getProxyImplementation(accountBalance.address),
-      await proxyAdmin.getProxyImplementation(perpView.address),
-      await proxyAdmin.getProxyImplementation(marketRegistry.address),
-    ],
-    {
-      initializer: "initialize",
-    },
-  );
-  await factory.deployed();
-  console.log(factory.address);
-  await (await perpView.grantViewStatesRole(factory.address)).wait();
+  await (await perpView.grantViewStatesRole(owner.address)).wait();
 
   const addresses = {
     AccountBalance: accountBalance.address,
     BaseToken1: volmexBaseToken1.address,
     BaseToken2: volmexBaseToken2.address,
-    Factory: factory.address,
     PerpetualOracles: perpetualOracle.address,
     MarketRegistry: marketRegistry.address,
     MatchingEngine: matchingEngine.address,
@@ -358,13 +339,6 @@ const positioning = async () => {
     });
   } catch (error) {
     console.log("ERROR - verify - periphery!");
-  }
-  try {
-    await run("verify:verify", {
-      address: await proxyAdmin.getProxyImplementation(factory.address),
-    });
-  } catch (error) {
-    console.log("ERROR - verify - factory!");
   }
   try {
     await run("verify:verify", {

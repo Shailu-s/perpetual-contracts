@@ -79,4 +79,5 @@ interface IPerpetualOracle {
     ) external view returns (uint256 price);
 
     function indexByBaseToken(address _baseToken) external view returns (uint256 index);
+    function initialTimestamps(uint256 _index) external view returns (uint256 timestamp);
 }

@@ -13,6 +13,7 @@ import { IAccountBalance } from "../interfaces/IAccountBalance.sol";
 import { IVolmexBaseToken } from "../interfaces/IVolmexBaseToken.sol";
 import { IPositioningConfig } from "../interfaces/IPositioningConfig.sol";
 import { IVirtualToken } from "../interfaces/IVirtualToken.sol";
+import { IMatchingEngine } from "../interfaces/IMatchingEngine.sol";
 
 import { AccountBalanceStorageV1 } from "../storage/AccountBalanceStorage.sol";
 import { BlockContext } from "../helpers/BlockContext.sol";
@@ -28,9 +29,12 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
     using LibPerpMath for uint160;
     using LibAccountMarket for LibAccountMarket.Info;
 
-    uint256 internal constant _MIN_PARTIAL_LIQUIDATE_POSITION_VALUE = 100e18 wei; // 100 USD in decimal 18
-
-    function initialize(address positioningConfigArg, address[2] calldata volmexBaseTokenArgs) external initializer {
+    function initialize(
+        address positioningConfigArg,
+        address[2] calldata volmexBaseTokenArgs,
+        IMatchingEngine matchingEngineArg,
+        address adminArg
+    ) external initializer {
         // IPositioningConfig address is not contract
         require(positioningConfigArg.isContract(), "AB_VPMMCNC");
 
@@ -42,8 +46,13 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
         for (uint256 index; index < 2; index++) {
             _underlyingPriceIndexes[volmexBaseTokenArgs[index]] = index;
         }
+        matchingEngine = matchingEngineArg;
+        sigmaVolmexIvs[0] = 12600; // 0.0126
+        sigmaVolmexIvs[1] = 13300; // 0.0133
+        minTimeBound = 600; // 10 minutes
         _grantRole(SM_INTERVAL_ROLE, positioningConfigArg);
         _grantRole(ACCOUNT_BALANCE_ADMIN, _msgSender());
+        _grantRole(SIGMA_IV_ROLE, adminArg);
     }
 
     function grantSettleRealizedPnlRole(address account) external {
@@ -65,6 +74,12 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
     function setSmIntervalLiquidation(uint256 smIntervalLiquidation) external virtual {
         _requireSmIntervalRole();
         _smIntervalLiquidation = smIntervalLiquidation;
+    }
+
+    function setMinTimeBound(uint256 minTimeBoundArg) external virtual {
+        _requireMinTimeBoundRole();
+        require(minTimeBoundArg > 300, "AB_NS5"); // not smaller than 5 mins
+        minTimeBound = minTimeBoundArg;
     }
 
     /// @inheritdoc IAccountBalance
@@ -131,6 +146,16 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
         _deregisterBaseToken(trader, baseToken);
     }
 
+    function updateSigmaVolmexIvs(uint256[] memory _indexes, uint256[] memory _sigmaVivs) external virtual {
+        _requireSigmaIvRole();
+        uint256 totalIndex = _indexes.length;
+        for (uint256 index; index < totalIndex; ++index) {
+            require(_sigmaVivs[index] > 0, "AccountBalance: not zero");
+            sigmaVolmexIvs[_indexes[index]] = _sigmaVivs[index];
+        }
+        emit SigmaVolmexIvsUpdated(_indexes, _sigmaVivs);
+    }
+
     /// @inheritdoc IAccountBalance
     function getPositioningConfig() external view override returns (address) {
         return _positioningConfig;
@@ -151,7 +176,7 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
         address trader,
         address baseToken,
         int256 accountValue
-    ) external view override returns (int256) {
+    ) public view override returns (int256) {
         int256 marginRequirement = getMarginRequirementForLiquidation(trader);
         int256 positionSize = getPositionSize(trader, baseToken);
 
@@ -160,13 +185,7 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
             return 0;
         }
 
-        // Liquidate the entire position if its value is small enough
-        // to prevent tiny positions left in the system
         uint256 positionValueAbs = getTotalPositionValue(trader, baseToken, _smIntervalLiquidation).abs();
-        if (positionValueAbs <= _MIN_PARTIAL_LIQUIDATE_POSITION_VALUE) {
-            return positionSize;
-        }
-
         // Liquidator can only take over partial position if margin ratio is ≥ 3.125% (aka the half of mmRatio).
         // If margin ratio < 3.125%, liquidator can take over the entire position.
         //
@@ -221,7 +240,7 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
     }
 
     /// @inheritdoc IAccountBalance
-    function getPnlAndPendingFee(address trader) external view virtual override returns (int256, int256) {
+    function getPnlAndPendingFee(address trader) public view virtual override returns (int256, int256) {
         int256 totalPositionValue;
         uint256 tokenLen = _baseTokensMap[trader].length;
         for (uint256 i = 0; i < tokenLen; i++) {
@@ -239,6 +258,20 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
     /// @dev this function is used to fetch index price of base token
     function getIndexPrice(address baseToken, uint256 twInterval) external view returns (uint256 indexPrice) {
         indexPrice = _getIndexPrice(baseToken, twInterval);
+    }
+
+    /// @dev This function checks if account of trader is eligible for liquidation
+    function isAccountLiquidatable(
+        address trader,
+        address baseToken,
+        uint256 minOrderSize,
+        int256 accountValue,
+        int256 freeCollateralByRatio
+    ) external view returns (bool isLiquidatable) {
+        (uint256 timeToWait, bool isLiquidationPossible) = getLiquidationTimeToWait(trader, baseToken, accountValue, minOrderSize, freeCollateralByRatio);
+        if(!isLiquidationPossible) return false;
+        if (nextLiquidationTime[trader] + timeToWait > block.timestamp) return false;
+        return accountValue < getMarginRequirementForLiquidation(trader);
     }
 
     /// @inheritdoc IAccountBalance
@@ -285,6 +318,51 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
 
     function getTraderBaseTokens(address trader) public view override returns (address[] memory) {
         return _baseTokensMap[trader];
+    }
+
+    function getNLiquidate(
+        uint256 liquidatablePositionSize,
+        uint256 minOrderSize,
+        uint256 maxOrderSize
+    ) public view returns (uint256 nLiquidate) {
+        nLiquidate = (liquidatablePositionSize.umin((_getFuzzyMaxOrderSize(minOrderSize, maxOrderSize))).umax(minOrderSize));
+    }
+
+    function getLiquidationTimeToWait(
+        address trader,
+        address baseToken,
+        int256 accountValue,
+        uint256 minOrderSize,
+        int256 freeCollateralByRatio
+    ) public view returns (uint256 timeToWait, bool isLiquidationPossible) {
+        uint256 maxOrderSize = matchingEngine.getMaxOrderSizeOverTime(baseToken);
+        int256 idealAmountToLiquidate = getLiquidatablePositionSize(trader, baseToken, accountValue);
+        if(idealAmountToLiquidate.abs() > 0) { // liquidate amount should be gt zero
+            isLiquidationPossible = true;
+        } else {
+            return (0, false);
+        }
+
+        uint256 totalPositionNotional = getTotalAbsPositionValue(trader);
+        uint256 nLiquidate = getNLiquidate(idealAmountToLiquidate.abs(), minOrderSize, maxOrderSize);
+        uint256 sigmaVolmexIv = (sigmaVolmexIvs[_underlyingPriceIndexes[baseToken]]);
+        uint256 maxTimeBound = (((freeCollateralByRatio.abs() * _SIGMA_IV_BASE * 1e18) / (6 * sigmaVolmexIv * totalPositionNotional))**2) / 1e36;
+        timeToWait = maxTimeBound > minTimeBound ? (nLiquidate * maxTimeBound) / idealAmountToLiquidate.abs() : 0;
+    }
+
+    function checkAndUpdateLiquidationTimeToWait(
+        address trader,
+        address baseToken,
+        int256 accountValue,
+        uint256 minOrderSize,
+        int256 freeCollateralByRatio
+    ) external {
+        _requireOnlyPositioning();
+        (uint256 timeToWait, bool isLiquidationPossible) = getLiquidationTimeToWait(trader, baseToken, accountValue, minOrderSize, freeCollateralByRatio);
+        require(isLiquidationPossible, "AB_LNZ");
+        if (timeToWait > 0) require(nextLiquidationTime[trader] <= block.timestamp, "AB_ELT"); // early liquidation triggered
+        nextLiquidationTime[trader] = block.timestamp + timeToWait;
+        emit TraderNextLiquidationUpdated(trader, baseToken, nextLiquidationTime[trader]);
     }
 
     function _modifyTakerBalance(
@@ -362,12 +440,28 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
         return (totalTakerQuoteBalance);
     }
 
+    function _getFuzzyMaxOrderSize(uint256 minOrderSize, uint256 maxOrderSize) internal view returns (uint256 fuzzyMaxOrderSize) {
+        uint128 uint128Max = type(uint128).max;
+        uint256 pseudoRandomNumber128Bits = uint128(uint128Max & uint256(keccak256(abi.encodePacked(block.difficulty, blockhash(block.number - 1), block.timestamp))));
+        uint256 pseudoRandomOrderSize = (maxOrderSize * (((pseudoRandomNumber128Bits * 2 * 10**17) / uint128Max) + 8 * 10**17)) / 10**18;
+
+        fuzzyMaxOrderSize = minOrderSize.umax(pseudoRandomOrderSize);
+    }
+
     function _requireAccountBalanceAdmin() internal view {
         require(hasRole(ACCOUNT_BALANCE_ADMIN, _msgSender()), "AccountBalance: Not admin");
     }
 
     function _requireSmIntervalRole() internal view {
         require(hasRole(SM_INTERVAL_ROLE, _msgSender()), "AccountBalance: Not sm interval role");
+    }
+
+    function _requireSigmaIvRole() internal view {
+        require(hasRole(SIGMA_IV_ROLE, _msgSender()), "AccountBalance: Not sigma IV role");
+    }
+
+    function _requireMinTimeBoundRole() internal view {
+        require(hasRole(SIGMA_IV_ROLE, _msgSender()), "AccountBalance: Not sigma IV role");
     }
 
     function _hasBaseToken(address[] memory baseTokens, address baseToken) internal pure returns (bool) {

@@ -14,6 +14,9 @@ interface IPositioningConfig {
     /// @return liquidationPenaltyRatio Liquidation penalty ratio
     function getLiquidationPenaltyRatio() external view returns (uint24 liquidationPenaltyRatio);
 
+    /// @return liquidatorFeeRatio liquidator fee from liquidation penalty
+    function getLiquidatorFeeRatio() external view returns (uint24);
+
     /// @return partialCloseRatio Partial close ratio
     function getPartialCloseRatio() external view returns (uint24 partialCloseRatio);
 

@@ -1,4 +1,4 @@
-import { expect, util } from "chai";
+import { expect, should, util } from "chai";
 import { ethers, upgrades } from "hardhat";
 import { FakeContract, smock } from "@defi-wonderland/smock";
 import { BigNumber } from "ethers";
@@ -153,6 +153,8 @@ describe("PerpetualOracle - Last Price Oracle", function () {
     accountBalance1 = await upgrades.deployProxy(AccountBalance, [
       positioningConfig.address,
       [volmexBaseToken.address, volmexBaseToken1.address],
+      matchingEngine.address,
+      owner.address,
     ]);
     await accountBalance1.deployed();
     await (await perpView.setAccount(accountBalance1.address)).wait();

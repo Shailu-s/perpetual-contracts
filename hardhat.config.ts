@@ -98,10 +98,11 @@ const config: HardhatUserConfig = {
     gasPrice: 21,
   },
   etherscan: {
-    // apiKey: process.env.ETHERSCAN_API_KEY,
     apiKey: {
-      // Basescan doesn't require an API key, however
-      // Hardhat still expects an arbitrary string to be provided.
+      "mainnet": process.env.ETHERSCAN_API_KEY,
+      "goerli": process.env.ETHERSCAN_API_KEY,
+      "polygonMumbai": process.env.POLYGONSCAN_API_KEY,
+      "arbitrumGoerli": process.env.ARBISCAN_API_KEY,
       "base-goerli": "PLACEHOLDER_STRING"
      },
      customChains: [

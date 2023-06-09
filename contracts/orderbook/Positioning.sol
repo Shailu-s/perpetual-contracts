@@ -2,9 +2,8 @@
 pragma solidity =0.8.18;
 
 import { AddressUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol";
-import { ContextUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol";
-import { EIP712Upgradeable } from "@openzeppelin/contracts-upgradeable/utils/cryptography/draft-EIP712Upgradeable.sol";
 import { ReentrancyGuardUpgradeable } from "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
+import { PausableUpgradeable } from "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
 
 import { LibAccountMarket } from "../libs/LibAccountMarket.sol";
 import { LibOrder } from "../libs/LibOrder.sol";
@@ -24,13 +23,11 @@ import { IVirtualToken } from "../interfaces/IVirtualToken.sol";
 import { IVaultController } from "../interfaces/IVaultController.sol";
 import { IPerpetualOracle } from "../interfaces/IPerpetualOracle.sol";
 
-import { BlockContext } from "../helpers/BlockContext.sol";
 import { FundingRate } from "../funding-rate/FundingRate.sol";
-import { OwnerPausable } from "../helpers/OwnerPausable.sol";
 import { OrderValidator } from "./OrderValidator.sol";
 
 // never inherit any new stateful contract. never change the orders of parent stateful contracts
-contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, OwnerPausable, FundingRate, EIP712Upgradeable, OrderValidator {
+contract Positioning is IPositioning, ReentrancyGuardUpgradeable, PausableUpgradeable, FundingRate, OrderValidator {
     using AddressUpgradeable for address;
     using LibSafeCastUint for uint256;
     using LibSafeCastInt for int256;
@@ -62,7 +59,7 @@ contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, 
         // P_MRNC:Market Registry  is not contract
         require(marketRegistryArg.isContract(), "P_MENC");
         __ReentrancyGuard_init();
-        __OwnerPausable_init();
+        __Pausable_init_unchained();
         __FundingRate_init(perpetualOracleArg);
         __OrderValidator_init_unchained();
 
@@ -102,7 +99,8 @@ contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, 
     }
 
     /// @inheritdoc IPositioning
-    function setDefaultFeeReceiver(address newDefaultFeeReceiver) external onlyOwner {
+    function setDefaultFeeReceiver(address newDefaultFeeReceiver) external {
+        _requirePositioningAdmin();
         // Default Fee Receiver is zero
         require(newDefaultFeeReceiver != address(0), "PC_DFRZ");
         defaultFeeReceiver = newDefaultFeeReceiver;
@@ -159,6 +157,16 @@ contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, 
     function toggleLiquidatorWhitelist() external {
         _requirePositioningAdmin();
         isLiquidatorWhitelistEnabled = !isLiquidatorWhitelistEnabled;
+    }
+
+    function pause() external {
+        _requirePositioningAdmin();
+        _pause();
+    }
+
+    function unpause() external {
+        _requirePositioningAdmin();
+        _unpause();
     }
 
     /// @inheritdoc IPositioning
@@ -293,8 +301,11 @@ contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, 
         address baseToken,
         int256 positionSizeToBeLiquidated
     ) internal {
+        IAccountBalance accountBalanceInst = IAccountBalance(accountBalance);
+        int256 accountValue = getAccountValue(trader);
+        int256 feeCollateralByRatio = _getFreeCollateralByRatio(trader, IPositioningConfig(positioningConfig).getImRatio());
         // P_EAV: enough account value
-        require(isAccountLiquidatable(trader), "P_EAV");
+        require(accountBalanceInst.isAccountLiquidatable(trader, baseToken, minPositionSizeByBaseToken[baseToken], accountValue, feeCollateralByRatio), "P_EAV");
         address liquidator = _msgSender();
         if (isLiquidatorWhitelistEnabled) {
             _requireWhitelistLiquidator(liquidator);
@@ -304,14 +315,12 @@ contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, 
 
         // P_WLD: wrong liquidation direction
         require(positionSize * positionSizeToBeLiquidated >= 0, "P_WLD");
-
-        IAccountBalance(accountBalance).registerBaseToken(trader, baseToken);
+        accountBalanceInst.registerBaseToken(trader, baseToken);
+        accountBalanceInst.checkAndUpdateLiquidationTimeToWait(trader, baseToken, accountValue, minPositionSizeByBaseToken[baseToken], feeCollateralByRatio);
 
         // must settle funding first
         _settleFunding(trader, baseToken);
         _settleFunding(liquidator, baseToken);
-
-        int256 accountValue = getAccountValue(trader);
 
         // trader's position is closed at index price and pnl realized
         (int256 liquidatedPositionSize, int256 liquidatedPositionNotional) = _getLiquidatedPositionSizeAndNotional(trader, baseToken, accountValue, positionSizeToBeLiquidated);
@@ -322,13 +331,10 @@ contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, 
         _modifyOwedRealizedPnl(trader, liquidationPenalty.neg256(), baseToken);
 
         // if there is bad debt, liquidation fees all go to liquidator; otherwise, split between liquidator & FR
-        uint256 liquidationFeeToLiquidator = liquidationPenalty / 2;
-        uint256 liquidationFeeToFR;
-        if (accountValue < 0) {
-            liquidationFeeToLiquidator = liquidationPenalty;
-        } else {
-            liquidationFeeToFR = liquidationPenalty - liquidationFeeToLiquidator;
-            _modifyOwedRealizedPnl(defaultFeeReceiver, liquidationFeeToFR.toInt256(), baseToken);
+        uint256 liquidationFeeToLiquidator = liquidationPenalty;
+        if (accountValue >= 0) {
+            liquidationFeeToLiquidator = liquidationPenalty.mulRatio(IPositioningConfig(positioningConfig).getLiquidatorFeeRatio());
+            _modifyOwedRealizedPnl(defaultFeeReceiver, (liquidationPenalty - liquidationFeeToLiquidator).toInt256(), baseToken);
         }
 
         // liquidator opens a position with liquidationFeeToLiquidator as a discount
@@ -443,7 +449,7 @@ contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, 
         );
 
         if (_firstTradedTimestampMap[baseToken] == 0) {
-            _firstTradedTimestampMap[baseToken] = _blockTimestamp();
+            _firstTradedTimestampMap[baseToken] = block.timestamp;
         }
 
         // if not closing a position, check margin ratio after swap
@@ -594,8 +600,10 @@ contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, 
 
         uint256 indexPrice = getIndexPrice(baseToken, _smIntervalLiquidation);
         require(indexPrice != 0, "P_0IP"); // zero index price
-        int256 liquidatedPositionSize = positionSizeToBeLiquidated.neg256();
-        int256 liquidatedPositionNotional = positionSizeToBeLiquidated.mulDiv(indexPrice.toInt256(), _ORACLE_BASE);
+        uint256 maxOrderSize = IMatchingEngine(_matchingEngine).getMaxOrderSizeOverTime(baseToken);
+        uint256 actualLiquidatableSize = IAccountBalance(accountBalance).getNLiquidate(positionSizeToBeLiquidated.abs(), minPositionSizeByBaseToken[baseToken], maxOrderSize);
+        int256 liquidatedPositionSize = positionSizeToBeLiquidated >= 0 ? (actualLiquidatableSize.toInt256()).neg256() : actualLiquidatableSize.toInt256();
+        int256 liquidatedPositionNotional = liquidatedPositionSize.mulDiv(indexPrice.toInt256(), _ORACLE_BASE);
 
         return (liquidatedPositionSize, liquidatedPositionNotional);
     }
@@ -629,11 +637,6 @@ contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, 
         _validate(order, signature);
     }
 
-    /// @dev This function checks if account of trader is eligible for liquidation
-    function isAccountLiquidatable(address trader) public view returns (bool) {
-        return getAccountValue(trader) < IAccountBalance(accountBalance).getMarginRequirementForLiquidation(trader);
-    }
-
     /// @dev This function returns position size of trader
     function _getTakerPosition(address trader, address baseToken) internal view returns (int256) {
         return IAccountBalance(accountBalance).getPositionSize(trader, baseToken);
@@ -653,10 +656,6 @@ contract Positioning is IPositioning, BlockContext, ReentrancyGuardUpgradeable, 
     /// @dev this function returns total free collateral available of trader
     function _getFreeCollateralByRatio(address trader, uint24 ratio) internal view returns (int256) {
         return IVaultController(vaultController).getFreeCollateralByRatio(trader, ratio);
-    }
-
-    function _msgSender() internal view override(OwnerPausable, ContextUpgradeable) returns (address) {
-        return super._msgSender();
     }
 
     function _requirePositioningAdmin() internal view {
