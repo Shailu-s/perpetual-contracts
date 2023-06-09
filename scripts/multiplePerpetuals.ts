@@ -1,6 +1,7 @@
 import { ethers, upgrades, run } from "hardhat";
 const proofHash = "0x6c00000000000000000000000000000000000000000000000000000000000000";
 const capRatio = "400000000";
+const arbitrumChainId = [42161, 421613];
 const positioning = async () => {
   const [owner] = await ethers.getSigners();
   console.log("Deployer: ", await owner.getAddress());
@@ -19,6 +20,8 @@ const positioning = async () => {
   const VolmexPerpPeriphery = await ethers.getContractFactory("VolmexPerpPeriphery");
   const TestERC20 = await ethers.getContractFactory("TetherToken");
   const VolmexPerpView = await ethers.getContractFactory("VolmexPerpView");
+  const networkDetail = await ethers.provider.getNetwork();
+  const isArbitrum = arbitrumChainId.includes(networkDetail.chainId);
 
   console.log("Deploying PerView ...");
   const perpView = await upgrades.deployProxy(VolmexPerpView, [owner.address]);
@@ -101,7 +104,12 @@ const positioning = async () => {
   console.log("Deploying USDT ...");
   let usdtAddress = process.env.USDT;
   if (!process.env.USDT) {
-    const usdt = await TestERC20.deploy("1000000000000000000", "Tether USD", "USDT", 6);
+    const usdt = await TestERC20.deploy(
+      "1000000000000000000",
+      `USD${isArbitrum ? "T" : "C"} Volmex Testnet`,
+      `USD${isArbitrum ? "T" : "C"}`,
+      6
+    );
     await usdt.deployed();
     usdtAddress = usdt.address;
     console.log(usdt.address);
@@ -131,7 +139,7 @@ const positioning = async () => {
     positioningConfig.address,
     [volmexBaseToken1.address, volmexBaseToken2.address],
     matchingEngine.address,
-    process.env.VOLMEX_MULTISIG ? process.env.VOLMEX_MULTISIG : owner.address
+    process.env.VOLMEX_MULTISIG ? process.env.VOLMEX_MULTISIG : owner.address,
   ]);
   await accountBalance.deployed();
   console.log(accountBalance.address);
@@ -178,7 +186,7 @@ const positioning = async () => {
       marketRegistry.address,
       [volmexBaseToken1.address, volmexBaseToken2.address],
       [owner.address, `${process.env.LIQUIDATOR}`],
-      ["10000000000000000", "10000000000000000"]
+      ["10000000000000000", "10000000000000000"],
     ],
     {
       initializer: "initialize",
