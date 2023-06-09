@@ -2,8 +2,6 @@
 pragma solidity =0.8.18;
 pragma abicoder v2;
 
-import { AddressUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol";
-
 import { LibSafeCastUint } from "../libs/LibSafeCastUint.sol";
 import { LibPerpMath } from "../libs/LibPerpMath.sol";
 
@@ -12,13 +10,11 @@ import { IPerpetualOracle } from "../interfaces/IPerpetualOracle.sol";
 import { IFundingRate } from "../interfaces/IFundingRate.sol";
 import { IPositioningConfig } from "../interfaces/IPositioningConfig.sol";
 
-import { BlockContext } from "../helpers/BlockContext.sol";
 import { FundingRateStorage } from "../storage/FundingRateStorage.sol";
 import { PositioningCallee } from "../helpers/PositioningCallee.sol";
 import { PositioningStorageV1 } from "../storage/PositioningStorage.sol";
 
-contract FundingRate is IFundingRate, BlockContext, PositioningCallee, FundingRateStorage, PositioningStorageV1 {
-    using AddressUpgradeable for address;
+contract FundingRate is IFundingRate, PositioningCallee, FundingRateStorage, PositioningStorageV1 {
     using LibPerpMath for uint256;
     using LibPerpMath for int256;
     using LibSafeCastUint for uint256;
@@ -32,7 +28,7 @@ contract FundingRate is IFundingRate, BlockContext, PositioningCallee, FundingRa
         int256 userTwPremium = IAccountBalance(accountBalance).getAccountInfo(trader, baseToken).lastTwPremiumGrowthGlobal;
         fundingPayment = _getFundingPayment(trader, baseToken, globalTwPremiumGrowth, userTwPremium);
 
-        uint256 timestamp = _blockTimestamp();
+        uint256 timestamp = block.timestamp;
         uint256 lastSettledTimestamp = _lastSettledTimestampMap[baseToken];
         // update states before further actions in this funding epoch; once per epoch
         if (timestamp - lastSettledTimestamp > _fundingPeriod) {
@@ -106,7 +102,7 @@ contract FundingRate is IFundingRate, BlockContext, PositioningCallee, FundingRa
         )
     {
         uint256 twapInterval = IPositioningConfig(positioningConfig).getTwapInterval();
-        uint256 timestamp = _blockTimestamp();
+        uint256 timestamp = block.timestamp;
         uint256 baseTokenIndex = _underlyingPriceIndexes[baseToken];
         // shorten twapInterval if prior observations are not enough
         // in first epoch, block-based funding is applicable
