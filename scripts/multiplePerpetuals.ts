@@ -5,7 +5,8 @@ const arbitrumChainId = [42161, 421613];
 const positioning = async () => {
   const [owner] = await ethers.getSigners();
   console.log("Deployer: ", await owner.getAddress());
-  console.log("Balance: ", (await owner.getBalance()).toString());
+  const ethBefore = await owner.getBalance();
+  console.log("Balance: ", ethBefore.toString());
 
   const MatchingEngine = await ethers.getContractFactory("MatchingEngine");
   const VolmexBaseToken = await ethers.getContractFactory("VolmexBaseToken");
@@ -254,6 +255,12 @@ const positioning = async () => {
   };
   console.log("\n =====Deployment Successful===== \n");
   console.log(addresses);
+  const ethAfter = await owner.getBalance();
+  console.log("ETH burned: ", (ethBefore.sub(ethAfter)).toString());
+
+  if (process.env.NOT_VERIFY) {
+    return;
+  }
 
   try {
     await run("verify:verify", {
