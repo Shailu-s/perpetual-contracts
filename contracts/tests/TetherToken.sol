@@ -412,7 +412,7 @@ contract TetherToken is Pausable, StandardToken, BlackList {
         emit Issue(amount);
     }
 
-    // Redeem tokens.
+    // Redeem tokens. 
     // These tokens are withdrawn from the owner address
     // if the balance must be enough to cover the redeem
     // or the call will fail.

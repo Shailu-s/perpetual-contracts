@@ -112,7 +112,7 @@ abstract contract MatchingEngineCore is IMatchingEngine, PausableUpgradeable, As
 
     function updateOrderSizeInterval(uint256 _interval) external {
         _requireMatchingEngineAdmin();
-        require(_interval >= 600, "MEC_SMI"); // _interval value should not be less than 10 mins
+        require(_interval >= 600, "MEC_SMI"); //_interval value should not be less than 10 mins
         orderSizeLookBackWindow = _interval;
         emit OrderSizeIntervalUpdated(_interval);
     }
