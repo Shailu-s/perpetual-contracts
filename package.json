@@ -41,7 +41,7 @@
     "slither": "ts-node --files scripts/slither.ts",
     "compile": "hardhat compile",
     "coverage": "hardhat coverage",
-    "deploy": "npx hardhat run --network $NETWORK scripts/deploy.ts"
+    "deploy": "npx hardhat run --network $NETWORK scripts/multiplePerpetuals.ts"
   },
   "devDependencies": {
     "@nomicfoundation/hardhat-network-helpers": "^1.0.8",
