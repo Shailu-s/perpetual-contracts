@@ -191,30 +191,30 @@ contract Positioning is IPositioning, ReentrancyGuardUpgradeable, PausableUpgrad
     // `liquidator` unused: we are keeping this for future implementation
     // when trader will be able to directly open position
     function openPosition(
-        LibOrder.Order memory orderLeft,
-        bytes memory signatureLeft,
-        LibOrder.Order memory orderRight,
-        bytes memory signatureRight,
+        LibOrder.Order memory makerOrder,
+        bytes memory signatureMaker,
+        LibOrder.Order memory takerOrder,
+        bytes memory signatureTaker,
         bytes memory liquidator
     ) external override whenNotPaused nonReentrant {
         // short = selling base token
-        address baseToken = orderLeft.isShort ? orderLeft.makeAsset.virtualToken : orderLeft.takeAsset.virtualToken;
+        address baseToken = makerOrder.isShort ? makerOrder.makeAsset.virtualToken : makerOrder.takeAsset.virtualToken;
 
         require(!isStaleIndexOracle(baseToken), "P_SIP"); // stale index price
-        _validateFull(orderLeft, signatureLeft);
-        _validateFull(orderRight, signatureRight);
+        _validateFull(makerOrder, signatureMaker);
+        _validateFull(takerOrder, signatureTaker);
 
         require(IMarketRegistry(_marketRegistry).checkBaseToken(baseToken), "V_PBRM"); // V_PERP: Basetoken not registered at market = V_PBRM
 
         // register base token for account balance calculations
-        IAccountBalance(accountBalance).registerBaseToken(orderLeft.trader, baseToken);
-        IAccountBalance(accountBalance).registerBaseToken(orderRight.trader, baseToken);
+        IAccountBalance(accountBalance).registerBaseToken(makerOrder.trader, baseToken);
+        IAccountBalance(accountBalance).registerBaseToken(takerOrder.trader, baseToken);
 
         // must settle funding first
-        _settleFunding(orderLeft.trader, baseToken);
-        _settleFunding(orderRight.trader, baseToken);
+        _settleFunding(makerOrder.trader, baseToken);
+        _settleFunding(takerOrder.trader, baseToken);
 
-        _openPosition(orderLeft, orderRight, baseToken);
+        _openPosition(makerOrder, takerOrder, baseToken);
     }
 
     /// @inheritdoc IPositioning
@@ -385,13 +385,13 @@ contract Positioning is IPositioning, ReentrancyGuardUpgradeable, PausableUpgrad
 
     /// @dev this function matches the both orders and opens the position
     function _openPosition(
-        LibOrder.Order memory orderLeft,
-        LibOrder.Order memory orderRight,
+        LibOrder.Order memory makerOrder,
+        LibOrder.Order memory takerOrder,
         address baseToken
     ) internal returns (InternalData memory internalData) {
-        LibFill.FillResult memory newFill = IMatchingEngine(_matchingEngine).matchOrders(orderLeft, orderRight);
+        LibFill.FillResult memory newFill = IMatchingEngine(_matchingEngine).matchOrders(makerOrder, takerOrder);
 
-        if (orderLeft.isShort) {
+        if (makerOrder.isShort) {
             internalData.leftExchangedPositionSize = newFill.leftValue.neg256();
             internalData.rightExchangedPositionSize = newFill.leftValue.toInt256();
 
@@ -414,36 +414,36 @@ contract Positioning is IPositioning, ReentrancyGuardUpgradeable, PausableUpgrad
 
         int256[2] memory realizedPnL;
         realizedPnL[0] = _realizePnLChecks(
-            orderLeft,
+            makerOrder,
             baseToken,
             internalData.leftExchangedPositionSize,
-            internalData.leftExchangedPositionNotional - orderFees.orderLeftFee.toInt256()
+            internalData.leftExchangedPositionNotional - orderFees.makerOrderFee.toInt256()
         );
         realizedPnL[1] = _realizePnLChecks(
-            orderRight,
+            takerOrder,
             baseToken,
             internalData.rightExchangedPositionSize,
-            internalData.rightExchangedPositionNotional - orderFees.orderRightFee.toInt256()
+            internalData.rightExchangedPositionNotional - orderFees.takerOrderFee.toInt256()
         );
 
         // modifies PnL of fee receiver
-        _modifyOwedRealizedPnl(defaultFeeReceiver, (orderFees.orderLeftFee + orderFees.orderRightFee).toInt256(), baseToken);
+        _modifyOwedRealizedPnl(defaultFeeReceiver, (orderFees.makerOrderFee + orderFees.takerOrderFee).toInt256(), baseToken);
 
         // modifies positionSize and openNotional
         internalData.leftPositionSize = _settleBalanceAndDeregister(
-            orderLeft.trader,
+            makerOrder.trader,
             baseToken,
             internalData.leftExchangedPositionSize,
-            internalData.leftExchangedPositionNotional - orderFees.orderLeftFee.toInt256(),
+            internalData.leftExchangedPositionNotional - orderFees.makerOrderFee.toInt256(),
             realizedPnL[0],
             0
         );
 
         internalData.rightPositionSize = _settleBalanceAndDeregister(
-            orderRight.trader,
+            takerOrder.trader,
             baseToken,
             internalData.rightExchangedPositionSize,
-            internalData.rightExchangedPositionNotional - orderFees.orderRightFee.toInt256(),
+            internalData.rightExchangedPositionNotional - orderFees.takerOrderFee.toInt256(),
             realizedPnL[1],
             0
         );
@@ -454,24 +454,24 @@ contract Positioning is IPositioning, ReentrancyGuardUpgradeable, PausableUpgrad
 
         // if not closing a position, check margin ratio after swap
         if (internalData.leftPositionSize != 0) {
-            _requireEnoughFreeCollateral(orderLeft.trader);
+            _requireEnoughFreeCollateral(makerOrder.trader);
         }
 
         if (internalData.rightPositionSize != 0) {
-            _requireEnoughFreeCollateral(orderRight.trader);
+            _requireEnoughFreeCollateral(takerOrder.trader);
         }
 
-        _updateTokenAmount(orderLeft.trader, baseToken);
-        _updateTokenAmount(orderRight.trader, baseToken);
+        _updateTokenAmount(makerOrder.trader, baseToken);
+        _updateTokenAmount(takerOrder.trader, baseToken);
 
         emit PositionChanged(
-            [orderLeft.trader, orderRight.trader],
+            [makerOrder.trader, takerOrder.trader],
             baseToken,
             [internalData.leftExchangedPositionSize, internalData.rightExchangedPositionSize],
             [internalData.leftExchangedPositionNotional, internalData.rightExchangedPositionNotional],
-            [orderFees.orderLeftFee, orderFees.orderRightFee],
-            [orderLeft.orderType, orderRight.orderType],
-            [orderLeft.isShort, orderRight.isShort]
+            [orderFees.makerOrderFee, orderFees.takerOrderFee],
+            [makerOrder.orderType, takerOrder.orderType],
+            [makerOrder.isShort, takerOrder.isShort]
         );
     }
 
@@ -622,11 +622,11 @@ contract Positioning is IPositioning, ReentrancyGuardUpgradeable, PausableUpgrad
         int256 leftExchangedPositionNotional,
         int256 rightExchangedPositionNotional
     ) internal view returns (OrderFees memory orderFees) {
-        orderFees.orderLeftFee = isLeftMaker
+        orderFees.makerOrderFee = isLeftMaker
             ? leftExchangedPositionNotional.abs().mulRatio(IMarketRegistry(_marketRegistry).getMakerFeeRatio())
             : leftExchangedPositionNotional.abs().mulRatio(IMarketRegistry(_marketRegistry).getTakerFeeRatio());
 
-        orderFees.orderRightFee = isLeftMaker
+        orderFees.takerOrderFee = isLeftMaker
             ? rightExchangedPositionNotional.abs().mulRatio(IMarketRegistry(_marketRegistry).getTakerFeeRatio())
             : rightExchangedPositionNotional.abs().mulRatio(IMarketRegistry(_marketRegistry).getMakerFeeRatio());
     }
