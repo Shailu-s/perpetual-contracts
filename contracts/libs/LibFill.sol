@@ -32,7 +32,8 @@ library LibFill {
         (uint256 leftMakeValue, uint256 leftTakeValue) = LibOrder.calculateRemaining(leftOrder, leftOrderFill, isLeftMakeFill); //q,b
         (uint256 rightMakeValue, uint256 rightTakeValue) = LibOrder.calculateRemaining(rightOrder, rightOrderFill, !isLeftMakeFill); //b,q
         //We have 3 cases here:
-        if (rightTakeValue > leftMakeValue) {
+        bool isLeftFill = isLeftMakeFill ? rightTakeValue > leftMakeValue : rightMakeValue > leftTakeValue;
+        if (isLeftFill) {
             //1nd: left order should be fully filled
             return fillLeft(leftMakeValue, leftTakeValue, rightOrder.makeAsset.value, rightOrder.takeAsset.value, isLeftMakeFill); //lq,lb,rb,rq
         }

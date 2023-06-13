@@ -184,12 +184,11 @@ describe("MatchingEngine", function () {
     vault = await upgrades.deployProxy(Vault, [
       positioningConfig.address,
       accountBalance.address,
-      virtualToken.address,
-      accountBalance.address,
+      USDC.address,
+      vaultController.address,
     ]);
-    await (await virtualToken.setMintBurnRole(owner.address)).wait();
-    await virtualToken.mint(account1.address, ten.toString());
-    await virtualToken.mint(account2.address, ten.toString());
+    await USDC.mint(account1.address, ten.toString());
+    await USDC.mint(account2.address, ten.toString());
     await (await volmexBaseToken.setMintBurnRole(positioning.address)).wait();
     await (await virtualToken.connect(owner).setMintBurnRole(positioning.address)).wait();
     perpViewFake = await smock.fake("VolmexPerpView");
@@ -211,7 +210,7 @@ describe("MatchingEngine", function () {
 
     await vault.connect(owner).setPositioning(positioning.address);
     await vault.connect(owner).setVaultController(vaultController.address);
-    await vaultController.registerVault(vault.address, virtualToken.address);
+    await vaultController.registerVault(vault.address, USDC.address);
     await vaultController.connect(owner).setPositioning(positioning.address);
 
     await positioningConfig.connect(owner).setMaxMarketsPerAccount(5);
@@ -229,28 +228,18 @@ describe("MatchingEngine", function () {
 
     asset = Asset(virtualToken.address, "10");
 
-    await virtualToken.connect(account1).approve(vault.address, ten.toString());
-    await virtualToken.connect(account2).approve(vault.address, ten.toString());
-    await virtualToken.connect(account1).approve(volmexPerpPeriphery.address, ten.toString());
-    await virtualToken.connect(account2).approve(volmexPerpPeriphery.address, ten.toString());
+    await USDC.connect(account1).approve(vault.address, ten.toString());
+    await USDC.connect(account2).approve(vault.address, ten.toString());
+    await USDC.connect(account1).approve(volmexPerpPeriphery.address, ten.toString());
+    await USDC.connect(account2).approve(volmexPerpPeriphery.address, ten.toString());
 
     // volmexPerpPeriphery.address, USDC.address, account1.address, amount
     await vaultController
       .connect(account1)
-      .deposit(
-        volmexPerpPeriphery.address,
-        virtualToken.address,
-        account1.address,
-        ten.toString(),
-      );
+      .deposit(volmexPerpPeriphery.address, USDC.address, account1.address, ten.toString());
     await vaultController
       .connect(account2)
-      .deposit(
-        volmexPerpPeriphery.address,
-        virtualToken.address,
-        account2.address,
-        ten.toString(),
-      );
+      .deposit(volmexPerpPeriphery.address, USDC.address, account2.address, ten.toString());
     const orderLeft2 = Order(
       ORDER,
       deadline,
@@ -1365,10 +1354,10 @@ describe("MatchingEngine", function () {
     it("should call do transfer with fee > 0", async () => {
       const [owner, account1, account2, account3, account4] = await ethers.getSigners();
 
-      await virtualToken.mint(account1.address, 1000000000000000);
+      await USDC.mint(account1.address, 1000000000000000);
 
-      await virtualToken.connect(account1).approve(transferManagerTest.address, 1000000000000000);
-      await virtualToken.connect(account2).approve(transferManagerTest.address, 1000000000000000);
+      await USDC.connect(account1).approve(transferManagerTest.address, 1000000000000000);
+      await USDC.connect(account2).approve(transferManagerTest.address, 1000000000000000);
 
       const left = libDeal.DealSide(asset, erc20TransferProxy.address, account1.address);
 
@@ -1380,10 +1369,10 @@ describe("MatchingEngine", function () {
     it("should call do transfer where DealData.maxFeeBasePoint is 0", async () => {
       const [owner, account1, account2, account3, account4] = await ethers.getSigners();
 
-      await virtualToken.mint(account1.address, 1000000000000000);
+      await USDC.mint(account1.address, 1000000000000000);
 
-      await virtualToken.connect(account1).approve(transferManagerTest.address, 1000000000000000);
-      await virtualToken.connect(account2).approve(transferManagerTest.address, 1000000000000000);
+      await USDC.connect(account1).approve(transferManagerTest.address, 1000000000000000);
+      await USDC.connect(account2).approve(transferManagerTest.address, 1000000000000000);
 
       const left = libDeal.DealSide(asset, erc20TransferProxy.address, account1.address);
 
@@ -1468,7 +1457,7 @@ describe("MatchingEngine", function () {
       const [owner, account1] = await ethers.getSigners();
       await expect(
         matchingEngine.connect(account1).grantMatchOrders(account1.address),
-      ).to.be.revertedWith("MatchingEngineCore: Not admin");
+      ).to.be.revertedWith("MEC_NA");
     });
   });
   describe("transfer payout else condition", async () => {

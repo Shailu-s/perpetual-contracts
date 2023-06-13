@@ -66,11 +66,11 @@ abstract contract MatchingEngineCore is IMatchingEngine, PausableUpgradeable, As
         emit CanceledAll(_msgSender(), minSalt);
     }
 
-    function matchOrderInBatch(LibOrder.Order[] memory ordersLeft, LibOrder.Order[] memory ordersRight) external whenNotPaused {
+    function matchOrderInBatch(LibOrder.Order[] memory makerOrders, LibOrder.Order[] memory takerOrders) external whenNotPaused {
         _requireCanMatchOrders();
-        uint256 ordersLength = ordersLeft.length;
+        uint256 ordersLength = makerOrders.length;
         for (uint256 index = 0; index < ordersLength; index++) {
-            matchOrders(ordersLeft[index], ordersRight[index]);
+            matchOrders(makerOrders[index], takerOrders[index]);
         }
     }
 
@@ -95,24 +95,24 @@ abstract contract MatchingEngineCore is IMatchingEngine, PausableUpgradeable, As
 
     /** 
         @notice Will match two orders & transfers assets
-        @param orderLeft the left side of order
-        @param orderRight the right side of order
+        @param makerOrder the left side of order
+        @param takerOrder the right side of order
      */
-    function matchOrders(LibOrder.Order memory orderLeft, LibOrder.Order memory orderRight) public whenNotPaused returns (LibFill.FillResult memory) {
+    function matchOrders(LibOrder.Order memory makerOrder, LibOrder.Order memory takerOrder) public whenNotPaused returns (LibFill.FillResult memory) {
         _requireCanMatchOrders();
-        if (orderLeft.trader != address(0) && orderRight.trader != address(0)) {
-            require(orderRight.trader != orderLeft.trader, "V_PERP_M: order verification failed");
-            _requireMinSalt(orderLeft.salt, orderLeft.trader);
-            _requireMinSalt(orderRight.salt, orderRight.trader);
+        if (makerOrder.trader != address(0) && takerOrder.trader != address(0)) {
+            require(takerOrder.trader != makerOrder.trader, "V_PERP_M: order verification failed");
+            _requireMinSalt(makerOrder.salt, makerOrder.trader);
+            _requireMinSalt(takerOrder.salt, takerOrder.trader);
         }
-        LibFill.FillResult memory newFill = _matchAndTransfer(orderLeft, orderRight);
+        LibFill.FillResult memory newFill = _matchAndTransfer(makerOrder, takerOrder);
 
         return (newFill);
     }
 
     function updateOrderSizeInterval(uint256 _interval) external {
         _requireMatchingEngineAdmin();
-        require(_interval >= 600, "MEC_SMI"); // _interval value should not be less than 10 mins
+        require(_interval >= 600, "MEC_SMI"); //_interval value should not be less than 10 mins
         orderSizeLookBackWindow = _interval;
         emit OrderSizeIntervalUpdated(_interval);
     }
@@ -130,23 +130,23 @@ abstract contract MatchingEngineCore is IMatchingEngine, PausableUpgradeable, As
 
     /**
         @notice matches valid orders and transfers their assets
-        @param orderLeft the left order of the match
-        @param orderRight the right order of the match
+        @param makerOrder the left order of the match
+        @param takerOrder the right order of the match
     */
-    function _matchAndTransfer(LibOrder.Order memory orderLeft, LibOrder.Order memory orderRight) internal returns (LibFill.FillResult memory newFill) {
-        _matchAssets(orderLeft, orderRight);
+    function _matchAndTransfer(LibOrder.Order memory makerOrder, LibOrder.Order memory takerOrder) internal returns (LibFill.FillResult memory newFill) {
+        _matchAssets(makerOrder, takerOrder);
 
-        newFill = _getFillSetNew(orderLeft, orderRight);
+        newFill = _getFillSetNew(makerOrder, takerOrder);
 
-        orderLeft.isShort
-            ? _updateObservation(newFill.rightValue, newFill.leftValue, orderLeft.makeAsset.virtualToken)
-            : _updateObservation(newFill.leftValue, newFill.rightValue, orderRight.makeAsset.virtualToken);
+        makerOrder.isShort
+            ? _updateObservation(newFill.rightValue, newFill.leftValue, makerOrder.makeAsset.virtualToken)
+            : _updateObservation(newFill.leftValue, newFill.rightValue, takerOrder.makeAsset.virtualToken);
 
-        bytes32 leftOrderKeyHash = LibOrder.hashKey(orderLeft);
-        bytes32 rightOrderKeyHash = LibOrder.hashKey(orderRight);
+        bytes32 leftOrderKeyHash = LibOrder.hashKey(makerOrder);
+        bytes32 rightOrderKeyHash = LibOrder.hashKey(takerOrder);
 
-        emit Matched([orderLeft.trader, orderRight.trader], [orderLeft.deadline, orderRight.deadline], [orderLeft.salt, orderRight.salt], newFill.leftValue, newFill.rightValue);
-        emit OrdersFilled([orderLeft.trader, orderRight.trader], [orderLeft.salt, orderRight.salt], [fills[leftOrderKeyHash], fills[rightOrderKeyHash]]);
+        emit Matched([makerOrder.trader, takerOrder.trader], [makerOrder.deadline, takerOrder.deadline], [makerOrder.salt, takerOrder.salt], newFill.leftValue, newFill.rightValue);
+        emit OrdersFilled([makerOrder.trader, takerOrder.trader], [makerOrder.salt, takerOrder.salt], [fills[leftOrderKeyHash], fills[rightOrderKeyHash]]);
     }
 
     function _updateObservation(uint256 quoteValue, uint256 baseValue, address baseToken) internal {
@@ -176,29 +176,29 @@ abstract contract MatchingEngineCore is IMatchingEngine, PausableUpgradeable, As
 
     /**
         @notice calculates fills for the matched orders and set them in "fills" mapping
-        @param orderLeft left order of the match
-        @param orderRight right order of the match
+        @param makerOrder left order of the match
+        @param takerOrder right order of the match
         @return returns change in orders' fills by the match 
     */
-    function _getFillSetNew(LibOrder.Order memory orderLeft, LibOrder.Order memory orderRight) internal returns (LibFill.FillResult memory) {
-        bytes32 leftOrderKeyHash = LibOrder.hashKey(orderLeft);
-        bytes32 rightOrderKeyHash = LibOrder.hashKey(orderRight);
-        uint256 leftOrderFill = _getOrderFill(orderLeft.salt, leftOrderKeyHash);
-        uint256 rightOrderFill = _getOrderFill(orderRight.salt, rightOrderKeyHash);
+    function _getFillSetNew(LibOrder.Order memory makerOrder, LibOrder.Order memory takerOrder) internal returns (LibFill.FillResult memory) {
+        bytes32 leftOrderKeyHash = LibOrder.hashKey(makerOrder);
+        bytes32 rightOrderKeyHash = LibOrder.hashKey(takerOrder);
+        uint256 leftOrderFill = _getOrderFill(makerOrder.salt, leftOrderKeyHash);
+        uint256 rightOrderFill = _getOrderFill(takerOrder.salt, rightOrderKeyHash);
 
-        LibFill.FillResult memory newFill = LibFill.fillOrder(orderLeft, orderRight, leftOrderFill, rightOrderFill, orderLeft.isShort);
+        LibFill.FillResult memory newFill = LibFill.fillOrder(makerOrder, takerOrder, leftOrderFill, rightOrderFill, makerOrder.isShort);
         require(newFill.rightValue > 0 && newFill.leftValue > 0, "V_PERP_M: nothing to fill");
 
-        if (orderLeft.salt != 0) {
-            if (orderLeft.isShort) {
+        if (makerOrder.salt != 0) {
+            if (makerOrder.isShort) {
                 fills[leftOrderKeyHash] = leftOrderFill + newFill.leftValue;
             } else {
                 fills[leftOrderKeyHash] = leftOrderFill + newFill.rightValue;
             }
         }
 
-        if (orderRight.salt != 0) {
-            if (orderRight.isShort) {
+        if (takerOrder.salt != 0) {
+            if (takerOrder.isShort) {
                 fills[rightOrderKeyHash] = rightOrderFill + newFill.rightValue;
             } else {
                 fills[rightOrderKeyHash] = rightOrderFill + newFill.leftValue;
@@ -229,10 +229,10 @@ abstract contract MatchingEngineCore is IMatchingEngine, PausableUpgradeable, As
         require(hasRole(MATCHING_ENGINE_CORE_ADMIN, _msgSender()), "MEC_NA");
     }
 
-    function _matchAssets(LibOrder.Order memory orderLeft, LibOrder.Order memory orderRight) internal pure returns (address matchToken) {
-        matchToken = _matchAssets(orderLeft.makeAsset.virtualToken, orderRight.takeAsset.virtualToken);
+    function _matchAssets(LibOrder.Order memory makerOrder, LibOrder.Order memory takerOrder) internal pure returns (address matchToken) {
+        matchToken = _matchAssets(makerOrder.makeAsset.virtualToken, takerOrder.takeAsset.virtualToken);
         require(matchToken != address(0), "V_PERP_M: left make assets don't match");
-        matchToken = _matchAssets(orderLeft.takeAsset.virtualToken, orderRight.makeAsset.virtualToken);
+        matchToken = _matchAssets(makerOrder.takeAsset.virtualToken, takerOrder.makeAsset.virtualToken);
         require(matchToken != address(0), "V_PERP_M: left take assets don't match");
     }
 

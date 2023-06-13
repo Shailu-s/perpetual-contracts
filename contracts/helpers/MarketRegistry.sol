@@ -97,6 +97,10 @@ contract MarketRegistry is IMarketRegistry, PositioningCallee, MarketRegistrySto
         }
     }
 
+    function getBaseTokens() external view returns (address[] memory baseTokens) {
+        baseTokens = _baseTokensMarketMap;
+    }
+
     function _requireMarketRegistryAdmin() internal view {
         require(hasRole(MARKET_REGISTRY_ADMIN, _msgSender()), "MarketRegistry: Not admin");
     }
@@ -108,9 +112,5 @@ contract MarketRegistry is IMarketRegistry, PositioningCallee, MarketRegistrySto
             }
         }
         return false;
-    }
-
-    function getBaseTokens() external view returns (address[] memory baseTokens) {
-        baseTokens = _baseTokensMarketMap;
     }
 }
