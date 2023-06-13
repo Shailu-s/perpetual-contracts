@@ -73,6 +73,6 @@ library LibFill {
             uint256 rightUSDNeeded = LibMath.safeGetPartialAmountFloor(leftTakeValue, rightMakeValue, rightTakeValue);
             require(leftMakeValue >= rightUSDNeeded, "fillLeft: not enough USD on left"); // Check if the buyer has enough USD
         }
-        return FillResult(leftMakeValue, leftTakeValue); // // Settlement will happen according to left order, since left order is seller, therefore leftTakeValue
+        return FillResult(leftMakeValue, leftTakeValue); // Settlement will happen according to left order, since left order is seller, therefore leftTakeValue
     }
 }
