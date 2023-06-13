@@ -50,13 +50,13 @@ library LibFill {
     ) internal pure returns (FillResult memory result) {
         uint256 makerQuoteValue;
         if (isLeftMakeFill) {
-            makerQuoteValue = LibMath.safeGetPartialAmountFloor(rightTakeValue, leftMakeValue, leftTakeValue); //rq * lb / lq
-            require(makerQuoteValue <= rightMakeValue, "V_PERP_M: fillRight: unable to fill");
-            return FillResult(rightTakeValue, makerQuoteValue); //rq, lb == left goes long ; rb, lq ==left goes short
+            makerQuoteValue = LibMath.safeGetPartialAmountFloor(rightTakeValue, leftMakeValue, leftTakeValue);
+            require(makerQuoteValue <= rightMakeValue, "fillRight: not enough USD on right");
+            return FillResult(rightTakeValue, makerQuoteValue);
         } else {
-            makerQuoteValue = LibMath.safeGetPartialAmountFloor(rightMakeValue, leftTakeValue, leftMakeValue);
-            require(makerQuoteValue <= leftMakeValue, "V_PERP_M: fillRight: unable to fill");
-            return FillResult(makerQuoteValue, rightMakeValue); //rq, lb == left goes long ; rb, lq ==left goes short
+            uint256 rightUSDNeeded = LibMath.safeGetPartialAmountFloor(rightMakeValue, leftTakeValue, leftMakeValue);
+            require(leftMakeValue >= rightUSDNeeded, "fillRight: not enough USD on left");
+            return FillResult(rightUSDNeeded, rightMakeValue);
         }
     }
 
@@ -68,11 +68,10 @@ library LibFill {
         bool isLeftMakeFill
     ) internal pure returns (FillResult memory result) {
         if (isLeftMakeFill) {
-            uint256 rightTake = LibMath.safeGetPartialAmountFloor(leftTakeValue, rightMakeValue, rightTakeValue); //lb *rq / rb = rq
-            require(rightTake <= leftMakeValue, "V_PERP_M: fillLeft: unable to fill");
+            require(rightMakeValue >= leftTakeValue, "fillLeft: not enough USD on right");
         } else {
-            uint256 rightTake = LibMath.safeGetPartialAmountFloor(leftMakeValue, rightTakeValue, rightMakeValue); //lb *rq / rb = rq
-            require(rightTake <= rightMakeValue, "V_PERP_M: fillLeft: unable to fill");
+            uint256 rightUSDNeeded = LibMath.safeGetPartialAmountFloor(leftTakeValue, rightMakeValue, rightTakeValue);
+            require(leftMakeValue >= rightUSDNeeded, "fillLeft: not enough USD on left");
         }
         return FillResult(leftMakeValue, leftTakeValue); //lq,lb
     }
