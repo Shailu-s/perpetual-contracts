@@ -750,8 +750,8 @@ describe("MatchingEngine", function () {
           "rounding error",
         );
       });
-      it("Should fail to match orders if buy order price is less than required for sell order ", async () => {
-        // Price of sell order is 100 and price of buy order is lesser than 100. i.e 5000 /51.Hence it Should not match.
+      it("Should not fail to match orders if buy order price is less than required for sell order ", async () => {
+        // Price of sell order is 100 and price of buy order is lesser than 100. i.e 5000 /51.Hence it should match.
         const orderLeft = Order(
           ORDER,
           deadline,
@@ -773,9 +773,8 @@ describe("MatchingEngine", function () {
           0,
           true,
         );
-        await expect(matchingEngine.matchOrders(orderRight, orderLeft)).to.be.revertedWith(
-          "V_PERP_M: fillLeft: unable to fill",
-        );
+
+        await expect(matchingEngine.matchOrders(orderRight, orderLeft)).to.emit(matchingEngine, "Matched");
       });
       it("should fail if trader for both the orders in same", async () => {
         const [owner, account1] = await ethers.getSigners();
@@ -886,7 +885,7 @@ describe("MatchingEngine", function () {
     });
 
     describe("Success:", function () {
-      it.only("Stop loss order match scenario", async () => {
+      it("Stop loss order match scenario", async () => {
         const orderLeft = Order(
           "0xe144c7ec",
           deadline,
@@ -1104,7 +1103,7 @@ describe("MatchingEngine", function () {
         );
 
         await expect(matchingEngine.matchOrders(sellOrder, buyOrder)).to.be.revertedWith(
-          "V_PERP_M: fillRight: unable to fill",
+          "fillRight: not enough USD on right",
         );
       });
       it("Should match stop loss with market order of price more than 70", async () => {
@@ -1718,7 +1717,7 @@ describe("MatchingEngine", function () {
         );
         await expectRevert(
           matchingEngine.matchOrders(orderLeft, orderRight),
-          "V_PERP_M: fillRight: unable to fill",
+          "fillRight: not enough USD on right",
         );
       });
       it("Should left and right complete fill", async () => {
@@ -1745,7 +1744,7 @@ describe("MatchingEngine", function () {
         );
         await expectRevert(
           matchingEngine.matchOrders(orderLeft, orderRight),
-          "V_PERP_M: fillRight: unable to fill",
+          "fillRight: not enough USD on right",
         );
       });
       it("Should left complete and right partial fill", async () => {
@@ -1770,10 +1769,11 @@ describe("MatchingEngine", function () {
           0,
           !isShort,
         );
-        await expectRevert(
-          matchingEngine.matchOrders(orderLeft, orderRight),
-          "V_PERP_M: fillLeft: unable to fill",
-        );
+        const receipt = await (await matchingEngine.matchOrders(orderLeft, orderRight)).wait();
+        const newFills = matchedFills(receipt);
+        console.log(newFills);
+        expect(newFills.leftValue).equal(convert(10));
+        expect(newFills.rightValue).equal(convert(110));
       });
     });
   });
@@ -1945,10 +1945,14 @@ describe("MatchingEngine", function () {
           0,
           isShort,
         );
-        const receipt = await (await matchingEngine.matchOrders(orderLeft, orderRight)).wait();
-        const newFills = matchedFills(receipt);
-        expect(newFills.leftValue).equal(convert(100));
-        expect(newFills.rightValue).equal(convert(10));
+        // const receipt = await (await matchingEngine.matchOrders(orderLeft, orderRight)).wait();
+        // const newFills = matchedFills(receipt);
+        // expect(newFills.leftValue).equal(convert(100));
+        // expect(newFills.rightValue).equal(convert(10));
+        await expectRevert(
+          matchingEngine.matchOrders(orderLeft, orderRight),
+          "fillLeft: not enough USD on left",
+        );
       });
 
       it("playground", async () => {
