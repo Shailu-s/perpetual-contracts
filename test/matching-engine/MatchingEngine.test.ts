@@ -897,6 +897,35 @@ describe("MatchingEngine", function () {
     });
 
     describe("Success:", function () {
+      it.only("Stop loss order match scenario", async () => {
+        const orderLeft = Order(
+          "0xe144c7ec",
+          deadline,
+          "0xA5Bc1D31e32330ED646C22DD84D436eE8315aF7a",
+          Asset("0x5b77C6E3116841DE8C753cA801c35b27FFBBC465", "45900000353076925792"),
+          Asset("0xe42E9db7a0E4AB0e74C4d8494d18ceF3032ad7A7", "1989000000000000000000"),
+          1686591456765000,
+          52000000,
+          true,
+        );
+
+        const orderRight = Order(
+          "0xf555eb98",
+          1686640796514,
+          "0x7c610B4dDA11820b749AeA40Df8cBfdA1925e581",
+          Asset("0xe42E9db7a0E4AB0e74C4d8494d18ceF3032ad7A7", "2000000000000000000000"),
+          Asset("0x5b77C6E3116841DE8C753cA801c35b27FFBBC465", "40000000000000000000"),
+          1686590796439000,
+          0,
+          false,
+        );
+
+
+        await expect(matchingEngine.matchOrders(orderRight, orderLeft))
+          .to.emit(matchingEngine, "Matched")
+          .to.emit(matchingEngine, "OrdersFilled")
+      });
+      
       it("should match orders & emit event", async () => {
         await expect(matchingEngine.matchOrders(orderLeft, orderRight))
           .to.emit(matchingEngine, "Matched")
