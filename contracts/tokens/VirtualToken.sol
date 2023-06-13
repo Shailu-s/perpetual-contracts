@@ -12,6 +12,7 @@ contract VirtualToken is IVirtualToken, ERC20Upgradeable, AccessControlUpgradeab
     bytes32 public constant BURNER = keccak256("BURNER");
 
     bool public isBase;
+    bool public isTransferEnabled;
 
     event WhitelistAdded(address account);
     event WhitelistRemoved(address account);
@@ -33,6 +34,11 @@ contract VirtualToken is IVirtualToken, ERC20Upgradeable, AccessControlUpgradeab
         _grantRole(BURNER, minterBurner);
     }
 
+    function toggleTransferEnable() external virtual {
+        _requireVirtualTokenAdmin();
+        isTransferEnabled = !isTransferEnabled;
+    }
+
     function mint(address recipient, uint256 amount) external override {
         _requireMinterRole();
         _mint(recipient, amount);
@@ -48,6 +54,11 @@ contract VirtualToken is IVirtualToken, ERC20Upgradeable, AccessControlUpgradeab
         _mint(recipient, type(uint256).max);
     }
 
+    function _transfer(address from, address to, uint256 amount) internal virtual override {
+        _requireTransferEnabled();
+        super._transfer(from, to, amount);
+    }
+
     function _requireVirtualTokenAdmin() internal view {
         require(hasRole(VIRTUAL_TOKEN_ADMIN, _msgSender()), "VirtualToken: Not admin");
     }
@@ -58,6 +69,10 @@ contract VirtualToken is IVirtualToken, ERC20Upgradeable, AccessControlUpgradeab
 
     function _requireBurnerRole() internal view {
         require(hasRole(BURNER, _msgSender()), "VirtualToken: Not burner");
+    }
+
+    function _requireTransferEnabled() internal view {
+        require(isTransferEnabled, "VirtualToken: ERC20._transfer not enabled");
     }
 
     uint256[50] private __gap;
