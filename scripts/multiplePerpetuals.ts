@@ -5,9 +5,8 @@ const arbitrumChainId = [42161, 421613];
 const positioning = async () => {
   const [owner] = await ethers.getSigners();
   console.log("Deployer: ", await owner.getAddress());
-  const ethBefore = await owner.getBalance();
+  const ethBefore = await ethers.provider.getBalance(owner.address);
   console.log("Balance: ", ethBefore.toString());
-
   const FEE_DATA = {
     maxFeePerGas: ethers.utils.parseUnits("100", "gwei"),
     maxPriorityFeePerGas: ethers.utils.parseUnits("5", "gwei"),
@@ -88,6 +87,7 @@ const positioning = async () => {
   );
 
   await perpetualOracle.deployed();
+  console.log(perpetualOracle.address);
   await (await volmexBaseToken1.setPriceFeed(perpetualOracle.address)).wait();
   await (await volmexBaseToken2.setPriceFeed(perpetualOracle.address)).wait();
   if (process.env.INDEX_OBSERVATION_ADDER) {
@@ -123,7 +123,7 @@ const positioning = async () => {
     );
     await usdt.deployed();
     usdtAddress = usdt.address;
-    console.log(usdt.address);
+    console.log(usdtAddress);
   }
 
   console.log("Deploying MatchingEngine ...");
@@ -265,7 +265,7 @@ const positioning = async () => {
   };
   console.log("\n =====Deployment Successful===== \n");
   console.log(addresses);
-  const ethAfter = await owner.getBalance();
+  const ethAfter = await provider.getBalance(owner.address);
   console.log("ETH burned: ", ethBefore.sub(ethAfter).toString());
 
   if (process.env.NOT_VERIFY) {
