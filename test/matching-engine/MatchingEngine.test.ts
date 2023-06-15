@@ -2112,6 +2112,34 @@ describe("MatchingEngine", function () {
       expect(newFills.leftValue).equal(convert(10));
       expect(newFills.rightValue).equal(convert(100));
     });
+
+    it("Should left partial and right complete fill", async () => {
+      orderLeft = Order(
+        ORDER,
+        deadline,
+        account1.address,
+        Asset(virtualToken.address, convert(220)),
+        Asset(volmexBaseToken.address, convert(20)),
+        ++salt,
+        0,
+        !isShort,
+      );
+
+      orderRight = Order(
+        ORDER,
+        deadline,
+        account2.address,
+        Asset(volmexBaseToken.address, convert(10)),
+        Asset(virtualToken.address, convert(100)),
+        ++salt,
+        0,
+        isShort,
+      );
+      const receipt = await (await matchingEngine.matchOrders(orderLeft, orderRight)).wait();
+      const newFills = matchedFills(receipt);
+      expect(newFills.leftValue).equal(convert(110));
+      expect(newFills.rightValue).equal(convert(10));
+    });
   });
 
   describe("Max order size - fills", () => {
