@@ -119,42 +119,42 @@ contract VolmexPerpPeriphery is AccessControlUpgradeable, IVolmexPerpPeriphery {
 
     function openPosition(
         uint256 _index,
-        LibOrder.Order memory _orderLeft,
-        bytes memory _signatureLeft,
-        LibOrder.Order memory _orderRight,
-        bytes memory _signatureRight,
+        LibOrder.Order memory _makerOrder,
+        bytes memory _signatureMaker,
+        LibOrder.Order memory _takerOrder,
+        bytes memory _signatureTaker,
         bytes memory liquidator
     ) external {
         _requireVolmexPerpPeripheryRelayer();
         if (isTraderWhitelistEnabled) {
-            _requireWhitelistedTrader(_orderLeft.trader);
-            _requireWhitelistedTrader(_orderRight.trader);
+            _requireWhitelistedTrader(_makerOrder.trader);
+            _requireWhitelistedTrader(_takerOrder.trader);
         }
-        _openPosition(_index, _orderLeft, _signatureLeft, _orderRight, _signatureRight, liquidator);
+        _openPosition(_index, _makerOrder, _signatureMaker, _takerOrder, _signatureTaker, liquidator);
     }
 
     function batchOpenPosition(
         uint256 _index,
-        LibOrder.Order[] memory _ordersLeft,
-        bytes[] memory _signaturesLeft,
-        LibOrder.Order[] memory _ordersRight,
-      bytes[] memory _signaturesRight,
+        LibOrder.Order[] memory _makerOrders,
+        bytes[] memory _signaturesMaker,
+        LibOrder.Order[] memory _takerOrders,
+      bytes[] memory _signaturesTaker,
         bytes memory liquidator
     ) external {
-        require(_ordersLeft.length == _ordersRight.length, "Periphery: mismatch orders");
+        require(_makerOrders.length == _takerOrders.length, "Periphery: mismatch orders");
         _requireVolmexPerpPeripheryRelayer();
 
-        uint256 ordersLength = _ordersLeft.length;
+        uint256 ordersLength = _makerOrders.length;
         bool _isTraderWhitelistEnabled = isTraderWhitelistEnabled;
         if (_isTraderWhitelistEnabled) {
             for (uint256 orderIndex = 0; orderIndex < ordersLength; orderIndex++) {
-                _requireWhitelistedTrader(_ordersLeft[orderIndex].trader);
-                _requireWhitelistedTrader(_ordersRight[orderIndex].trader);
+                _requireWhitelistedTrader(_makerOrders[orderIndex].trader);
+                _requireWhitelistedTrader(_takerOrders[orderIndex].trader);
             }
         }
 
         for (uint256 orderIndex = 0; orderIndex < ordersLength; orderIndex++) {
-            _openPosition(_index, _ordersLeft[orderIndex], _signaturesLeft[orderIndex], _ordersRight[orderIndex], _signaturesRight[orderIndex], liquidator);
+            _openPosition(_index, _makerOrders[orderIndex], _signaturesMaker[orderIndex], _takerOrders[orderIndex], _signaturesTaker[orderIndex], liquidator);
         }
     }
 
@@ -174,16 +174,16 @@ contract VolmexPerpPeriphery is AccessControlUpgradeable, IVolmexPerpPeriphery {
 
     function _openPosition(
         uint256 _index,
-        LibOrder.Order memory _orderLeft,
-        bytes memory _signatureLeft,
-        LibOrder.Order memory _orderRight,
-        bytes memory _signatureRight,
+        LibOrder.Order memory _makerOrder,
+        bytes memory _signatureMaker,
+        LibOrder.Order memory _takerOrder,
+        bytes memory _signatureTaker,
         bytes memory liquidator
     ) internal {
-        if (_orderLeft.orderType != LibOrder.ORDER) require(_verifyTriggerPrice(_orderLeft), "Periphery: left order price verification failed");
-        if (_orderRight.orderType != LibOrder.ORDER) require(_verifyTriggerPrice(_orderRight), "Periphery: right order price verification failed");
+        if (_makerOrder.orderType != LibOrder.ORDER) require(_verifyTriggerPrice(_makerOrder), "Periphery: left order price verification failed");
+        if (_takerOrder.orderType != LibOrder.ORDER) require(_verifyTriggerPrice(_takerOrder), "Periphery: right order price verification failed");
         IPositioning positioning = perpView.positionings(_index);
-        positioning.openPosition(_orderLeft, _signatureLeft, _orderRight, _signatureRight, liquidator);
+        positioning.openPosition(_makerOrder, _signatureMaker, _takerOrder, _signatureTaker, liquidator);
     }
 
     function batchOrderValidate(LibOrder.Order[] memory order, uint256 _index) external view returns (bool[] memory) {

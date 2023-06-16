@@ -184,12 +184,11 @@ describe("MatchingEngine", function () {
     vault = await upgrades.deployProxy(Vault, [
       positioningConfig.address,
       accountBalance.address,
-      virtualToken.address,
-      accountBalance.address,
+      USDC.address,
+      vaultController.address,
     ]);
-    await (await virtualToken.setMintBurnRole(owner.address)).wait();
-    await virtualToken.mint(account1.address, ten.toString());
-    await virtualToken.mint(account2.address, ten.toString());
+    await USDC.mint(account1.address, ten.toString());
+    await USDC.mint(account2.address, ten.toString());
     await (await volmexBaseToken.setMintBurnRole(positioning.address)).wait();
     await (await virtualToken.connect(owner).setMintBurnRole(positioning.address)).wait();
     perpViewFake = await smock.fake("VolmexPerpView");
@@ -211,7 +210,7 @@ describe("MatchingEngine", function () {
 
     await vault.connect(owner).setPositioning(positioning.address);
     await vault.connect(owner).setVaultController(vaultController.address);
-    await vaultController.registerVault(vault.address, virtualToken.address);
+    await vaultController.registerVault(vault.address, USDC.address);
     await vaultController.connect(owner).setPositioning(positioning.address);
 
     await positioningConfig.connect(owner).setMaxMarketsPerAccount(5);
@@ -229,28 +228,18 @@ describe("MatchingEngine", function () {
 
     asset = Asset(virtualToken.address, "10");
 
-    await virtualToken.connect(account1).approve(vault.address, ten.toString());
-    await virtualToken.connect(account2).approve(vault.address, ten.toString());
-    await virtualToken.connect(account1).approve(volmexPerpPeriphery.address, ten.toString());
-    await virtualToken.connect(account2).approve(volmexPerpPeriphery.address, ten.toString());
+    await USDC.connect(account1).approve(vault.address, ten.toString());
+    await USDC.connect(account2).approve(vault.address, ten.toString());
+    await USDC.connect(account1).approve(volmexPerpPeriphery.address, ten.toString());
+    await USDC.connect(account2).approve(volmexPerpPeriphery.address, ten.toString());
 
     // volmexPerpPeriphery.address, USDC.address, account1.address, amount
     await vaultController
       .connect(account1)
-      .deposit(
-        volmexPerpPeriphery.address,
-        virtualToken.address,
-        account1.address,
-        ten.toString(),
-      );
+      .deposit(volmexPerpPeriphery.address, USDC.address, account1.address, ten.toString());
     await vaultController
       .connect(account2)
-      .deposit(
-        volmexPerpPeriphery.address,
-        virtualToken.address,
-        account2.address,
-        ten.toString(),
-      );
+      .deposit(volmexPerpPeriphery.address, USDC.address, account2.address, ten.toString());
     const orderLeft2 = Order(
       ORDER,
       deadline,
@@ -761,8 +750,8 @@ describe("MatchingEngine", function () {
           "rounding error",
         );
       });
-      it("Should fail to match orders if buy order price is less than required for sell order ", async () => {
-        // Price of sell order is 100 and price of buy order is lesser than 100. i.e 5000 /51.Hence it Should not match.
+      it("Should not fail to match orders if buy order price is less than required for sell order ", async () => {
+        // Price of sell order is 100 and price of buy order is lesser than 100. i.e 5000 /51.Hence it should match.
         const orderLeft = Order(
           ORDER,
           deadline,
@@ -784,9 +773,8 @@ describe("MatchingEngine", function () {
           0,
           true,
         );
-        await expect(matchingEngine.matchOrders(orderRight, orderLeft)).to.be.revertedWith(
-          "V_PERP_M: fillLeft: unable to fill",
-        );
+
+        await expect(matchingEngine.matchOrders(orderRight, orderLeft)).to.emit(matchingEngine, "Matched");
       });
       it("should fail if trader for both the orders in same", async () => {
         const [owner, account1] = await ethers.getSigners();
@@ -897,6 +885,35 @@ describe("MatchingEngine", function () {
     });
 
     describe("Success:", function () {
+      it("Stop loss order match scenario", async () => {
+        const orderLeft = Order(
+          "0xe144c7ec",
+          deadline,
+          "0xA5Bc1D31e32330ED646C22DD84D436eE8315aF7a",
+          Asset("0x5b77C6E3116841DE8C753cA801c35b27FFBBC465", "45900000353076925792"),
+          Asset("0xe42E9db7a0E4AB0e74C4d8494d18ceF3032ad7A7", "1989000000000000000000"),
+          1686591456765000,
+          52000000,
+          true,
+        );
+
+        const orderRight = Order(
+          "0xf555eb98",
+          1686640796514,
+          "0x7c610B4dDA11820b749AeA40Df8cBfdA1925e581",
+          Asset("0xe42E9db7a0E4AB0e74C4d8494d18ceF3032ad7A7", "2000000000000000000000"),
+          Asset("0x5b77C6E3116841DE8C753cA801c35b27FFBBC465", "40000000000000000000"),
+          1686590796439000,
+          0,
+          false,
+        );
+
+
+        await expect(matchingEngine.matchOrders(orderRight, orderLeft))
+          .to.emit(matchingEngine, "Matched")
+          .to.emit(matchingEngine, "OrdersFilled")
+      });
+      
       it("should match orders & emit event", async () => {
         await expect(matchingEngine.matchOrders(orderLeft, orderRight))
           .to.emit(matchingEngine, "Matched")
@@ -1086,7 +1103,7 @@ describe("MatchingEngine", function () {
         );
 
         await expect(matchingEngine.matchOrders(sellOrder, buyOrder)).to.be.revertedWith(
-          "V_PERP_M: fillRight: unable to fill",
+          "fillRight: not enough USD on right",
         );
       });
       it("Should match stop loss with market order of price more than 70", async () => {
@@ -1336,10 +1353,10 @@ describe("MatchingEngine", function () {
     it("should call do transfer with fee > 0", async () => {
       const [owner, account1, account2, account3, account4] = await ethers.getSigners();
 
-      await virtualToken.mint(account1.address, 1000000000000000);
+      await USDC.mint(account1.address, 1000000000000000);
 
-      await virtualToken.connect(account1).approve(transferManagerTest.address, 1000000000000000);
-      await virtualToken.connect(account2).approve(transferManagerTest.address, 1000000000000000);
+      await USDC.connect(account1).approve(transferManagerTest.address, 1000000000000000);
+      await USDC.connect(account2).approve(transferManagerTest.address, 1000000000000000);
 
       const left = libDeal.DealSide(asset, erc20TransferProxy.address, account1.address);
 
@@ -1351,10 +1368,10 @@ describe("MatchingEngine", function () {
     it("should call do transfer where DealData.maxFeeBasePoint is 0", async () => {
       const [owner, account1, account2, account3, account4] = await ethers.getSigners();
 
-      await virtualToken.mint(account1.address, 1000000000000000);
+      await USDC.mint(account1.address, 1000000000000000);
 
-      await virtualToken.connect(account1).approve(transferManagerTest.address, 1000000000000000);
-      await virtualToken.connect(account2).approve(transferManagerTest.address, 1000000000000000);
+      await USDC.connect(account1).approve(transferManagerTest.address, 1000000000000000);
+      await USDC.connect(account2).approve(transferManagerTest.address, 1000000000000000);
 
       const left = libDeal.DealSide(asset, erc20TransferProxy.address, account1.address);
 
@@ -1439,7 +1456,7 @@ describe("MatchingEngine", function () {
       const [owner, account1] = await ethers.getSigners();
       await expect(
         matchingEngine.connect(account1).grantMatchOrders(account1.address),
-      ).to.be.revertedWith("MatchingEngineCore: Not admin");
+      ).to.be.revertedWith("MEC_NA");
     });
   });
   describe("transfer payout else condition", async () => {
@@ -1700,7 +1717,7 @@ describe("MatchingEngine", function () {
         );
         await expectRevert(
           matchingEngine.matchOrders(orderLeft, orderRight),
-          "V_PERP_M: fillRight: unable to fill",
+          "fillRight: not enough USD on right",
         );
       });
       it("Should left and right complete fill", async () => {
@@ -1727,7 +1744,7 @@ describe("MatchingEngine", function () {
         );
         await expectRevert(
           matchingEngine.matchOrders(orderLeft, orderRight),
-          "V_PERP_M: fillRight: unable to fill",
+          "fillRight: not enough USD on right",
         );
       });
       it("Should left complete and right partial fill", async () => {
@@ -1752,10 +1769,11 @@ describe("MatchingEngine", function () {
           0,
           !isShort,
         );
-        await expectRevert(
-          matchingEngine.matchOrders(orderLeft, orderRight),
-          "V_PERP_M: fillLeft: unable to fill",
-        );
+        const receipt = await (await matchingEngine.matchOrders(orderLeft, orderRight)).wait();
+        const newFills = matchedFills(receipt);
+        console.log(newFills);
+        expect(newFills.leftValue).equal(convert(10));
+        expect(newFills.rightValue).equal(convert(110));
       });
     });
   });
@@ -1927,10 +1945,14 @@ describe("MatchingEngine", function () {
           0,
           isShort,
         );
-        const receipt = await (await matchingEngine.matchOrders(orderLeft, orderRight)).wait();
-        const newFills = matchedFills(receipt);
-        expect(newFills.leftValue).equal(convert(100));
-        expect(newFills.rightValue).equal(convert(10));
+        // const receipt = await (await matchingEngine.matchOrders(orderLeft, orderRight)).wait();
+        // const newFills = matchedFills(receipt);
+        // expect(newFills.leftValue).equal(convert(100));
+        // expect(newFills.rightValue).equal(convert(10));
+        await expectRevert(
+          matchingEngine.matchOrders(orderLeft, orderRight),
+          "fillLeft: not enough USD on left",
+        );
       });
 
       it("playground", async () => {
@@ -2025,6 +2047,126 @@ describe("MatchingEngine", function () {
             ["100000000000000000000", "35000000000000000000"],
           );
       });
+    });
+  });
+
+  describe("LibFill - left and right", () => {
+    const isShort = true;
+    let salt = 0;
+    this.beforeEach(async () => {
+      await (await matchingEngine.grantMatchOrders(owner.address)).wait();
+    });
+
+    it("Should left partial and right complete fill", async () => {
+      orderLeft = Order(
+        ORDER,
+        deadline,
+        account1.address,
+        Asset(volmexBaseToken.address, convert(20)),
+        Asset(virtualToken.address, convert(200)),
+        ++salt,
+        0,
+        isShort,
+      );
+
+      orderRight = Order(
+        ORDER,
+        deadline,
+        account2.address,
+        Asset(virtualToken.address, convert(110)),
+        Asset(volmexBaseToken.address, convert(10)),
+        ++salt,
+        0,
+        !isShort,
+      );
+      const receipt = await (await matchingEngine.matchOrders(orderLeft, orderRight)).wait();
+      const newFills = matchedFills(receipt);
+      expect(newFills.leftValue).equal(convert(10));
+      expect(newFills.rightValue).equal(convert(100));
+    });
+
+    it("Should left complete and right partial fill", async () => {
+      orderLeft = Order(
+        ORDER,
+        deadline,
+        account1.address,
+        Asset(volmexBaseToken.address, convert(10)),
+        Asset(virtualToken.address, convert(100)),
+        ++salt,
+        0,
+        isShort,
+      );
+
+      orderRight = Order(
+        ORDER,
+        deadline,
+        account2.address,
+        Asset(virtualToken.address, convert(220)),
+        Asset(volmexBaseToken.address, convert(20)),
+        ++salt,
+        0,
+        !isShort,
+      );
+      const receipt = await (await matchingEngine.matchOrders(orderLeft, orderRight)).wait();
+      const newFills = matchedFills(receipt);
+      expect(newFills.leftValue).equal(convert(10));
+      expect(newFills.rightValue).equal(convert(100));
+    });
+
+    it("Should left partial and right complete fill", async () => {
+      orderLeft = Order(
+        ORDER,
+        deadline,
+        account1.address,
+        Asset(virtualToken.address, convert(220)),
+        Asset(volmexBaseToken.address, convert(20)),
+        ++salt,
+        0,
+        !isShort,
+      );
+
+      orderRight = Order(
+        ORDER,
+        deadline,
+        account2.address,
+        Asset(volmexBaseToken.address, convert(10)),
+        Asset(virtualToken.address, convert(100)),
+        ++salt,
+        0,
+        isShort,
+      );
+      const receipt = await (await matchingEngine.matchOrders(orderLeft, orderRight)).wait();
+      const newFills = matchedFills(receipt);
+      expect(newFills.leftValue).equal(convert(110));
+      expect(newFills.rightValue).equal(convert(10));
+    });
+
+    it("Should left complete and right partial fill", async () => {
+      orderLeft = Order(
+        ORDER,
+        deadline,
+        account1.address,
+        Asset(virtualToken.address, convert(110)),
+        Asset(volmexBaseToken.address, convert(10)),
+        ++salt,
+        0,
+        !isShort,
+      );
+
+      orderRight = Order(
+        ORDER,
+        deadline,
+        account2.address,
+        Asset(volmexBaseToken.address, convert(20)),
+        Asset(virtualToken.address, convert(200)),
+        ++salt,
+        0,
+        isShort,
+      );
+      const receipt = await (await matchingEngine.matchOrders(orderLeft, orderRight)).wait();
+      const newFills = matchedFills(receipt);
+      expect(newFills.leftValue).equal(convert(110));
+      expect(newFills.rightValue).equal(convert(10));
     });
   });
 

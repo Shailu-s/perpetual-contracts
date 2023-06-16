@@ -30,15 +30,15 @@ contract PerpetualOracle is AccessControlUpgradeable, IPerpetualOracle {
     mapping(uint256 => uint256) public lastestMarkPrice;
     mapping(uint256 => uint256) public lastPriceTotalObservations;
     mapping(uint256 => uint256) public indexTotalObservations;
-    uint256 public smInterval;
-    uint256 public markSmInterval;
-    uint256 public fundingPeriod;
-    IPositioning public positioning;
     mapping(uint256 => uint256) public currentIndexEpochEndTimestamp;
     mapping(uint256 => uint256) public currentMarkEpochEndTimestamp;
     mapping(uint256 => uint256) public markPriceEpochsCount;
     mapping(uint256 => uint256) public indexPriceEpochsCount;
     mapping(uint256 => uint256) public initialTimestamps;
+    uint256 public smInterval;
+    uint256 public markSmInterval;
+    uint256 public fundingPeriod;
+    IPositioning public positioning;
 
     function __PerpetualOracle_init(
         address[2] calldata _baseToken,

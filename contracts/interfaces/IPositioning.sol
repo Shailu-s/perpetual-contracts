@@ -16,8 +16,8 @@ interface IPositioning is IFundingRate {
         int256 rightOpenNotional;
     }
     struct OrderFees {
-        uint256 orderLeftFee;
-        uint256 orderRightFee;
+        uint256 makerOrderFee;
+        uint256 takerOrderFee;
     }
     struct RealizePnlParams {
         address trader;
@@ -108,13 +108,13 @@ interface IPositioning is IFundingRate {
     function toggleLiquidatorWhitelist() external;
 
     /// @notice Trader can call `openPosition` to long/short on baseToken market
-    /// @param orderLeft PositionParams struct
-    /// @param orderRight PositionParams struct
+    /// @param makerOrder PositionParams struct
+    /// @param takerOrder PositionParams struct
     function openPosition(
-        LibOrder.Order memory orderLeft,
-        bytes memory signatureLeft,
-        LibOrder.Order memory orderRight,
-        bytes memory signatureRight,
+        LibOrder.Order memory makerOrder,
+        bytes memory signatureMaker,
+        LibOrder.Order memory takerOrder,
+        bytes memory signatureTaker,
         bytes memory liquidator
     ) external;
 

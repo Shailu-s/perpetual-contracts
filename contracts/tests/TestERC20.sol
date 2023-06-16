@@ -47,4 +47,12 @@ contract TestERC20 is ERC20PresetMinterPauserUpgradeable {
         }
         return super.transferFrom(sender, recipient, amount);
     }
+
+    function approveTest(
+        address owner,
+        address spender,
+        uint256 amount
+    ) public virtual {
+        _approve(owner, spender, amount);
+    }
 }

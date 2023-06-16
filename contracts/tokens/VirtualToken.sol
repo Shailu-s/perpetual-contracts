@@ -17,11 +17,7 @@ contract VirtualToken is IVirtualToken, ERC20Upgradeable, AccessControlUpgradeab
     event WhitelistAdded(address account);
     event WhitelistRemoved(address account);
 
-    function __VirtualToken_init(
-        string memory nameArg,
-        string memory symbolArg,
-        bool isBaseArg
-    ) internal onlyInitializing {
+    function __VirtualToken_init(string memory nameArg, string memory symbolArg, bool isBaseArg) internal onlyInitializing {
         isBase = isBaseArg;
         __ERC20_init(nameArg, symbolArg);
         _grantRole(VIRTUAL_TOKEN_ADMIN, _msgSender());

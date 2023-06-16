@@ -297,7 +297,7 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
         uint256 indexTwap = _getIndexPrice(baseToken, twInterval);
         require(indexTwap != 0, "AccountBalance: zero index twap");
         // both positionSize & indexTwap are in 10^18 already
-        // overflow inspection:
+        // overflow inspection: 
         // only overflow when position value in USD(18 decimals) > 2^255 / 10^18
         return (positionSize * indexTwap.toInt256()) / _ORACLE_BASE;
     }

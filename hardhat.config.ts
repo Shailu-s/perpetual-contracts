@@ -78,7 +78,7 @@ const config: HardhatUserConfig = {
       timeout: 36000000,
     },
     "base-goerli": {
-      url: `https://empty-soft-surf.base-goerli.discover.quiknode.pro/${process.env.BASE_GOERLI_QUICKNODE_API_KEY}/`,
+      url: `https://icy-fabled-meadow.base-goerli.quiknode.pro/5552ae4af262e5dca077a7a9c26b3cb484599925/`,
       accounts: [`0x${process.env.PRIVATE_KEY}`],
       throwOnTransactionFailures: true,
       loggingEnabled: true,

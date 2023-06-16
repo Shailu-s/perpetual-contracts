@@ -11,7 +11,6 @@ contract VolmexPerpView is IVolmexPerpView, AccessControlUpgradeable {
     bytes32 public constant VOLMEX_PERP_VIEW = keccak256("VOLMEX_PERP_VIEW");
     // perp view role to set contracts
     bytes32 public constant PERP_VIEW_STATES = keccak256("PERP_VIEW_STATES");
-
     // Store the addresses of positionings { index => positioning address }
     mapping(uint256 => IPositioning) public positionings;
     // Store the addresses of vaultControllers { index => vaultController address }

@@ -182,8 +182,6 @@ contract VaultController is ReentrancyGuardUpgradeable, OwnerPausable, VaultCont
         int256 fundingPayment = IPositioning(_positioning).getAllPendingFundingPayment(trader);
         (int256 owedRealizedPnl, int256 unrealizedPnl) = IAccountBalance(_accountBalance).getPnlAndPendingFee(trader);
         int256 balanceX10_18 = getBalance(trader);
-        // accountValue = collateralValue + owedRealizedPnl - fundingPayment + unrealizedPnl
-
         return balanceX10_18 + (owedRealizedPnl - fundingPayment) + unrealizedPnl;
     }
 
