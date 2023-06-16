@@ -118,8 +118,7 @@ contract Vault is IVault, ReentrancyGuardUpgradeable, OwnerPausable, VaultStorag
     function repayDebtToOwner(address token, uint256 amount) external override whenNotPaused nonReentrant onlySettlementToken(token) {
         _requireVaultAdmin();
         address to = _msgSender();
-        //V_AIMTD: amount is more that debt
-        require(_totalDebt >= amount, "V_AIMTD");
+        require(_totalDebt >= amount, "V_AIMTD"); // V_AIMTD: amount is more that debt
         SafeERC20Upgradeable.safeTransfer(IERC20Upgradeable(token), to, amount);
         _totalDebt -= amount;
         emit DebtRepayed(to, amount);

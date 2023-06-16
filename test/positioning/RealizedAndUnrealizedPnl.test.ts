@@ -162,7 +162,7 @@ describe("Realised pnl tests", function () {
     await accountBalance.deployed();
 
     USDC = await TestERC20.deploy();
-    await USDC.__TestERC20_init("TestUSDC", "USDC", 6);
+    await USDC.__TestERC20_init("TestUSDC", "USDC", 18);
     await USDC.deployed();
 
     await perpetualOracle.setMarkObservationAdder(matchingEngine.address);
@@ -172,20 +172,6 @@ describe("Realised pnl tests", function () {
     });
     await virtualToken.deployed();
     await virtualToken.setMintBurnRole(owner.address);
-
-    vault = await upgrades.deployProxy(Vault, [
-      positioningConfig.address,
-      accountBalance.address,
-      virtualToken.address,
-      accountBalance.address,
-    ]);
-
-    vault2 = await upgrades.deployProxy(Vault, [
-      positioningConfig.address,
-      accountBalance.address,
-      virtualToken.address,
-      accountBalance.address,
-    ]);
 
     transferManagerTest = await upgrades.deployProxy(
       TransferManagerTest,
@@ -204,6 +190,19 @@ describe("Realised pnl tests", function () {
     vaultController = await upgrades.deployProxy(VaultController, [
       positioningConfig.address,
       accountBalance1.address,
+    ]);
+    vault = await upgrades.deployProxy(Vault, [
+      positioningConfig.address,
+      accountBalance.address,
+      USDC.address,
+      vaultController.address,
+    ]);
+
+    vault2 = await upgrades.deployProxy(Vault, [
+      positioningConfig.address,
+      accountBalance.address,
+      USDC.address,
+      vaultController.address,
     ]);
     marketRegistry = await upgrades.deployProxy(MarketRegistry, [
       virtualToken.address,
@@ -240,7 +239,7 @@ describe("Realised pnl tests", function () {
 
     await vault.connect(owner).setPositioning(positioning.address);
     await vault.connect(owner).setVaultController(vaultController.address);
-    await vaultController.registerVault(vault.address, virtualToken.address);
+    await vaultController.registerVault(vault.address, USDC.address);
     await vaultController.connect(owner).setPositioning(positioning.address);
 
     await positioningConfig.connect(owner).setMaxMarketsPerAccount(5);
@@ -266,29 +265,19 @@ describe("Realised pnl tests", function () {
       relayer.address,
     ]);
     deadline;
-    await virtualToken.mint(account1.address, convert("100"));
-    await virtualToken.mint(account2.address, convert("100"));
-    await virtualToken.connect(account1).approve(vault.address, convert("100"));
-    await virtualToken.connect(account2).approve(vault.address, convert("100"));
-    await virtualToken.connect(account1).approve(volmexPerpPeriphery.address, convert("100"));
-    await virtualToken.connect(account2).approve(volmexPerpPeriphery.address, convert("100"));
+    await USDC.mint(account1.address, convert("100"));
+    await USDC.mint(account2.address, convert("100"));
+    await USDC.connect(account1).approve(vault.address, convert("100"));
+    await USDC.connect(account2).approve(vault.address, convert("100"));
+    await USDC.connect(account1).approve(volmexPerpPeriphery.address, convert("100"));
+    await USDC.connect(account2).approve(volmexPerpPeriphery.address, convert("100"));
     await perpetualOracle.setIndexObservationAdder(owner.address);
     await vaultController
       .connect(account1)
-      .deposit(
-        volmexPerpPeriphery.address,
-        virtualToken.address,
-        account1.address,
-        convert("100"),
-      );
+      .deposit(volmexPerpPeriphery.address, USDC.address, account1.address, convert("100"));
     await vaultController
       .connect(account2)
-      .deposit(
-        volmexPerpPeriphery.address,
-        virtualToken.address,
-        account2.address,
-        convert("100"),
-      );
+      .deposit(volmexPerpPeriphery.address, USDC.address, account2.address, convert("100"));
     for (let i = 0; i < 10; i++) {
       await perpetualOracle.addIndexObservations([0], [200000000], [proofHash]);
       await perpetualOracle.addIndexObservations([1], [200000000], [proofHash]);

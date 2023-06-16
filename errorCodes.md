@@ -60,7 +60,7 @@
 
 > **V_PERP_M: order verification failed"**
 
-    When orderleft and order right both have same traders then this error is thrown in match order function.
+    When makerOrder and takerOrder both have same traders then this error is thrown in match order function.
 
 > **V_PERP_M: nothing to fill**
 
