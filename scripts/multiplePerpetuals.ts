@@ -5,22 +5,31 @@ const arbitrumChainId = [42161, 421613];
 const positioning = async () => {
   const [owner] = await ethers.getSigners();
   console.log("Deployer: ", await owner.getAddress());
-  const ethBefore = await owner.getBalance();
+  const ethBefore = await ethers.provider.getBalance(owner.address);
   console.log("Balance: ", ethBefore.toString());
+  const FEE_DATA = {
+    maxFeePerGas: ethers.utils.parseUnits("100", "gwei"),
+    maxPriorityFeePerGas: ethers.utils.parseUnits("5", "gwei"),
+    baseFeePerGas: ethers.utils.parseUnits("20", "gwei"),
+  };
 
-  const MatchingEngine = await ethers.getContractFactory("MatchingEngine");
-  const VolmexBaseToken = await ethers.getContractFactory("VolmexBaseToken");
-  const VolmexQuoteToken = await ethers.getContractFactory("VolmexQuoteToken");
-  const PerpetualOracle = await ethers.getContractFactory("PerpetualOracle");
-  const VaultController = await ethers.getContractFactory("VaultController");
-  const PositioningConfig = await ethers.getContractFactory("PositioningConfig");
-  const AccountBalance = await ethers.getContractFactory("AccountBalance");
-  const Positioning = await ethers.getContractFactory("Positioning");
-  const Vault = await ethers.getContractFactory("Vault");
-  const MarketRegistry = await ethers.getContractFactory("MarketRegistry");
-  const VolmexPerpPeriphery = await ethers.getContractFactory("VolmexPerpPeriphery");
-  const TestERC20 = await ethers.getContractFactory("TetherToken");
-  const VolmexPerpView = await ethers.getContractFactory("VolmexPerpView");
+  const provider = new ethers.providers.FallbackProvider([ethers.provider], 1);
+  provider.getFeeData = async () => FEE_DATA;
+  const signer = new ethers.Wallet(process.env.PRIVATE_KEY, provider);
+
+  const MatchingEngine = await ethers.getContractFactory("MatchingEngine", signer);
+  const VolmexBaseToken = await ethers.getContractFactory("VolmexBaseToken", signer);
+  const VolmexQuoteToken = await ethers.getContractFactory("VolmexQuoteToken", signer);
+  const PerpetualOracle = await ethers.getContractFactory("PerpetualOracle", signer);
+  const VaultController = await ethers.getContractFactory("VaultController", signer);
+  const PositioningConfig = await ethers.getContractFactory("PositioningConfig", signer);
+  const AccountBalance = await ethers.getContractFactory("AccountBalance", signer);
+  const Positioning = await ethers.getContractFactory("Positioning", signer);
+  const Vault = await ethers.getContractFactory("Vault", signer);
+  const MarketRegistry = await ethers.getContractFactory("MarketRegistry", signer);
+  const VolmexPerpPeriphery = await ethers.getContractFactory("VolmexPerpPeriphery", signer);
+  const TestERC20 = await ethers.getContractFactory("TetherToken", signer);
+  const VolmexPerpView = await ethers.getContractFactory("VolmexPerpView", signer);
   const networkDetail = await ethers.provider.getNetwork();
   const isArbitrum = arbitrumChainId.includes(networkDetail.chainId);
 
@@ -78,6 +87,7 @@ const positioning = async () => {
   );
 
   await perpetualOracle.deployed();
+  console.log(perpetualOracle.address);
   await (await volmexBaseToken1.setPriceFeed(perpetualOracle.address)).wait();
   await (await volmexBaseToken2.setPriceFeed(perpetualOracle.address)).wait();
   if (process.env.INDEX_OBSERVATION_ADDER) {
@@ -109,11 +119,11 @@ const positioning = async () => {
       "1000000000000000000",
       `USD${isArbitrum ? "T" : "C"} Volmex Testnet`,
       `USD${isArbitrum ? "T" : "C"}`,
-      6
+      6,
     );
     await usdt.deployed();
     usdtAddress = usdt.address;
-    console.log(usdt.address);
+    console.log(usdtAddress);
   }
 
   console.log("Deploying MatchingEngine ...");
@@ -255,8 +265,8 @@ const positioning = async () => {
   };
   console.log("\n =====Deployment Successful===== \n");
   console.log(addresses);
-  const ethAfter = await owner.getBalance();
-  console.log("ETH burned: ", (ethBefore.sub(ethAfter)).toString());
+  const ethAfter = await provider.getBalance(owner.address);
+  console.log("ETH burned: ", ethBefore.sub(ethAfter).toString());
 
   if (process.env.NOT_VERIFY) {
     return;

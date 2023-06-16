@@ -49,14 +49,14 @@ library LibFill {
         bool isLeftMakeFill
     ) internal pure returns (FillResult memory result) {
         uint256 makerQuoteValue;
-        if (isLeftMakeFill) {
-            makerQuoteValue = LibMath.safeGetPartialAmountFloor(rightTakeValue, leftMakeValue, leftTakeValue); //rq * lb / lq
-            require(makerQuoteValue <= rightMakeValue, "V_PERP_M: fillRight: unable to fill");
-            return FillResult(rightTakeValue, makerQuoteValue); //rq, lb == left goes long ; rb, lq ==left goes short
-        } else {
-            makerQuoteValue = LibMath.safeGetPartialAmountFloor(rightMakeValue, leftTakeValue, leftMakeValue);
-            require(makerQuoteValue <= leftMakeValue, "V_PERP_M: fillRight: unable to fill");
-            return FillResult(makerQuoteValue, rightMakeValue); //rq, lb == left goes long ; rb, lq ==left goes short
+        if (isLeftMakeFill) { // left is selling EVIV
+            makerQuoteValue = LibMath.safeGetPartialAmountFloor(rightTakeValue, leftMakeValue, leftTakeValue);
+            require(makerQuoteValue <= rightMakeValue, "fillRight: not enough USD on right");
+            return FillResult(rightTakeValue, makerQuoteValue);
+        } else { // left is buying EVIV
+            uint256 rightUSDNeeded = LibMath.safeGetPartialAmountFloor(rightMakeValue, leftTakeValue, leftMakeValue);
+            require(leftMakeValue >= rightUSDNeeded, "fillRight: not enough USD on left");
+            return FillResult(rightUSDNeeded, rightMakeValue);
         }
     }
 
@@ -67,13 +67,12 @@ library LibFill {
         uint256 rightTakeValue,
         bool isLeftMakeFill
     ) internal pure returns (FillResult memory result) {
-        if (isLeftMakeFill) {
-            uint256 rightTake = LibMath.safeGetPartialAmountFloor(leftTakeValue, rightMakeValue, rightTakeValue); //lb *rq / rb = rq
-            require(rightTake <= leftMakeValue, "V_PERP_M: fillLeft: unable to fill");
-        } else {
-            uint256 rightTake = LibMath.safeGetPartialAmountFloor(leftMakeValue, rightTakeValue, rightMakeValue); //lb *rq / rb = rq
-            require(rightTake <= rightMakeValue, "V_PERP_M: fillLeft: unable to fill");
+        if (isLeftMakeFill) { // left is selling EVIV
+            require(rightMakeValue >= leftTakeValue, "fillLeft: not enough USD on right"); // Check if the buyer has enough USD
+        } else { // left is buying EVIV
+            uint256 rightUSDNeeded = LibMath.safeGetPartialAmountFloor(leftTakeValue, rightMakeValue, rightTakeValue);
+            require(leftMakeValue >= rightUSDNeeded, "fillLeft: not enough USD on left"); // Check if the buyer has enough USD
         }
-        return FillResult(leftMakeValue, leftTakeValue); //lq,lb
+        return FillResult(leftMakeValue, leftTakeValue); // Settlement will happen according to left order, since left order is seller, therefore leftTakeValue
     }
 }
