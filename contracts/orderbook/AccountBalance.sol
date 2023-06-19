@@ -363,6 +363,7 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
         if (timeToWait > 0) require(nextLiquidationTime[trader] <= block.timestamp, "AB_ELT"); // early liquidation triggered
         nextLiquidationTime[trader] = block.timestamp + timeToWait;
         if (accountValue < 0) emit TraderBadDebt(trader, accountValue);
+        if (timeToWait == 0) emit ZeroMaxTimeBound(trader, timeToWait);
         emit TraderNextLiquidationUpdated(trader, baseToken, nextLiquidationTime[trader]);
     }
 
