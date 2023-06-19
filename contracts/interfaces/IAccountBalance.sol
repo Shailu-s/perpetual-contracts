@@ -15,6 +15,7 @@ interface IAccountBalance {
     event UnderlyingPriceIndexSet(uint256 indexed underlyingIndex, address baseToken);
     event SigmaVolmexIvsUpdated(uint256[] index, uint256[] sigmaVivs);
     event TraderNextLiquidationUpdated(address indexed trader, address indexed baseToken, uint256 nextLiquidateTime);
+    event TraderBadDebt(address indexed trader, int256 accountValue);
 
     function initialize(address positioningConfigArg, address[2] calldata volmexBaseTokenArgs, IMatchingEngine matchingEngineArg, address adminArg) external;
 
