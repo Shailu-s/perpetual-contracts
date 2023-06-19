@@ -98,7 +98,7 @@ contract Vault is IVault, ReentrancyGuardUpgradeable, OwnerPausable, VaultStorag
         uint256 remainingAmount = 0;
         if (vaultBalance < amount) {
             remainingAmount = amount - vaultBalance;
-            emit LowBalance(remainingAmount);
+            emit LowBalance(remainingAmount); // Note: Used for monitoring service to trigger insurance-fund
         }
         amount = amount - remainingAmount;
         SafeERC20Upgradeable.safeTransfer(IERC20Upgradeable(_settlementToken), to, amount);
