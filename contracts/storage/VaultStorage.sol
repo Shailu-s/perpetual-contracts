@@ -13,4 +13,5 @@ abstract contract VaultStorageV1 {
     address internal _positioning;
     uint256 internal _totalDebt;
     address internal _vaultController;
+    uint256 public highWeightedAmount; // fat finger amount, used to trigger monitor service for huge deposit and withdraw
 }
