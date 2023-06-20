@@ -376,7 +376,7 @@ const positioning = async (hre: HardhatRuntimeEnvironment) => {
   }
   try {
     await run("verify:verify", {
-      address: usdtAddress,
+      address: usdt.address,
       constructorArguments: ["1000000000000000000", "Tether USD", "USDT", 6],
     });
   } catch (error) {
