@@ -74,10 +74,13 @@ const positioning = async () => {
   );
 
   await perpetualOracle.deployed();
+  console.log(perpetualOracle.address);
   await (await volmexBaseToken.setPriceFeed(perpetualOracle.address)).wait();
   await (await volmexBaseToken2.setPriceFeed(perpetualOracle.address)).wait();
   if (process.env.INDEX_OBSERVATION_ADDER) {
-    await (await perpetualOracle.setIndexObservationAdder(process.env.INDEX_OBSERVATION_ADDER)).wait();
+    await (
+      await perpetualOracle.setIndexObservationAdder(process.env.INDEX_OBSERVATION_ADDER)
+    ).wait();
   }
 
   console.log("Deploying Quote Token ...");
