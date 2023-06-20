@@ -256,6 +256,19 @@ describe("PerpetualOracle - Index Price Oracle", function () {
       await time.increase(epochTimeSeconds);
       expect((await perpetualOracle.latestIndexPrice(0)).toString()).equal("76000000");
     });
+
+    it("Should fetch lastest prices", async () => {
+      await (await perpetualOracle.addIndexObservations([0,1], [76000000, 76000000], [proofHash, proofHash])).wait();
+      await time.increase(epochTimeSeconds);
+      let prices = await perpetualOracle.getLatestBaseTokenPrice([0,1]);
+      expect((prices[0].indexPrice.toString())).equal("76000000");
+      expect(( prices[0].markPrice.toString())).equal("60000000");
+      expect(( prices[0].lastPrice.toString())).equal("60000000");
+      expect(( prices[1].indexPrice.toString())).equal("76000000");
+      expect(( prices[1].markPrice.toString())).equal("60000000");
+      expect(( prices[1].lastPrice.toString())).equal("60000000");
+
+    });
   });
 
   describe("Deployment", function () {
