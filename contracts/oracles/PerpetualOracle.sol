@@ -40,6 +40,12 @@ contract PerpetualOracle is AccessControlUpgradeable, IPerpetualOracle {
     uint256 public fundingPeriod;
     IPositioning public positioning;
 
+    struct Price {
+        uint256 indexPrice;
+        uint256 markPrice;
+        uint256 lastPrice;
+    }
+
     function __PerpetualOracle_init(
         address[2] calldata _baseToken,
         uint256[2] calldata _lastPrices,
@@ -165,6 +171,26 @@ contract PerpetualOracle is AccessControlUpgradeable, IPerpetualOracle {
         LastPriceObservation[65535] storage observations = lastPriceObservations[_index];
         uint256 currentIndex = _getCurrentIndex(_index, true);
         lastPrice = observations[currentIndex].lastPrice;
+    }
+
+    function getLatestBaseTokenPrice(uint256[] memory indexes) public view returns (Price[] memory) {
+        Price[] memory prices = new Price[](indexes.length);
+
+        for (uint256 i = 0; i < indexes.length; i++) {
+            uint256 indexPrice = latestIndexPrice(indexes[i]);
+            uint256 markPrice = latestMarkPrice(indexes[i]);
+            uint256 lastPrice = latestLastPrice(indexes[i]);
+
+            Price memory price = Price({
+                indexPrice: indexPrice,
+                markPrice: markPrice,
+                lastPrice: lastPrice
+            });
+
+            prices[i] = price;
+        }
+
+        return prices;
     }
 
     function getIndexEpochSMA(uint256 _index, uint256 _startTimestamp, uint256 _endTimestamp) external view returns (uint256 price) {
