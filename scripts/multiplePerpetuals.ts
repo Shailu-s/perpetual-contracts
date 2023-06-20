@@ -300,7 +300,7 @@ const positioning = async (hre: HardhatRuntimeEnvironment) => {
   console.log("Set positioning ...");
   await (await vaultControllerTransactor.setPositioning(positioning.address)).wait();
   console.log("Register vault ...");
-  await (await vaultControllerTransactor.registerVault(vault.address, usdtAddress)).wait();
+  await (await vaultControllerTransactor.registerVault(vault.address, usdt.address)).wait();
   console.log("Set maker fee ...");
   await marketRegistryTransactor.setMakerFeeRatio("400");
   console.log("Set taker fee ...");
@@ -334,7 +334,7 @@ const positioning = async (hre: HardhatRuntimeEnvironment) => {
     QuoteToken: volmexQuoteToken.address,
     Vault: vault.address,
     VaultController: vaultController.address,
-    USDT: usdtAddress,
+    USDT: usdt.address,
     Deployer: await owner.getAddress(),
   };
   console.log("\n =====Deployment Successful===== \n");
