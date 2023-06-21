@@ -59,6 +59,7 @@ contract Vault is IVault, ReentrancyGuardUpgradeable, OwnerPausable, VaultStorag
         _positioningConfig = positioningConfigArg;
         _accountBalance = accountBalanceArg;
         _vaultController = vaultControllerArg;
+        highWeightedAmount = 10000000000;
         _grantRole(VAULT_ADMIN, _msgSender());
     }
 
@@ -75,6 +76,12 @@ contract Vault is IVault, ReentrancyGuardUpgradeable, OwnerPausable, VaultStorag
         // V_VPMM: Vault controller is not contract
         require(vaultControllerArg.isContract(), "V_VPMM");
         _vaultController = vaultControllerArg;
+    }
+
+    function setHighWeightedAmount(uint256 amountArg) external {
+        _requireVaultAdmin();
+        require(amountArg > 10 ** _decimals, "V_SWM"); // small weighted amount
+        highWeightedAmount = amountArg;
     }
 
     /// @inheritdoc IVault
@@ -98,10 +105,11 @@ contract Vault is IVault, ReentrancyGuardUpgradeable, OwnerPausable, VaultStorag
         uint256 remainingAmount = 0;
         if (vaultBalance < amount) {
             remainingAmount = amount - vaultBalance;
-            emit LowBalance(remainingAmount);
+            emit LowBalance(remainingAmount); // Note: Used for monitoring service to trigger insurance-fund
         }
         amount = amount - remainingAmount;
         SafeERC20Upgradeable.safeTransfer(IERC20Upgradeable(_settlementToken), to, amount);
+        if (amount > highWeightedAmount) emit HighWeightAmountWithdrawn(to, amount);
         emit Withdrawn(_settlementToken, to, amount);
     }
 
@@ -181,6 +189,7 @@ contract Vault is IVault, ReentrancyGuardUpgradeable, OwnerPausable, VaultStorag
         uint256 settlementTokenBalanceCap = IPositioningConfig(_positioningConfig).getSettlementTokenBalanceCap();
         // V_GTSTBC: greater than settlement token balance cap
         require(_vaultBalance <= settlementTokenBalanceCap, "V_GTSTBC");
+        if (amount > highWeightedAmount) emit HighWeightAmountDeposited(from, amount);
         emit Deposited(_settlementToken, from, amount);
     }
 
