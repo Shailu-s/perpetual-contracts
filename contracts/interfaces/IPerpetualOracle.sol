@@ -59,7 +59,6 @@ interface IPerpetualOracle {
     function latestMarkPrice(uint256 index) external view returns (uint256 latestMarkPrice);
 
     function latestLastPrice(uint256 _index) external view returns (uint256 latestLastPrice);
-    function getLatestBaseTokenPrice(uint256[] memory indexes) public view returns (Price[] memory);
     function getIndexEpochSMA(
         uint256 _index,
         uint256 _startTimestamp,
