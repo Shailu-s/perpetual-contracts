@@ -45,13 +45,7 @@ contract VolmexPerpPeriphery is AccessControlUpgradeable, IVolmexPerpPeriphery {
      * @param _owner Address of the admin EOA
      * @param _relayer Address of relayer to execute open position
      */
-    function initialize(
-        IVolmexPerpView _perpView,
-        IPerpetualOracle _perpetualOracle,
-        address[2] memory _vaults,
-        address _owner,
-        address _relayer
-    ) external initializer {
+    function initialize(IVolmexPerpView _perpView, IPerpetualOracle _perpetualOracle, address[2] memory _vaults, address _owner, address _relayer) external initializer {
         require(_owner != address(0), "VolmexPerpPeriphery: Admin can't be address(0)");
         require(_relayer != address(0), "VolmexPerpPeriphery: Relayer can't be address(0)");
         require(address(_perpView) != address(0), "VolmexPerpPeriphery: zero address");
@@ -98,21 +92,12 @@ contract VolmexPerpPeriphery is AccessControlUpgradeable, IVolmexPerpPeriphery {
         emit TraderWhitelisted(_trader, _isWhitelist);
     }
 
-    function depositToVault(
-        uint256 _index,
-        address _token,
-        uint256 _amount
-    ) external {
+    function depositToVault(uint256 _index, address _token, uint256 _amount) external {
         IVaultController vaultController = perpView.vaultControllers(_index);
         vaultController.deposit(IVolmexPerpPeriphery(address(this)), _token, _msgSender(), _amount);
     }
 
-    function withdrawFromVault(
-        uint256 _index,
-        address _token,
-        address _to,
-        uint256 _amount
-    ) external {
+    function withdrawFromVault(uint256 _index, address _token, address _to, uint256 _amount) external {
         IVaultController vaultController = perpView.vaultControllers(_index);
         vaultController.withdraw(_token, _to, _amount);
     }
@@ -138,7 +123,7 @@ contract VolmexPerpPeriphery is AccessControlUpgradeable, IVolmexPerpPeriphery {
         LibOrder.Order[] memory _makerOrders,
         bytes[] memory _signaturesMaker,
         LibOrder.Order[] memory _takerOrders,
-      bytes[] memory _signaturesTaker,
+        bytes[] memory _signaturesTaker,
         bytes memory liquidator
     ) external {
         require(_makerOrders.length == _takerOrders.length, "Periphery: mismatch orders");
@@ -158,14 +143,36 @@ contract VolmexPerpPeriphery is AccessControlUpgradeable, IVolmexPerpPeriphery {
         }
     }
 
-    function transferToVault(
-        IERC20Upgradeable _token,
-        address _from,
-        uint256 _amount
-    ) external {
+    function transferToVault(IERC20Upgradeable _token, address _from, uint256 _amount) external {
         address caller = _msgSender();
         require(_isVaultWhitelist[caller], "Periphery: vault not whitelisted");
         _token.safeTransferFrom(_from, caller, _amount);
+    }
+
+    function batchOrderValidate(LibOrder.Order[] memory order, uint256 _index) external view returns (bool[] memory) {
+        uint256 ordersLength = order.length;
+        bool[] memory _result = new bool[](ordersLength);
+        bool valid;
+        IPositioning positioning = perpView.positionings(_index);
+        for (uint256 orderIndex = 0; orderIndex < ordersLength; orderIndex++) {
+            try positioning.getOrderValidate(order[orderIndex]) {
+                valid = true;
+            } catch {
+                valid = false;
+            }
+            _result[orderIndex] = valid;
+        }
+        return _result;
+    }
+
+    function getTraderOrderValidate(uint256 _index, LibOrder.Order memory _order) external view returns (bool) {
+        if (!isTraderWhitelisted[_order.trader]) return false;
+        IPositioning positioning = perpView.positionings(_index);
+        try positioning.getOrderValidate(_order) {
+            return true;
+        } catch {
+            return false;
+        }
     }
 
     /**
@@ -184,22 +191,6 @@ contract VolmexPerpPeriphery is AccessControlUpgradeable, IVolmexPerpPeriphery {
         if (_takerOrder.orderType != LibOrder.ORDER) require(_verifyTriggerPrice(_takerOrder), "Periphery: right order price verification failed");
         IPositioning positioning = perpView.positionings(_index);
         positioning.openPosition(_makerOrder, _signatureMaker, _takerOrder, _signatureTaker, liquidator);
-    }
-
-    function batchOrderValidate(LibOrder.Order[] memory order, uint256 _index) external view returns (bool[] memory) {
-        uint256 ordersLength = order.length;
-        bool[] memory _result = new bool[](ordersLength);
-        bool valid;
-        IPositioning positioning = perpView.positionings(_index);
-        for (uint256 orderIndex = 0; orderIndex < ordersLength; orderIndex++) {
-            try positioning.getOrderValidate(order[orderIndex]) {
-                valid = true;
-            } catch {
-                valid = false;
-            }
-            _result[orderIndex] = valid;
-        }
-        return _result;
     }
 
     function _requireVolmexPerpPeripheryAdmin() internal view {
