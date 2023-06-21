@@ -13,26 +13,26 @@ import { HardhatUserConfig } from "hardhat/config";
 import "solidity-coverage";
 import "hardhat-docgen";
 import { config as dotEnvConfig } from "dotenv";
-// import "@matterlabs/hardhat-zksync-upgradable";
-// import "@matterlabs/hardhat-zksync-solc";
+import "@matterlabs/hardhat-zksync-upgradable";
+import "@matterlabs/hardhat-zksync-solc";
 dotEnvConfig();
 
 const config: HardhatUserConfig = {
-  // zksolc: {
-  //   version: "1.3.10",
-  //   compilerSource: "binary",
-  //   settings: {
-  //     //compilerPath: "zksolc",  // optional. Ignored for compilerSource "docker". Can be used if compiler is located in a specific folder
-  //     libraries: {}, // optional. References to non-inlinable libraries
-  //     isSystem: false, // optional.  Enables Yul instructions available only for zkSync system contracts and libraries
-  //     forceEvmla: false, // optional. Falls back to EVM legacy assembly if there is a bug with Yul
-  //     optimizer: {
-  //       enabled: true,
-  //       runs: 100, // optional. True by default
-  //       mode: "3", // optional. 3 by default, z to optimize bytecode size
-  //     },
-  //   },
-  // },
+  zksolc: {
+    version: "1.3.10",
+    compilerSource: "binary",
+    settings: {
+      //compilerPath: "zksolc",  // optional. Ignored for compilerSource "docker". Can be used if compiler is located in a specific folder
+      libraries: {}, // optional. References to non-inlinable libraries
+      isSystem: false, // optional.  Enables Yul instructions available only for zkSync system contracts and libraries
+      forceEvmla: false, // optional. Falls back to EVM legacy assembly if there is a bug with Yul
+      optimizer: {
+        enabled: true,
+        runs: 100, // optional. True by default
+        mode: "3", // optional. 3 by default, z to optimize bytecode size
+      },
+    },
+  },
   solidity: {
     compilers: [
       {

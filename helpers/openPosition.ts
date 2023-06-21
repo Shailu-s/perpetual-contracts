@@ -4,10 +4,10 @@ const ORDER = "0xf555eb98";
 const STOP_LOSS_LIMIT_ORDER = "0xeeaed735";
 const TAKE_PROFIT_LIMIT_ORDER = "0xe0fc7f94";
 const ZERO_ADDR = "0x0000000000000000000000000000000000000000";
-const baseToken = "0xDF3A92A7B883B482651388eC5b71370A3A038Db3";
-const quoteToken = "0xfe0B36Cee1B08D160b5031A3b397b61A261DC333";
-const positioningAddress = "0xD83d5bfF0B20D7eB34125B86879Cbd2Fc047a741";
-const peripheryAddress = "0x4C333EE98201D1062E9f7c2404a6c48fD7B67D87";
+const baseToken = "0x16a8976B5eF04FC7D96a490099B574ced13823bA";
+const quoteToken = "0x26AC26788bd7fdEd6B1AB70629214C2Aa211d8c9";
+const positioningAddress = "0x44AAFDCc84B5E449EB167A4aa30D90c45541Cd36";
+const peripheryAddress = "0xdfA41D11050eD1Dab501e27a44Cb50E435077050";
 function encodeAddress(account) {
   return web3.eth.abi.encodeParameters(["address"], [account]);
 }
@@ -54,7 +54,7 @@ const Types = {
 async function getSignature() {
   console.log("Signature creation started ...");
   const provider = new ethers.providers.JsonRpcProvider(
-    `https://soft-ancient-owl.base-goerli.discover.quiknode.pro/8fe248d5da37b5ea28fbb48d7d94651386abe2a6/`,
+    `https://arb-goerli.g.alchemy.com/v2/${process.env.ARBITRUM_TESTNET_ALCHEMY_API_KEY}`,
   );
   const account1 = new ethers.Wallet(`${process.env.PRIVATE_KEY}`, provider);
   const account2 = new ethers.Wallet(`${process.env.PRIVATE_KEY_1}`, provider);
@@ -64,7 +64,11 @@ async function getSignature() {
   const Positioning = await ethers.getContractFactory("Positioning");
   const positioning = Positioning.attach(positioningAddress);
   const periphery = Periphery.attach(peripheryAddress);
-
+  // console.log(account3.address);
+  // const li = await positioning
+  //   .connect(account1)
+  //   .liquidate(account3.address, baseToken, "2000000000000000000", { gasLimit: 8000000 });
+  // const rec = await li.wait();
   // const accountBalance = await ethers.getContractFactory("AccountBalance");
   // const account = accountBalance.attach("0xaa2f68AC0Fd0A67BACd9F4085Ad58910f75905C7");
   // const liquidatableSizes = await account.getLiquidatablePositionSize(
@@ -74,9 +78,12 @@ async function getSignature() {
   // );
   // console.log(liquidatableSizes.toString(), " size");
   // console.log(rec.transactionHash);
-  // await periphery.connect(account1).whitelistTrader(account2.address, true);
-  // await periphery.connect(account1).whitelistTrader(account3.address, true);
-
+  // const whitelst = await periphery
+  //   .connect(account1)
+  //   .whitelistTrader(account2.address, true, { gasLimit: 20000000 });
+  // await whitelst.wait();
+  // const whitelist2 = await periphery.connect(account1).whitelistTrader(account3.address, true);
+  // await whitelist2.wait();
   const time = new Date().getTime();
   const deadline = time + 50000000;
   let salt = time;
@@ -120,10 +127,10 @@ async function getSignature() {
   const signatureRight = await account2._signTypedData(domain, Types, orderRight);
   console.log("Signature created !!!");
 
-  // const accountBalance = await ethers.getContractAt(
-  //   "AccountBalance",
-  //   `${process.env.ACCOUNT_BALANCE}`,
-  // );
+  // // const accountBalance = await ethers.getContractAt(
+  // //   "AccountBalance",
+  // //   `${process.env.ACCOUNT_BALANCE}`,
+  // // );
 
   console.log("Opening position ...");
   const tx = await periphery
