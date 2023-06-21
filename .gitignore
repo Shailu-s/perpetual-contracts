@@ -1,4 +1,6 @@
 artifacts
+artifacts-zk
+cache-zk
 cache
 node_modules
 coverage.json
