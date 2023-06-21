@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity =0.8.18;
 
+import { BaseTokenStorageV1 } from "../storage/BaseTokenStorage.sol";
 import { IPerpetualOracle } from "../interfaces/IPerpetualOracle.sol";
 import { IVolmexBaseToken } from "../interfaces/IVolmexBaseToken.sol";
 import { VirtualToken } from "./VirtualToken.sol";
-import { BaseTokenStorageV1 } from "../storage/BaseTokenStorage.sol";
 
 contract VolmexBaseToken is IVolmexBaseToken, VirtualToken, BaseTokenStorageV1 {
     function initialize(

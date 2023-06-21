@@ -19,6 +19,11 @@ interface IPerpetualOracle {
         uint256 timestamp;
         uint256 cardinality; // number of elements in current epoch
     }
+    struct Price {
+        uint256 indexPrice;
+        uint256 markPrice;
+        uint256 lastPrice;
+    }
 
     event ObservationAdderSet(address indexed matchingEngine);
     event IndexObservationAdded(uint256[] index, uint256[] underlyingPrice, uint256 timestamp);
@@ -59,6 +64,7 @@ interface IPerpetualOracle {
     function latestMarkPrice(uint256 index) external view returns (uint256 latestMarkPrice);
 
     function latestLastPrice(uint256 _index) external view returns (uint256 latestLastPrice);
+    function getLatestBaseTokenPrice(uint256[] memory indexes) external view returns (Price[] memory);
     function getIndexEpochSMA(
         uint256 _index,
         uint256 _startTimestamp,

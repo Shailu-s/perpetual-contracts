@@ -3,9 +3,10 @@
 pragma solidity =0.8.18;
 
 import { AccessControlUpgradeable } from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
+
 import { IPerpetualOracle } from "../interfaces/IPerpetualOracle.sol";
-import { IPositioning } from "../interfaces/IPositioning.sol";
 import { LibSafeCastUint } from "../libs/LibSafeCastUint.sol";
+import { IPositioning } from "../interfaces/IPositioning.sol";
 import { LibPerpMath } from "../libs/LibPerpMath.sol";
 
 contract PerpetualOracle is AccessControlUpgradeable, IPerpetualOracle {
@@ -39,12 +40,6 @@ contract PerpetualOracle is AccessControlUpgradeable, IPerpetualOracle {
     uint256 public markSmInterval;
     uint256 public fundingPeriod;
     IPositioning public positioning;
-
-    struct Price {
-        uint256 indexPrice;
-        uint256 markPrice;
-        uint256 lastPrice;
-    }
 
     function __PerpetualOracle_init(
         address[2] calldata _baseToken,

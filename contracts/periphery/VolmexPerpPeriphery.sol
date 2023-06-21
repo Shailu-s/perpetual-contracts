@@ -4,13 +4,13 @@ pragma solidity =0.8.18;
 import { AccessControlUpgradeable } from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 import { SafeERC20Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 
-import { LibOrder } from "../libs/LibOrder.sol";
-import { IPerpetualOracle } from "../interfaces/IPerpetualOracle.sol";
-import { IPositioning } from "../interfaces/IPositioning.sol";
-import { IVaultController } from "../interfaces/IVaultController.sol";
 import { IVolmexPerpPeriphery, IERC20Upgradeable, IVirtualToken } from "../interfaces/IVolmexPerpPeriphery.sol";
+import { IPerpetualOracle } from "../interfaces/IPerpetualOracle.sol";
+import { IVaultController } from "../interfaces/IVaultController.sol";
 import { IVolmexPerpView } from "../interfaces/IVolmexPerpView.sol";
-import { IPositioningConfig } from "../interfaces/IPositioningConfig.sol";
+import { IPositioning } from "../interfaces/IPositioning.sol";
+
+import { LibOrder } from "../libs/LibOrder.sol";
 
 contract VolmexPerpPeriphery is AccessControlUpgradeable, IVolmexPerpPeriphery {
     using SafeERC20Upgradeable for IERC20Upgradeable;
