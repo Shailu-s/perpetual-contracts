@@ -15,21 +15,22 @@ import "hardhat-docgen";
 import { config as dotEnvConfig } from "dotenv";
 import "@matterlabs/hardhat-zksync-upgradable";
 import "@matterlabs/hardhat-zksync-solc";
+import "@matterlabs/hardhat-zksync-toolbox";
+
 dotEnvConfig();
 
 const config: HardhatUserConfig = {
   zksolc: {
-    version: "1.3.10",
+    version: "1.3.8",
     compilerSource: "binary",
     settings: {
-      //compilerPath: "zksolc",  // optional. Ignored for compilerSource "docker". Can be used if compiler is located in a specific folder
-      libraries: {}, // optional. References to non-inlinable libraries
-      isSystem: false, // optional.  Enables Yul instructions available only for zkSync system contracts and libraries
-      forceEvmla: false, // optional. Falls back to EVM legacy assembly if there is a bug with Yul
+      libraries: {},
+      isSystem: false,
+      forceEvmla: false,
       optimizer: {
         enabled: true,
-        runs: 100, // optional. True by default
-        mode: "3", // optional. 3 by default, z to optimize bytecode size
+        runs: 100,
+        mode: "3"
       },
     },
   },
@@ -103,10 +104,10 @@ const config: HardhatUserConfig = {
       timeout: 36000000,
     },
     zkTestnet: {
-      url: "https://testnet.era.zksync.dev",
+      url: "https://zksync2-testnet.zksync.dev",
       accounts: [`0x${process.env.PRIVATE_KEY}`],
       ethNetwork: "goerli",
-      gasMultiplier: 1.5,
+      gasMultiplier: 1,
       timeout: 36000000,
       zksync: true,
     },
