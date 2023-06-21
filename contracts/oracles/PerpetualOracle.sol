@@ -40,12 +40,6 @@ contract PerpetualOracle is AccessControlUpgradeable, IPerpetualOracle {
     uint256 public fundingPeriod;
     IPositioning public positioning;
 
-    struct Price {
-        uint256 indexPrice;
-        uint256 markPrice;
-        uint256 lastPrice;
-    }
-
     function __PerpetualOracle_init(
         address[2] calldata _baseToken,
         uint256[2] calldata _lastPrices,
