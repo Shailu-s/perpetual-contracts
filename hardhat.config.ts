@@ -15,13 +15,13 @@ import "hardhat-docgen";
 import { config as dotEnvConfig } from "dotenv";
 import "@matterlabs/hardhat-zksync-upgradable";
 import "@matterlabs/hardhat-zksync-solc";
-import "@matterlabs/hardhat-zksync-toolbox";
+// import "@matterlabs/hardhat-zksync-toolbox";
 
 dotEnvConfig();
 
 const config: HardhatUserConfig = {
   zksolc: {
-    version: "1.3.8",
+    version: "1.3.10",
     compilerSource: "binary",
     settings: {
       libraries: {},
