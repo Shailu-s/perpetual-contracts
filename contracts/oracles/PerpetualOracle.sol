@@ -3,9 +3,10 @@
 pragma solidity =0.8.18;
 
 import { AccessControlUpgradeable } from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
+
 import { IPerpetualOracle } from "../interfaces/IPerpetualOracle.sol";
-import { IPositioning } from "../interfaces/IPositioning.sol";
 import { LibSafeCastUint } from "../libs/LibSafeCastUint.sol";
+import { IPositioning } from "../interfaces/IPositioning.sol";
 import { LibPerpMath } from "../libs/LibPerpMath.sol";
 
 contract PerpetualOracle is AccessControlUpgradeable, IPerpetualOracle {

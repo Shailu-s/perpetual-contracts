@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL - 1.1
 pragma solidity =0.8.18;
 
-import "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
+import { AccessControlUpgradeable } from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 import { IPositioningConfig } from "../interfaces/IPositioningConfig.sol";
 import { PositioningConfigStorageV1 } from "../storage/PositioningConfigStorage.sol";
 import { IPerpetualOracle } from "../interfaces/IPerpetualOracle.sol";
