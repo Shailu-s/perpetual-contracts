@@ -12,7 +12,7 @@ const positioning = async (hre: HardhatRuntimeEnvironment) => {
   console.log("Deployer: ", await owner.getAddress());
   const ethBefore = await ethers.provider.getBalance(owner.address);
   console.log("Balance: ", ethBefore.toString());
-  const wallet = new Wallet("ded016e6b77a5847bc4665207ab97157de8749cf96627de82da30734fef5c9aa");
+  const wallet = new Wallet(`${process.env.PRIVATE_KEY}`);
   const deployer = new Deployer(hre, wallet);
 
   const MatchingEngine = await deployer.loadArtifact("MatchingEngine");

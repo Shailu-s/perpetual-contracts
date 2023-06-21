@@ -17,9 +17,9 @@ const approveDeposit = async () => {
   );
   const account1 = new ethers.Wallet(`${process.env.PRIVATE_KEY}`, provider);
   const account2 = new ethers.Wallet(`${process.env.PRIVATE_KEY_2}`, provider);
-  // const wallet = new Wallet("ded016e6b77a5847bc4665207ab97157de8749cf96627de82da30734fef5c9aa");
+  // const wallet = new Wallet(`${process.env.PRIVATE_KEY}`);
   // const deployer = new Deployer(hardhat, wallet);
-  // const wallet1 = new Wallet("0476ef11f262e89813d2bb57a9cc3c067aa8daa4c84bed440110bd8b7188c876");
+  // const wallet1 = new Wallet(`${process.env.PRIVATE_KEY_2}`);
   // const deployer1 = new Deployer(hardhat, wallet1);
   // const USDCArts = await deployer.loadArtifact("TestERC20");
   // const USDC = new ContractFactory(USDCArts.abi, USDCArts.bytecode, deployer1.zkWallet);
