@@ -256,7 +256,7 @@ const positioning = async () => {
   };
   console.log("\n =====Deployment Successful===== \n");
   console.log(addresses);
-  const ethAfter = await ethers.provider.getBalance(owner.address);
+  const ethAfter = await provider.getBalance(owner.address);
   console.log("ETH burned: ", ethBefore.sub(ethAfter).toString());
 
   if (process.env.NOT_VERIFY) {

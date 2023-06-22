@@ -1,8 +1,15 @@
 import { ethers, web3 } from "hardhat";
+import { Deployer } from "@matterlabs/hardhat-zksync-deploy";
+import { Wallet, utils, ContractFactory } from "zksync-web3";
+import { HardhatRuntimeEnvironment } from "hardhat/types";
+import hardhat from "hardhat";
+
 const USDCADDR = "0xB3011837c08D3A447AC1e08CCBAb30caBFC50511";
-const peripheryAddress = "0xb68C04A6AD25E4A5F5CF97BE582E77CF9795371f";
-const oracle = "0xeEa55e19b03E1257B624C6DCEDA3F0506C8a6EA0";
+const peripheryAddress = "0xdfA41D11050eD1Dab501e27a44Cb50E435077050";
+const oracle = "0x898C9Df84dDAfc64e15c8B92875Ed4FE6ec70515";
 const proofHash = "0x6c00000000000000000000000000000000000000000000000000000000000000";
+const vaultaddress = "0xC1F137Db7be8B606D8D97b926ABa74D8317bc9E9";
+const vaultcontrolleraa = "0x9d5Ef0bd892593dc5BC5Ef2226032cEa57C67Ad5";
 
 const approveDeposit = async () => {
   const provider = new ethers.providers.JsonRpcProvider(
@@ -10,26 +17,46 @@ const approveDeposit = async () => {
   );
   const account1 = new ethers.Wallet(`${process.env.PRIVATE_KEY}`, provider);
   const account2 = new ethers.Wallet(`${process.env.PRIVATE_KEY_2}`, provider);
+  // const wallet = new Wallet(`${process.env.PRIVATE_KEY}`);
+  // const deployer = new Deployer(hardhat, wallet);
+  // const wallet1 = new Wallet(`${process.env.PRIVATE_KEY_2}`);
+  // const deployer1 = new Deployer(hardhat, wallet1);
+  // const USDCArts = await deployer.loadArtifact("TestERC20");
+  // const USDC = new ContractFactory(USDCArts.abi, USDCArts.bytecode, deployer1.zkWallet);
   const USDC = await ethers.getContractFactory("TetherToken");
+  // const Vault = await ethers.getContractFactory("Vault");
+  // const controller = await ethers.getContractFactory("VaultController");
+  // const vault = Vault.attach(vaultaddress);
+  // await vault.setSettlementToken("0xB3011837c08D3A447AC1e08CCBAb30caBFC50511");
   const usdc = USDC.attach(USDCADDR);
+  // const vaultController = controller.attach(vaultcontrolleraa);
+  // await vaultController.registerVault(vaultaddress, "0xB3011837c08D3A447AC1e08CCBAb30caBFC50511");
+  // const arts = await deployer.loadArtifact("PerpetualOracle");
+  // const Oracle = new ContractFactory(arts.abi, arts.bytecode, deployer.zkWallet);
+  // const peripheryarts = await deployer1.loadArtifact("VolmexPerpPeriphery");
+  // const Periphery = new ContractFactory(
+  //   peripheryarts.abi,
+  //   peripheryarts.bytecode,
+  //   deployer1.zkWallet,
+  // );
   const Periphery = await ethers.getContractFactory("VolmexPerpPeriphery");
   const periphery = Periphery.attach(peripheryAddress);
-  // const transfer = await usdc.connect(account1).transfer(account2.address, "100000000000");
-  // const approval = await usdc.connect(account2).approve(peripheryAddress, "1000000000");
+  // const transfer = await usdc
+  //   .connect(account1)
+  //   .transfer(account2.address, "100000000000", { gasLimit: 200000000 });
+  // const approval = await usdc.connect(account2).approve(peripheryAddress, "100000000000");
   // const approvalReceipt = await approval.wait();
   // console.log("approval tx hash:", approvalReceipt.transactionHash);
 
-  // const deposit = await periphery
-  //   .connect(account2)
-  //   .withdrawFromVault(0, USDCADDR, account2.address, "350000000");
+  // const deposit = await periphery.connect(account2).depositToVault(0, USDCADDR, "10000000000");
   // const depositReceipt = await deposit.wait();
   // console.log("deposit tx hash", depositReceipt.transactionHash);
   const Oracle = await ethers.getContractFactory("PerpetualOracle");
   const perpOracle = Oracle.attach(oracle);
-  const setter = await perpOracle.setIndexObservationAdder(account1.address);
-  for (let i = 0; i < 1; i++) {
-    await perpOracle.addIndexObservations([0], [1000000], [proofHash]);
-    await perpOracle.addIndexObservations([1], [1000000], [proofHash]);
+  // const setter = await perpOracle.setIndexObservationAdder(account1.address);
+  for (let i = 0; i < 2; i++) {
+    await perpOracle.addIndexObservations([0], [55000000], [proofHash]);
+    await perpOracle.addIndexObservations([1], [55000000], [proofHash]);
     console.log(i);
   }
 };
