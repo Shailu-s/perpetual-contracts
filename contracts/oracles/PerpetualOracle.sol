@@ -20,7 +20,7 @@ contract PerpetualOracle is AccessControlUpgradeable, IPerpetualOracle {
     bytes32 public constant FUNDING_PERIOD_ROLE = keccak256("FUNDING_PERIOD_ROLE");
     bytes32 public constant SMA_INTERVAL_ROLE = keccak256("SMA_INTERVAL_ROLE");
     bytes32 public constant CACHE_CHAINLINK_PRICE_UPDATE_ROLE = keccak256("CACHE_CHAINLINK_PRICE_UPDATE_ROLE");
-    bytes32 public constant CHAINLINK_TOKEN_ID = bytes32(uint256(2**255));    // CHAINLINK_TOKEN_ID = 0x8000000000000000000000000000000000000000000000000000000000000000 id for chain link base token indexes
+    bytes32 public constant CHAINLINK_TOKEN_ID = bytes32(uint256(2 ** 255)); // CHAINLINK_TOKEN_ID = 0x8000000000000000000000000000000000000000000000000000000000000000 id for chain link base token indexes
     uint256 internal _indexCount;
 
     mapping(uint256 => address) public baseTokenByIndex;
@@ -100,8 +100,8 @@ contract PerpetualOracle is AccessControlUpgradeable, IPerpetualOracle {
     }
 
     function grantCacheChainlinkPriceUpdateRole(address _chainlinkPriceFeeder) external virtual {
-         _requireOracleAdmin(); 
-          _grantRole(CACHE_CHAINLINK_PRICE_UPDATE_ROLE, _chainlinkPriceFeeder); // This role should be granted to positoning contract as well as to trusted address
+        _requireOracleAdmin();
+        _grantRole(CACHE_CHAINLINK_PRICE_UPDATE_ROLE, _chainlinkPriceFeeder); // This role should be granted to positoning contract as well as to trusted address
     }
 
     function setFundingPeriod(uint256 _period) external virtual {
@@ -139,24 +139,24 @@ contract PerpetualOracle is AccessControlUpgradeable, IPerpetualOracle {
 
     function cacheChainlinkPrice(uint256 _baseTokenIndex) external virtual {
         _requireCacheChainlinkPriceUpdateRole();
-        require(isChainlinkToken(_baseTokenIndex),"PerpOracle: invalid chainlink base token index");
-        (uint80 roundId, int256 answer,,,) = AggregatorV3Interface(chainlinkAggregatorByIndex[_baseTokenIndex]).latestRoundData();
+        require(isChainlinkToken(_baseTokenIndex), "PerpOracle: invalid chainlink base token index");
+        (uint80 roundId, int256 answer, , , ) = AggregatorV3Interface(chainlinkAggregatorByIndex[_baseTokenIndex]).latestRoundData();
         bytes32 proofHash = bytes32(roundId + block.timestamp);
         uint256 price10x6 = uint256(answer) / 100; // Since  prices comes in 8 decimals so need to convert them to 6 (10^6 / 10^8 = 100)
         _pushIndexPrice(_baseTokenIndex, price10x6, proofHash);
         if (initialTimestamps[_baseTokenIndex] > 0) {
-                _saveEpoch(_baseTokenIndex, price10x6, false);
-            }
+            _saveEpoch(_baseTokenIndex, price10x6, false);
+        }
         emit ChainlinkPriceAdded(_baseTokenIndex, price10x6, block.timestamp);
     }
 
-    function addChainlinkBaseToken(uint256 _baseTokenIndex,address _chainlinkAggregatorArg, address _baseTokenArgs) external virtual {
+    function addChainlinkBaseToken(uint256 _baseTokenIndex, address _chainlinkAggregatorArg, address _baseTokenArgs) external virtual {
         _requireOracleAdmin();
-        require(isChainlinkToken(_baseTokenIndex),"PerpOracle: invalid chainlink base token index");
+        require(isChainlinkToken(_baseTokenIndex), "PerpOracle: invalid chainlink base token index");
         indexByBaseToken[_baseTokenArgs] = _baseTokenIndex;
         baseTokenByIndex[_baseTokenIndex] = _baseTokenArgs;
         chainlinkAggregatorByIndex[_baseTokenIndex] = _chainlinkAggregatorArg;
-        emit ChainlinkBaseTokenAdded(_baseTokenIndex, _baseTokenArgs, _chainlinkAggregatorArg); 
+        emit ChainlinkBaseTokenAdded(_baseTokenIndex, _baseTokenArgs, _chainlinkAggregatorArg);
     }
 
     function latestIndexPrice(uint256 _index) public view returns (uint256 indexPrice) {
@@ -205,11 +205,7 @@ contract PerpetualOracle is AccessControlUpgradeable, IPerpetualOracle {
             uint256 markPrice = latestMarkPrice(indexes[i]);
             uint256 lastPrice = latestLastPrice(indexes[i]);
 
-            Price memory price = Price({
-                indexPrice: indexPrice,
-                markPrice: markPrice,
-                lastPrice: lastPrice
-            });
+            Price memory price = Price({ indexPrice: indexPrice, markPrice: markPrice, lastPrice: lastPrice });
 
             prices[i] = price;
         }
@@ -435,6 +431,6 @@ contract PerpetualOracle is AccessControlUpgradeable, IPerpetualOracle {
     }
 
     function isChainlinkToken(uint256 baseTokenIndex) internal view returns (bool) {
-      return ((uint256(CHAINLINK_TOKEN_ID & bytes32(baseTokenIndex))>>255) == 1) ;
+        return ((uint256(CHAINLINK_TOKEN_ID & bytes32(baseTokenIndex)) >> 255) == 1);
     }
 }
