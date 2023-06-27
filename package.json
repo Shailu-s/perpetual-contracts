@@ -93,6 +93,7 @@
     ]
   },
   "dependencies": {
+    "@chainlink/contracts": "^0.6.1",
     "@defi-wonderland/smock": "^2.2.0",
     "@matterlabs/hardhat-zksync-deploy": "^0.6.3",
     "@matterlabs/hardhat-zksync-solc": "^0.3.17",
