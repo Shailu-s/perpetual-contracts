@@ -19,8 +19,8 @@ contract PerpetualOracle is AccessControlUpgradeable, IPerpetualOracle {
     bytes32 public constant ADD_INDEX_OBSERVATION_ROLE = keccak256("ADD_INDEX_OBSERVATION_ROLE");
     bytes32 public constant FUNDING_PERIOD_ROLE = keccak256("FUNDING_PERIOD_ROLE");
     bytes32 public constant SMA_INTERVAL_ROLE = keccak256("SMA_INTERVAL_ROLE");
-    bytes32 public constant CACHE_CHAINLINK_PRICE_UPDATE_ROLE = keccak256("CACHE_CHAINLINK_PRICE_UPDATE_ROLE");
-    bytes32 public constant CHAINLINK_TOKEN_ID = bytes32(uint256(2 ** 255)); // CHAINLINK_TOKEN_ID = 0x8000000000000000000000000000000000000000000000000000000000000000 id for chain link base token indexes
+    bytes32 public constant CACHE_CHAINLINK_PRICE_ROLE = keccak256("CACHE_CHAINLINK_PRICE_ROLE");
+    bytes32 public constant CHAINLINK_TOKEN_CHECKSUM = bytes32(uint256(2 ** 255)); // CHAINLINK_TOKEN_CHECKSUM = 0x8000000000000000000000000000000000000000000000000000000000000000 checksum for chain link base token indexes
     uint256 internal _indexCount;
 
     mapping(uint256 => address) public baseTokenByIndex;
@@ -101,7 +101,7 @@ contract PerpetualOracle is AccessControlUpgradeable, IPerpetualOracle {
 
     function grantCacheChainlinkPriceUpdateRole(address _chainlinkPriceFeeder) external virtual {
         _requireOracleAdmin();
-        _grantRole(CACHE_CHAINLINK_PRICE_UPDATE_ROLE, _chainlinkPriceFeeder); // This role should be granted to positoning contract as well as to trusted address
+        _grantRole(CACHE_CHAINLINK_PRICE_ROLE, _chainlinkPriceFeeder); // This role should be granted to positoning contract as well as to trusted address
     }
 
     function setFundingPeriod(uint256 _period) external virtual {
@@ -138,7 +138,7 @@ contract PerpetualOracle is AccessControlUpgradeable, IPerpetualOracle {
     }
 
     function cacheChainlinkPrice(uint256 _baseTokenIndex) external virtual {
-        _requireCacheChainlinkPriceUpdateRole();
+        _requireCacheChainlinkPriceRole();
         require(isChainlinkToken(_baseTokenIndex), "PerpOracle: invalid chainlink base token index");
         (uint80 roundId, int256 answer, , , ) = AggregatorV3Interface(chainlinkAggregatorByIndex[_baseTokenIndex]).latestRoundData();
         bytes32 proofHash = bytes32(roundId + block.timestamp);
@@ -436,6 +436,6 @@ contract PerpetualOracle is AccessControlUpgradeable, IPerpetualOracle {
     }
 
     function isChainlinkToken(uint256 baseTokenIndex) internal view returns (bool) {
-        return ((uint256(CHAINLINK_TOKEN_ID & bytes32(baseTokenIndex)) >> 255) == 1);
+        return ((uint256(CHAINLINK_TOKEN_CHECKSUM & bytes32(baseTokenIndex)) >> 255) == 1);
     }
 }
