@@ -20,7 +20,7 @@ contract PerpetualOracle is AccessControlUpgradeable, IPerpetualOracle {
     bytes32 public constant FUNDING_PERIOD_ROLE = keccak256("FUNDING_PERIOD_ROLE");
     bytes32 public constant SMA_INTERVAL_ROLE = keccak256("SMA_INTERVAL_ROLE");
     bytes32 public constant CACHE_CHAINLINK_PRICE_ROLE = keccak256("CACHE_CHAINLINK_PRICE_ROLE");
-    bytes32 public constant chainlinkPriceFeedId = bytes32(uint256(2*255));    // isChainlinkPriceFeed = 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff id for chain link base token indexes
+    bytes32 public constant CHAINLINK_TOKEN_ID = bytes32(uint256(2**255));    // CHAINLINK_TOKEN_ID = 0x8000000000000000000000000000000000000000000000000000000000000000 id for chain link base token indexes
     uint256 internal _indexCount;
 
     mapping(uint256 => address) public baseTokenByIndex;
@@ -99,7 +99,7 @@ contract PerpetualOracle is AccessControlUpgradeable, IPerpetualOracle {
         _grantRole(SMA_INTERVAL_ROLE, _positioningConfig);
     }
 
-    function grantCacheChainlinkPriceRole(address _positioning) external virtual {
+    function grantCacheChainlinkPriceUpdateRole(address _positioning) external virtual {
          _requireOracleAdmin();
           _grantRole(CACHE_CHAINLINK_PRICE_ROLE, _positioning);
     }
@@ -434,7 +434,7 @@ contract PerpetualOracle is AccessControlUpgradeable, IPerpetualOracle {
         require(hasRole(CACHE_CHAINLINK_PRICE_ROLE, _msgSender()), "PerpOracle: not chain link price adder");
     }
 
-    function isChainlinkToken(uint256 baseTokenIndex) internal pure returns (bool _isChainlinkToken) {
-        if (uint256(chainlinkPriceFeedId & bytes32(baseTokenIndex))>>255 == 1) _isChainlinkToken = true;
+    function isChainlinkToken(uint256 baseTokenIndex) internal view returns (bool) {
+      return (uint256(CHAINLINK_TOKEN_ID & bytes32(baseTokenIndex))>>255 == 1) ;
     }
 }

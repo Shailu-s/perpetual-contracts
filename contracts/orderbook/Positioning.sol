@@ -674,8 +674,8 @@ contract Positioning is IPositioning, ReentrancyGuardUpgradeable, PausableUpgrad
         require(isLiquidatorWhitelisted[liquidator], "P_LW"); // Positioning: liquidator not whitelisted
     }
 
-    function isChainlinkToken(uint256 baseTokenIndex) internal pure returns (bool _isChainlinkToken) {
-        if (uint256(chainlinkPriceFeedId & bytes32(baseTokenIndex))>>255 == 1) _isChainlinkToken = true;
+    function isChainlinkToken(uint256 baseTokenIndex) internal pure returns (bool) {
+        return (uint256(CHAINLINK_TOKEN_ID & bytes32(baseTokenIndex))>>255 == 1) ;
     }
 
     function _getPnlToBeRealized(InternalRealizePnlParams memory params) internal pure returns (int256) {
