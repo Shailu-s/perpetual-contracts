@@ -36,7 +36,7 @@ contract PerpetualOracle is AccessControlUpgradeable, IPerpetualOracle {
     mapping(uint256 => uint256) public markPriceEpochsCount;
     mapping(uint256 => uint256) public indexPriceEpochsCount;
     mapping(uint256 => uint256) public initialTimestamps;
-    mapping(uint256 => uint256) public _chainLinkPriceFeedByIndex;
+    mapping(uint256 => address) public _chainLinkPriceFeedByIndex;
     uint256 public smInterval;
     uint256 public markSmInterval;
     uint256 public fundingPeriod;
@@ -135,8 +135,12 @@ contract PerpetualOracle is AccessControlUpgradeable, IPerpetualOracle {
 
     }
 
-    function addBaseToken(uint256 baseTokenIndex,address _chainLinkPriceFeedArg, address _baseTokenArgs) external {
-        
+    function addChainLinkBaseToken(uint256 _baseTokenIndex,address _chainLinkPriceFeedArg, address _baseTokenArgs) external virtual {
+        _requireOracleAdmin();
+        require(isChainlinkToken(_baseTokenIndex),"PerpOracle: invalid chainlink base token index");
+        indexByBaseToken[_baseTokenArgs] = _baseTokenIndex;
+        baseTokenByIndex[_baseTokenIndex] = _baseTokenArgs;
+        _chainLinkPriceFeedByIndex[_baseTokenIndex] = _chainLinkPriceFeedArg;
     }
     function latestIndexPrice(uint256 _index) public view returns (uint256 indexPrice) {
         IndexObservation[65535] storage observations = indexObservations[_index];
@@ -409,7 +413,7 @@ contract PerpetualOracle is AccessControlUpgradeable, IPerpetualOracle {
         require(hasRole(SMA_INTERVAL_ROLE, _msgSender()), "MarkPriceOracle: not sma interval role");
     }
 
-    function isChainlinkToken(uint256 baseTokenIndex) public view returns (uint256) {
-        return uint256(isChainlinkPriceFeed & bytes32(baseTokenIndex))>>255;
+    function isChainlinkToken(uint256 baseTokenIndex) public view returns (bool ) {
+        if (uint256(isChainlinkPriceFeed & bytes32(baseTokenIndex))>>255 == 1) return true;
     }
 }
