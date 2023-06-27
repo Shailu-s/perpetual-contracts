@@ -28,6 +28,8 @@ interface IPerpetualOracle {
     event ObservationAdderSet(address indexed matchingEngine);
     event IndexObservationAdded(uint256[] index, uint256[] underlyingPrice, uint256 timestamp);
     event MarkObservationAdded(uint256 indexed index, uint256 lastPrice, uint256 markPrice, uint256 timestamp);
+    event ChainlinkBaseTokenAdded(uint256 index,address basetoken, address chainlinkAggregator);
+    event ChainlinkPriceAdded(uint256 index,uint256 price,uint256 timestamp);
 
     function __PerpetualOracle_init(
         address[2] calldata _baseToken,
@@ -46,6 +48,8 @@ interface IPerpetualOracle {
     function grantFundingPeriodRole(address _account) external;
 
     function grantSmaIntervalRole(address _positioningConfig) external;
+
+    function grantCacheChainlinkPriceRole(address _positioning) external;
 
     function setFundingPeriod(uint256 _period) external;
 
