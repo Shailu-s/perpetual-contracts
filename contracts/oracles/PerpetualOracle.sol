@@ -142,7 +142,7 @@ contract PerpetualOracle is AccessControlUpgradeable, IPerpetualOracle {
         require(isChainlinkToken(_baseTokenIndex), "PerpOracle: invalid chainlink base token index");
         (uint80 roundId, int256 answer, , , ) = AggregatorV3Interface(chainlinkAggregatorByIndex[_baseTokenIndex]).latestRoundData();
         bytes32 proofHash = bytes32(roundId + block.timestamp);
-        uint256 price10x6 = uint256(answer) / 100; // Since  prices comes in 8 decimals so need to convert them to 6 (10^6 / 10^8 = 100)
+        uint256 price10x6 = uint256(answer) / 100; // Since chainlink provides prices in 8 decimals so need to convert them to 6 (10^6 / 10^8 = 100)
         _pushIndexPrice(_baseTokenIndex, price10x6, proofHash);
         if (initialTimestamps[_baseTokenIndex] > 0) {
             _saveEpoch(_baseTokenIndex, price10x6, false);
