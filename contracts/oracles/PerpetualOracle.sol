@@ -3,7 +3,7 @@
 pragma solidity =0.8.18;
 
 import { AccessControlUpgradeable } from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
-
+import { AggregatorV3Interface } from "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
 import { IPerpetualOracle } from "../interfaces/IPerpetualOracle.sol";
 import { LibSafeCastUint } from "../libs/LibSafeCastUint.sol";
 import { IPositioning } from "../interfaces/IPositioning.sol";
@@ -19,7 +19,7 @@ contract PerpetualOracle is AccessControlUpgradeable, IPerpetualOracle {
     bytes32 public constant ADD_INDEX_OBSERVATION_ROLE = keccak256("ADD_INDEX_OBSERVATION_ROLE");
     bytes32 public constant FUNDING_PERIOD_ROLE = keccak256("FUNDING_PERIOD_ROLE");
     bytes32 public constant SMA_INTERVAL_ROLE = keccak256("SMA_INTERVAL_ROLE");
-
+    bytes32 public constant isChainlinkPriceFeed = bytes32(uint256(2*255));    // isChainlinkPriceFeed = 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
     uint256 internal _indexCount;
 
     mapping(uint256 => address) public baseTokenByIndex;
@@ -36,6 +36,7 @@ contract PerpetualOracle is AccessControlUpgradeable, IPerpetualOracle {
     mapping(uint256 => uint256) public markPriceEpochsCount;
     mapping(uint256 => uint256) public indexPriceEpochsCount;
     mapping(uint256 => uint256) public initialTimestamps;
+    mapping(uint256 => uint256) public _chainLinkPriceFeedByIndex;
     uint256 public smInterval;
     uint256 public markSmInterval;
     uint256 public fundingPeriod;
@@ -130,6 +131,13 @@ contract PerpetualOracle is AccessControlUpgradeable, IPerpetualOracle {
         emit IndexObservationAdded(_indexes, _prices, block.timestamp);
     }
 
+    function cacheChainLinkPrice(uint256 baseTokenIndex) external virtual {
+
+    }
+
+    function addBaseToken(uint256 baseTokenIndex,address _chainLinkPriceFeedArg, address _baseTokenArgs) external {
+        
+    }
     function latestIndexPrice(uint256 _index) public view returns (uint256 indexPrice) {
         IndexObservation[65535] storage observations = indexObservations[_index];
         uint256 currentIndex = _getCurrentIndex(_index, false);
@@ -399,5 +407,9 @@ contract PerpetualOracle is AccessControlUpgradeable, IPerpetualOracle {
 
     function _requireSmaIntervalRole() internal view {
         require(hasRole(SMA_INTERVAL_ROLE, _msgSender()), "MarkPriceOracle: not sma interval role");
+    }
+
+    function isChainlinkToken(uint256 baseTokenIndex) public view returns (uint256) {
+        return uint256(isChainlinkPriceFeed & bytes32(baseTokenIndex))>>255;
     }
 }
