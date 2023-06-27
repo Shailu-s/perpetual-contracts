@@ -160,9 +160,6 @@ contract PerpetualOracle is AccessControlUpgradeable, IPerpetualOracle {
     }
 
     function latestIndexPrice(uint256 _index) public view returns (uint256 indexPrice) {
-        IndexObservation[65535] storage observations = indexObservations[_index];
-        uint256 currentIndex = _getCurrentIndex(_index, false);
-        indexPrice = observations[currentIndex].underlyingPrice;
     }
 
     function latestIndexSMA(uint256 _smInterval, uint256 _index) external view virtual override returns (uint256 answer, uint256 lastUpdateTimestamp) {
