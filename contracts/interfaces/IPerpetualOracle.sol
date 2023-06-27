@@ -49,7 +49,7 @@ interface IPerpetualOracle {
 
     function grantSmaIntervalRole(address _positioningConfig) external;
 
-    function grantCacheChainlinkPriceRole(address _positioning) external;
+    // function grantCacheChainlinkPriceRole(address _positioning) external;
 
     function setFundingPeriod(uint256 _period) external;
 
