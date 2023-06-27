@@ -365,6 +365,10 @@ contract Positioning is IPositioning, ReentrancyGuardUpgradeable, PausableUpgrad
     /// @dev Settle trader's funding payment to his/her realized pnl.
     function _settleFunding(address trader, address baseToken) internal {
         (int256 fundingPayment, int256 globalTwPremiumGrowth) = settleFunding(trader, baseToken);
+        uint256 baseTokenIndex = _underlyingPriceIndexes[baseToken];
+        if(isChainlinkToken(baseTokenIndex)){
+            IPerpetualOracle(_perpetualOracleArg).cacheChainlinkPrice(baseTokenIndex);
+        }
         if (fundingPayment != 0) {
             IAccountBalance(accountBalance).modifyOwedRealizedPnl(trader, fundingPayment.neg256(), baseToken);
             emit FundingPaymentSettled(trader, baseToken, fundingPayment);
@@ -668,6 +672,10 @@ contract Positioning is IPositioning, ReentrancyGuardUpgradeable, PausableUpgrad
 
     function _requireWhitelistLiquidator(address liquidator) internal view {
         require(isLiquidatorWhitelisted[liquidator], "P_LW"); // Positioning: liquidator not whitelisted
+    }
+
+    function isChainlinkToken(uint256 baseTokenIndex) internal pure returns (bool _isChainlinkToken) {
+        if (uint256(chainlinkPriceFeedId & bytes32(baseTokenIndex))>>255 == 1) _isChainlinkToken = true;
     }
 
     function _getPnlToBeRealized(InternalRealizePnlParams memory params) internal pure returns (int256) {
