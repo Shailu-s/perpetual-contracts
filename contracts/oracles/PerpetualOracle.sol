@@ -160,6 +160,9 @@ contract PerpetualOracle is AccessControlUpgradeable, IPerpetualOracle {
     }
 
     function latestIndexPrice(uint256 _index) public view returns (uint256 indexPrice) {
+        if (isChainlinkToken(_index)) {
+        } else {
+        }
     }
 
     function latestIndexSMA(uint256 _smInterval, uint256 _index) external view virtual override returns (uint256 answer, uint256 lastUpdateTimestamp) {
