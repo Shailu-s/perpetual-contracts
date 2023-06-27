@@ -436,6 +436,6 @@ contract PerpetualOracle is AccessControlUpgradeable, IPerpetualOracle {
     }
 
     function isChainlinkToken(uint256 baseTokenIndex) internal view returns (bool) {
-        return ((uint256(CHAINLINK_CHECKSUM & bytes32(baseTokenIndex)) >> 255) == 1);
+        return ((uint256(CHAINLINK_TOKEN_CHECKSUM & bytes32(baseTokenIndex)) >> 255) == 1);
     }
 }
