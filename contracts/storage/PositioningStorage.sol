@@ -31,7 +31,7 @@ abstract contract PositioningStorageV1 {
     bool public isLiquidatorWhitelistEnabled;
     uint256 public indexPriceAllowedInterval;
     mapping(address => uint256) public minPositionSizeByBaseToken;
-    bytes32 public constant CHAINLINK_TOKEN_ID = bytes32(uint256(2*255));    // CHAINLINK_TOKEN_ID = 0x8000000000000000000000000000000000000000000000000000000000000000 id for chain link base token indexes
+    bytes32 public constant CHAINLINK_TOKEN_CHECKSUM = bytes32(uint256(2 ** 255));    // CHAINLINK_TOKEN_ID = 0x8000000000000000000000000000000000000000000000000000000000000000 id for chain link base token indexes
 
     uint256[48] private __gap;
 }
