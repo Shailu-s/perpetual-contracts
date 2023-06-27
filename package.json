@@ -103,11 +103,13 @@
     "@remix-project/remixd": "^0.6.14",
     "dotenv": "^16.0.3",
     "eth-sig-util": "3.0.1",
+    "husky": "^8.0.3",
     "link": "^1.5.1",
     "remix": "^1.17.1",
     "remixd": "^0.2.4",
     "sol2uml": "^2.4.3",
     "solgraph": "^1.0.2",
+    "solium": "^1.2.5",
     "surya": "^0.4.6",
     "zksync-web3": "^0.14.3"
   }
