@@ -19,6 +19,7 @@ contract PerpetualOracle is AccessControlUpgradeable, IPerpetualOracle {
     bytes32 public constant ADD_INDEX_OBSERVATION_ROLE = keccak256("ADD_INDEX_OBSERVATION_ROLE");
     bytes32 public constant FUNDING_PERIOD_ROLE = keccak256("FUNDING_PERIOD_ROLE");
     bytes32 public constant SMA_INTERVAL_ROLE = keccak256("SMA_INTERVAL_ROLE");
+    bytes32 public constant CACHE_CHAINLINK_PRICE_ROLE = keccak256("CACHE_CHAINLINK_PRICE_ROLE");
     bytes32 public constant isChainlinkPriceFeed = bytes32(uint256(2*255));    // isChainlinkPriceFeed = 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
     uint256 internal _indexCount;
 
@@ -36,7 +37,7 @@ contract PerpetualOracle is AccessControlUpgradeable, IPerpetualOracle {
     mapping(uint256 => uint256) public markPriceEpochsCount;
     mapping(uint256 => uint256) public indexPriceEpochsCount;
     mapping(uint256 => uint256) public initialTimestamps;
-    mapping(uint256 => address) public _chainLinkPriceFeedByIndex;
+    mapping(uint256 => address) public chainLinkPriceFeedByIndex;
     uint256 public smInterval;
     uint256 public markSmInterval;
     uint256 public fundingPeriod;
@@ -98,6 +99,11 @@ contract PerpetualOracle is AccessControlUpgradeable, IPerpetualOracle {
         _grantRole(SMA_INTERVAL_ROLE, _positioningConfig);
     }
 
+    function grantCacheChainlinkPriceRole(address _positioning) external virtual {
+         _requireOracleAdmin();
+          _grantRole(CACHE_CHAINLINK_PRICE_ROLE, _positioning);
+    }
+
     function setFundingPeriod(uint256 _period) external virtual {
         _requireFundingPeriodRole();
         fundingPeriod = _period;
@@ -131,8 +137,16 @@ contract PerpetualOracle is AccessControlUpgradeable, IPerpetualOracle {
         emit IndexObservationAdded(_indexes, _prices, block.timestamp);
     }
 
-    function cacheChainLinkPrice(uint256 baseTokenIndex) external virtual {
-
+    function cacheChainLinkPrice(uint256 _baseTokenIndex) external virtual {
+        _requireCacheChainlinkPriceRole();
+        require(isChainlinkToken(_baseTokenIndex),"PerpOracle: invalid chainlink base token index");
+        (uint80 roundId, int256 answer,,,) = AggregatorV3Interface(chainLinkPriceFeedByIndex[_baseTokenIndex]).latestRoundData();
+        bytes32 proofHash = bytes32(roundId + block.timestamp);
+        uint256 price10x6 = uint256(answer) / 100; // Since  prices comes in 8 decimals so need to convert them to 6 (10^6/10^8 = 100)
+        _pushIndexPrice(_baseTokenIndex,price10x6,proofHash);
+         if (initialTimestamps[_baseTokenIndex] > 0) {
+                _saveEpoch(_baseTokenIndex, price10x6, false);
+            }
     }
 
     function addChainLinkBaseToken(uint256 _baseTokenIndex,address _chainLinkPriceFeedArg, address _baseTokenArgs) external virtual {
@@ -140,7 +154,7 @@ contract PerpetualOracle is AccessControlUpgradeable, IPerpetualOracle {
         require(isChainlinkToken(_baseTokenIndex),"PerpOracle: invalid chainlink base token index");
         indexByBaseToken[_baseTokenArgs] = _baseTokenIndex;
         baseTokenByIndex[_baseTokenIndex] = _baseTokenArgs;
-        _chainLinkPriceFeedByIndex[_baseTokenIndex] = _chainLinkPriceFeedArg;
+        chainLinkPriceFeedByIndex[_baseTokenIndex] = _chainLinkPriceFeedArg;
     }
     function latestIndexPrice(uint256 _index) public view returns (uint256 indexPrice) {
         IndexObservation[65535] storage observations = indexObservations[_index];
@@ -413,7 +427,10 @@ contract PerpetualOracle is AccessControlUpgradeable, IPerpetualOracle {
         require(hasRole(SMA_INTERVAL_ROLE, _msgSender()), "MarkPriceOracle: not sma interval role");
     }
 
-    function isChainlinkToken(uint256 baseTokenIndex) public view returns (bool ) {
+    function _requireCacheChainlinkPriceRole() internal view {
+        require(hasRole(CACHE_CHAINLINK_PRICE_ROLE, _msgSender()), "PerpOracle: not chain link price adder");
+    }
+    function isChainlinkToken(uint256 baseTokenIndex) public view returns (bool) {
         if (uint256(isChainlinkPriceFeed & bytes32(baseTokenIndex))>>255 == 1) return true;
     }
 }
