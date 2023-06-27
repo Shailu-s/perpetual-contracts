@@ -431,8 +431,8 @@ contract PerpetualOracle is AccessControlUpgradeable, IPerpetualOracle {
         require(hasRole(SMA_INTERVAL_ROLE, _msgSender()), "MarkPriceOracle: not sma interval role");
     }
 
-    function _requireCacheChainlinkPriceUpdateRole() internal view {
-        require(hasRole(CACHE_CHAINLINK_PRICE_UPDATE_ROLE, _msgSender()), "PerpOracle: not chain link price adder");
+    function _requireCacheChainlinkPriceRole() internal view {
+        require(hasRole(CACHE_CHAINLINK_PRICE_ROLE, _msgSender()), "PerpOracle: not chain link price adder");
     }
 
     function isChainlinkToken(uint256 baseTokenIndex) internal view returns (bool) {
