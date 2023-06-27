@@ -161,6 +161,8 @@ contract PerpetualOracle is AccessControlUpgradeable, IPerpetualOracle {
 
     function latestIndexPrice(uint256 _index) public view returns (uint256 indexPrice) {
         if (isChainlinkToken(_index)) {
+            (, int256 answer, , , ) = AggregatorV3Interface(chainlinkAggregatorByIndex[_index]).latestRoundData();
+            indexPrice = answer.abs();
         } else {
         }
     }
