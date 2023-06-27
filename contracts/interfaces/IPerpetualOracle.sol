@@ -62,6 +62,10 @@ interface IPerpetualOracle {
         uint256[] memory _prices,
         bytes32[] memory _proofHashes
     ) external;
+    
+    function cacheChainlinkPrice(uint256 _baseTokenIndex) external;
+
+    function addChainlinkBaseToken(uint256 _baseTokenIndex,address chainlinkAggregatorArg, address baseTokenArg) external;
 
     function latestIndexPrice(uint256 _index) external view returns (uint256 latestIndexPrice);
 

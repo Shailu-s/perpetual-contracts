@@ -20,7 +20,7 @@ contract PerpetualOracle is AccessControlUpgradeable, IPerpetualOracle {
     bytes32 public constant FUNDING_PERIOD_ROLE = keccak256("FUNDING_PERIOD_ROLE");
     bytes32 public constant SMA_INTERVAL_ROLE = keccak256("SMA_INTERVAL_ROLE");
     bytes32 public constant CACHE_CHAINLINK_PRICE_ROLE = keccak256("CACHE_CHAINLINK_PRICE_ROLE");
-    bytes32 public constant isChainlinkPriceFeed = bytes32(uint256(2*255));    // isChainlinkPriceFeed = 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff id for chain link base token indexes
+    bytes32 public constant chainlinkPriceFeedId = bytes32(uint256(2*255));    // isChainlinkPriceFeed = 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff id for chain link base token indexes
     uint256 internal _indexCount;
 
     mapping(uint256 => address) public baseTokenByIndex;
@@ -137,7 +137,7 @@ contract PerpetualOracle is AccessControlUpgradeable, IPerpetualOracle {
         emit IndexObservationAdded(_indexes, _prices, block.timestamp);
     }
 
-    function cacheChainLinkPrice(uint256 _baseTokenIndex) external virtual {
+    function cacheChainlinkPrice(uint256 _baseTokenIndex) external virtual {
         _requireCacheChainlinkPriceRole();
         require(isChainlinkToken(_baseTokenIndex),"PerpOracle: invalid chainlink base token index");
         (uint80 roundId, int256 answer,,,) = AggregatorV3Interface(chainlinkAggregatorByIndex[_baseTokenIndex]).latestRoundData();
@@ -433,7 +433,8 @@ contract PerpetualOracle is AccessControlUpgradeable, IPerpetualOracle {
     function _requireCacheChainlinkPriceRole() internal view {
         require(hasRole(CACHE_CHAINLINK_PRICE_ROLE, _msgSender()), "PerpOracle: not chain link price adder");
     }
-    function isChainlinkToken(uint256 baseTokenIndex) public view returns (bool) {
-        if (uint256(isChainlinkPriceFeed & bytes32(baseTokenIndex))>>255 == 1) return true;
+
+    function isChainlinkToken(uint256 baseTokenIndex) internal pure returns (bool _isChainlinkToken) {
+        if (uint256(chainlinkPriceFeedId & bytes32(baseTokenIndex))>>255 == 1) _isChainlinkToken = true;
     }
 }
