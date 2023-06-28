@@ -32,9 +32,11 @@ describe.only("PerpetualOracle - Index Price Oracle", function () {
   let VolmexPerpView;
   let perpView;
   let ChainLinkAggregator;
-  let chainlinkAggregator;
+  let chainlinkAggregator1;
+  let chainlinkAggregator2;
   let accountBalance1;
   let chainlinkBaseToken;
+  let chainlinkBaseToken2;
   let MarketRegistry;
   let marketRegistry;
   let TestERC20;
@@ -42,8 +44,10 @@ describe.only("PerpetualOracle - Index Price Oracle", function () {
   let owner, account1, account2, account3, alice, bob;
   let liquidator;
   const deadline = 87654321987654;
-  const chainlinkTokenIndex =
+  const chainlinkTokenIndex1 =
     "57896044618658097711785492504343953926634992332820282019728792008524463585424";
+  const chainlinkTokenIndex2 =
+    "57896044618658097711785492504343953926634992332820282019728792008524463585425";
   const one = ethers.constants.WeiPerEther; // 1e18
   const two = ethers.constants.WeiPerEther.mul(BigNumber.from("2")); // 2e18
   const epochTimeSeconds = 28800;
@@ -107,18 +111,39 @@ describe.only("PerpetualOracle - Index Price Oracle", function () {
         initializer: "initialize",
       },
     );
+    chainlinkBaseToken2 = await upgrades.deployProxy(
+      VolmexBaseToken,
+      [
+        "VolmexBaseToken", // nameArg
+        "VBT", // symbolArg,
+        owner.address, // priceFeedArg
+        true, // isBase
+      ],
+      {
+        initializer: "initialize",
+      },
+    );
     await volmexBaseToken.deployed();
     await (await perpView.setBaseToken(volmexBaseToken.address)).wait();
 
-    chainlinkAggregator = await ChainLinkAggregator.deploy(8, 3075000000000);
-    await chainlinkAggregator.deployed();
+    chainlinkAggregator1 = await ChainLinkAggregator.deploy(8, 3075000000000);
+    await chainlinkAggregator1.deployed();
+    chainlinkAggregator2 = await ChainLinkAggregator.deploy(8, 3048000000000);
+    await chainlinkAggregator2.deployed();
     perpetualOracle = await upgrades.deployProxy(
       PerpetualOracle,
       [
-        [volmexBaseToken.address, volmexBaseToken.address],
+        [
+          volmexBaseToken.address,
+          volmexBaseToken.address,
+          chainlinkBaseToken.address,
+          chainlinkBaseToken2.address,
+        ],
         [60000000, 60000000],
         [60000000, 60000000],
         [proofHash, proofHash],
+        [chainlinkTokenIndex1, chainlinkTokenIndex2],
+        [chainlinkAggregator1.address, chainlinkAggregator2.address],
         owner.address,
       ],
       { initializer: "__PerpetualOracle_init" },
@@ -156,7 +181,13 @@ describe.only("PerpetualOracle - Index Price Oracle", function () {
 
     accountBalance1 = await upgrades.deployProxy(AccountBalance, [
       positioningConfig.address,
-      [volmexBaseToken.address, volmexBaseToken.address],
+      [
+        volmexBaseToken.address,
+        volmexBaseToken.address,
+        chainlinkBaseToken.address,
+        chainlinkBaseToken2.address,
+      ],
+      [chainlinkTokenIndex1, chainlinkTokenIndex2],
       matchingEngine.address,
       owner.address,
     ]);
@@ -182,7 +213,12 @@ describe.only("PerpetualOracle - Index Price Oracle", function () {
     (await accountBalance1.grantSettleRealizedPnlRole(vaultController.address)).wait();
     marketRegistry = await upgrades.deployProxy(MarketRegistry, [
       volmexQuoteToken.address,
-      [volmexBaseToken.address, volmexBaseToken.address],
+      [
+        volmexBaseToken.address,
+        volmexBaseToken.address,
+        chainlinkBaseToken.address,
+        chainlinkBaseToken2.address,
+      ],
     ]);
 
     positioning = await upgrades.deployProxy(
@@ -194,7 +230,13 @@ describe.only("PerpetualOracle - Index Price Oracle", function () {
         matchingEngine.address,
         perpetualOracle.address,
         marketRegistry.address,
-        [volmexBaseToken.address, volmexBaseToken.address],
+        [
+          volmexBaseToken.address,
+          volmexBaseToken.address,
+          chainlinkBaseToken.address,
+          chainlinkBaseToken2.address,
+        ],
+        [chainlinkTokenIndex1, chainlinkTokenIndex2],
         [owner.address, account1.address],
         ["10000000000000000000", "10000000000000000000"],
       ],
@@ -244,12 +286,6 @@ describe.only("PerpetualOracle - Index Price Oracle", function () {
       owner.address, // replace with replayer address
     ]);
     await volmexPerpPeriphery.deployed();
-    const addChainlinkToken = await perpetualOracle.addChainlinkBaseToken(
-      chainlinkTokenIndex,
-      chainlinkAggregator.address,
-      chainlinkBaseToken.address,
-    );
-    await addChainlinkToken.wait();
     await perpetualOracle.setIndexObservationAdder(owner.address);
     await perpetualOracle.setIndexObservationAdder(owner.address);
   });
@@ -468,52 +504,58 @@ describe.only("PerpetualOracle - Index Price Oracle", function () {
     });
   });
   describe.only("Chainlink tokens test", async () => {
-    it("Chainlink base tokens shoul be added", async () => {
-      const baseTokenByIndex = await perpetualOracle.baseTokenByIndex(chainlinkTokenIndex);
-      expect(baseTokenByIndex).to.be.equal(chainlinkBaseToken.address);
-      const aggregatorByIndex = await perpetualOracle.chainlinkAggregatorByIndex(
-        chainlinkTokenIndex,
+    it("Chainlink base tokens shoul be added correctly", async () => {
+      const baseTokenByIndex1 = await perpetualOracle.baseTokenByIndex(chainlinkTokenIndex1);
+      expect(baseTokenByIndex1).to.be.equal(chainlinkBaseToken.address);
+      const aggregatorByIndex1 = await perpetualOracle.chainlinkAggregatorByIndex(
+        chainlinkTokenIndex1,
       );
-      expect(aggregatorByIndex).to.be.equal(chainlinkAggregator.address);
+      expect(aggregatorByIndex1).to.be.equal(chainlinkAggregator1.address);
+      const baseTokenByIndex2 = await perpetualOracle.baseTokenByIndex(chainlinkTokenIndex2);
+      expect(baseTokenByIndex2).to.be.equal(chainlinkBaseToken2.address);
+      const aggregatorByIndex2 = await perpetualOracle.chainlinkAggregatorByIndex(
+        chainlinkTokenIndex2,
+      );
+      expect(aggregatorByIndex2).to.be.equal(chainlinkAggregator2.address);
     });
     it("should cache observation for chainlink token and give latest price SMA", async () => {
       const currentTimestamp = await time.latest();
-      await chainlinkAggregator.updateRoundData(
+      await chainlinkAggregator1.updateRoundData(
         "162863638383902",
         "30000000004546",
         parseInt(currentTimestamp),
         parseInt(currentTimestamp),
       );
-      const cacheIndexPrice = await perpetualOracle.cacheChainlinkPrice(chainlinkTokenIndex);
+      const cacheIndexPrice = await perpetualOracle.cacheChainlinkPrice(chainlinkTokenIndex1);
       await cacheIndexPrice.wait();
       const chainlinkTokenPriceCached = await perpetualOracle.latestIndexSMA(
         200,
-        chainlinkTokenIndex,
+        chainlinkTokenIndex1,
       );
       expect(chainlinkTokenPriceCached.answer.toString()).to.be.equal("300000000045");
     });
     it("should fetch latest price from aggregator", async () => {
       const currentTimestamp = await time.latest();
-      await chainlinkAggregator.updateRoundData(
+      await chainlinkAggregator1.updateRoundData(
         "162863638383902",
         "39099003902399",
         parseInt(currentTimestamp),
         parseInt(currentTimestamp),
       );
-      const cacheIndexPrice = await perpetualOracle.cacheChainlinkPrice(chainlinkTokenIndex);
+      const cacheIndexPrice = await perpetualOracle.cacheChainlinkPrice(chainlinkTokenIndex1);
       await cacheIndexPrice.wait();
-      const latestIndexPrice = await perpetualOracle.latestIndexPrice(chainlinkTokenIndex);
+      const latestIndexPrice = await perpetualOracle.latestIndexPrice(chainlinkTokenIndex1);
       expect(latestIndexPrice.toString()).to.be.equal("390990039023");
     });
     it("should fetch epoch price ", async () => {
       const currentTimestamp = await time.latest();
-      await chainlinkAggregator.updateRoundData(
+      await chainlinkAggregator1.updateRoundData(
         "162863638383902",
         "30000000000000",
         parseInt(currentTimestamp),
         parseInt(currentTimestamp),
       );
-      await chainlinkAggregator.updateRoundData(
+      await chainlinkAggregator1.updateRoundData(
         "162863638383903",
         "40000000000000",
         parseInt(currentTimestamp),
