@@ -519,6 +519,7 @@ describe.only("PerpetualOracle - Index Price Oracle", function () {
         parseInt(currentTimestamp),
         parseInt(currentTimestamp),
       );
+      // Since there are no mark price observation added epoch price will come out to be 0
     });
   });
 });
