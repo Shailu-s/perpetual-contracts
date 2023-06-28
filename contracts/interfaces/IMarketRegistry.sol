@@ -6,7 +6,7 @@ interface IMarketRegistry {
     /// @param maxOrdersPerMarket Max orders per market
     event MaxOrdersPerMarketChanged(uint8 maxOrdersPerMarket);
 
-    function initialize(address quoteTokenArg, address[2] calldata volmexBaseTokenArgs) external;
+    function initialize(address quoteTokenArg, address[4] calldata volmexBaseTokenArgs) external;
 
     /// @dev Set max allowed orders per market
     /// @param maxOrdersPerMarketArg The max allowed orders per market

@@ -22,7 +22,7 @@ contract MarketRegistry is IMarketRegistry, PositioningCallee, MarketRegistrySto
         _;
     }
 
-    function initialize(address quoteTokenArg, address[2] calldata volmexBaseTokenArgs) external initializer {
+    function initialize(address quoteTokenArg, address[4] calldata volmexBaseTokenArgs) external initializer {
         __PositioningCallee_init();
 
         // QuoteToken is not contract
