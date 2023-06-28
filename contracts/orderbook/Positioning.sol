@@ -44,7 +44,8 @@ contract Positioning is IPositioning, ReentrancyGuardUpgradeable, PausableUpgrad
         address matchingEngineArg,
         address perpetualOracleArg,
         address marketRegistryArg,
-        address[2] calldata volmexBaseTokenArgs,
+        address[4] calldata volmexBaseTokenArgs, //NOTE: index 2 and 3 is of chainlink base token
+        uint256[2] calldata chainlinkBaseTokenIndexArgs,
         address[2] calldata liquidators,
         uint256[2] calldata _minPositionSizeByBaseToken
     ) external initializer {
@@ -73,6 +74,7 @@ contract Positioning is IPositioning, ReentrancyGuardUpgradeable, PausableUpgrad
         indexPriceAllowedInterval = 1800;
         for (uint256 index = 0; index < 2; index++) {
             _underlyingPriceIndexes[volmexBaseTokenArgs[index]] = index;
+            _underlyingPriceIndexes[volmexBaseTokenArgs[index + 2]] = chainlinkBaseTokenIndexArgs[index];
             isLiquidatorWhitelisted[liquidators[index]] = true;
             minPositionSizeByBaseToken[volmexBaseTokenArgs[index]] = _minPositionSizeByBaseToken[index];
         }
