@@ -107,6 +107,8 @@ contract Positioning is IPositioning, ReentrancyGuardUpgradeable, PausableUpgrad
         emit DefaultFeeReceiverChanged(defaultFeeReceiver);
     }
 
+    // TODO: Cherry pick commit: ec05632b5d7eadab35011f5db00948a368846032
+
     /// @inheritdoc IPositioning
     function whitelistLiquidator(address liquidator, bool isWhitelist) external {
         _requirePositioningAdmin();
