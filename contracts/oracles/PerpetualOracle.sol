@@ -104,7 +104,7 @@ contract PerpetualOracle is AccessControlUpgradeable, IPerpetualOracle {
         _grantRole(SMA_INTERVAL_ROLE, _positioningConfig);
     }
 
-    function grantCacheChainlinkPriceUpdateRole(address _chainlinkPriceFeeder) external virtual {
+    function grantCacheChainlinkPriceRole(address _chainlinkPriceFeeder) external virtual {
         _requireOracleAdmin();
         _grantRole(CACHE_CHAINLINK_PRICE_ROLE, _chainlinkPriceFeeder); // This role should be granted to positoning contract as well as to trusted address
     }
