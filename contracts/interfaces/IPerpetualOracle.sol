@@ -28,7 +28,7 @@ interface IPerpetualOracle {
     event ObservationAdderSet(address indexed matchingEngine);
     event IndexObservationAdded(uint256[] index, uint256[] underlyingPrice, uint256 timestamp);
     event MarkObservationAdded(uint256 indexed index, uint256 lastPrice, uint256 markPrice, uint256 timestamp);
-    event ChainlinkBaseTokenAdded(uint256 index, address basetoken, address chainlinkAggregator);
+    event ChainlinkBaseTokenAdded(uint256 index, address basetoken);
     event ChainlinkPriceAdded(uint256 index, uint256 price, uint256 timestamp);
 
     function __PerpetualOracle_init(
