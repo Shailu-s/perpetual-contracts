@@ -37,7 +37,7 @@ contract PerpetualOracle is AccessControlUpgradeable, IPerpetualOracle {
     mapping(uint256 => uint256) public markPriceEpochsCount;
     mapping(uint256 => uint256) public indexPriceEpochsCount;
     mapping(uint256 => uint256) public initialTimestamps;
-    mapping(uint256 => address) public chainlinkAggregatorByIndex;
+    mapping(uint256 => AggregatorV3Interface) public chainlinkAggregatorByIndex;
     uint256 public smInterval;
     uint256 public markSmInterval;
     uint256 public fundingPeriod;
@@ -139,8 +139,7 @@ contract PerpetualOracle is AccessControlUpgradeable, IPerpetualOracle {
 
     function cacheChainlinkPrice(uint256 _baseTokenIndex) external virtual {
         _requireCacheChainlinkPriceRole();
-        require(_isChainlinkToken(_baseTokenIndex), "PerpOracle: invalid chainlink base token index");
-        (uint80 roundId, int256 answer, , , ) = AggregatorV3Interface(chainlinkAggregatorByIndex[_baseTokenIndex]).latestRoundData();
+        (uint80 roundId, int256 answer, , , ) = chainlinkAggregatorByIndex[_baseTokenIndex].latestRoundData();
         bytes32 proofHash = bytes32(roundId + block.timestamp);
         uint256 price10x6 = uint256(answer) / 100; // Since chainlink provides prices in 8 decimals so need to convert them to 6 (10^6 / 10^8 = 100)
         _pushIndexPrice(_baseTokenIndex, price10x6, proofHash);
@@ -150,13 +149,13 @@ contract PerpetualOracle is AccessControlUpgradeable, IPerpetualOracle {
         emit ChainlinkPriceAdded(_baseTokenIndex, price10x6, block.timestamp);
     }
 
-    function addChainlinkBaseToken(uint256 _baseTokenIndex, address _chainlinkAggregatorArg, address _baseTokenArgs) external virtual {
+    function addChainlinkBaseToken(uint256 _baseTokenIndex, AggregatorV3Interface _chainlinkAggregatorArg, address _baseTokenArgs) external virtual {
         _requireOracleAdmin();
         require(_isChainlinkToken(_baseTokenIndex), "PerpOracle: invalid chainlink base token index");
         indexByBaseToken[_baseTokenArgs] = _baseTokenIndex;
         baseTokenByIndex[_baseTokenIndex] = _baseTokenArgs;
         chainlinkAggregatorByIndex[_baseTokenIndex] = _chainlinkAggregatorArg;
-        emit ChainlinkBaseTokenAdded(_baseTokenIndex, _baseTokenArgs, _chainlinkAggregatorArg);
+        emit ChainlinkBaseTokenAdded(_baseTokenIndex, _baseTokenArgs);
     }
 
     function latestIndexPrice(uint256 _index) public view returns (uint256 indexPrice) {
@@ -420,7 +419,7 @@ contract PerpetualOracle is AccessControlUpgradeable, IPerpetualOracle {
     }
 
     function _getPriceFromChainlink(uint256 _index) internal view returns (uint256 price) {
-        (, int256 answer, , , ) = AggregatorV3Interface(chainlinkAggregatorByIndex[_index]).latestRoundData();
+        (, int256 answer, , , ) = chainlinkAggregatorByIndex[_index].latestRoundData();
         price = (answer / 100).abs(); // Note: chainlink follows 8 decimals price, volmex 6 decimals
     }
 

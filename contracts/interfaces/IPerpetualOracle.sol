@@ -3,6 +3,8 @@
 pragma solidity =0.8.18;
 
 import { IPositioning } from "./IPositioning.sol";
+import { AggregatorV3Interface } from "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
+
 
 interface IPerpetualOracle {
     struct IndexObservation {
@@ -28,7 +30,7 @@ interface IPerpetualOracle {
     event ObservationAdderSet(address indexed matchingEngine);
     event IndexObservationAdded(uint256[] index, uint256[] underlyingPrice, uint256 timestamp);
     event MarkObservationAdded(uint256 indexed index, uint256 lastPrice, uint256 markPrice, uint256 timestamp);
-    event ChainlinkBaseTokenAdded(uint256 index, address basetoken, address chainlinkAggregator);
+    event ChainlinkBaseTokenAdded(uint256 index, address basetoken);
     event ChainlinkPriceAdded(uint256 index, uint256 price, uint256 timestamp);
 
     function __PerpetualOracle_init(
@@ -63,7 +65,7 @@ interface IPerpetualOracle {
     
     function cacheChainlinkPrice(uint256 _baseTokenIndex) external;
 
-    function addChainlinkBaseToken(uint256 _baseTokenIndex, address chainlinkAggregatorArg, address baseTokenArg) external;
+    function addChainlinkBaseToken(uint256 _baseTokenIndex, AggregatorV3Interface _chainlinkAggregatorArg, address _baseTokenArgs) external;
 
     function latestIndexPrice(uint256 _index) external view returns (uint256 latestIndexPrice);
 
