@@ -91,4 +91,5 @@ interface IPerpetualOracle {
 
     function indexByBaseToken(address _baseToken) external view returns (uint256 index);
     function initialTimestamps(uint256 _index) external view returns (uint256 timestamp);
+    function getIndexPriceForLiquidation(uint256 _index, uint256 _smInterval) external view returns (uint256 indexPrice);
 }
