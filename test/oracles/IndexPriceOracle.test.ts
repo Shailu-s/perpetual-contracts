@@ -6,7 +6,7 @@ const { Order, Asset, sign, encodeAddress } = require("../order");
 import { utils } from "ethers";
 const { expectRevert, time } = require("@openzeppelin/test-helpers");
 
-describe("PerpetualOracle - Index Price Oracle", function () {
+describe.only("PerpetualOracle - Index Price Oracle", function () {
   let MatchingEngine;
   let matchingEngine;
   let VirtualToken;
@@ -31,8 +31,10 @@ describe("PerpetualOracle - Index Price Oracle", function () {
   let volmexPerpPeriphery;
   let VolmexPerpView;
   let perpView;
-
+  let ChainLinkAggregator;
+  let chainlinkAggregator;
   let accountBalance1;
+  let chainlinkBaseToken;
   let MarketRegistry;
   let marketRegistry;
   let TestERC20;
@@ -40,6 +42,8 @@ describe("PerpetualOracle - Index Price Oracle", function () {
   let owner, account1, account2, account3, alice, bob;
   let liquidator;
   const deadline = 87654321987654;
+  const chainlinkTokenIndex =
+    "57896044618658097711785492504343953926634992332820282019728792008524463585424";
   const one = ethers.constants.WeiPerEther; // 1e18
   const two = ethers.constants.WeiPerEther.mul(BigNumber.from("2")); // 2e18
   const epochTimeSeconds = 28800;
@@ -69,6 +73,7 @@ describe("PerpetualOracle - Index Price Oracle", function () {
     VolmexBaseToken = await ethers.getContractFactory("VolmexBaseToken");
     VolmexQuoteToken = await ethers.getContractFactory("VolmexQuoteToken");
     VolmexPerpView = await ethers.getContractFactory("VolmexPerpView");
+    ChainLinkAggregator = await ethers.getContractFactory("MockV3Aggregator");
     [owner, account1, account2, account3, alice, bob] = await ethers.getSigners();
     liquidator = encodeAddress(owner.address);
   });
@@ -90,9 +95,23 @@ describe("PerpetualOracle - Index Price Oracle", function () {
         initializer: "initialize",
       },
     );
+    chainlinkBaseToken = await upgrades.deployProxy(
+      VolmexBaseToken,
+      [
+        "VolmexBaseToken", // nameArg
+        "VBT", // symbolArg,
+        owner.address, // priceFeedArg
+        true, // isBase
+      ],
+      {
+        initializer: "initialize",
+      },
+    );
     await volmexBaseToken.deployed();
     await (await perpView.setBaseToken(volmexBaseToken.address)).wait();
 
+    chainlinkAggregator = await ChainLinkAggregator.deploy(8, 3075000000000);
+    await chainlinkAggregator.deployed();
     perpetualOracle = await upgrades.deployProxy(
       PerpetualOracle,
       [
@@ -216,7 +235,7 @@ describe("PerpetualOracle - Index Price Oracle", function () {
     await perpetualOracle.grantSmaIntervalRole(positioningConfig.address);
     await perpetualOracle.setPositioning(positioning.address);
     await positioningConfig.setTwapInterval(28800);
-
+    await perpetualOracle.grantCacheChainlinkPriceRole(owner.address);
     volmexPerpPeriphery = await upgrades.deployProxy(VolmexPerpPeriphery, [
       perpView.address,
       perpetualOracle.address,
@@ -225,6 +244,12 @@ describe("PerpetualOracle - Index Price Oracle", function () {
       owner.address, // replace with replayer address
     ]);
     await volmexPerpPeriphery.deployed();
+    const addChainlinkToken = await perpetualOracle.addChainlinkBaseToken(
+      chainlinkTokenIndex,
+      chainlinkAggregator.address,
+      chainlinkBaseToken.address,
+    );
+    await addChainlinkToken.wait();
     await perpetualOracle.setIndexObservationAdder(owner.address);
     await perpetualOracle.setIndexObservationAdder(owner.address);
   });
@@ -258,16 +283,21 @@ describe("PerpetualOracle - Index Price Oracle", function () {
     });
 
     it("Should fetch lastest prices", async () => {
-      await (await perpetualOracle.addIndexObservations([0,1], [76000000, 76000000], [proofHash, proofHash])).wait();
+      await (
+        await perpetualOracle.addIndexObservations(
+          [0, 1],
+          [76000000, 76000000],
+          [proofHash, proofHash],
+        )
+      ).wait();
       await time.increase(epochTimeSeconds);
-      let prices = await perpetualOracle.getLatestBaseTokenPrice([0,1]);
-      expect((prices[0].indexPrice.toString())).equal("76000000");
-      expect(( prices[0].markPrice.toString())).equal("60000000");
-      expect(( prices[0].lastPrice.toString())).equal("60000000");
-      expect(( prices[1].indexPrice.toString())).equal("76000000");
-      expect(( prices[1].markPrice.toString())).equal("60000000");
-      expect(( prices[1].lastPrice.toString())).equal("60000000");
-
+      let prices = await perpetualOracle.getLatestBaseTokenPrice([0, 1]);
+      expect(prices[0].indexPrice.toString()).equal("76000000");
+      expect(prices[0].markPrice.toString()).equal("60000000");
+      expect(prices[0].lastPrice.toString()).equal("60000000");
+      expect(prices[1].indexPrice.toString()).equal("76000000");
+      expect(prices[1].markPrice.toString()).equal("60000000");
+      expect(prices[1].lastPrice.toString()).equal("60000000");
     });
   });
 
@@ -290,6 +320,7 @@ describe("PerpetualOracle - Index Price Oracle", function () {
       );
     });
   });
+
   describe("Add Observation", async () => {
     it("Should add observation", async () => {
       for (let i = 0; i < 10; i++) {
@@ -434,6 +465,60 @@ describe("PerpetualOracle - Index Price Oracle", function () {
         parseInt(timestamp) + 28800,
       );
       expect(lastEpochIndexPrice.toString()).to.equal("0");
+    });
+  });
+  describe.only("Chainlink tokens test", async () => {
+    it("Chainlink base tokens shoul be added", async () => {
+      const baseTokenByIndex = await perpetualOracle.baseTokenByIndex(chainlinkTokenIndex);
+      expect(baseTokenByIndex).to.be.equal(chainlinkBaseToken.address);
+      const aggregatorByIndex = await perpetualOracle.chainlinkAggregatorByIndex(
+        chainlinkTokenIndex,
+      );
+      expect(aggregatorByIndex).to.be.equal(chainlinkAggregator.address);
+    });
+    it("should cache observation for chainlink token and give latest price SMA", async () => {
+      const currentTimestamp = await time.latest();
+      await chainlinkAggregator.updateRoundData(
+        "162863638383902",
+        "30000000004546",
+        parseInt(currentTimestamp),
+        parseInt(currentTimestamp),
+      );
+      const cacheIndexPrice = await perpetualOracle.cacheChainlinkPrice(chainlinkTokenIndex);
+      await cacheIndexPrice.wait();
+      const chainlinkTokenPriceCached = await perpetualOracle.latestIndexSMA(
+        200,
+        chainlinkTokenIndex,
+      );
+      expect(chainlinkTokenPriceCached.answer.toString()).to.be.equal("300000000045");
+    });
+    it("should fetch latest price from aggregator", async () => {
+      const currentTimestamp = await time.latest();
+      await chainlinkAggregator.updateRoundData(
+        "162863638383902",
+        "39099003902399",
+        parseInt(currentTimestamp),
+        parseInt(currentTimestamp),
+      );
+      const cacheIndexPrice = await perpetualOracle.cacheChainlinkPrice(chainlinkTokenIndex);
+      await cacheIndexPrice.wait();
+      const latestIndexPrice = await perpetualOracle.latestIndexPrice(chainlinkTokenIndex);
+      expect(latestIndexPrice.toString()).to.be.equal("390990039023");
+    });
+    it("should fetch epoch price ", async () => {
+      const currentTimestamp = await time.latest();
+      await chainlinkAggregator.updateRoundData(
+        "162863638383902",
+        "30000000000000",
+        parseInt(currentTimestamp),
+        parseInt(currentTimestamp),
+      );
+      await chainlinkAggregator.updateRoundData(
+        "162863638383903",
+        "40000000000000",
+        parseInt(currentTimestamp),
+        parseInt(currentTimestamp),
+      );
     });
   });
 });
