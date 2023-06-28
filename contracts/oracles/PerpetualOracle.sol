@@ -419,7 +419,7 @@ contract PerpetualOracle is AccessControlUpgradeable, IPerpetualOracle {
     }
 
     function _getPriceFromChainlink(uint256 _index) internal view returns (uint256 price) {
-        (, int256 answer, , , ) = AggregatorV3Interface(chainlinkAggregatorByIndex[_index]).latestRoundData();
+        (, int256 answer, , , ) = chainlinkAggregatorByIndex[_index].latestRoundData();
         price = (answer / 100).abs(); // Note: chainlink follows 8 decimals price, volmex 6 decimals
     }
 
