@@ -6,7 +6,7 @@ const { Order, Asset, sign, encodeAddress } = require("../order");
 import { utils } from "ethers";
 const { expectRevert, time } = require("@openzeppelin/test-helpers");
 
-describe.only("PerpetualOracle - Index Price Oracle", function () {
+describe("PerpetualOracle - Index Price Oracle", function () {
   let MatchingEngine;
   let matchingEngine;
   let VirtualToken;
@@ -503,7 +503,7 @@ describe.only("PerpetualOracle - Index Price Oracle", function () {
       expect(lastEpochIndexPrice.toString()).to.equal("0");
     });
   });
-  describe.only("Chainlink tokens test", async () => {
+  describe("Chainlink tokens test", async () => {
     it("Chainlink base tokens shoul be added correctly", async () => {
       const underlyingindex1 = await positioning.un;
       const baseTokenByIndex1 = await perpetualOracle.baseTokenByIndex(chainlinkTokenIndex1);
@@ -572,7 +572,7 @@ describe.only("PerpetualOracle - Index Price Oracle", function () {
       );
       expect(currentEpochPrice.toString()).to.be.equal("0");
     });
-    it.only("should fetch epoch price", async () => {
+    it("should fetch epoch price", async () => {
       const currentTimestamp = await time.latest();
       await chainlinkAggregator1.updateRoundData(
         "162863638383902",

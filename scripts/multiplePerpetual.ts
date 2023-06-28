@@ -7,6 +7,10 @@ const positioning = async () => {
   console.log("Deployer: ", await owner.getAddress());
   const ethBefore = await ethers.provider.getBalance(owner.address);
   console.log("Balance: ", ethBefore.toString());
+  const chainlinkTokenIndex1 =
+    "57896044618658097711785492504343953926634992332820282019728792003956564819969";
+  const chainlinkTokenIndex2 =
+    "57896044618658097711785492504343953926634992332820282019728792003956564819970";
 
   const MatchingEngine = await ethers.getContractFactory("MatchingEngine");
   const VolmexBaseToken = await ethers.getContractFactory("VolmexBaseToken");
@@ -63,15 +67,55 @@ const positioning = async () => {
   console.log(volmexBaseToken2.address);
   await (await perpView.setBaseToken(volmexBaseToken2.address)).wait();
 
+  const volmexBaseToken3 = await upgrades.deployProxy(
+    VolmexBaseToken,
+    [
+      "Virtual Ethereum Perp Futures", // nameArg
+      "VETHUSD", // symbolArg,
+      owner.address, // priceFeedArg
+      true, // isBase
+    ],
+    {
+      initializer: "initialize",
+    },
+  );
+  await volmexBaseToken3.deployed();
+
+  console.log(volmexBaseToken3.address);
+  await (await perpView.setBaseToken(volmexBaseToken3.address)).wait();
+  const volmexBaseToken4 = await upgrades.deployProxy(
+    VolmexBaseToken,
+    [
+      "Virtual Bitcoin Perp Futures", // nameArg
+      "VBTCUSD", // symbolArg,
+      owner.address, // priceFeedArg
+      true, // isBase
+    ],
+    {
+      initializer: "initialize",
+    },
+  );
+  await volmexBaseToken3.deployed();
+
+  console.log(volmexBaseToken4.address);
+  await (await perpView.setBaseToken(volmexBaseToken4.address)).wait();
+
   console.log("Deploying Perpetuals oracle ...");
 
   const perpetualOracle = await upgrades.deployProxy(
     PerpetualOracle,
     [
-      [volmexBaseToken1.address, volmexBaseToken2.address],
-      [71000000, 52000000],
+      [
+        volmexBaseToken1.address,
+        volmexBaseToken2.address,
+        volmexBaseToken3.address,
+        volmexBaseToken4.address,
+      ],
+      [71000000, 52000000, 30750000000, 1862000000],
       [52000000, 50000000],
       [proofHash, proofHash],
+      [chainlinkTokenIndex1, chainlinkTokenIndex2],
+      [process.env.CHAINLINKAGRREGATOR_1, process.env.CHAINLINKAGRREGATOR_2],
       owner.address,
     ],
     { initializer: "__PerpetualOracle_init" },
@@ -81,10 +125,13 @@ const positioning = async () => {
   console.log(perpetualOracle.address);
   await (await volmexBaseToken1.setPriceFeed(perpetualOracle.address)).wait();
   await (await volmexBaseToken2.setPriceFeed(perpetualOracle.address)).wait();
+  await (await volmexBaseToken3.setPriceFeed(perpetualOracle.address)).wait();
+  await (await volmexBaseToken4.setPriceFeed(perpetualOracle.address)).wait();
   if (process.env.INDEX_OBSERVATION_ADDER) {
     await (
       await perpetualOracle.setIndexObservationAdder(process.env.INDEX_OBSERVATION_ADDER)
     ).wait();
+    await perpetualOracle.grantCacheChainlinkPriceRole(owner.address);
   }
 
   console.log("Deploying Quote Token ...");
@@ -139,7 +186,13 @@ const positioning = async () => {
   console.log("Deploying Account Balance ...");
   const accountBalance = await upgrades.deployProxy(AccountBalance, [
     positioningConfig.address,
-    [volmexBaseToken1.address, volmexBaseToken2.address],
+    [
+      volmexBaseToken1.address,
+      volmexBaseToken2.address,
+      volmexBaseToken3.address,
+      volmexBaseToken4.address,
+    ],
+    [chainlinkTokenIndex1, chainlinkTokenIndex2],
     matchingEngine.address,
     process.env.VOLMEX_MULTISIG ? process.env.VOLMEX_MULTISIG : owner.address,
   ]);
@@ -172,7 +225,12 @@ const positioning = async () => {
   console.log("Deploying MarketRegistry ...");
   const marketRegistry = await upgrades.deployProxy(MarketRegistry, [
     volmexQuoteToken.address,
-    [volmexBaseToken1.address, volmexBaseToken2.address],
+    [
+      volmexBaseToken1.address,
+      volmexBaseToken2.address,
+      volmexBaseToken3.address,
+      volmexBaseToken4.address,
+    ],
   ]);
   await marketRegistry.deployed();
   console.log(marketRegistry.address);
@@ -186,7 +244,13 @@ const positioning = async () => {
       matchingEngine.address,
       perpetualOracle.address,
       marketRegistry.address,
-      [volmexBaseToken1.address, volmexBaseToken2.address],
+      [
+        volmexBaseToken1.address,
+        volmexBaseToken2.address,
+        volmexBaseToken3.address,
+        volmexBaseToken4.address,
+      ],
+      [chainlinkTokenIndex1, chainlinkTokenIndex2],
       [owner.address, `${process.env.LIQUIDATOR}`],
       ["10000000000000000000", "10000000000000000000"],
     ],
@@ -207,12 +271,15 @@ const positioning = async () => {
   console.log("Set at perp view ...");
   await (await perpView.setPositioning(positioning.address)).wait();
   await (await perpView.incrementPerpIndex()).wait();
+  console.log("grant cache chain link price role");
+  await (await perpetualOracle.grantCacheChainlinkPriceRole(positioning.address)).wait();
   console.log("Set minter-burner ...");
   await (await volmexBaseToken1.setMintBurnRole(positioning.address)).wait();
   await (await volmexBaseToken2.setMintBurnRole(positioning.address)).wait();
+  await (await volmexBaseToken3.setMintBurnRole(positioning.address)).wait();
+  await (await volmexBaseToken4.setMintBurnRole(positioning.address)).wait();
   await (await volmexQuoteToken.setMintBurnRole(positioning.address)).wait();
-
-  console.log("Set fee receiver ...");
+  await console.log("Set fee receiver ...");
   await (await positioning.setDefaultFeeReceiver(owner.address)).wait();
   console.log("Set positioning ...");
   await (await vaultController.setPositioning(positioning.address)).wait();
@@ -241,6 +308,8 @@ const positioning = async () => {
     AccountBalance: accountBalance.address,
     BaseToken1: volmexBaseToken1.address,
     BaseToken2: volmexBaseToken2.address,
+    BaseToken3: volmexBaseToken3.address,
+    BaseToken4: volmexBaseToken4.address,
     PerpetualOracles: perpetualOracle.address,
     MarketRegistry: marketRegistry.address,
     MatchingEngine: matchingEngine.address,
