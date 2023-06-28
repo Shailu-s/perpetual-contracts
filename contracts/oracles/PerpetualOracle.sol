@@ -44,10 +44,12 @@ contract PerpetualOracle is AccessControlUpgradeable, IPerpetualOracle {
     IPositioning public positioning;
 
     function __PerpetualOracle_init(
-        address[2] calldata _baseToken,
+        address[4] calldata _baseToken, //NOTE: index 2 and 3 is of chainlink base token
         uint256[2] calldata _lastPrices,
         uint256[2] calldata _indexPrices,
         bytes32[2] calldata _proofHashes,
+        uint256[2] calldata _chainlinkBaseTokenIndex,
+        AggregatorV3Interface[2] calldata _chainlinkAggregators,
         address _admin
     ) external initializer {
         uint256 indexCount;
@@ -55,6 +57,9 @@ contract PerpetualOracle is AccessControlUpgradeable, IPerpetualOracle {
             baseTokenByIndex[indexCount] = _baseToken[indexCount];
             indexByBaseToken[_baseToken[indexCount]] = indexCount;
             lastPriceObservations[indexCount][0] = LastPriceObservation({ timestamp: block.timestamp, lastPrice: _lastPrices[indexCount] });
+            baseTokenByIndex[_chainlinkBaseTokenIndex[indexCount]] = _baseToken[indexCount + 2];
+            indexByBaseToken[_baseToken[indexCount + 2]] = _chainlinkBaseTokenIndex[indexCount];
+            chainlinkAggregatorByIndex[_chainlinkBaseTokenIndex[indexCount]] = _chainlinkAggregators[indexCount];
             lastestMarkPrice[indexCount] = _lastPrices[indexCount];
             ++lastPriceTotalObservations[indexCount];
 

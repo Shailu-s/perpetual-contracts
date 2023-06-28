@@ -34,10 +34,12 @@ interface IPerpetualOracle {
     event ChainlinkPriceAdded(uint256 index, uint256 price, uint256 timestamp);
 
     function __PerpetualOracle_init(
-        address[2] calldata _baseToken,
-        uint256[2] calldata _markPrices,
+        address[4] calldata _baseToken,
+        uint256[2] calldata _lastPrices,
         uint256[2] calldata _indexPrices,
         bytes32[2] calldata _proofHashes,
+        uint256[2] calldata _chainlinkBaseTokenIndex,
+        AggregatorV3Interface[2] calldata _chainlinkAggregators,
         address _admin
     ) external;
 
