@@ -366,7 +366,7 @@ contract Positioning is IPositioning, ReentrancyGuardUpgradeable, PausableUpgrad
     function _settleFunding(address trader, address baseToken) internal {
         (int256 fundingPayment, int256 globalTwPremiumGrowth) = settleFunding(trader, baseToken);
         uint256 baseTokenIndex = _underlyingPriceIndexes[baseToken];
-        if(isChainlinkToken(baseTokenIndex)){
+        if(_isChainlinkToken(baseTokenIndex)){
             IPerpetualOracle(_perpetualOracleArg).cacheChainlinkPrice(baseTokenIndex);
         }
         if (fundingPayment != 0) {
@@ -674,7 +674,7 @@ contract Positioning is IPositioning, ReentrancyGuardUpgradeable, PausableUpgrad
         require(isLiquidatorWhitelisted[liquidator], "P_LW"); // Positioning: liquidator not whitelisted
     }
 
-    function isChainlinkToken(uint256 baseTokenIndex) internal pure returns (bool) {
+    function _isChainlinkToken(uint256 baseTokenIndex) internal view returns (bool) {
         return ((uint256(CHAINLINK_TOKEN_CHECKSUM & bytes32(baseTokenIndex)) >> 255) == 1) ;
     }
 
