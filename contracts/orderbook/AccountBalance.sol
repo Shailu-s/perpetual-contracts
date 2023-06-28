@@ -31,7 +31,8 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
 
     function initialize(
         address positioningConfigArg,
-        address[2] calldata volmexBaseTokenArgs,
+        address[4] calldata volmexBaseTokenArgs,
+        uint256[2] calldata chainlinkBaseTokenIndexArgs,
         IMatchingEngine matchingEngineArg,
         address adminArg
     ) external initializer {
@@ -45,6 +46,7 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
         _smIntervalLiquidation = 3600;
         for (uint256 index; index < 2; index++) {
             _underlyingPriceIndexes[volmexBaseTokenArgs[index]] = index;
+            _underlyingPriceIndexes[volmexBaseTokenArgs[index+2]] = chainlinkBaseTokenIndexArgs[index];
         }
         matchingEngine = matchingEngineArg;
         sigmaVolmexIvs[0] = 12600; // 0.0126
