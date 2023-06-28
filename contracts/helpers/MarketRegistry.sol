@@ -27,7 +27,7 @@ contract MarketRegistry is IMarketRegistry, PositioningCallee, MarketRegistrySto
 
         // QuoteToken is not contract
         require(quoteTokenArg.isContract(), "MR_QTNC");
-        for (uint256 index; index < 2; ++index) {
+        for (uint256 index; index < 4; ++index) {
             _baseTokensMarketMap.push(volmexBaseTokenArgs[index]);
         }
         // update states

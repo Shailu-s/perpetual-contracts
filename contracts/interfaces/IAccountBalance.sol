@@ -18,7 +18,7 @@ interface IAccountBalance {
     event TraderBadDebt(address indexed trader, int256 accountValue);
     event ZeroMaxTimeBound(address indexed trader, uint256 maxTimeBound);
 
-    function initialize(address positioningConfigArg, address[2] calldata volmexBaseTokenArgs, IMatchingEngine matchingEngineArg, address adminArg) external;
+    function initialize(address positioningConfigArg, address[4] calldata volmexBaseTokenArgs, uint256[2] calldata chainlinkBaseTokenIndexArgs, IMatchingEngine matchingEngineArg, address adminArg) external;
 
     /// @notice Modify trader owedRealizedPnl
     /// @dev Only used by `Positioning` contract
