@@ -107,20 +107,6 @@ contract Positioning is IPositioning, ReentrancyGuardUpgradeable, PausableUpgrad
         emit DefaultFeeReceiverChanged(defaultFeeReceiver);
     }
 
-    function setPerpetualOracle(address perpetualOracleArg) external {
-        _requirePositioningAdmin();
-        // P_AZ: Index price oracle is address zero
-        require(perpetualOracleArg != address(0), "P_AZ");
-        _perpetualOracleArg = perpetualOracleArg;
-    }
-
-    function setMinPositionSize(uint256 _minPositionSize, address baseToken) external {
-        _requirePositioningAdmin();
-        require(_minPositionSize >= 1e18, "P_MPSlT1");
-        // P_MPSGT1: Min position size less than 1e18
-        minPositionSizeByBaseToken[baseToken] = _minPositionSize;
-    }
-
     /// @inheritdoc IPositioning
     function whitelistLiquidator(address liquidator, bool isWhitelist) external {
         _requirePositioningAdmin();
@@ -129,29 +115,6 @@ contract Positioning is IPositioning, ReentrancyGuardUpgradeable, PausableUpgrad
             delete isLiquidatorWhitelisted[liquidator];
         }
         emit LiquidatorWhitelisted(liquidator, isWhitelist);
-    }
-
-    /// @inheritdoc IPositioning
-    function setFundingPeriod(uint256 period) external {
-        _requirePositioningAdmin();
-        _fundingPeriod = period;
-
-        emit FundingPeriodSet(period);
-    }
-
-    function setSmInterval(uint256 smInterval) external virtual {
-        _requireSmIntervalRole();
-        _smInterval = smInterval;
-    }
-
-    function setSmIntervalLiquidation(uint256 smIntervalLiquidation) external virtual {
-        _requireSmIntervalRole();
-        _smIntervalLiquidation = smIntervalLiquidation;
-    }
-
-    function setIndexOracleInterval(uint256 _interval) external virtual {
-        _requirePositioningAdmin();
-        indexPriceAllowedInterval = _interval;
     }
 
     function toggleLiquidatorWhitelist() external {

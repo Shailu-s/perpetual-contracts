@@ -96,14 +96,6 @@ interface IPositioning is IFundingRate {
     /// @param isWhitelist if true, whitelist. is false remove whitelist
     function whitelistLiquidator(address liquidator, bool isWhitelist) external;
 
-    /// @notice Update funding rate inteval
-    /// @param period should be the funding settlement period
-    function setFundingPeriod(uint256 period) external;
-
-    function setSmInterval(uint256 smInterval) external;
-
-    function setSmIntervalLiquidation(uint256 smIntervalLiquidation) external;
-
     /// @notice If true, allows only whitelisted liquidators, else everyone can be liquidator
     function toggleLiquidatorWhitelist() external;
 
