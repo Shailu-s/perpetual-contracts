@@ -42,9 +42,9 @@ describe("Global", function () {
   let liquidator;
   let VirtualToken;
   const chainlinkTokenIndex1 =
-  "57896044618658097711785492504343953926634992332820282019728792008524463585424";
-const chainlinkTokenIndex2 =
-  "57896044618658097711785492504343953926634992332820282019728792008524463585425";
+    "57896044618658097711785492504343953926634992332820282019728792008524463585424";
+  const chainlinkTokenIndex2 =
+    "57896044618658097711785492504343953926634992332820282019728792008524463585425";
   const ORDER = "0xf555eb98";
   const one = ethers.constants.WeiPerEther; // 1e18
   const two = ethers.constants.WeiPerEther.mul(BigNumber.from("2")); // 2e18
@@ -132,7 +132,7 @@ const chainlinkTokenIndex2 =
           chainlinkBaseToken.address,
           chainlinkBaseToken2.address,
         ],
-        [60000000, 60000000],
+        [60000000, 60000000, 3075000000000, 1800000000],
         [60000000, 60000000],
         [proofHash, proofHash],
         [chainlinkTokenIndex1, chainlinkTokenIndex2],
@@ -261,9 +261,8 @@ const chainlinkTokenIndex2 =
     await perpetualOracle.setIndexObservationAdder(matchingEngine.address);
 
     await positioningConfig
-    .connect(owner)
-    .setSettlementTokenBalanceCap("1000000000000000000000000000000000000000");
-
+      .connect(owner)
+      .setSettlementTokenBalanceCap("1000000000000000000000000000000000000000");
 
     periphery = await upgrades.deployProxy(VolmexPerpPeriphery, [
       perpView.address,
@@ -588,7 +587,7 @@ const chainlinkTokenIndex2 =
     await expect(
       positioning
         .connect(account1)
-        .openPosition(orderRight, signatureRight,orderLeft, signatureLeft,liquidator),
+        .openPosition(orderRight, signatureRight, orderLeft, signatureLeft, liquidator),
     ).to.emit(positioning, "PositionChanged");
 
     positionSize = await accountBalance1.getPositionSize(
@@ -651,7 +650,7 @@ const chainlinkTokenIndex2 =
     await expect(
       positioning
         .connect(account1)
-        .openPosition(orderLeft, signatureLeft,orderRight, signatureRight,liquidator),
+        .openPosition(orderLeft, signatureLeft, orderRight, signatureRight, liquidator),
     ).to.emit(positioning, "PositionChanged");
 
     positionSize = await accountBalance1.getPositionSize(

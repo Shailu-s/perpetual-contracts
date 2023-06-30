@@ -41,9 +41,9 @@ describe("Multiple protocols", function () {
   let liquidator;
   const deadline = 87654321987654;
   const chainlinkTokenIndex1 =
-  "57896044618658097711785492504343953926634992332820282019728792008524463585424";
-const chainlinkTokenIndex2 =
-  "57896044618658097711785492504343953926634992332820282019728792008524463585425";
+    "57896044618658097711785492504343953926634992332820282019728792008524463585424";
+  const chainlinkTokenIndex2 =
+    "57896044618658097711785492504343953926634992332820282019728792008524463585425";
   const ORDER = "0xf555eb98";
   const proofHash = "0x6c00000000000000000000000000000000000000000000000000000000000000";
   this.beforeAll(async () => {
@@ -132,13 +132,8 @@ const chainlinkTokenIndex2 =
     perpetualOracle = await upgrades.deployProxy(
       PerpetualOracle,
       [
-        [
-          EVIV.address,
-          BVIV.address,
-          chainlinkBaseToken.address,
-          chainlinkBaseToken2.address,
-        ],
-        [60000000, 50000000],
+        [EVIV.address, BVIV.address, chainlinkBaseToken.address, chainlinkBaseToken2.address],
+        [60000000, 50000000, 3075000000000, 1800000000],
         [70000000, 55000000],
         [proofHash, proofHash],
         [chainlinkTokenIndex1, chainlinkTokenIndex2],
@@ -149,103 +144,88 @@ const chainlinkTokenIndex2 =
     );
     await EVIV.setPriceFeed(perpetualOracle.address);
     await BVIV.setPriceFeed(perpetualOracle.address);
-  volmexQuoteToken = await upgrades.deployProxy(
-    VolmexQuoteToken,
-    [
-      "VolmexQuoteToken", // nameArg
-      "VUSDT", // symbolArg,
-      false, // isBase
-    ],
-    {
-      initializer: "initialize",
-    },
-  );
-  await volmexQuoteToken.deployed();
-  await (await perpView.setQuoteToken(volmexQuoteToken.address)).wait();
-
-  positioningConfig = await upgrades.deployProxy(PositioningConfig, [perpetualOracle.address]);
-
-  USDC = await TestERC20.deploy("100000000000000000000000", "Tether USD", "USDT", 6);
-  await USDC.deployed();
-
-  matchingEngine = await upgrades.deployProxy(MatchingEngine, [
-    owner.address,
-    perpetualOracle.address,
-  ]);
-
-  virtualToken = await upgrades.deployProxy(VirtualToken, ["VirtualToken", "VTK", false], {
-    initializer: "initialize",
-  });
-  await virtualToken.deployed();
-
-  accountBalance1 = await upgrades.deployProxy(AccountBalance, [
-    positioningConfig.address,
-    [
-      EVIV.address,
-      BVIV.address,
-      chainlinkBaseToken.address,
-      chainlinkBaseToken2.address,
-    ],
-    [chainlinkTokenIndex1, chainlinkTokenIndex2],
-    matchingEngine.address,
-    owner.address,
-  ]);
-  await accountBalance1.deployed();
-  await (await perpView.setAccount(accountBalance1.address)).wait();
-  vaultController = await upgrades.deployProxy(VaultController, [
-    positioningConfig.address,
-    accountBalance1.address,
-  ]);
-  await vaultController.deployed();
-  await (await perpView.setVaultController(vaultController.address)).wait();
-
-  vault = await upgrades.deployProxy(Vault, [
-    positioningConfig.address,
-    accountBalance1.address,
-    USDC.address,
-    vaultController.address,
-  ]);
-  await vault.deployed();
-  await (await perpView.incrementVaultIndex()).wait();
-
-  (await accountBalance1.grantSettleRealizedPnlRole(vault.address)).wait();
-  (await accountBalance1.grantSettleRealizedPnlRole(vaultController.address)).wait();
-  marketRegistry = await upgrades.deployProxy(MarketRegistry, [
-    volmexQuoteToken.address,
-    [
-      EVIV.address,
-      BVIV.address,
-      chainlinkBaseToken.address,
-      chainlinkBaseToken2.address,
-    ],
-  ]);
-
-  positioning = await upgrades.deployProxy(
-    Positioning,
-    [
-      positioningConfig.address,
-      vaultController.address,
-      accountBalance1.address,
-      matchingEngine.address,
-      perpetualOracle.address,
-      marketRegistry.address,
+    volmexQuoteToken = await upgrades.deployProxy(
+      VolmexQuoteToken,
       [
-        EVIV.address,
-        BVIV.address,
-        chainlinkBaseToken.address,
-        chainlinkBaseToken2.address,
+        "VolmexQuoteToken", // nameArg
+        "VUSDT", // symbolArg,
+        false, // isBase
       ],
-      [chainlinkTokenIndex1, chainlinkTokenIndex2],
-      [owner.address, account1.address],
-      ["10000000000000000000", "10000000000000000000"],
-    ],
-    {
+      {
+        initializer: "initialize",
+      },
+    );
+    await volmexQuoteToken.deployed();
+    await (await perpView.setQuoteToken(volmexQuoteToken.address)).wait();
+
+    positioningConfig = await upgrades.deployProxy(PositioningConfig, [perpetualOracle.address]);
+
+    USDC = await TestERC20.deploy("100000000000000000000000", "Tether USD", "USDT", 6);
+    await USDC.deployed();
+
+    matchingEngine = await upgrades.deployProxy(MatchingEngine, [
+      owner.address,
+      perpetualOracle.address,
+    ]);
+
+    virtualToken = await upgrades.deployProxy(VirtualToken, ["VirtualToken", "VTK", false], {
       initializer: "initialize",
-    },
-  );
-  await positioning.deployed();
-  await (await perpView.setPositioning(positioning.address)).wait();
-  await (await perpView.incrementPerpIndex()).wait();
+    });
+    await virtualToken.deployed();
+
+    accountBalance1 = await upgrades.deployProxy(AccountBalance, [
+      positioningConfig.address,
+      [EVIV.address, BVIV.address, chainlinkBaseToken.address, chainlinkBaseToken2.address],
+      [chainlinkTokenIndex1, chainlinkTokenIndex2],
+      matchingEngine.address,
+      owner.address,
+    ]);
+    await accountBalance1.deployed();
+    await (await perpView.setAccount(accountBalance1.address)).wait();
+    vaultController = await upgrades.deployProxy(VaultController, [
+      positioningConfig.address,
+      accountBalance1.address,
+    ]);
+    await vaultController.deployed();
+    await (await perpView.setVaultController(vaultController.address)).wait();
+
+    vault = await upgrades.deployProxy(Vault, [
+      positioningConfig.address,
+      accountBalance1.address,
+      USDC.address,
+      vaultController.address,
+    ]);
+    await vault.deployed();
+    await (await perpView.incrementVaultIndex()).wait();
+
+    (await accountBalance1.grantSettleRealizedPnlRole(vault.address)).wait();
+    (await accountBalance1.grantSettleRealizedPnlRole(vaultController.address)).wait();
+    marketRegistry = await upgrades.deployProxy(MarketRegistry, [
+      volmexQuoteToken.address,
+      [EVIV.address, BVIV.address, chainlinkBaseToken.address, chainlinkBaseToken2.address],
+    ]);
+
+    positioning = await upgrades.deployProxy(
+      Positioning,
+      [
+        positioningConfig.address,
+        vaultController.address,
+        accountBalance1.address,
+        matchingEngine.address,
+        perpetualOracle.address,
+        marketRegistry.address,
+        [EVIV.address, BVIV.address, chainlinkBaseToken.address, chainlinkBaseToken2.address],
+        [chainlinkTokenIndex1, chainlinkTokenIndex2],
+        [owner.address, account1.address],
+        ["10000000000000000000", "10000000000000000000"],
+      ],
+      {
+        initializer: "initialize",
+      },
+    );
+    await positioning.deployed();
+    await (await perpView.setPositioning(positioning.address)).wait();
+    await (await perpView.incrementPerpIndex()).wait();
     await (await EVIV.setMintBurnRole(positioning.address)).wait();
     await (await BVIV.setMintBurnRole(positioning.address)).wait();
 

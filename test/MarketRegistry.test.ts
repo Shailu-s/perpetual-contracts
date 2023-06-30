@@ -35,7 +35,7 @@ describe("Market Registry", function () {
   let marketRegistry;
   let TestERC20;
   let USDC;
-  let owner, account1,account2;
+  let owner, account1, account2;
   const chainlinkTokenIndex1 =
     "57896044618658097711785492504343953926634992332820282019728792008524463585424";
   const chainlinkTokenIndex2 =
@@ -60,7 +60,7 @@ describe("Market Registry", function () {
     VolmexQuoteToken = await ethers.getContractFactory("VolmexQuoteToken");
     VolmexPerpView = await ethers.getContractFactory("VolmexPerpView");
     ChainLinkAggregator = await ethers.getContractFactory("MockV3Aggregator");
-    [owner, account1,account2] = await ethers.getSigners();
+    [owner, account1, account2] = await ethers.getSigners();
   });
 
   this.beforeEach(async () => {
@@ -120,7 +120,7 @@ describe("Market Registry", function () {
           chainlinkBaseToken.address,
           chainlinkBaseToken2.address,
         ],
-        [60000000, 60000000],
+        [60000000, 60000000, 30750000000, 1800000000],
         [60000000, 60000000],
         [proofHash, proofHash],
         [chainlinkTokenIndex1, chainlinkTokenIndex2],

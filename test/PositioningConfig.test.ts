@@ -1,7 +1,7 @@
 import { expect } from "chai";
 import { ethers, upgrades } from "hardhat";
 
-describe.only("PositioningConfig", function () {
+describe("PositioningConfig", function () {
   let PositioningConfig;
   let positioningConfig;
   let PerpetualOracle;
@@ -16,9 +16,9 @@ describe.only("PositioningConfig", function () {
   let owner, account1;
   const proofHash = "0x6c00000000000000000000000000000000000000000000000000000000000000";
   const chainlinkTokenIndex1 =
-  "57896044618658097711785492504343953926634992332820282019728792008524463585424";
-const chainlinkTokenIndex2 =
-  "57896044618658097711785492504343953926634992332820282019728792008524463585425";
+    "57896044618658097711785492504343953926634992332820282019728792008524463585424";
+  const chainlinkTokenIndex2 =
+    "57896044618658097711785492504343953926634992332820282019728792008524463585425";
 
   this.beforeAll(async () => {
     PositioningConfig = await ethers.getContractFactory("PositioningConfig");
@@ -74,17 +74,16 @@ const chainlinkTokenIndex2 =
     chainlinkAggregator2 = await ChainLinkAggregator.deploy(8, 3048000000000);
     await chainlinkAggregator2.deployed();
 
-
     perpetualOracle = await upgrades.deployProxy(
       PerpetualOracle,
       [
         [
-          VolmexBaseToken.address,
-          VolmexBaseToken.address,
+          volmexBaseToken.address,
+          volmexBaseToken.address,
           chainlinkBaseToken.address,
           chainlinkBaseToken2.address,
         ],
-        [10000000, 10000000],
+        [10000000, 10000000, 3075000000000, 1800000000],
         [10000000, 10000000],
         [proofHash, proofHash],
         [chainlinkTokenIndex1, chainlinkTokenIndex2],
