@@ -35,7 +35,7 @@ interface IPerpetualOracle {
 
     function __PerpetualOracle_init(
         address[4] calldata _baseToken,
-        uint256[2] calldata _lastPrices,
+        uint256[4] calldata _lastPrices,
         uint256[2] calldata _indexPrices,
         bytes32[2] calldata _proofHashes,
         uint256[2] calldata _chainlinkBaseTokenIndex,
