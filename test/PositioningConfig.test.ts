@@ -1,20 +1,31 @@
 import { expect } from "chai";
 import { ethers, upgrades } from "hardhat";
 
-describe("PositioningConfig", function () {
+describe.only("PositioningConfig", function () {
   let PositioningConfig;
   let positioningConfig;
   let PerpetualOracle;
   let perpetualOracle;
   let VolmexBaseToken;
   let volmexBaseToken;
+  let chainlinkBaseToken;
+  let chainlinkBaseToken2;
+  let ChainLinkAggregator;
+  let chainlinkAggregator1;
+  let chainlinkAggregator2;
   let owner, account1;
   const proofHash = "0x6c00000000000000000000000000000000000000000000000000000000000000";
+  const chainlinkTokenIndex1 =
+  "57896044618658097711785492504343953926634992332820282019728792008524463585424";
+const chainlinkTokenIndex2 =
+  "57896044618658097711785492504343953926634992332820282019728792008524463585425";
 
   this.beforeAll(async () => {
     PositioningConfig = await ethers.getContractFactory("PositioningConfig");
     PerpetualOracle = await ethers.getContractFactory("PerpetualOracle");
     VolmexBaseToken = await ethers.getContractFactory("VolmexBaseToken");
+    ChainLinkAggregator = await ethers.getContractFactory("MockV3Aggregator");
+
     [owner, account1] = await ethers.getSigners();
   });
 
@@ -32,13 +43,52 @@ describe("PositioningConfig", function () {
       },
     );
     await volmexBaseToken.deployed();
+    chainlinkBaseToken = await upgrades.deployProxy(
+      VolmexBaseToken,
+      [
+        "VolmexBaseToken", // nameArg
+        "VBT", // symbolArg,
+        owner.address, // priceFeedArg
+        true, // isBase
+      ],
+      {
+        initializer: "initialize",
+      },
+    );
+    chainlinkBaseToken2 = await upgrades.deployProxy(
+      VolmexBaseToken,
+      [
+        "VolmexBaseToken", // nameArg
+        "VBT", // symbolArg,
+        owner.address, // priceFeedArg
+        true, // isBase
+      ],
+      {
+        initializer: "initialize",
+      },
+    );
+    await volmexBaseToken.deployed();
+
+    chainlinkAggregator1 = await ChainLinkAggregator.deploy(8, 3075000000000);
+    await chainlinkAggregator1.deployed();
+    chainlinkAggregator2 = await ChainLinkAggregator.deploy(8, 3048000000000);
+    await chainlinkAggregator2.deployed();
+
+
     perpetualOracle = await upgrades.deployProxy(
       PerpetualOracle,
       [
-        [volmexBaseToken.address, volmexBaseToken.address],
+        [
+          VolmexBaseToken.address,
+          VolmexBaseToken.address,
+          chainlinkBaseToken.address,
+          chainlinkBaseToken2.address,
+        ],
         [10000000, 10000000],
         [10000000, 10000000],
         [proofHash, proofHash],
+        [chainlinkTokenIndex1, chainlinkTokenIndex2],
+        [chainlinkAggregator1.address, chainlinkAggregator2.address],
         owner.address,
       ],
       { initializer: "__PerpetualOracle_init" },

@@ -1,79 +1,103 @@
 import { expect } from "chai";
 import { ethers, upgrades } from "hardhat";
-import { BigNumber } from "ethers";
 
 describe("Market Registry", function () {
   let MatchingEngine;
   let matchingEngine;
   let VirtualToken;
   let virtualToken;
-  let erc20TransferProxy;
-  let ERC20TransferProxy;
-  let TransferManagerTest;
-  let ERC1271Test;
-  let erc1271Test;
-
+  let Positioning;
+  let positioning;
   let PositioningConfig;
   let positioningConfig;
-
+  let Vault;
+  let vault;
+  let VaultController;
+  let vaultController;
   let AccountBalance;
-  let accountBalance;
-
-  let VolmexBaseToken;
-  let volmexBaseToken;
-  let VolmexPerpPeriphery;
   let PerpetualOracle;
   let perpetualOracle;
-  let transferManagerTest;
+  let VolmexBaseToken;
+  let volmexBaseToken;
+  let VolmexQuoteToken;
+  let volmexQuoteToken;
+  let VolmexPerpPeriphery;
+  let volmexPerpPeriphery;
+  let VolmexPerpView;
+  let perpView;
   let accountBalance1;
+  let chainlinkBaseToken;
+  let chainlinkBaseToken2;
+  let ChainLinkAggregator;
+  let chainlinkAggregator1;
+  let chainlinkAggregator2;
   let MarketRegistry;
   let marketRegistry;
-  let BaseToken;
-  let baseToken;
   let TestERC20;
   let USDC;
-  let perpViewFake;
-  let orderLeft, orderRight;
-  const deadline = 87654321987654;
-  const maxFundingRate = 0.08;
-  let owner, account1, account2, account3, account4, relayer;
-  let liquidator;
+  let owner, account1,account2;
+  const chainlinkTokenIndex1 =
+    "57896044618658097711785492504343953926634992332820282019728792008524463585424";
+  const chainlinkTokenIndex2 =
+    "57896044618658097711785492504343953926634992332820282019728792008524463585425";
 
-  const one = ethers.constants.WeiPerEther; // 1e18
-  const five = ethers.constants.WeiPerEther.mul(BigNumber.from("5")); // 5e18
-  const ten = ethers.constants.WeiPerEther.mul(BigNumber.from("10000")); // 10e18
-  const ORDER = "0xf555eb98";
-  const STOP_LOSS_LIMIT_ORDER = "0xeeaed735";
-  const TAKE_PROFIT_LIMIT_ORDER = "0xe0fc7f94";
   const ZERO_ADDR = "0x0000000000000000000000000000000000000000";
   const proofHash = "0x6c00000000000000000000000000000000000000000000000000000000000000";
-  const capRatio = "400000000";
 
   this.beforeAll(async () => {
     VolmexPerpPeriphery = await ethers.getContractFactory("VolmexPerpPeriphery");
     PerpetualOracle = await ethers.getContractFactory("PerpetualOracle");
-    // fundingRate = await smock.fake("FundingRate")
-    MatchingEngine = await ethers.getContractFactory("MatchingEngineTest");
+    MatchingEngine = await ethers.getContractFactory("MatchingEngine");
     VirtualToken = await ethers.getContractFactory("VirtualTokenTest");
-    ERC20TransferProxy = await ethers.getContractFactory("ERC20TransferProxy");
-    TransferManagerTest = await ethers.getContractFactory("TransferManagerTest");
-    ERC1271Test = await ethers.getContractFactory("ERC1271Test");
+    Positioning = await ethers.getContractFactory("Positioning");
     PositioningConfig = await ethers.getContractFactory("PositioningConfig");
+    Vault = await ethers.getContractFactory("Vault");
+    VaultController = await ethers.getContractFactory("VaultController");
     MarketRegistry = await ethers.getContractFactory("MarketRegistry");
     AccountBalance = await ethers.getContractFactory("AccountBalance");
-    BaseToken = await ethers.getContractFactory("VolmexBaseToken");
     TestERC20 = await ethers.getContractFactory("TestERC20");
     VolmexBaseToken = await ethers.getContractFactory("VolmexBaseToken");
-    [owner, account1, account2, account3, account4, relayer] = await ethers.getSigners();
+    VolmexQuoteToken = await ethers.getContractFactory("VolmexQuoteToken");
+    VolmexPerpView = await ethers.getContractFactory("VolmexPerpView");
+    ChainLinkAggregator = await ethers.getContractFactory("MockV3Aggregator");
+    [owner, account1,account2] = await ethers.getSigners();
   });
 
-  beforeEach(async () => {
+  this.beforeEach(async () => {
+    perpView = await upgrades.deployProxy(VolmexPerpView, [owner.address]);
+    await perpView.deployed();
+    await (await perpView.grantViewStatesRole(owner.address)).wait();
+
     volmexBaseToken = await upgrades.deployProxy(
       VolmexBaseToken,
       [
         "VolmexBaseToken", // nameArg
         "VBT", // symbolArg,
-        account1.address, // priceFeedArg
+        owner.address, // priceFeedArg
+        true, // isBase
+      ],
+      {
+        initializer: "initialize",
+      },
+    );
+    chainlinkBaseToken = await upgrades.deployProxy(
+      VolmexBaseToken,
+      [
+        "VolmexBaseToken", // nameArg
+        "VBT", // symbolArg,
+        owner.address, // priceFeedArg
+        true, // isBase
+      ],
+      {
+        initializer: "initialize",
+      },
+    );
+    chainlinkBaseToken2 = await upgrades.deployProxy(
+      VolmexBaseToken,
+      [
+        "VolmexBaseToken", // nameArg
+        "VBT", // symbolArg,
+        owner.address, // priceFeedArg
         true, // isBase
       ],
       {
@@ -81,100 +105,195 @@ describe("Market Registry", function () {
       },
     );
     await volmexBaseToken.deployed();
+    await (await perpView.setBaseToken(volmexBaseToken.address)).wait();
+
+    chainlinkAggregator1 = await ChainLinkAggregator.deploy(8, 3075000000000);
+    await chainlinkAggregator1.deployed();
+    chainlinkAggregator2 = await ChainLinkAggregator.deploy(8, 3048000000000);
+    await chainlinkAggregator2.deployed();
     perpetualOracle = await upgrades.deployProxy(
       PerpetualOracle,
       [
-        [volmexBaseToken.address, volmexBaseToken.address],
-        [10000000, 10000000],
-        [10000000, 10000000],
+        [
+          volmexBaseToken.address,
+          volmexBaseToken.address,
+          chainlinkBaseToken.address,
+          chainlinkBaseToken2.address,
+        ],
+        [60000000, 60000000],
+        [60000000, 60000000],
         [proofHash, proofHash],
+        [chainlinkTokenIndex1, chainlinkTokenIndex2],
+        [chainlinkAggregator1.address, chainlinkAggregator2.address],
         owner.address,
       ],
       { initializer: "__PerpetualOracle_init" },
     );
-
     await volmexBaseToken.setPriceFeed(perpetualOracle.address);
-
-    baseToken = await upgrades.deployProxy(
-      VolmexBaseToken,
+    volmexQuoteToken = await upgrades.deployProxy(
+      VolmexQuoteToken,
       [
-        "BaseToken", // nameArg
-        "BTN", // symbolArg,
-        perpetualOracle.address, // priceFeedArg
-        true, // isBase
+        "VolmexBaseToken", // nameArg
+        "VBT", // symbolArg,
+        false, // isBase
       ],
       {
         initializer: "initialize",
       },
     );
-    await baseToken.deployed();
-
-    erc20TransferProxy = await upgrades.deployProxy(ERC20TransferProxy, [], {
-      initializer: "erc20TransferProxyInit",
-    });
-    await erc20TransferProxy.deployed();
-
-    erc1271Test = await ERC1271Test.deploy();
+    await volmexQuoteToken.deployed();
+    await (await perpView.setQuoteToken(volmexQuoteToken.address)).wait();
 
     positioningConfig = await upgrades.deployProxy(PositioningConfig, [perpetualOracle.address]);
-    await positioningConfig.deployed();
-    await perpetualOracle.grantSmaIntervalRole(positioningConfig.address);
-    matchingEngine = await upgrades.deployProxy(
-      MatchingEngine,
-      [owner.address, perpetualOracle.address],
-      {
-        initializer: "__MatchingEngineTest_init",
-      },
-    );
-    accountBalance = await upgrades.deployProxy(AccountBalance, [
-      positioningConfig.address,
-      [volmexBaseToken.address, volmexBaseToken.address],
-      matchingEngine.address,
+
+    matchingEngine = await upgrades.deployProxy(MatchingEngine, [
       owner.address,
+      perpetualOracle.address,
     ]);
-    await accountBalance.deployed();
 
     USDC = await TestERC20.deploy();
     await USDC.__TestERC20_init("TestUSDC", "USDC", 6);
     await USDC.deployed();
 
-    await perpetualOracle.setMarkObservationAdder(matchingEngine.address);
-
     virtualToken = await upgrades.deployProxy(VirtualToken, ["VirtualToken", "VTK", false], {
       initializer: "initialize",
     });
     await virtualToken.deployed();
-    await virtualToken.setMintBurnRole(owner.address);
 
+    accountBalance1 = await upgrades.deployProxy(AccountBalance, [
+      positioningConfig.address,
+      [
+        volmexBaseToken.address,
+        volmexBaseToken.address,
+        chainlinkBaseToken.address,
+        chainlinkBaseToken2.address,
+      ],
+      [chainlinkTokenIndex1, chainlinkTokenIndex2],
+      matchingEngine.address,
+      owner.address,
+    ]);
+    await accountBalance1.deployed();
+    await (await perpView.setAccount(accountBalance1.address)).wait();
+    vaultController = await upgrades.deployProxy(VaultController, [
+      positioningConfig.address,
+      accountBalance1.address,
+    ]);
+    await vaultController.deployed();
+    await (await perpView.setVaultController(vaultController.address)).wait();
+
+    vault = await upgrades.deployProxy(Vault, [
+      positioningConfig.address,
+      accountBalance1.address,
+      USDC.address,
+      vaultController.address,
+    ]);
+    await vault.deployed();
+    await (await perpView.incrementVaultIndex()).wait();
+
+    (await accountBalance1.grantSettleRealizedPnlRole(vault.address)).wait();
+    (await accountBalance1.grantSettleRealizedPnlRole(vaultController.address)).wait();
     marketRegistry = await upgrades.deployProxy(MarketRegistry, [
-      virtualToken.address,
-      [volmexBaseToken.address, volmexBaseToken.address],
+      volmexQuoteToken.address,
+      [
+        volmexBaseToken.address,
+        volmexBaseToken.address,
+        chainlinkBaseToken.address,
+        chainlinkBaseToken2.address,
+      ],
     ]);
 
-    // await marketRegistry.connect(owner).addBaseToken(virtualToken.address)
+    positioning = await upgrades.deployProxy(
+      Positioning,
+      [
+        positioningConfig.address,
+        vaultController.address,
+        accountBalance1.address,
+        matchingEngine.address,
+        perpetualOracle.address,
+        marketRegistry.address,
+        [
+          volmexBaseToken.address,
+          volmexBaseToken.address,
+          chainlinkBaseToken.address,
+          chainlinkBaseToken2.address,
+        ],
+        [chainlinkTokenIndex1, chainlinkTokenIndex2],
+        [owner.address, account1.address],
+        ["10000000000000000000", "10000000000000000000"],
+      ],
+      {
+        initializer: "initialize",
+      },
+    );
+    await positioning.deployed();
+
+    await (await perpView.setPositioning(positioning.address)).wait();
+
+    await (await perpView.incrementPerpIndex()).wait();
+    await (await volmexBaseToken.setMintBurnRole(positioning.address)).wait();
+    await (await volmexQuoteToken.setMintBurnRole(positioning.address)).wait();
+
     await marketRegistry.connect(owner).addBaseToken(volmexBaseToken.address);
-    // await marketRegistry.connect(owner).addBaseToken(baseToken.address)
     await marketRegistry.connect(owner).setMakerFeeRatio(0.0004e6);
     await marketRegistry.connect(owner).setTakerFeeRatio(0.0009e6);
+
+    await accountBalance1.connect(owner).setPositioning(positioning.address);
+
+    await vault.connect(owner).setPositioning(positioning.address);
+    await vault.connect(owner).setVaultController(vaultController.address);
+    await vaultController.registerVault(vault.address, USDC.address);
+    await vaultController.connect(owner).setPositioning(positioning.address);
+    await positioningConfig.connect(owner).setPositioning(positioning.address);
+    await positioningConfig.connect(owner).setAccountBalance(accountBalance1.address);
+    await positioningConfig.connect(owner).setMaxMarketsPerAccount(5);
+    await positioningConfig
+      .connect(owner)
+      .setSettlementTokenBalanceCap("1000000000000000000000000000000000000000");
+
+    await positioning.connect(owner).setMarketRegistry(marketRegistry.address);
+    await positioning.connect(owner).setDefaultFeeReceiver(owner.address);
+    await positioning.connect(owner).setPositioning(positioning.address);
+
+    await (await matchingEngine.grantMatchOrders(positioning.address)).wait();
+    await perpetualOracle.grantSmaIntervalRole(positioningConfig.address);
+    await perpetualOracle.setPositioning(positioning.address);
+    await positioningConfig.setTwapInterval(28800);
+    await perpetualOracle.grantCacheChainlinkPriceRole(owner.address);
+    volmexPerpPeriphery = await upgrades.deployProxy(VolmexPerpPeriphery, [
+      perpView.address,
+      perpetualOracle.address,
+      [vault.address, vault.address],
+      owner.address,
+      owner.address, // replace with replayer address
+    ]);
+    await volmexPerpPeriphery.deployed();
+    await perpetualOracle.setIndexObservationAdder(owner.address);
   });
   describe("Deploy", async () => {
-    it("shoud successfully deploy", async () => {
+    it("should successfully deploy", async () => {
       let receipt = await marketRegistry.deployed();
       expect(receipt.confirmations).not.equal(0);
     });
-    it("shoud fail to deploy when quote token is not contract", async () => {
+    it("should fail to deploy when quote token is not contract", async () => {
       await expect(
         upgrades.deployProxy(MarketRegistry, [
           ZERO_ADDR,
-          [volmexBaseToken.address, volmexBaseToken.address],
+          [
+            volmexBaseToken.address,
+            volmexBaseToken.address,
+            chainlinkBaseToken.address,
+            chainlinkBaseToken2.address,
+          ],
         ]),
       ).to.be.revertedWith("MR_QTNC");
     });
-    it("shoud fail to initilaize again", async () => {
+    it("should fail to initilaize again", async () => {
       await expect(
         marketRegistry.initialize(virtualToken.address, [
           volmexBaseToken.address,
           volmexBaseToken.address,
+          chainlinkBaseToken.address,
+          chainlinkBaseToken2.address,
         ]),
       ).to.be.revertedWith("Initializable: contract is already initialized");
     });
