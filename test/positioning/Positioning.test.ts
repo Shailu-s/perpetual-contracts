@@ -2432,7 +2432,12 @@ describe("Positioning", function () {
         // vaultController = await upgrades.deployProxy(VaultController, [positioningConfig.address, accountBalance1.address])
         marketRegistry = await upgrades.deployProxy(MarketRegistry, [
           virtualToken.address,
-          [volmexBaseToken.address, volmexBaseToken.address],
+          [
+            volmexBaseToken.address,
+            volmexBaseToken1.address,
+            volmexBaseToken2.address,
+            volmexBaseToken3.address,
+          ],
         ]);
 
         positioning = await upgrades.deployProxy(
@@ -2444,7 +2449,13 @@ describe("Positioning", function () {
             matchingEngine.address,
             perpetualOracle.address,
             marketRegistry.address,
-            [volmexBaseToken.address, volmexBaseToken.address],
+            [
+              volmexBaseToken.address,
+              volmexBaseToken1.address,
+              volmexBaseToken2.address,
+              volmexBaseToken3.address,
+            ],
+            [chainlinkTokenIndex1, chainlinkTokenIndex2],
             [owner.address, account2.address],
             ["1000000000000000000", "1000000000000000000"],
           ],
