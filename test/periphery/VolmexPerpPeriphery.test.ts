@@ -1875,6 +1875,64 @@ describe("VolmexPerpPeriphery", function () {
         ),
       ).to.be.revertedWith("Periphery: left order price verification failed");
     });
+    it("should fail to fill LimitOrder: Sell Stop Limit Order Trigger for index price Not Matched", async () => {
+      const currentTimestamp = await time.latest();
+      await chainlinkAggregator1.updateRoundData(
+        "162863638383902",
+        "180000000000",
+        currentTimestamp.toString(),
+        currentTimestamp.toString(),
+      );
+      await perpetualOracle.cacheChainlinkPrice(
+        "57896044618658097711785492504343953926634992332820282019728792003956564819969",
+      );
+      const newCurrentTimestamp = await time.latest();
+      await chainlinkAggregator1.updateRoundData(
+        "162863638383904",
+        "200000000000",
+        newCurrentTimestamp.toString(),
+        newCurrentTimestamp.toString(),
+      );
+
+      const orderLeft = Order(
+        STOP_LOSS_INDEX_PRICE,
+        deadline,
+        account1.address,
+        Asset(volmexBaseToken2.address, two.toString()),
+        Asset(virtualToken.address, two.toString()),
+        1,
+        (19e8).toString(),
+        true,
+      );
+
+      const orderRight = Order(
+        STOP_LOSS_INDEX_PRICE,
+        deadline,
+        account2.address,
+        Asset(virtualToken.address, two.toString()),
+        Asset(volmexBaseToken2.address, two.toString()),
+        1,
+        (19e8).toString(),
+        false,
+      );
+
+      const signatureLeftLimitOrder = await getSignature(orderLeft, account1.address);
+      const signatureRightLimitOrder = await getSignature(orderRight, account2.address);
+
+      await matchingEngine.grantMatchOrders(positioning.address);
+      await volmexPerpPeriphery.whitelistTrader(account1.address, true);
+      await volmexPerpPeriphery.whitelistTrader(account2.address, true);
+      await expect(
+        volmexPerpPeriphery.openPosition(
+          0,
+          orderLeft,
+          signatureLeftLimitOrder,
+          orderRight,
+          signatureRightLimitOrder,
+          owner.address,
+        ),
+      ).to.be.revertedWith("Periphery: left order price verification failed");
+    });
     it("should fail to fill LimitOrder: Sell Stop Limit Order Trigger Price Not Matched", async () => {
       const orderLeft = Order(
         STOP_LOSS_MARK_PRICE,
