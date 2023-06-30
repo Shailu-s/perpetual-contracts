@@ -16,8 +16,14 @@ describe("Vault Controller tests for withdrawal", function () {
   let matchingEngineFake: FakeContract<MatchingEngine>;
   let PerpetualOracle;
   let perpetualOracle;
+  let ChainLinkAggregator;
+  let chainlinkAggregator1;
+  let chainlinkAggregator2;
   let VolmexBaseToken;
   let volmexBaseToken;
+  let volmexBaseToken1;
+  let volmexBaseToken2;
+  let volmexBaseToken3;
   let Positioning;
   let positioning;
   let VolmexPerpPeriphery;
@@ -27,7 +33,10 @@ describe("Vault Controller tests for withdrawal", function () {
   const proofHash = "0x6c00000000000000000000000000000000000000000000000000000000000000";
   const capRatio = "250";
   const twapType = "0x1444f8cf";
-
+  const chainlinkTokenIndex1 =
+    "57896044618658097711785492504343953926634992332820282019728792003956564819969";
+  const chainlinkTokenIndex2 =
+    "57896044618658097711785492504343953926634992332820282019728792003956564819970";
   this.beforeEach(async function () {
     [owner, alice, relayer] = await ethers.getSigners();
 
@@ -35,6 +44,7 @@ describe("Vault Controller tests for withdrawal", function () {
     PerpetualOracle = await ethers.getContractFactory("PerpetualOracle");
     VolmexBaseToken = await ethers.getContractFactory("VolmexBaseToken");
     perpViewFake = await smock.fake("VolmexPerpView");
+    ChainLinkAggregator = await ethers.getContractFactory("MockV3Aggregator");
 
     volmexBaseToken = await upgrades.deployProxy(
       VolmexBaseToken,
@@ -49,13 +59,50 @@ describe("Vault Controller tests for withdrawal", function () {
       },
     );
     await volmexBaseToken.deployed();
+    volmexBaseToken2 = await upgrades.deployProxy(
+      VolmexBaseToken,
+      [
+        "VolmexBaseToken", // nameArg
+        "VBT", // symbolArg,
+        owner.address, // priceFeedArg
+        true, // isBase
+      ],
+      {
+        initializer: "initialize",
+      },
+    );
+    await volmexBaseToken2.deployed();
+    volmexBaseToken3 = await upgrades.deployProxy(
+      VolmexBaseToken,
+      [
+        "VolmexBaseToken", // nameArg
+        "VBT", // symbolArg,
+        owner.address, // priceFeedArg
+        true, // isBase
+      ],
+      {
+        initializer: "initialize",
+      },
+    );
+    await volmexBaseToken3.deployed();
+    chainlinkAggregator1 = await ChainLinkAggregator.deploy(8, 3075000000000);
+    await chainlinkAggregator1.deployed();
+    chainlinkAggregator2 = await ChainLinkAggregator.deploy(8, 180000000000);
+    await chainlinkAggregator2.deployed();
     perpetualOracle = await upgrades.deployProxy(
       PerpetualOracle,
       [
-        [volmexBaseToken.address, volmexBaseToken.address],
-        [10000000, 10000000],
-        [10000000, 10000000],
+        [
+          volmexBaseToken.address,
+          volmexBaseToken.address,
+          volmexBaseToken2.address,
+          volmexBaseToken3.address,
+        ],
+        [100000000, 100000000, 30000000000, 1800000000],
+        [100000000, 100000000],
         [proofHash, proofHash],
+        [chainlinkTokenIndex1, chainlinkTokenIndex2],
+        [chainlinkAggregator1.address, chainlinkAggregator2.address],
         owner.address,
       ],
       { initializer: "__PerpetualOracle_init" },
@@ -83,7 +130,13 @@ describe("Vault Controller tests for withdrawal", function () {
     const accountBalanceFactory = await ethers.getContractFactory("AccountBalance");
     accountBalance = await upgrades.deployProxy(accountBalanceFactory, [
       positioningConfig.address,
-      [volmexBaseToken.address, volmexBaseToken.address],
+      [
+        volmexBaseToken.address,
+        volmexBaseToken.address,
+        volmexBaseToken2.address,
+        volmexBaseToken3.address,
+      ],
+      [chainlinkTokenIndex1, chainlinkTokenIndex2],
       matchingEngineFake.address,
       owner.address,
     ]);
@@ -121,7 +174,13 @@ describe("Vault Controller tests for withdrawal", function () {
         matchingEngineFake.address,
         perpetualOracle.address,
         perpetualOracle.address,
-        [volmexBaseToken.address, volmexBaseToken.address],
+        [
+          volmexBaseToken.address,
+          volmexBaseToken.address,
+          volmexBaseToken2.address,
+          volmexBaseToken3.address,
+        ],
+        [chainlinkTokenIndex1, chainlinkTokenIndex2],
         [owner.address, alice.address],
         ["1000000000000000000", "1000000000000000000"],
       ],
@@ -175,7 +234,13 @@ describe("Vault Controller tests for withdrawal", function () {
         matchingEngineFake.address,
         perpetualOracle.address,
         perpetualOracle.address,
-        [volmexBaseToken.address, volmexBaseToken.address],
+        [
+          volmexBaseToken.address,
+          volmexBaseToken.address,
+          volmexBaseToken2.address,
+          volmexBaseToken3.address,
+        ],
+        [chainlinkTokenIndex1, chainlinkTokenIndex2],
         [owner.address, alice.address],
         ["1000000000000000000", "1000000000000000000"],
       ],
