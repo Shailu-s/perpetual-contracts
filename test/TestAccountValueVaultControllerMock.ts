@@ -22,7 +22,10 @@ describe("Vault Controller Mock tests for account value", function () {
   let prepViewFake;
   let owner, alice, relayer;
   const proofHash = "0x6c00000000000000000000000000000000000000000000000000000000000000";
-
+  const chainlinkTokenIndex1 =
+    "57896044618658097711785492504343953926634992332820282019728792003956564819969";
+  const chainlinkTokenIndex2 =
+    "57896044618658097711785492504343953926634992332820282019728792003956564819970";
   beforeEach(async function () {
     [owner, alice, relayer] = await ethers.getSigners();
     PerpetualOracle = await ethers.getContractFactory("PerpetualOracle");
@@ -43,10 +46,12 @@ describe("Vault Controller Mock tests for account value", function () {
     perpetualOracle = await upgrades.deployProxy(
       PerpetualOracle,
       [
-        [alice.address, alice.address],
-        [10000000, 10000000],
+        [alice.address, alice.address, alice.address, alice.address],
+        [10000000, 10000000, 10000000, 10000000],
         [10000000, 10000000],
         [proofHash, proofHash],
+        [chainlinkTokenIndex1, chainlinkTokenIndex2],
+        [alice.address, alice.address],
         owner.address,
       ],
       { initializer: "__PerpetualOracle_init" },
@@ -59,7 +64,8 @@ describe("Vault Controller Mock tests for account value", function () {
     const accountBalanceFactory = await ethers.getContractFactory("AccountBalance");
     accountBalance = await upgrades.deployProxy(accountBalanceFactory, [
       positioningConfig.address,
-      [alice.address, alice.address],
+      [alice.address, alice.address, alice.address, alice.address],
+      [chainlinkTokenIndex1, chainlinkTokenIndex2],
       alice.address,
       owner.address,
     ]);
@@ -89,7 +95,8 @@ describe("Vault Controller Mock tests for account value", function () {
         matchingEngineFake.address,
         perpetualOracle.address,
         perpetualOracle.address,
-        [alice.address, alice.address],
+        [alice.address, alice.address, alice.address, alice.address],
+        [chainlinkTokenIndex1, chainlinkTokenIndex2],
         [owner.address, alice.address],
         ["1000000000000000000", "1000000000000000000"],
       ],

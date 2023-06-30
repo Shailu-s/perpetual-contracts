@@ -339,12 +339,13 @@ describe("PerpetualOracle - Index Price Oracle", function () {
             chainlinkBaseToken.address,
             chainlinkBaseToken2.address,
           ],
+
+          [60000000, 60000000, 300000000000, 1800000000],
           [60000000, 60000000],
-      [60000000, 60000000],
-      [proofHash, proofHash],
-      [chainlinkTokenIndex1, chainlinkTokenIndex2],
-      [chainlinkAggregator1.address, chainlinkAggregator2.address],
-      owner.address,
+          [proofHash, proofHash],
+          [chainlinkTokenIndex1, chainlinkTokenIndex2],
+          [chainlinkAggregator1.address, chainlinkAggregator2.address],
+          owner.address,
         ),
         "Initializable: contract is already initialized",
       );
