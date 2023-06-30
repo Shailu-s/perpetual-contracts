@@ -11,7 +11,6 @@ import { IVolmexPerpView } from "../interfaces/IVolmexPerpView.sol";
 import { IPositioning } from "../interfaces/IPositioning.sol";
 
 import { LibOrder } from "../libs/LibOrder.sol";
-import "hardhat/console.sol";
 contract VolmexPerpPeriphery is AccessControlUpgradeable, IVolmexPerpPeriphery {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
@@ -244,7 +243,6 @@ contract VolmexPerpPeriphery is AccessControlUpgradeable, IVolmexPerpPeriphery {
         uint256 _index = perpetualOracle.indexByBaseToken(baseToken);
         if (_order.orderType == LibOrder.STOP_LOSS_MARK_PRICE || _order.orderType == LibOrder.TAKE_PROFIT_MARK_PRICE) {
             price = perpetualOracle.latestMarkPrice(_index);
-            console.log(price," mark price== ");
         } else if (_order.orderType == LibOrder.STOP_LOSS_INDEX_PRICE || _order.orderType == LibOrder.TAKE_PROFIT_INDEX_PRICE) {
             price = perpetualOracle.latestIndexPrice(_index);
         } else {
