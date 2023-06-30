@@ -6,7 +6,7 @@ import { BigNumber } from "ethers";
 import { time } from "@nomicfoundation/hardhat-network-helpers";
 const { expectRevert } = require("@openzeppelin/test-helpers");
 
-describe.only("VolmexPerpPeriphery", function () {
+describe("VolmexPerpPeriphery", function () {
   let MatchingEngine;
   let matchingEngine;
   let VirtualToken;
