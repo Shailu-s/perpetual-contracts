@@ -140,9 +140,9 @@ describe("Periodic Funding payment", function () {
       },
     );
     await volmexBaseToken3.deployed();
-    chainlinkAggregator1 = await ChainLinkAggregator.deploy(8, 3075000000000);
+    chainlinkAggregator1 = await ChainLinkAggregator.deploy(8, 180000000000);
     await chainlinkAggregator1.deployed();
-    chainlinkAggregator2 = await ChainLinkAggregator.deploy(8, 180000000000);
+    chainlinkAggregator2 = await ChainLinkAggregator.deploy(8, 3750000000000);
     await chainlinkAggregator2.deployed();
     perpetualOracle = await upgrades.deployProxy(
       PerpetualOracle,
@@ -164,6 +164,7 @@ describe("Periodic Funding payment", function () {
     );
 
     await volmexBaseToken.setPriceFeed(perpetualOracle.address);
+    await volmexBaseToken2.setPriceFeed(perpetualOracle.address);
     volmexQuoteToken = await upgrades.deployProxy(
       VolmexQuoteToken,
       [
@@ -265,6 +266,8 @@ describe("Periodic Funding payment", function () {
     await (await perpView.setPositioning(positioning.address)).wait();
     await (await perpView.incrementPerpIndex()).wait();
     await (await volmexBaseToken.setMintBurnRole(positioning.address)).wait();
+    await (await volmexBaseToken2.setMintBurnRole(positioning.address)).wait();
+
     await (await volmexQuoteToken.setMintBurnRole(positioning.address)).wait();
 
     await marketRegistry.connect(owner).addBaseToken(volmexBaseToken.address);
@@ -339,6 +342,8 @@ describe("Periodic Funding payment", function () {
         .connect(bob)
         .depositToVault(index, USDC.address, "1000000000000000000000000")
     ).wait();
+    await perpetualOracle.grantCacheChainlinkPriceRole(owner.address);
+    await perpetualOracle.grantCacheChainlinkPriceRole(positioning.address);
     await perpetualOracle.setIndexObservationAdder(owner.address);
     for (let i = 0; i < 10; i++) {
       await perpetualOracle.addIndexObservations([0], [75000000], [proofHash]);
@@ -1411,6 +1416,256 @@ describe("Periodic Funding payment", function () {
 
       expect(fundingPayment9.toString()).to.not.equal(fundingPayment11.toString());
       expect(fundingPayment10.toString()).to.not.equal(fundingPayment12.toString());
+    });
+  });
+  describe(" Periodic funding test for Chainlink integrations", () => {
+    it("funding payment should not change before 8 hours", async () => {
+      await perpetualOracle.grantCacheChainlinkPriceRole(owner.address);
+      const currentTimestamp = await time.latest();
+      await chainlinkAggregator1.updateRoundData(
+        "162863638383902",
+        "3186200000000",
+        currentTimestamp.toString(),
+        currentTimestamp.toString(),
+      );
+      await perpetualOracle.cacheChainlinkPrice(
+        "57896044618658097711785492504343953926634992332820282019728792003956564819969",
+      );
+      const orderLeft = Order(
+        ORDER,
+        87654321987654,
+        account1.address,
+        Asset(volmexBaseToken2.address, "10000000000000000000"),
+        Asset(virtualToken.address, "18000000000000000000000"),
+        1,
+        0,
+        true,
+      );
+
+      const orderRight = Order(
+        ORDER,
+        87654321987654,
+        account2.address,
+        Asset(virtualToken.address, "18000000000000000000000"),
+        Asset(volmexBaseToken2.address, "10000000000000000000"),
+        2,
+        0,
+        false,
+      );
+
+      const signatureLeft = await getSignature(orderLeft, account1.address);
+      const signatureRight = await getSignature(orderRight, account2.address);
+
+      await volmexPerpPeriphery.openPosition(
+        index,
+        orderLeft,
+        signatureLeft,
+        orderRight,
+        signatureRight,
+        liquidator,
+      );
+
+      const accountInfo1 = await accountBalance1.getAccountInfo(
+        account1.address,
+        volmexBaseToken2.address,
+      );
+
+      for (let i = 34; i < 38; i++) {
+        const orderLeft = Order(
+          ORDER,
+          deadline,
+          alice.address,
+          Asset(volmexBaseToken2.address, "10000000000000000000"),
+          Asset(virtualToken.address, "100000000000000000000"),
+          i,
+          (1e6).toString(),
+          true,
+        );
+
+        const orderRight = Order(
+          ORDER,
+          deadline,
+          bob.address,
+          Asset(virtualToken.address, "100000000000000000000"),
+          Asset(volmexBaseToken2.address, "10000000000000000000"),
+          i + 1,
+          (1e6).toString(),
+          false,
+        );
+
+        const signatureLeft = await getSignature(orderLeft, alice.address);
+        const signatureRight = await getSignature(orderRight, bob.address);
+        const tr = await volmexPerpPeriphery.openPosition(
+          index,
+          orderLeft,
+          signatureLeft,
+          orderRight,
+          signatureRight,
+          liquidator,
+        );
+      }
+      const fundingPayment1 = await positioning.getPendingFundingPayment(
+        account1.address,
+        volmexBaseToken2.address,
+      );
+      const fundingPayment2 = await positioning.getPendingFundingPayment(
+        account2.address,
+        volmexBaseToken2.address,
+      );
+
+      await time.increase(20000);
+      await perpetualOracle.cacheChainlinkPrice(
+        "57896044618658097711785492504343953926634992332820282019728792003956564819969",
+      );
+      const stamp = await time.latest();
+      const fundingPayment3 = await positioning.getPendingFundingPayment(
+        account1.address,
+        volmexBaseToken2.address,
+      );
+      const fundingPayment4 = await positioning.getPendingFundingPayment(
+        account2.address,
+        volmexBaseToken2.address,
+      );
+
+      expect(fundingPayment1.toString()).to.equal(fundingPayment3.toString());
+      expect(fundingPayment2.toString()).to.equal(fundingPayment4.toString());
+
+      const accountInfo2 = await accountBalance1.getAccountInfo(
+        account1.address,
+        volmexBaseToken2.address,
+      );
+
+      expect(accountInfo2.lastTwPremiumGrowthGlobal.toString()).to.equal(
+        accountInfo1.lastTwPremiumGrowthGlobal.toString(),
+      );
+    });
+    it("Funding should occur after 8 hours", async () => {
+      await perpetualOracle.grantCacheChainlinkPriceRole(owner.address);
+
+      const currentTimestamp = await time.latest();
+      await chainlinkAggregator1.updateRoundData(
+        "162863638383902",
+        "180000000000",
+        currentTimestamp.toString(),
+        currentTimestamp.toString(),
+      );
+      await perpetualOracle.cacheChainlinkPrice(
+        "57896044618658097711785492504343953926634992332820282019728792003956564819969",
+      );
+      const orderLeft = Order(
+        ORDER,
+        87654321987654,
+        account1.address,
+        Asset(volmexBaseToken2.address, "10000000000000000000"),
+        Asset(virtualToken.address, "18000000000000000000000"),
+        1,
+        0,
+        true,
+      );
+
+      const orderRight = Order(
+        ORDER,
+        87654321987654,
+        account2.address,
+        Asset(virtualToken.address, "18000000000000000000000"),
+        Asset(volmexBaseToken2.address, "10000000000000000000"),
+        2,
+        0,
+        false,
+      );
+
+      const signatureLeft = await getSignature(orderLeft, account1.address);
+      const signatureRight = await getSignature(orderRight, account2.address);
+
+      await volmexPerpPeriphery.openPosition(
+        index,
+        orderLeft,
+        signatureLeft,
+        orderRight,
+        signatureRight,
+        liquidator,
+      );
+
+      const accountInfo1 = await accountBalance1.getAccountInfo(
+        account1.address,
+        volmexBaseToken2.address,
+      );
+
+      for (let i = 34; i < 38; i++) {
+        const orderLeft = Order(
+          ORDER,
+          deadline,
+          alice.address,
+          Asset(volmexBaseToken2.address, "10000000000000000000"),
+          Asset(virtualToken.address, "100000000000000000000"),
+          i,
+          (1e6).toString(),
+          true,
+        );
+
+        const orderRight = Order(
+          ORDER,
+          deadline,
+          bob.address,
+          Asset(virtualToken.address, "100000000000000000000"),
+          Asset(volmexBaseToken2.address, "10000000000000000000"),
+          i + 1,
+          (1e6).toString(),
+          false,
+        );
+
+        const signatureLeft = await getSignature(orderLeft, alice.address);
+        const signatureRight = await getSignature(orderRight, bob.address);
+        const tr = await volmexPerpPeriphery.openPosition(
+          index,
+          orderLeft,
+          signatureLeft,
+          orderRight,
+          signatureRight,
+          liquidator,
+        );
+      }
+      const fundingPayment1 = await positioning.getPendingFundingPayment(
+        account1.address,
+        volmexBaseToken2.address,
+      );
+      const fundingPayment2 = await positioning.getPendingFundingPayment(
+        account2.address,
+        volmexBaseToken2.address,
+      );
+
+      await time.increase(20000);
+      await chainlinkAggregator1.updateRoundData(
+        "162863638383904",
+        "190000000000",
+        currentTimestamp + 20000,
+        currentTimestamp + 20000,
+      );
+      await perpetualOracle.cacheChainlinkPrice(
+        "57896044618658097711785492504343953926634992332820282019728792003956564819969",
+      );
+      await time.increase(10000);
+      await chainlinkAggregator1.updateRoundData(
+        "162863638383905",
+        "190000000000",
+        currentTimestamp.toString() + 30000,
+        currentTimestamp.toString() + 30000,
+      );
+      await perpetualOracle.cacheChainlinkPrice(
+        "57896044618658097711785492504343953926634992332820282019728792003956564819969",
+      );
+      const stamp = await time.latest();
+      const fundingPayment3 = await positioning.getPendingFundingPayment(
+        account1.address,
+        volmexBaseToken2.address,
+      );
+      const fundingPayment4 = await positioning.getPendingFundingPayment(
+        account2.address,
+        volmexBaseToken2.address,
+      );
+
+      expect(fundingPayment1.toString()).to.not.equal(fundingPayment3.toString());
+      expect(fundingPayment2.toString()).to.not.equal(fundingPayment4.toString());
     });
   });
 

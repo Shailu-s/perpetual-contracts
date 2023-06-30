@@ -174,7 +174,7 @@ describe("Liquidation test in Positioning", function () {
 
     await volmexBaseToken.setPriceFeed(perpetualOracle.address);
     await volmexBaseToken1.setPriceFeed(perpetualOracle.address);
-
+    await volmexBaseToken2.setPriceFeed(perpetualOracle.address);
     await perpetualOracle.setIndexObservationAdder(owner.address);
     for (let i = 0; i < 10; i++) {
       await perpetualOracle.addIndexObservations([0], [100000000], [proofHash]);
@@ -263,6 +263,9 @@ describe("Liquidation test in Positioning", function () {
     await positioning.deployed();
     await (await volmexBaseToken.setMintBurnRole(positioning.address)).wait();
     await (await volmexBaseToken1.setMintBurnRole(positioning.address)).wait();
+    await (await volmexBaseToken2.setMintBurnRole(positioning.address)).wait();
+    await perpetualOracle.grantCacheChainlinkPriceRole(owner.address);
+    await perpetualOracle.grantCacheChainlinkPriceRole(positioning.address);
     await (await virtualToken.setMintBurnRole(positioning.address)).wait();
 
     perpViewFake = await smock.fake("VolmexPerpView");
@@ -275,8 +278,8 @@ describe("Liquidation test in Positioning", function () {
     ]);
 
     await perpetualOracle.setIndexObservationAdder(owner.address);
-    await marketRegistry.connect(owner).addBaseToken(volmexBaseToken.address);
-    await marketRegistry.connect(owner).addBaseToken(volmexBaseToken1.address);
+    // await marketRegistry.connect(owner).addBaseToken(volmexBaseToken.address);
+    // await marketRegistry.connect(owner).addBaseToken(volmexBaseToken1.address);
     await marketRegistry.connect(owner).setMakerFeeRatio(0.0004e6);
     await marketRegistry.connect(owner).setTakerFeeRatio(0.0009e6);
     await matchingEngine.grantMatchOrders(positioning.address);

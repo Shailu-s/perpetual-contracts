@@ -567,6 +567,19 @@ describe("PerpetualOracle - Index Price Oracle", function () {
       );
       expect(currentEpochPrice.toString()).to.be.equal("0");
     });
+    it("should revert when accountdo have ha cache role to add chainlonk observation", async () => {
+      const currentTimestamp = await time.latest();
+
+      await chainlinkAggregator1.updateRoundData(
+        "162863638383902",
+        "30000000000000",
+        parseInt(currentTimestamp),
+        parseInt(currentTimestamp),
+      );
+      await expect(
+        perpetualOracle.connect(account1).cacheChainlinkPrice(chainlinkTokenIndex1),
+      ).to.be.revertedWith("PerpOracle: not chain link price adder");
+    });
     it("should fetch epoch price", async () => {
       const currentTimestamp = await time.latest();
       await chainlinkAggregator1.updateRoundData(
@@ -613,6 +626,59 @@ describe("PerpetualOracle - Index Price Oracle", function () {
       console.log((await perpetualOracle.initialTimestamps(chainlinkTokenIndex1)).toString());
       console.log((await perpetualOracle.indexPriceEpochsCount(chainlinkTokenIndex1)).toString());
       expect(currentEpochPrice1.toString()).to.be.equal("350000000000");
+    });
+    it("should fetch last epoch price", async () => {
+      const currentTimestamp = await time.latest();
+      await chainlinkAggregator1.updateRoundData(
+        "162863638383902",
+        "30000000000000",
+        parseInt(currentTimestamp),
+        parseInt(currentTimestamp),
+      );
+      await perpetualOracle.cacheChainlinkPrice(chainlinkTokenIndex1);
+      await chainlinkAggregator1.updateRoundData(
+        "162863638383903",
+        "40000000000000",
+        parseInt(currentTimestamp) + 1,
+        parseInt(currentTimestamp) + 1,
+      );
+      await perpetualOracle.cacheChainlinkPrice(chainlinkTokenIndex1);
+      // Since there are no mark price observation added epoch price will come out to be 0
+      const currentEpochPrice = await perpetualOracle.getIndexEpochSMA(
+        chainlinkTokenIndex1,
+        parseInt(currentTimestamp),
+        parseInt(currentTimestamp) + 28800,
+      );
+      expect(currentEpochPrice.toString()).to.be.equal("0");
+      await perpetualOracle.addMarkObservation(chainlinkTokenIndex1, 300000000000);
+      await chainlinkAggregator1.updateRoundData(
+        "162863638383905",
+        "30000000000000",
+        parseInt(currentTimestamp) + 2,
+        parseInt(currentTimestamp) + 2,
+      );
+      await perpetualOracle.cacheChainlinkPrice(chainlinkTokenIndex1);
+      await chainlinkAggregator1.updateRoundData(
+        "162863638383906",
+        "40000000000000",
+        parseInt(currentTimestamp) + 3,
+        parseInt(currentTimestamp) + 3,
+      );
+      await perpetualOracle.cacheChainlinkPrice(chainlinkTokenIndex1);
+      const currentEpochPrice1 = await perpetualOracle.getIndexEpochSMA(
+        chainlinkTokenIndex1,
+        parseInt(currentTimestamp),
+        parseInt(currentTimestamp) + 28800,
+      );
+
+      expect(currentEpochPrice1.toString()).to.be.equal("350000000000");
+      await time.increase(28800);
+      const currentEpochPrice2 = await perpetualOracle.getIndexEpochSMA(
+        chainlinkTokenIndex1,
+        parseInt(currentTimestamp),
+        parseInt(currentTimestamp) + 57600,
+      );
+      expect(currentEpochPrice2.toString()).to.be.equal("350000000000");
     });
   });
 });
