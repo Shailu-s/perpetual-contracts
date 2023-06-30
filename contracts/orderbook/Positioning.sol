@@ -102,8 +102,8 @@ contract Positioning is IPositioning, ReentrancyGuardUpgradeable, PausableUpgrad
      
     function setMinPositionSize(uint256 _minPositionSize, address baseToken) external {
         _requirePositioningAdmin();
-        require(_minPositionSize >= 1e18, "P_MPSlT1");
-        // P_MPSGT1: Min position size less than 1e18
+        require(_minPositionSize >= 1e15, "P_MPSlT1");
+        // P_MPSGT1: Min position size less than 0.001
         minPositionSizeByBaseToken[baseToken] = _minPositionSize;
     }
      

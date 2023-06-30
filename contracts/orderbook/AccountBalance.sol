@@ -84,6 +84,11 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
         minTimeBound = minTimeBoundArg;
     }
 
+    function setSigmaViv(uint256 _baseTokenIndex,uint256 _sigmaViv) external virtual {
+        _requireAccountBalanceAdmin();
+         sigmaVolmexIvs[_baseTokenIndex] = _sigmaViv;
+    }
+    
     /// @inheritdoc IAccountBalance
     function modifyOwedRealizedPnl(
         address trader,
