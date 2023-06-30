@@ -8,6 +8,8 @@ describe("Global", function () {
   let account1, account2;
   let MatchingEngine;
   let VolmexBaseToken;
+  let USDC;
+  let virtualToken;
   let VolmexQuoteToken;
   let PerpetualOracle;
   let perpetualOracle;
@@ -22,19 +24,27 @@ describe("Global", function () {
   let TestERC20;
   let volmexBaseToken;
   let volmexQuoteToken;
-  let usdc;
   let positioningConfig;
-  let accountBalance;
+  let accountBalance1;
   let vaultController;
   let vault;
   let positioning;
   let marketRegistry;
   let periphery;
   let perpView;
+  let chainlinkBaseToken;
+  let chainlinkBaseToken2;
+  let ChainLinkAggregator;
   let matchingEngine;
   let orderLeft, orderRight;
+  let chainlinkAggregator1;
+  let chainlinkAggregator2;
   let liquidator;
-
+  let VirtualToken;
+  const chainlinkTokenIndex1 =
+  "57896044618658097711785492504343953926634992332820282019728792008524463585424";
+const chainlinkTokenIndex2 =
+  "57896044618658097711785492504343953926634992332820282019728792008524463585425";
   const ORDER = "0xf555eb98";
   const one = ethers.constants.WeiPerEther; // 1e18
   const two = ethers.constants.WeiPerEther.mul(BigNumber.from("2")); // 2e18
@@ -56,11 +66,13 @@ describe("Global", function () {
     PositioningConfig = await ethers.getContractFactory("PositioningConfig");
     AccountBalance = await ethers.getContractFactory("AccountBalance");
     Positioning = await ethers.getContractFactory("Positioning");
+    ChainLinkAggregator = await ethers.getContractFactory("MockV3Aggregator");
     Vault = await ethers.getContractFactory("Vault");
     MarketRegistry = await ethers.getContractFactory("MarketRegistry");
     VolmexPerpPeriphery = await ethers.getContractFactory("VolmexPerpPeriphery");
     VolmexPerpView = await ethers.getContractFactory("VolmexPerpView");
     TestERC20 = await ethers.getContractFactory("TestERC20");
+    VirtualToken = await ethers.getContractFactory("VirtualTokenTest");
   });
 
   this.beforeEach(async () => {
@@ -73,7 +85,31 @@ describe("Global", function () {
       [
         "VolmexBaseToken", // nameArg
         "VBT", // symbolArg,
-        account1.address, // priceFeedArg
+        owner.address, // priceFeedArg
+        true, // isBase
+      ],
+      {
+        initializer: "initialize",
+      },
+    );
+    chainlinkBaseToken = await upgrades.deployProxy(
+      VolmexBaseToken,
+      [
+        "VolmexBaseToken", // nameArg
+        "VBT", // symbolArg,
+        owner.address, // priceFeedArg
+        true, // isBase
+      ],
+      {
+        initializer: "initialize",
+      },
+    );
+    chainlinkBaseToken2 = await upgrades.deployProxy(
+      VolmexBaseToken,
+      [
+        "VolmexBaseToken", // nameArg
+        "VBT", // symbolArg,
+        owner.address, // priceFeedArg
         true, // isBase
       ],
       {
@@ -81,27 +117,35 @@ describe("Global", function () {
       },
     );
     await volmexBaseToken.deployed();
+    await (await perpView.setBaseToken(volmexBaseToken.address)).wait();
+
+    chainlinkAggregator1 = await ChainLinkAggregator.deploy(8, 3075000000000);
+    await chainlinkAggregator1.deployed();
+    chainlinkAggregator2 = await ChainLinkAggregator.deploy(8, 3048000000000);
+    await chainlinkAggregator2.deployed();
     perpetualOracle = await upgrades.deployProxy(
       PerpetualOracle,
       [
-        [volmexBaseToken.address, volmexBaseToken.address],
-        [10000000, 10000000],
-        [10000000, 10000000],
+        [
+          volmexBaseToken.address,
+          volmexBaseToken.address,
+          chainlinkBaseToken.address,
+          chainlinkBaseToken2.address,
+        ],
+        [60000000, 60000000],
+        [60000000, 60000000],
         [proofHash, proofHash],
+        [chainlinkTokenIndex1, chainlinkTokenIndex2],
+        [chainlinkAggregator1.address, chainlinkAggregator2.address],
         owner.address,
       ],
       { initializer: "__PerpetualOracle_init" },
     );
-    await perpetualOracle.deployed();
-    await perpetualOracle.setIndexObservationAdder(owner.address);
-
     await volmexBaseToken.setPriceFeed(perpetualOracle.address);
-    await (await perpView.setBaseToken(volmexBaseToken.address)).wait();
-
     volmexQuoteToken = await upgrades.deployProxy(
       VolmexQuoteToken,
       [
-        "VolmexQuoteToken", // nameArg
+        "VolmexBaseToken", // nameArg
         "VBT", // symbolArg,
         false, // isBase
       ],
@@ -112,70 +156,89 @@ describe("Global", function () {
     await volmexQuoteToken.deployed();
     await (await perpView.setQuoteToken(volmexQuoteToken.address)).wait();
 
-    usdc = await upgrades.deployProxy(TestERC20, ["VolmexUSDC", "VUSDC", 6], {
-      initializer: "__TestERC20_init",
-    });
-    await usdc.deployed();
+    positioningConfig = await upgrades.deployProxy(PositioningConfig, [perpetualOracle.address]);
 
     matchingEngine = await upgrades.deployProxy(MatchingEngine, [
       owner.address,
       perpetualOracle.address,
     ]);
-    await matchingEngine.deployed();
-    await (await perpetualOracle.setMarkObservationAdder(matchingEngine.address)).wait();
 
-    positioningConfig = await upgrades.deployProxy(PositioningConfig, [perpetualOracle.address]);
-    await positioningConfig.deployed();
-    await positioningConfig.setMaxMarketsPerAccount(5);
-    await positioningConfig.setSettlementTokenBalanceCap("10000000000000000000000000");
+    USDC = await TestERC20.deploy();
+    await USDC.__TestERC20_init("TestUSDC", "USDC", 6);
+    await USDC.deployed();
 
-    accountBalance = await upgrades.deployProxy(AccountBalance, [
+    virtualToken = await upgrades.deployProxy(VirtualToken, ["VirtualToken", "VTK", false], {
+      initializer: "initialize",
+    });
+    await virtualToken.deployed();
+
+    accountBalance1 = await upgrades.deployProxy(AccountBalance, [
       positioningConfig.address,
-      [volmexBaseToken.address, volmexBaseToken.address],
+      [
+        volmexBaseToken.address,
+        volmexBaseToken.address,
+        chainlinkBaseToken.address,
+        chainlinkBaseToken2.address,
+      ],
+      [chainlinkTokenIndex1, chainlinkTokenIndex2],
       matchingEngine.address,
       owner.address,
     ]);
-    await accountBalance.deployed();
-    await (await perpView.setAccount(accountBalance.address)).wait();
-
+    await accountBalance1.deployed();
+    await (await perpView.setAccount(accountBalance1.address)).wait();
     vaultController = await upgrades.deployProxy(VaultController, [
       positioningConfig.address,
-      accountBalance.address,
+      accountBalance1.address,
     ]);
     await vaultController.deployed();
     await (await perpView.setVaultController(vaultController.address)).wait();
 
     vault = await upgrades.deployProxy(Vault, [
       positioningConfig.address,
-      accountBalance.address,
-      usdc.address,
+      accountBalance1.address,
+      USDC.address,
       vaultController.address,
     ]);
     await vault.deployed();
     await (await perpView.incrementVaultIndex()).wait();
+
+    (await accountBalance1.grantSettleRealizedPnlRole(vault.address)).wait();
+    (await accountBalance1.grantSettleRealizedPnlRole(vaultController.address)).wait();
     marketRegistry = await upgrades.deployProxy(MarketRegistry, [
       volmexQuoteToken.address,
-      [volmexBaseToken.address, volmexBaseToken.address],
+      [
+        volmexBaseToken.address,
+        volmexBaseToken.address,
+        chainlinkBaseToken.address,
+        chainlinkBaseToken2.address,
+      ],
     ]);
-    await marketRegistry.deployed();
+
     positioning = await upgrades.deployProxy(
       Positioning,
       [
         positioningConfig.address,
         vaultController.address,
-        accountBalance.address,
+        accountBalance1.address,
         matchingEngine.address,
         perpetualOracle.address,
         marketRegistry.address,
-        [volmexBaseToken.address, volmexBaseToken.address],
+        [
+          volmexBaseToken.address,
+          volmexBaseToken.address,
+          chainlinkBaseToken.address,
+          chainlinkBaseToken2.address,
+        ],
+        [chainlinkTokenIndex1, chainlinkTokenIndex2],
         [owner.address, account1.address],
-        ["1000000000000000000", "1000000000000000000"],
+        ["10000000000000000000", "10000000000000000000"],
       ],
       {
         initializer: "initialize",
       },
     );
     await positioning.deployed();
+
     await (await perpView.setPositioning(positioning.address)).wait();
     await (await perpView.incrementPerpIndex()).wait();
     await (await volmexBaseToken.setMintBurnRole(positioning.address)).wait();
@@ -184,14 +247,23 @@ describe("Global", function () {
     await (await positioning.setMarketRegistry(marketRegistry.address)).wait();
     await (await positioning.setDefaultFeeReceiver(owner.address)).wait();
     await (await vaultController.setPositioning(positioning.address)).wait();
-    await (await vaultController.registerVault(vault.address, usdc.address)).wait();
-    await (await accountBalance.setPositioning(positioning.address)).wait();
+    await (await vaultController.registerVault(vault.address, USDC.address)).wait();
+    await (await accountBalance1.setPositioning(positioning.address)).wait();
     await (await perpetualOracle.setPositioning(positioning.address)).wait();
 
     await perpetualOracle.grantSmaIntervalRole(positioningConfig.address);
     await positioningConfig.setPositioning(positioning.address);
-    await positioningConfig.setAccountBalance(accountBalance.address);
+    await positioningConfig.setAccountBalance(accountBalance1.address);
     await positioningConfig.setTwapInterval(28800);
+    await perpetualOracle.setMarkObservationAdder(owner.address);
+    await perpetualOracle.setMarkObservationAdder(matchingEngine.address);
+    await perpetualOracle.setIndexObservationAdder(owner.address);
+    await perpetualOracle.setIndexObservationAdder(matchingEngine.address);
+
+    await positioningConfig
+    .connect(owner)
+    .setSettlementTokenBalanceCap("1000000000000000000000000000000000000000");
+
 
     periphery = await upgrades.deployProxy(VolmexPerpPeriphery, [
       perpView.address,
@@ -206,20 +278,20 @@ describe("Global", function () {
   it("should match orders and open position", async () => {
     await matchingEngine.grantMatchOrders(positioning.address);
 
-    await usdc.connect(owner).mint(account1.address, "10000000000000000000");
-    await usdc.connect(owner).mint(account2.address, "10000000000000000000");
+    await USDC.connect(owner).mint(account1.address, "10000000000000000000");
+    await USDC.connect(owner).mint(account2.address, "10000000000000000000");
 
-    await usdc.connect(account1).approve(periphery.address, "10000000000000000000");
-    await usdc.connect(account2).approve(periphery.address, "10000000000000000000");
-    await periphery.connect(account1).depositToVault(0, usdc.address, "10000000000000000000");
-    await periphery.connect(account2).depositToVault(0, usdc.address, "10000000000000000000");
+    await USDC.connect(account1).approve(periphery.address, "10000000000000000000");
+    await USDC.connect(account2).approve(periphery.address, "10000000000000000000");
+    await periphery.connect(account1).depositToVault(0, USDC.address, "10000000000000000000");
+    await periphery.connect(account2).depositToVault(0, USDC.address, "10000000000000000000");
 
     orderLeft = Order(
       ORDER,
       deadline,
       account1.address,
-      Asset(volmexQuoteToken.address, one.toString()),
-      Asset(volmexBaseToken.address, one.toString()),
+      Asset(volmexQuoteToken.address, "10000000000000000000"),
+      Asset(volmexBaseToken.address, "10000000000000000000"),
       5,
       0,
       false,
@@ -229,8 +301,8 @@ describe("Global", function () {
       ORDER,
       deadline,
       account2.address,
-      Asset(volmexBaseToken.address, one.toString()),
-      Asset(volmexQuoteToken.address, one.toString()),
+      Asset(volmexBaseToken.address, "10000000000000000000"),
+      Asset(volmexQuoteToken.address, "10000000000000000000"),
       6,
       0,
       true,
@@ -247,11 +319,11 @@ describe("Global", function () {
         .openPosition(orderLeft, signatureLeft, orderRight, signatureRight, liquidator),
     ).to.emit(positioning, "PositionChanged");
     console.log("here");
-    let positionSize = await accountBalance.getPositionSize(
+    let positionSize = await accountBalance1.getPositionSize(
       account1.address,
       orderLeft.takeAsset.virtualToken,
     );
-    let positionSize1 = await accountBalance.getPositionSize(
+    let positionSize1 = await accountBalance1.getPositionSize(
       account2.address,
       orderLeft.takeAsset.virtualToken,
     );
@@ -260,7 +332,7 @@ describe("Global", function () {
       [
         "open notional",
         (
-          await accountBalance.getOpenNotional(account1.address, orderLeft.takeAsset.virtualToken)
+          await accountBalance1.getOpenNotional(account1.address, orderLeft.takeAsset.virtualToken)
         ).toString(),
       ],
       ["", ""],
@@ -268,14 +340,14 @@ describe("Global", function () {
       [
         "open notional 1",
         (
-          await accountBalance.getOpenNotional(account2.address, orderLeft.takeAsset.virtualToken)
+          await accountBalance1.getOpenNotional(account2.address, orderLeft.takeAsset.virtualToken)
         ).toString(),
       ],
     ]);
     console.log("Another call \n");
 
-    expect(positionSize).to.be.equal("1000000000000000000");
-    expect(positionSize1).to.be.equal("-1000000000000000000");
+    expect(positionSize).to.be.equal("10000000000000000000");
+    expect(positionSize1).to.be.equal("-10000000000000000000");
 
     const proofHash = "0x6c00000000000000000000000000000000000000000000000000000000000000";
     for (let index = 0; index < 10; index++) {
@@ -287,8 +359,8 @@ describe("Global", function () {
       ORDER,
       deadline,
       account1.address,
-      Asset(volmexBaseToken.address, one.toString()),
-      Asset(volmexQuoteToken.address, one.toString()),
+      Asset(volmexBaseToken.address, "10000000000000000000"),
+      Asset(volmexQuoteToken.address, "10000000000000000000"),
       1,
       0,
       true,
@@ -298,8 +370,8 @@ describe("Global", function () {
       ORDER,
       deadline,
       account2.address,
-      Asset(volmexQuoteToken.address, one.toString()),
-      Asset(volmexBaseToken.address, one.toString()),
+      Asset(volmexQuoteToken.address, "10000000000000000000"),
+      Asset(volmexBaseToken.address, "10000000000000000000"),
       2,
       0,
       false,
@@ -307,7 +379,6 @@ describe("Global", function () {
 
     signatureLeft = await getSignature(orderLeft, account1.address);
     signatureRight = await getSignature(orderRight, account2.address);
-
     // left 1, 2
     // right 2, 1
     await expect(
@@ -316,11 +387,11 @@ describe("Global", function () {
         .openPosition(orderLeft, signatureLeft, orderRight, signatureRight, liquidator),
     ).to.emit(positioning, "PositionChanged");
 
-    positionSize = await accountBalance.getPositionSize(
+    positionSize = await accountBalance1.getPositionSize(
       account1.address,
       orderLeft.makeAsset.virtualToken,
     );
-    positionSize1 = await accountBalance.getPositionSize(
+    positionSize1 = await accountBalance1.getPositionSize(
       account2.address,
       orderLeft.makeAsset.virtualToken,
     );
@@ -329,7 +400,7 @@ describe("Global", function () {
       [
         "open notional",
         (
-          await accountBalance.getOpenNotional(account1.address, orderLeft.makeAsset.virtualToken)
+          await accountBalance1.getOpenNotional(account1.address, orderLeft.makeAsset.virtualToken)
         ).toString(),
       ],
       ["", ""],
@@ -337,7 +408,7 @@ describe("Global", function () {
       [
         "open notional 1",
         (
-          await accountBalance.getOpenNotional(account2.address, orderLeft.makeAsset.virtualToken)
+          await accountBalance1.getOpenNotional(account2.address, orderLeft.makeAsset.virtualToken)
         ).toString(),
       ],
     ]);
@@ -347,8 +418,8 @@ describe("Global", function () {
       ORDER,
       deadline,
       account1.address,
-      Asset(volmexBaseToken.address, one.toString()),
-      Asset(volmexQuoteToken.address, one.toString()),
+      Asset(volmexBaseToken.address, "10000000000000000000"),
+      Asset(volmexQuoteToken.address, "10000000000000000000"),
       3,
       0,
       true,
@@ -358,8 +429,8 @@ describe("Global", function () {
       ORDER,
       deadline,
       account2.address,
-      Asset(volmexQuoteToken.address, one.toString()),
-      Asset(volmexBaseToken.address, one.toString()),
+      Asset(volmexQuoteToken.address, "10000000000000000000"),
+      Asset(volmexBaseToken.address, "10000000000000000000"),
       4,
       0,
       false,
@@ -376,11 +447,11 @@ describe("Global", function () {
         .openPosition(orderLeft, signatureLeft, orderRight, signatureRight, liquidator),
     ).to.emit(positioning, "PositionChanged");
 
-    positionSize = await accountBalance.getPositionSize(
+    positionSize = await accountBalance1.getPositionSize(
       account1.address,
       orderLeft.makeAsset.virtualToken,
     );
-    positionSize1 = await accountBalance.getPositionSize(
+    positionSize1 = await accountBalance1.getPositionSize(
       account2.address,
       orderLeft.makeAsset.virtualToken,
     );
@@ -389,7 +460,7 @@ describe("Global", function () {
       [
         "open notional",
         (
-          await accountBalance.getOpenNotional(account1.address, orderLeft.makeAsset.virtualToken)
+          await accountBalance1.getOpenNotional(account1.address, orderLeft.makeAsset.virtualToken)
         ).toString(),
       ],
       ["", ""],
@@ -397,33 +468,33 @@ describe("Global", function () {
       [
         "open notional 1",
         (
-          await accountBalance.getOpenNotional(account2.address, orderLeft.makeAsset.virtualToken)
+          await accountBalance1.getOpenNotional(account2.address, orderLeft.makeAsset.virtualToken)
         ).toString(),
       ],
     ]);
   });
 
-  it("should match orders and open position", async () => {
+  it("should match orders and open position2", async () => {
     const index = await perpetualOracle.indexByBaseToken(volmexBaseToken.address);
 
     await matchingEngine.grantMatchOrders(positioning.address);
 
-    await usdc.connect(owner).mint(account1.address, "10000000000000000000");
-    await usdc.connect(owner).mint(account2.address, "10000000000000000000");
+    await USDC.connect(owner).mint(account1.address, "10000000000000000000");
+    await USDC.connect(owner).mint(account2.address, "10000000000000000000");
 
-    await usdc.connect(account1).approve(periphery.address, "10000000000000000000");
-    await usdc.connect(account2).approve(periphery.address, "10000000000000000000");
+    await USDC.connect(account1).approve(periphery.address, "10000000000000000000");
+    await USDC.connect(account2).approve(periphery.address, "10000000000000000000");
 
-    await periphery.connect(account1).depositToVault(0, usdc.address, "10000000000000000000");
-    await periphery.connect(account2).depositToVault(0, usdc.address, "10000000000000000000");
+    await periphery.connect(account1).depositToVault(0, USDC.address, "10000000000000000000");
+    await periphery.connect(account2).depositToVault(0, USDC.address, "10000000000000000000");
 
     // Both partial filled {5, 2} {3, 1}
     orderLeft = Order(
       ORDER,
       deadline,
       account1.address,
-      Asset(volmexQuoteToken.address, three.toString()),
-      Asset(volmexBaseToken.address, one.toString()),
+      Asset(volmexQuoteToken.address, "5000000000000000000"),
+      Asset(volmexBaseToken.address, "20000000000000000000"),
       1,
       0,
       false,
@@ -433,8 +504,8 @@ describe("Global", function () {
       ORDER,
       deadline,
       account2.address,
-      Asset(volmexBaseToken.address, two.toString()),
-      Asset(volmexQuoteToken.address, one.toString()),
+      Asset(volmexBaseToken.address, "30000000000000000000"),
+      Asset(volmexQuoteToken.address, "1000000000000000000"),
       1,
       0,
       true,
@@ -449,11 +520,11 @@ describe("Global", function () {
         .openPosition(orderRight, signatureRight, orderLeft, signatureLeft, liquidator),
     ).to.emit(positioning, "PositionChanged");
 
-    let positionSize = await accountBalance.getPositionSize(
+    let positionSize = await accountBalance1.getPositionSize(
       account1.address,
       orderLeft.takeAsset.virtualToken,
     );
-    let positionSize1 = await accountBalance.getPositionSize(
+    let positionSize1 = await accountBalance1.getPositionSize(
       account2.address,
       orderLeft.takeAsset.virtualToken,
     );
@@ -462,7 +533,7 @@ describe("Global", function () {
       [
         "open notional",
         (
-          await accountBalance.getOpenNotional(account1.address, orderLeft.takeAsset.virtualToken)
+          await accountBalance1.getOpenNotional(account1.address, orderLeft.takeAsset.virtualToken)
         ).toString(),
       ],
       ["", ""],
@@ -470,7 +541,7 @@ describe("Global", function () {
       [
         "open notional 1",
         (
-          await accountBalance.getOpenNotional(account2.address, orderLeft.takeAsset.virtualToken)
+          await accountBalance1.getOpenNotional(account2.address, orderLeft.takeAsset.virtualToken)
         ).toString(),
       ],
     ]);
@@ -479,11 +550,10 @@ describe("Global", function () {
     console.log("observations", observations.toString());
     console.log("Another call \n");
 
-    expect(positionSize).to.be.equal("1000000000000000000");
-    expect(positionSize1).to.be.equal("-1000000000000000000");
+    expect(positionSize).to.be.equal("20000000000000000000");
+    expect(positionSize1).to.be.equal("-20000000000000000000");
 
     const proofHash = "0x6c00000000000000000000000000000000000000000000000000000000000000";
-
     for (let index = 0; index < 10; index++) {
       await (await perpetualOracle.addIndexObservations([0], [100000000], [proofHash])).wait();
       await (await perpetualOracle.addIndexObservations([1], [100000000], [proofHash])).wait();
@@ -494,8 +564,8 @@ describe("Global", function () {
       ORDER,
       deadline,
       account1.address,
-      Asset(volmexBaseToken.address, one.toString()),
-      Asset(volmexQuoteToken.address, two.toString()),
+      Asset(volmexBaseToken.address, "20000000000000000000"),
+      Asset(volmexQuoteToken.address, "300000000000000000000"),
       1,
       0,
       true,
@@ -505,8 +575,8 @@ describe("Global", function () {
       ORDER,
       deadline,
       account2.address,
-      Asset(volmexQuoteToken.address, two.toString()),
-      Asset(volmexBaseToken.address, one.toString()),
+      Asset(volmexQuoteToken.address, "200000000000000000000"),
+      Asset(volmexBaseToken.address, "10000000000000000000"),
       2,
       0,
       false,
@@ -518,14 +588,14 @@ describe("Global", function () {
     await expect(
       positioning
         .connect(account1)
-        .openPosition(orderLeft, signatureLeft, orderRight, signatureRight, liquidator),
+        .openPosition(orderRight, signatureRight,orderLeft, signatureLeft,liquidator),
     ).to.emit(positioning, "PositionChanged");
 
-    positionSize = await accountBalance.getPositionSize(
+    positionSize = await accountBalance1.getPositionSize(
       account1.address,
       orderLeft.makeAsset.virtualToken,
     );
-    positionSize1 = await accountBalance.getPositionSize(
+    positionSize1 = await accountBalance1.getPositionSize(
       account2.address,
       orderLeft.makeAsset.virtualToken,
     );
@@ -534,7 +604,7 @@ describe("Global", function () {
       [
         "open notional",
         (
-          await accountBalance.getOpenNotional(account1.address, orderLeft.makeAsset.virtualToken)
+          await accountBalance1.getOpenNotional(account1.address, orderLeft.makeAsset.virtualToken)
         ).toString(),
       ],
       ["", ""],
@@ -542,7 +612,7 @@ describe("Global", function () {
       [
         "open notional 1",
         (
-          await accountBalance.getOpenNotional(account2.address, orderLeft.makeAsset.virtualToken)
+          await accountBalance1.getOpenNotional(account2.address, orderLeft.makeAsset.virtualToken)
         ).toString(),
       ],
     ]);
@@ -557,8 +627,8 @@ describe("Global", function () {
       ORDER,
       deadline,
       account1.address,
-      Asset(volmexBaseToken.address, two.toString()),
-      Asset(volmexQuoteToken.address, one.toString()),
+      Asset(volmexBaseToken.address, "20000000000000000000"),
+      Asset(volmexQuoteToken.address, "10000000000000000000"),
       1,
       0,
       true,
@@ -568,8 +638,8 @@ describe("Global", function () {
       ORDER,
       deadline,
       account2.address,
-      Asset(volmexQuoteToken.address, two.toString()),
-      Asset(volmexBaseToken.address, three.toString()),
+      Asset(volmexQuoteToken.address, "20000000000000000000"),
+      Asset(volmexBaseToken.address, "30000000000000000000"),
       2,
       0,
       false,
@@ -581,14 +651,14 @@ describe("Global", function () {
     await expect(
       positioning
         .connect(account1)
-        .openPosition(orderLeft, signatureLeft, orderRight, signatureRight, liquidator),
+        .openPosition(orderLeft, signatureLeft,orderRight, signatureRight,liquidator),
     ).to.emit(positioning, "PositionChanged");
 
-    positionSize = await accountBalance.getPositionSize(
+    positionSize = await accountBalance1.getPositionSize(
       account1.address,
       orderLeft.makeAsset.virtualToken,
     );
-    positionSize1 = await accountBalance.getPositionSize(
+    positionSize1 = await accountBalance1.getPositionSize(
       account2.address,
       orderLeft.makeAsset.virtualToken,
     );
@@ -597,7 +667,7 @@ describe("Global", function () {
       [
         "open notional",
         (
-          await accountBalance.getOpenNotional(account1.address, orderLeft.makeAsset.virtualToken)
+          await accountBalance1.getOpenNotional(account1.address, orderLeft.makeAsset.virtualToken)
         ).toString(),
       ],
       ["", ""],
@@ -605,7 +675,7 @@ describe("Global", function () {
       [
         "open notional 1",
         (
-          await accountBalance.getOpenNotional(account2.address, orderLeft.makeAsset.virtualToken)
+          await accountBalance1.getOpenNotional(account2.address, orderLeft.makeAsset.virtualToken)
         ).toString(),
       ],
     ]);

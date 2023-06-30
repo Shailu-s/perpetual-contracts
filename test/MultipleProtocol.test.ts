@@ -1,18 +1,16 @@
 import { expect } from "chai";
 import { ethers, upgrades } from "hardhat";
-import { smock } from "@defi-wonderland/smock";
-import { parseUnits, zeroPad } from "ethers/lib/utils";
 const { Order, Asset, sign, encodeAddress } = require("./order");
-import { BigNumber } from "ethers";
-import { time } from "@nomicfoundation/hardhat-network-helpers";
 
 describe("Multiple protocols", function () {
   let MatchingEngine;
   let matchingEngine;
   let VirtualToken;
   let virtualToken;
-  let ERC20TransferProxyTest;
   let Positioning;
+  let ChainLinkAggregator;
+  let chainlinkAggregator1;
+  let chainlinkAggregator2;
   let positioning;
   let PositioningConfig;
   let positioningConfig;
@@ -32,7 +30,8 @@ describe("Multiple protocols", function () {
   let volmexPerpPeriphery;
   let VolmexPerpView;
   let perpView;
-
+  let chainlinkBaseToken;
+  let chainlinkBaseToken2;
   let accountBalance1;
   let MarketRegistry;
   let marketRegistry;
@@ -41,33 +40,24 @@ describe("Multiple protocols", function () {
   let owner, account1, account2, account3, account4, alice, bob;
   let liquidator;
   const deadline = 87654321987654;
-  const one = ethers.constants.WeiPerEther; // 1e18
-  const two = ethers.constants.WeiPerEther.mul(BigNumber.from("2")); // 2e18
-
+  const chainlinkTokenIndex1 =
+  "57896044618658097711785492504343953926634992332820282019728792008524463585424";
+const chainlinkTokenIndex2 =
+  "57896044618658097711785492504343953926634992332820282019728792008524463585425";
   const ORDER = "0xf555eb98";
-  const traderWhiteListerRole =
-    "0x2fb89cb8e2c481f376f65f284214892b25912128a308376bc38815249326e026";
-  const STOP_LOSS_INDEX_PRICE = "0x835d5c1e";
-  const STOP_LOSS_LAST_PRICE = "0xd9ed8042";
-  const STOP_LOSS_MARK_PRICE = "0xe144c7ec";
-  const TAKE_PROFIT_INDEX_PRICE = "0x67393efa";
-  const TAKE_PROFIT_LAST_PRICE = "0xc7dc86f6";
-  const TAKE_PROFIT_MARK_PRICE = "0xb6d64e04";
-  const ZERO_ADDR = "0x0000000000000000000000000000000000000000";
   const proofHash = "0x6c00000000000000000000000000000000000000000000000000000000000000";
-  const capRatio = "250";
   this.beforeAll(async () => {
     VolmexPerpPeriphery = await ethers.getContractFactory("VolmexPerpPeriphery");
     PerpetualOracle = await ethers.getContractFactory("PerpetualOracle");
     MatchingEngine = await ethers.getContractFactory("MatchingEngine");
     VirtualToken = await ethers.getContractFactory("VirtualTokenTest");
-    ERC20TransferProxyTest = await ethers.getContractFactory("ERC20TransferProxyTest");
     Positioning = await ethers.getContractFactory("Positioning");
     PositioningConfig = await ethers.getContractFactory("PositioningConfig");
     Vault = await ethers.getContractFactory("Vault");
     VaultController = await ethers.getContractFactory("VaultController");
     MarketRegistry = await ethers.getContractFactory("MarketRegistry");
     AccountBalance = await ethers.getContractFactory("AccountBalance");
+    ChainLinkAggregator = await ethers.getContractFactory("MockV3Aggregator");
     TestERC20 = await ethers.getContractFactory("TetherToken");
     VolmexBaseToken = await ethers.getContractFactory("VolmexBaseToken");
     VolmexQuoteToken = await ethers.getContractFactory("VolmexQuoteToken");
@@ -107,102 +97,155 @@ describe("Multiple protocols", function () {
       },
     );
     await EVIV.deployed();
+    chainlinkBaseToken = await upgrades.deployProxy(
+      VolmexBaseToken,
+      [
+        "VolmexBaseToken", // nameArg
+        "VBT", // symbolArg,
+        owner.address, // priceFeedArg
+        true, // isBase
+      ],
+      {
+        initializer: "initialize",
+      },
+    );
+    chainlinkBaseToken2 = await upgrades.deployProxy(
+      VolmexBaseToken,
+      [
+        "VolmexBaseToken", // nameArg
+        "VBT", // symbolArg,
+        owner.address, // priceFeedArg
+        true, // isBase
+      ],
+      {
+        initializer: "initialize",
+      },
+    );
+
     await (await perpView.setBaseToken(EVIV.address)).wait();
     await (await perpView.setBaseToken(BVIV.address)).wait();
 
+    chainlinkAggregator1 = await ChainLinkAggregator.deploy(8, 3075000000000);
+    await chainlinkAggregator1.deployed();
+    chainlinkAggregator2 = await ChainLinkAggregator.deploy(8, 3048000000000);
+    await chainlinkAggregator2.deployed();
     perpetualOracle = await upgrades.deployProxy(
       PerpetualOracle,
       [
-        [EVIV.address, BVIV.address],
+        [
+          EVIV.address,
+          BVIV.address,
+          chainlinkBaseToken.address,
+          chainlinkBaseToken2.address,
+        ],
         [60000000, 50000000],
         [70000000, 55000000],
         [proofHash, proofHash],
+        [chainlinkTokenIndex1, chainlinkTokenIndex2],
+        [chainlinkAggregator1.address, chainlinkAggregator2.address],
         owner.address,
       ],
       { initializer: "__PerpetualOracle_init" },
     );
     await EVIV.setPriceFeed(perpetualOracle.address);
     await BVIV.setPriceFeed(perpetualOracle.address);
-    volmexQuoteToken = await upgrades.deployProxy(
-      VolmexQuoteToken,
-      [
-        "VolmexQuoteToken", // nameArg
-        "VUSDT", // symbolArg,
-        false, // isBase
-      ],
-      {
-        initializer: "initialize",
-      },
-    );
-    await volmexQuoteToken.deployed();
-    await (await perpView.setQuoteToken(volmexQuoteToken.address)).wait();
-
-    positioningConfig = await upgrades.deployProxy(PositioningConfig, [perpetualOracle.address]);
-
-    USDC = await TestERC20.deploy("100000000000000000000000", "Tether USD", "USDT", 6);
-    await USDC.deployed();
-
-    matchingEngine = await upgrades.deployProxy(MatchingEngine, [
-      owner.address,
-      perpetualOracle.address,
-    ]);
-
-    virtualToken = await upgrades.deployProxy(VirtualToken, ["VirtualToken", "VTK", false], {
+  volmexQuoteToken = await upgrades.deployProxy(
+    VolmexQuoteToken,
+    [
+      "VolmexQuoteToken", // nameArg
+      "VUSDT", // symbolArg,
+      false, // isBase
+    ],
+    {
       initializer: "initialize",
-    });
-    await virtualToken.deployed();
+    },
+  );
+  await volmexQuoteToken.deployed();
+  await (await perpView.setQuoteToken(volmexQuoteToken.address)).wait();
 
-    accountBalance1 = await upgrades.deployProxy(AccountBalance, [
-      positioningConfig.address,
-      [EVIV.address, BVIV.address],
-      matchingEngine.address,
-      owner.address,
-    ]);
-    await accountBalance1.deployed();
-    await (await perpView.setAccount(accountBalance1.address)).wait();
-    vaultController = await upgrades.deployProxy(VaultController, [
-      positioningConfig.address,
-      accountBalance1.address,
-    ]);
-    await vaultController.deployed();
-    await (await perpView.setVaultController(vaultController.address)).wait();
+  positioningConfig = await upgrades.deployProxy(PositioningConfig, [perpetualOracle.address]);
 
-    vault = await upgrades.deployProxy(Vault, [
+  USDC = await TestERC20.deploy("100000000000000000000000", "Tether USD", "USDT", 6);
+  await USDC.deployed();
+
+  matchingEngine = await upgrades.deployProxy(MatchingEngine, [
+    owner.address,
+    perpetualOracle.address,
+  ]);
+
+  virtualToken = await upgrades.deployProxy(VirtualToken, ["VirtualToken", "VTK", false], {
+    initializer: "initialize",
+  });
+  await virtualToken.deployed();
+
+  accountBalance1 = await upgrades.deployProxy(AccountBalance, [
+    positioningConfig.address,
+    [
+      EVIV.address,
+      BVIV.address,
+      chainlinkBaseToken.address,
+      chainlinkBaseToken2.address,
+    ],
+    [chainlinkTokenIndex1, chainlinkTokenIndex2],
+    matchingEngine.address,
+    owner.address,
+  ]);
+  await accountBalance1.deployed();
+  await (await perpView.setAccount(accountBalance1.address)).wait();
+  vaultController = await upgrades.deployProxy(VaultController, [
+    positioningConfig.address,
+    accountBalance1.address,
+  ]);
+  await vaultController.deployed();
+  await (await perpView.setVaultController(vaultController.address)).wait();
+
+  vault = await upgrades.deployProxy(Vault, [
+    positioningConfig.address,
+    accountBalance1.address,
+    USDC.address,
+    vaultController.address,
+  ]);
+  await vault.deployed();
+  await (await perpView.incrementVaultIndex()).wait();
+
+  (await accountBalance1.grantSettleRealizedPnlRole(vault.address)).wait();
+  (await accountBalance1.grantSettleRealizedPnlRole(vaultController.address)).wait();
+  marketRegistry = await upgrades.deployProxy(MarketRegistry, [
+    volmexQuoteToken.address,
+    [
+      EVIV.address,
+      BVIV.address,
+      chainlinkBaseToken.address,
+      chainlinkBaseToken2.address,
+    ],
+  ]);
+
+  positioning = await upgrades.deployProxy(
+    Positioning,
+    [
       positioningConfig.address,
-      accountBalance1.address,
-      USDC.address,
       vaultController.address,
-    ]);
-    await vault.deployed();
-    await (await perpView.incrementVaultIndex()).wait();
-
-    (await accountBalance1.grantSettleRealizedPnlRole(vault.address)).wait();
-    (await accountBalance1.grantSettleRealizedPnlRole(vaultController.address)).wait();
-    marketRegistry = await upgrades.deployProxy(MarketRegistry, [
-      volmexQuoteToken.address,
-      [EVIV.address, BVIV.address],
-    ]);
-
-    positioning = await upgrades.deployProxy(
-      Positioning,
+      accountBalance1.address,
+      matchingEngine.address,
+      perpetualOracle.address,
+      marketRegistry.address,
       [
-        positioningConfig.address,
-        vaultController.address,
-        accountBalance1.address,
-        matchingEngine.address,
-        perpetualOracle.address,
-        marketRegistry.address,
-        [EVIV.address, BVIV.address],
-        [owner.address, account1.address],
-        ["1000000000000000000", "1000000000000000000"],
+        EVIV.address,
+        BVIV.address,
+        chainlinkBaseToken.address,
+        chainlinkBaseToken2.address,
       ],
-      {
-        initializer: "initialize",
-      },
-    );
-    await positioning.deployed();
-    await (await perpView.setPositioning(positioning.address)).wait();
-    await (await perpView.incrementPerpIndex()).wait();
+      [chainlinkTokenIndex1, chainlinkTokenIndex2],
+      [owner.address, account1.address],
+      ["10000000000000000000", "10000000000000000000"],
+    ],
+    {
+      initializer: "initialize",
+    },
+  );
+  await positioning.deployed();
+  await (await perpView.setPositioning(positioning.address)).wait();
+  await (await perpView.incrementPerpIndex()).wait();
     await (await EVIV.setMintBurnRole(positioning.address)).wait();
     await (await BVIV.setMintBurnRole(positioning.address)).wait();
 
@@ -265,8 +308,8 @@ describe("Multiple protocols", function () {
         ORDER,
         deadline,
         account1.address,
-        Asset(EVIV.address, "1000000000000000000"),
-        Asset(volmexQuoteToken.address, "70000000000000000000"),
+        Asset(EVIV.address, "10000000000000000000"),
+        Asset(volmexQuoteToken.address, "700000000000000000000"),
         89,
         0,
         true,
@@ -275,8 +318,8 @@ describe("Multiple protocols", function () {
         ORDER,
         deadline,
         account2.address,
-        Asset(volmexQuoteToken.address, "70000000000000000000"),
-        Asset(EVIV.address, "1000000000000000000"),
+        Asset(volmexQuoteToken.address, "700000000000000000000"),
+        Asset(EVIV.address, "10000000000000000000"),
         987,
         0,
         false,
@@ -297,7 +340,7 @@ describe("Multiple protocols", function () {
       const lastMarkPriceAdded = await perpetualOracle.latestMarkPrice(0);
       expect(lastMarkPriceAdded.toString()).to.be.equal("70000000");
       const traderEVIVSize = await accountBalance1.getPositionSize(account2.address, EVIV.address);
-      expect(traderEVIVSize.toString()).to.be.equal("1000000000000000000");
+      expect(traderEVIVSize.toString()).to.be.equal("10000000000000000000");
       const traderBVIVSize = await accountBalance1.getPositionSize(account2.address, BVIV.address);
       expect(traderBVIVSize.toString()).to.be.equal("0");
     });
@@ -308,8 +351,8 @@ describe("Multiple protocols", function () {
         ORDER,
         deadline,
         account1.address,
-        Asset(BVIV.address, "1000000000000000000"),
-        Asset(volmexQuoteToken.address, "60000000000000000000"),
+        Asset(BVIV.address, "10000000000000000000"),
+        Asset(volmexQuoteToken.address, "600000000000000000000"),
         89,
         0,
         true,
@@ -318,8 +361,8 @@ describe("Multiple protocols", function () {
         ORDER,
         deadline,
         account2.address,
-        Asset(volmexQuoteToken.address, "60000000000000000000"),
-        Asset(BVIV.address, "1000000000000000000"),
+        Asset(volmexQuoteToken.address, "600000000000000000000"),
+        Asset(BVIV.address, "10000000000000000000"),
         987,
         0,
         false,
@@ -343,7 +386,7 @@ describe("Multiple protocols", function () {
         account2.address,
         BVIV.address,
       );
-      expect(traderPositionSizeBVIV.toString()).to.be.equal("1000000000000000000");
+      expect(traderPositionSizeBVIV.toString()).to.be.equal("10000000000000000000");
       const traderPositionSizeEVIV = await accountBalance1.getPositionSize(
         account2.address,
         EVIV.address,

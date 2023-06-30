@@ -1,17 +1,14 @@
-import { expect, util } from "chai";
+import { expect } from "chai";
 import { ethers, upgrades } from "hardhat";
-import { FakeContract, smock } from "@defi-wonderland/smock";
-import { BigNumber } from "ethers";
-const { Order, Asset, sign, encodeAddress } = require("../order");
-import { utils } from "ethers";
+
+const { encodeAddress } = require("../order");
 const { expectRevert, time } = require("@openzeppelin/test-helpers");
 
-describe.only("PerpetualOracle - Index Price Oracle", function () {
+describe("PerpetualOracle - Index Price Oracle", function () {
   let MatchingEngine;
   let matchingEngine;
   let VirtualToken;
   let virtualToken;
-  let ERC20TransferProxyTest;
   let Positioning;
   let positioning;
   let PositioningConfig;
@@ -41,32 +38,22 @@ describe.only("PerpetualOracle - Index Price Oracle", function () {
   let marketRegistry;
   let TestERC20;
   let USDC;
-  let owner, account1, account2, account3, alice, bob;
+  let owner, account1;
   let liquidator;
-  const deadline = 87654321987654;
   const chainlinkTokenIndex1 =
     "57896044618658097711785492504343953926634992332820282019728792008524463585424";
   const chainlinkTokenIndex2 =
     "57896044618658097711785492504343953926634992332820282019728792008524463585425";
-  const one = ethers.constants.WeiPerEther; // 1e18
-  const two = ethers.constants.WeiPerEther.mul(BigNumber.from("2")); // 2e18
   const epochTimeSeconds = 28800;
-  const ORDER = "0xf555eb98";
-  const STOP_LOSS_LIMIT_ORDER = "0xeeaed735";
-  const TAKE_PROFIT_LIMIT_ORDER = "0xe0fc7f94";
+
   const ZERO_ADDR = "0x0000000000000000000000000000000000000000";
   const proofHash = "0x6c00000000000000000000000000000000000000000000000000000000000000";
-  const initialTimeStampRole =
-    "0x8426feed6a25f9f5e06c145118f728dcb93a441fbf150f1e4c2e84c5ffd3c927";
-  const capRatio = "250";
-  const twapType = "0x1444f8cf";
 
   this.beforeAll(async () => {
     VolmexPerpPeriphery = await ethers.getContractFactory("VolmexPerpPeriphery");
     PerpetualOracle = await ethers.getContractFactory("PerpetualOracle");
     MatchingEngine = await ethers.getContractFactory("MatchingEngine");
     VirtualToken = await ethers.getContractFactory("VirtualTokenTest");
-    ERC20TransferProxyTest = await ethers.getContractFactory("ERC20TransferProxyTest");
     Positioning = await ethers.getContractFactory("Positioning");
     PositioningConfig = await ethers.getContractFactory("PositioningConfig");
     Vault = await ethers.getContractFactory("Vault");
@@ -78,7 +65,7 @@ describe.only("PerpetualOracle - Index Price Oracle", function () {
     VolmexQuoteToken = await ethers.getContractFactory("VolmexQuoteToken");
     VolmexPerpView = await ethers.getContractFactory("VolmexPerpView");
     ChainLinkAggregator = await ethers.getContractFactory("MockV3Aggregator");
-    [owner, account1, account2, account3, alice, bob] = await ethers.getSigners();
+    [owner, account1] = await ethers.getSigners();
     liquidator = encodeAddress(owner.address);
   });
 
@@ -287,7 +274,6 @@ describe.only("PerpetualOracle - Index Price Oracle", function () {
     ]);
     await volmexPerpPeriphery.deployed();
     await perpetualOracle.setIndexObservationAdder(owner.address);
-    await perpetualOracle.setIndexObservationAdder(owner.address);
   });
   describe("Epoch", () => {
     it("Should calculate average price", async () => {
@@ -346,11 +332,18 @@ describe.only("PerpetualOracle - Index Price Oracle", function () {
     it("Should fail to initialize again ", async () => {
       await expectRevert(
         perpetualOracle.__PerpetualOracle_init(
-          [volmexBaseToken.address, volmexBaseToken.address],
+          [
+            volmexBaseToken.address,
+            volmexBaseToken.address,
+            chainlinkBaseToken.address,
+            chainlinkBaseToken2.address,
+          ],
           [60000000, 60000000],
-          [60000000, 60000000],
-          [proofHash, proofHash],
-          owner.address,
+      [60000000, 60000000],
+      [proofHash, proofHash],
+      [chainlinkTokenIndex1, chainlinkTokenIndex2],
+      [chainlinkAggregator1.address, chainlinkAggregator2.address],
+      owner.address,
         ),
         "Initializable: contract is already initialized",
       );
@@ -503,7 +496,7 @@ describe.only("PerpetualOracle - Index Price Oracle", function () {
       expect(lastEpochIndexPrice.toString()).to.equal("0");
     });
   });
-  describe.only("Chainlink tokens test", async () => {
+  describe("Chainlink tokens test", async () => {
     it("Chainlink base tokens shoul be added correctly", async () => {
       const baseTokenByIndex1 = await perpetualOracle.baseTokenByIndex(chainlinkTokenIndex1);
       expect(baseTokenByIndex1).to.be.equal(chainlinkBaseToken.address);
