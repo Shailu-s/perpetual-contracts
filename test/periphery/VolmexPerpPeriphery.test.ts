@@ -159,7 +159,7 @@ describe("VolmexPerpPeriphery", function () {
           volmexBaseToken2.address,
           volmexBaseToken3.address,
         ],
-        [100000000, 100000000, 30000000000, 1800000000],
+        [100000000, 100000000, 1800000000, 30800000000],
         [100000000, 100000000],
         [proofHash, proofHash],
         [chainlinkTokenIndex1, chainlinkTokenIndex2],
@@ -269,6 +269,7 @@ describe("VolmexPerpPeriphery", function () {
     await (await perpView.setPositioning(positioning.address)).wait();
     await (await perpView.incrementPerpIndex()).wait();
     await (await volmexBaseToken.setMintBurnRole(positioning.address)).wait();
+    await (await volmexBaseToken2.setMintBurnRole(positioning.address)).wait();
     await (await volmexQuoteToken.setMintBurnRole(positioning.address)).wait();
 
     await marketRegistry.connect(owner).setMakerFeeRatio(0.0004e6);
@@ -298,6 +299,8 @@ describe("VolmexPerpPeriphery", function () {
 
     await perpetualOracle.setMarkObservationAdder(matchingEngine.address);
     await perpetualOracle.setIndexObservationAdder(owner.address);
+    await perpetualOracle.grantCacheChainlinkPriceRole(owner.address);
+    await perpetualOracle.grantCacheChainlinkPriceRole(positioning.address);
     await positioningConfig.connect(owner).setPositioning(positioning.address);
     await positioningConfig.connect(owner).setAccountBalance(accountBalance1.address);
     volmexPerpPeriphery = await upgrades.deployProxy(VolmexPerpPeriphery, [
@@ -1261,6 +1264,66 @@ describe("VolmexPerpPeriphery", function () {
       );
       expect(receipt.confirmations).not.equal(0);
     });
+    it("should fill LimitOrder for chain link supported base tokens", async () => {
+      const currentTimestamp = await time.latest();
+      await chainlinkAggregator1.updateRoundData(
+        "162863638383902",
+        "180000000000",
+        currentTimestamp.toString(),
+        currentTimestamp.toString(),
+      );
+      await perpetualOracle.cacheChainlinkPrice(
+        "57896044618658097711785492504343953926634992332820282019728792003956564819969",
+      );
+      await await USDC.transfer(account1.address, "100000000000");
+      await await USDC.transfer(account2.address, "100000000000");
+      await USDC.connect(account1).approve(volmexPerpPeriphery.address, "100000000000");
+      await USDC.connect(account2).approve(volmexPerpPeriphery.address, "100000000000");
+      (
+        await volmexPerpPeriphery.connect(account1).depositToVault(0, USDC.address, "100000000000")
+      ).wait();
+      (
+        await volmexPerpPeriphery.connect(account2).depositToVault(0, USDC.address, "100000000000")
+      ).wait();
+      await volmexPerpPeriphery.whitelistTrader(account1.address, true);
+      await volmexPerpPeriphery.whitelistTrader(account2.address, true);
+      const orderLeft = Order(
+        STOP_LOSS_MARK_PRICE,
+        deadline,
+        account1.address,
+        Asset(volmexBaseToken2.address, "10000000000000000000"),
+        Asset(virtualToken.address, "18000000000000000000000"),
+        1,
+        (19e8).toString(),
+        true,
+      );
+
+      const orderRight = Order(
+        STOP_LOSS_MARK_PRICE,
+        deadline,
+        account2.address,
+        Asset(virtualToken.address, "18000000000000000000000"),
+        Asset(volmexBaseToken2.address, "10000000000000000000"),
+        1,
+        (17e8).toString(),
+        false,
+      );
+
+      const signatureLeftLimitOrder = await getSignature(orderLeft, account1.address);
+      const signatureRightLimitOrder = await getSignature(orderRight, account2.address);
+
+      await matchingEngine.grantMatchOrders(positioning.address);
+
+      let receipt = await volmexPerpPeriphery.openPosition(
+        0,
+        orderLeft,
+        signatureLeftLimitOrder,
+        orderRight,
+        signatureRightLimitOrder,
+        owner.address,
+      );
+      expect(receipt.confirmations).not.equal(0);
+    });
 
     it("should fail to add order due to expired deadline", async () => {
       await await USDC.transfer(account1.address, "100000000000");
@@ -1750,6 +1813,67 @@ describe("VolmexPerpPeriphery", function () {
             owner.address,
           ),
       ).to.be.revertedWith("VolmexPerpPeriphery: Not relayer");
+    });
+    it("should fail to fill stop loss limit order for chain link supported base tokens", async () => {
+      const currentTimestamp = await time.latest();
+      await chainlinkAggregator1.updateRoundData(
+        "162863638383902",
+        "180000000000",
+        currentTimestamp.toString(),
+        currentTimestamp.toString(),
+      );
+      await perpetualOracle.cacheChainlinkPrice(
+        "57896044618658097711785492504343953926634992332820282019728792003956564819969",
+      );
+      await await USDC.transfer(account1.address, "100000000000");
+      await await USDC.transfer(account2.address, "100000000000");
+      await USDC.connect(account1).approve(volmexPerpPeriphery.address, "100000000000");
+      await USDC.connect(account2).approve(volmexPerpPeriphery.address, "100000000000");
+      (
+        await volmexPerpPeriphery.connect(account1).depositToVault(0, USDC.address, "100000000000")
+      ).wait();
+      (
+        await volmexPerpPeriphery.connect(account2).depositToVault(0, USDC.address, "100000000000")
+      ).wait();
+      await volmexPerpPeriphery.whitelistTrader(account1.address, true);
+      await volmexPerpPeriphery.whitelistTrader(account2.address, true);
+      const orderLeft = Order(
+        STOP_LOSS_MARK_PRICE,
+        deadline,
+        account1.address,
+        Asset(volmexBaseToken2.address, "10000000000000000000"),
+        Asset(virtualToken.address, "18000000000000000000000"),
+        1,
+        (17e8).toString(),
+        true,
+      );
+
+      const orderRight = Order(
+        STOP_LOSS_MARK_PRICE,
+        deadline,
+        account2.address,
+        Asset(virtualToken.address, "18000000000000000000000"),
+        Asset(volmexBaseToken2.address, "10000000000000000000"),
+        1,
+        (17e8).toString(),
+        false,
+      );
+
+      const signatureLeftLimitOrder = await getSignature(orderLeft, account1.address);
+      const signatureRightLimitOrder = await getSignature(orderRight, account2.address);
+
+      await matchingEngine.grantMatchOrders(positioning.address);
+
+      await expect(
+        volmexPerpPeriphery.openPosition(
+          0,
+          orderLeft,
+          signatureLeftLimitOrder,
+          orderRight,
+          signatureRightLimitOrder,
+          owner.address,
+        ),
+      ).to.be.revertedWith("Periphery: left order price verification failed");
     });
     it("should fail to fill LimitOrder: Sell Stop Limit Order Trigger Price Not Matched", async () => {
       const orderLeft = Order(
