@@ -43,9 +43,9 @@ describe("ParentToken", function () {
       [
         [
           volmexBaseToken.address,
-          volmexBaseToken1.address,
-          volmexBaseToken2.address,
-          volmexBaseToken3.address,
+          volmexBaseToken.address,
+          volmexBaseToken.address,
+          volmexBaseToken.address,
         ],
         [100000000, 100000000, 30000000000, 1800000000],
         [100000000, 100000000],

@@ -501,6 +501,7 @@ describe("Positioning", function () {
               accountBalance1.address,
               matchingEngine.address,
               perpetualOracle.address,
+              marketRegistry.address,
               [
                 volmexBaseToken.address,
                 volmexBaseToken1.address,
