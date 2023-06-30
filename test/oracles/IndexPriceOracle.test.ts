@@ -500,7 +500,6 @@ describe("PerpetualOracle - Index Price Oracle", function () {
   });
   describe("Chainlink tokens test", async () => {
     it("Chainlink base tokens shoul be added correctly", async () => {
-      const underlyingindex1 = await positioning.un;
       const baseTokenByIndex1 = await perpetualOracle.baseTokenByIndex(chainlinkTokenIndex1);
       expect(baseTokenByIndex1).to.be.equal(chainlinkBaseToken.address);
       const aggregatorByIndex1 = await perpetualOracle.chainlinkAggregatorByIndex(
@@ -679,6 +678,40 @@ describe("PerpetualOracle - Index Price Oracle", function () {
         parseInt(currentTimestamp) + 57600,
       );
       expect(currentEpochPrice2.toString()).to.be.equal("350000000000");
+    });
+    it("should add baseToken", async () => {
+      const newTokenIndex =
+        "57896044618658097711785492504343953926634992332820282019728792003956564819980";
+      const chainlinkBaseToken5 = await upgrades.deployProxy(
+        VolmexBaseToken,
+        [
+          "VolmexBaseToken", // nameArg
+          "VBT", // symbolArg,
+          owner.address, // priceFeedArg
+          true, // isBase
+        ],
+        {
+          initializer: "initialize",
+        },
+      );
+      await perpetualOracle.addChainlinkBaseToken(
+        newTokenIndex,
+        chainlinkAggregator1.address,
+        chainlinkBaseToken5.address,
+      );
+      const baseTokenByIndex1 = await perpetualOracle.baseTokenByIndex(newTokenIndex);
+      expect(baseTokenByIndex1).to.be.equal(chainlinkBaseToken5.address);
+      const aggregatorByIndex1 = await perpetualOracle.chainlinkAggregatorByIndex(newTokenIndex);
+      expect(aggregatorByIndex1).to.be.equal(chainlinkAggregator1.address);
+    });
+    it("should fail to add base token", async () => {
+      await expect(
+        perpetualOracle.addChainlinkBaseToken(
+          "57896044618658097711785492504343953926634992332820282019728792003956564819967",
+          chainlinkAggregator1.address,
+          volmexBaseToken.address,
+        ),
+      ).to.be.revertedWith("PerpOracle: invalid chainlink base token index");
     });
   });
 });
