@@ -179,6 +179,10 @@ describe("PerpetualOracle - Index Price Oracle", function () {
       owner.address,
     ]);
     await accountBalance1.deployed();
+    await accountBalance1.grantAddUnderlyingIndexRole(owner.address);
+    await accountBalance1.grantAddUnderlyingIndexRole(perpetualOracle.address);
+    await accountBalance1.grantSigmaVivRole(perpetualOracle.address);
+
     await (await perpView.setAccount(accountBalance1.address)).wait();
     vaultController = await upgrades.deployProxy(VaultController, [
       positioningConfig.address,
@@ -238,11 +242,11 @@ describe("PerpetualOracle - Index Price Oracle", function () {
     await (await perpView.incrementPerpIndex()).wait();
     await (await volmexBaseToken.setMintBurnRole(positioning.address)).wait();
     await (await volmexQuoteToken.setMintBurnRole(positioning.address)).wait();
-
+    await marketRegistry.grantAddBaseTokenRole(owner.address);
     await marketRegistry.connect(owner).addBaseToken(volmexBaseToken.address);
     await marketRegistry.connect(owner).setMakerFeeRatio(0.0004e6);
     await marketRegistry.connect(owner).setTakerFeeRatio(0.0009e6);
-
+    await marketRegistry.grantAddBaseTokenRole(perpetualOracle.address);
     await accountBalance1.connect(owner).setPositioning(positioning.address);
 
     await vault.connect(owner).setPositioning(positioning.address);
@@ -263,6 +267,8 @@ describe("PerpetualOracle - Index Price Oracle", function () {
     await (await matchingEngine.grantMatchOrders(positioning.address)).wait();
     await perpetualOracle.grantSmaIntervalRole(positioningConfig.address);
     await perpetualOracle.setPositioning(positioning.address);
+    await perpetualOracle.setAccountBalance(accountBalance1.address);
+    await perpetualOracle.setMarketRegistry(marketRegistry.address);
     await positioningConfig.setTwapInterval(28800);
     await perpetualOracle.grantCacheChainlinkPriceRole(owner.address);
     volmexPerpPeriphery = await upgrades.deployProxy(VolmexPerpPeriphery, [
@@ -698,11 +704,16 @@ describe("PerpetualOracle - Index Price Oracle", function () {
         newTokenIndex,
         chainlinkAggregator1.address,
         chainlinkBaseToken5.address,
+        "5100000",
       );
       const baseTokenByIndex1 = await perpetualOracle.baseTokenByIndex(newTokenIndex);
       expect(baseTokenByIndex1).to.be.equal(chainlinkBaseToken5.address);
       const aggregatorByIndex1 = await perpetualOracle.chainlinkAggregatorByIndex(newTokenIndex);
       expect(aggregatorByIndex1).to.be.equal(chainlinkAggregator1.address);
+      const sigmaViv = await accountBalance1.sigmaVolmexIvs(
+        "57896044618658097711785492504343953926634992332820282019728792003956564819980",
+      );
+      expect(sigmaViv.toString()).to.be.equal("5100000");
     });
     it("should fail to add base token", async () => {
       await expect(
@@ -710,6 +721,7 @@ describe("PerpetualOracle - Index Price Oracle", function () {
           "57896044618658097711785492504343953926634992332820282019728792003956564819967",
           chainlinkAggregator1.address,
           volmexBaseToken.address,
+          4710000,
         ),
       ).to.be.revertedWith("PerpOracle: invalid chainlink base token index");
     });

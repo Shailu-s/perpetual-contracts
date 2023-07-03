@@ -38,7 +38,7 @@ contract MarketRegistry is IMarketRegistry, PositioningCallee, MarketRegistrySto
 
     function grantAddBaseTokenRole(address baseTokenAdder) external {
         _requireMarketRegistryAdmin();
-        _grantRole(ADD_BASE_TOKEN,baseTokenAdder);
+        _grantRole(ADD_BASE_TOKEN, baseTokenAdder);
     }
     
     /// @inheritdoc IMarketRegistry
