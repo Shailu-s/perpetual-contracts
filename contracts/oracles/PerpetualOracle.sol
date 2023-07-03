@@ -95,7 +95,7 @@ contract PerpetualOracle is AccessControlUpgradeable, IPerpetualOracle {
         _requireOracleAdmin();
         marketRegistry = _marketRegistry;
     }
-    
+
     function setMarkObservationAdder(address _adder) external virtual {
         _requireOracleAdmin();
         require(_adder != address(0), "PerpOracle: zero address");
@@ -171,9 +171,13 @@ contract PerpetualOracle is AccessControlUpgradeable, IPerpetualOracle {
         emit ChainlinkPriceAdded(_baseTokenIndex, price10x6, block.timestamp);
     }
 
-    function addChainlinkBaseToken(uint256 _baseTokenIndex, AggregatorV3Interface _chainlinkAggregatorArg, address _baseTokenArgs) external virtual {
+    function addChainlinkBaseToken(uint256 _baseTokenIndex, AggregatorV3Interface _chainlinkAggregatorArg, address _baseTokenArgs, uint256 _sigmaViv) external virtual {
         _requireOracleAdmin();
         require(_isChainlinkToken(_baseTokenIndex), "PerpOracle: invalid chainlink base token index");
+        positioning.setUnderlyingPriceIndex(_baseTokenArgs, _baseTokenIndex);
+        accountBalance.setUnderlyingPriceIndex(_baseTokenArgs, _baseTokenIndex);
+        accountBalance.setSigmaViv(_baseTokenIndex,_sigmaViv);
+        marketRegistry.addBaseToken(_baseTokenArgs);
         indexByBaseToken[_baseTokenArgs] = _baseTokenIndex;
         baseTokenByIndex[_baseTokenIndex] = _baseTokenArgs;
         chainlinkAggregatorByIndex[_baseTokenIndex] = _chainlinkAggregatorArg;
