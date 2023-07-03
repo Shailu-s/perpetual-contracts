@@ -8,6 +8,8 @@ import { IPerpetualOracle } from "../interfaces/IPerpetualOracle.sol";
 import { LibSafeCastUint } from "../libs/LibSafeCastUint.sol";
 import { IPositioning } from "../interfaces/IPositioning.sol";
 import { LibPerpMath } from "../libs/LibPerpMath.sol";
+import { IMarketRegistry } from "../interfaces/IMarketRegistry.sol";
+import { IAccountBalance } from "../interfaces/IAccountBalance.sol";
 
 contract PerpetualOracle is AccessControlUpgradeable, IPerpetualOracle {
     using LibSafeCastUint for uint256;
@@ -42,6 +44,8 @@ contract PerpetualOracle is AccessControlUpgradeable, IPerpetualOracle {
     uint256 public markSmInterval;
     uint256 public fundingPeriod;
     IPositioning public positioning;
+    IMarketRegistry public marketRegistry;
+    IAccountBalance public accountBalance;
 
     function __PerpetualOracle_init(
         address[4] calldata _baseToken, //NOTE: index 2 and 3 is of chainlink base token
