@@ -24,8 +24,13 @@ describe("PerpetualOracle - Last Price Oracle", function () {
   let PerpetualOracle;
   let perpetualOracle;
   let VolmexBaseToken;
+  let ChainLinkAggregator;
+  let chainlinkAggregator1;
+  let chainlinkAggregator2;
   let volmexBaseToken;
   let volmexBaseToken1;
+  let volmexBaseToken2;
+  let volmexBaseToken3;
   let VolmexQuoteToken;
   let volmexQuoteToken;
   let VolmexPerpPeriphery;
@@ -49,6 +54,10 @@ describe("PerpetualOracle - Last Price Oracle", function () {
   const TAKE_PROFIT_LIMIT_ORDER = "0xe0fc7f94";
   const ZERO_ADDR = "0x0000000000000000000000000000000000000000";
   const proofHash = "0x6c00000000000000000000000000000000000000000000000000000000000000";
+  const chainlinkTokenIndex1 =
+    "57896044618658097711785492504343953926634992332820282019728792008524463585424";
+  const chainlinkTokenIndex2 =
+    "57896044618658097711785492504343953926634992332820282019728792008524463585425";
   const initialTimeStampRole =
     "0x8426feed6a25f9f5e06c145118f728dcb93a441fbf150f1e4c2e84c5ffd3c927";
   const capRatio = "250";
@@ -70,6 +79,8 @@ describe("PerpetualOracle - Last Price Oracle", function () {
     VolmexBaseToken = await ethers.getContractFactory("VolmexBaseToken");
     VolmexQuoteToken = await ethers.getContractFactory("VolmexQuoteToken");
     VolmexPerpView = await ethers.getContractFactory("VolmexPerpView");
+    ChainLinkAggregator = await ethers.getContractFactory("MockV3Aggregator");
+
     [owner, account1, account2, account3, alice, bob] = await ethers.getSigners();
     liquidator = encodeAddress(owner.address);
   });
@@ -108,13 +119,52 @@ describe("PerpetualOracle - Last Price Oracle", function () {
     await volmexBaseToken.deployed();
     await (await perpView.setBaseToken(volmexBaseToken.address)).wait();
 
+    volmexBaseToken2 = await upgrades.deployProxy(
+      VolmexBaseToken,
+      [
+        "VolmexBaseToken", // nameArg
+        "VBT", // symbolArg,
+        owner.address, // priceFeedArg
+        true, // isBase
+      ],
+      {
+        initializer: "initialize",
+      },
+    );
+    await volmexBaseToken2.deployed();
+    await (await perpView.setBaseToken(volmexBaseToken2.address)).wait();
+    volmexBaseToken3 = await upgrades.deployProxy(
+      VolmexBaseToken,
+      [
+        "VolmexBaseToken", // nameArg
+        "VBT", // symbolArg,
+        owner.address, // priceFeedArg
+        true, // isBase
+      ],
+      {
+        initializer: "initialize",
+      },
+    );
+    await volmexBaseToken3.deployed();
+    await (await perpView.setBaseToken(volmexBaseToken3.address)).wait();
+    chainlinkAggregator1 = await ChainLinkAggregator.deploy(8, 3075000000000);
+    await chainlinkAggregator1.deployed();
+    chainlinkAggregator2 = await ChainLinkAggregator.deploy(8, 180000000000);
+    await chainlinkAggregator2.deployed();
     perpetualOracle = await upgrades.deployProxy(
       PerpetualOracle,
       [
-        [volmexBaseToken.address, volmexBaseToken1.address],
-        [60000000, 60000000],
+        [
+          volmexBaseToken.address,
+          volmexBaseToken1.address,
+          volmexBaseToken2.address,
+          volmexBaseToken3.address,
+        ],
+        [60000000, 60000000, 30000000000, 1800000000],
         [60000000, 60000000],
         [proofHash, proofHash],
+        [chainlinkTokenIndex1, chainlinkTokenIndex2],
+        [chainlinkAggregator1.address, chainlinkAggregator2.address],
         owner.address,
       ],
       { initializer: "__PerpetualOracle_init" },
@@ -152,7 +202,13 @@ describe("PerpetualOracle - Last Price Oracle", function () {
 
     accountBalance1 = await upgrades.deployProxy(AccountBalance, [
       positioningConfig.address,
-      [volmexBaseToken.address, volmexBaseToken1.address],
+      [
+        volmexBaseToken.address,
+        volmexBaseToken1.address,
+        volmexBaseToken2.address,
+        volmexBaseToken3.address,
+      ],
+      [chainlinkTokenIndex1, chainlinkTokenIndex2],
       matchingEngine.address,
       owner.address,
     ]);
@@ -178,7 +234,12 @@ describe("PerpetualOracle - Last Price Oracle", function () {
     (await accountBalance1.grantSettleRealizedPnlRole(vaultController.address)).wait();
     marketRegistry = await upgrades.deployProxy(MarketRegistry, [
       volmexQuoteToken.address,
-      [volmexBaseToken.address, volmexBaseToken1.address],
+      [
+        volmexBaseToken.address,
+        volmexBaseToken1.address,
+        volmexBaseToken2.address,
+        volmexBaseToken3.address,
+      ],
     ]);
     positioning = await upgrades.deployProxy(
       Positioning,
@@ -189,7 +250,13 @@ describe("PerpetualOracle - Last Price Oracle", function () {
         matchingEngine.address,
         perpetualOracle.address,
         marketRegistry.address,
-        [volmexBaseToken.address, volmexBaseToken1.address],
+        [
+          volmexBaseToken.address,
+          volmexBaseToken1.address,
+          volmexBaseToken2.address,
+          volmexBaseToken3.address,
+        ],
+        [chainlinkTokenIndex1, chainlinkTokenIndex2],
         [owner.address, account1.address],
         ["10000000000000000000", "10000000000000000000"],
       ],
@@ -314,10 +381,17 @@ describe("PerpetualOracle - Last Price Oracle", function () {
       let receipt = await upgrades.deployProxy(
         PerpetualOracle,
         [
-          [volmexBaseToken.address, volmexBaseToken.address],
-          [60000000, 60000000],
+          [
+            volmexBaseToken.address,
+            volmexBaseToken1.address,
+            volmexBaseToken2.address,
+            volmexBaseToken3.address,
+          ],
+          [60000000, 60000000, 30000000000, 1800000000],
           [60000000, 60000000],
           [proofHash, proofHash],
+          [chainlinkTokenIndex1, chainlinkTokenIndex2],
+          [chainlinkAggregator1.address, chainlinkAggregator2.address],
           owner.address,
         ],
         { initializer: "__PerpetualOracle_init" },
@@ -328,10 +402,17 @@ describe("PerpetualOracle - Last Price Oracle", function () {
       let receipt = await upgrades.deployProxy(
         PerpetualOracle,
         [
-          [volmexBaseToken.address, volmexBaseToken.address],
-          [10000000, 10000000],
-          [10000000, 10000000],
+          [
+            volmexBaseToken.address,
+            volmexBaseToken1.address,
+            volmexBaseToken2.address,
+            volmexBaseToken3.address,
+          ],
+          [60000000, 60000000, 30000000000, 1800000000],
+          [60000000, 60000000],
           [proofHash, proofHash],
+          [chainlinkTokenIndex1, chainlinkTokenIndex2],
+          [chainlinkAggregator1.address, chainlinkAggregator2.address],
           owner.address,
         ],
         { initializer: "__PerpetualOracle_init" },
@@ -339,10 +420,17 @@ describe("PerpetualOracle - Last Price Oracle", function () {
       expect(receipt.confirmations).not.equal(0);
       await expect(
         receipt.__PerpetualOracle_init(
-          [volmexBaseToken.address, volmexBaseToken.address],
-          [10000000, 10000000],
-          [10000000, 10000000],
+          [
+            volmexBaseToken.address,
+            volmexBaseToken1.address,
+            volmexBaseToken2.address,
+            volmexBaseToken3.address,
+          ],
+          [60000000, 60000000, 30000000000, 1800000000],
+          [60000000, 60000000],
           [proofHash, proofHash],
+          [chainlinkTokenIndex1, chainlinkTokenIndex2],
+          [chainlinkAggregator1.address, chainlinkAggregator2.address],
           owner.address,
         ),
       ).to.be.revertedWith("Initializable: contract is already initialized");

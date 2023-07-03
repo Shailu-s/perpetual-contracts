@@ -62,6 +62,7 @@ contract PerpetualOracle is AccessControlUpgradeable, IPerpetualOracle {
             lastPriceObservations[_chainlinkBaseTokenIndex[indexCount]][0] = LastPriceObservation({ timestamp: block.timestamp, lastPrice: _lastPrices[indexCount+2] });
             chainlinkAggregatorByIndex[_chainlinkBaseTokenIndex[indexCount]] = _chainlinkAggregators[indexCount];
             lastestMarkPrice[indexCount] = _lastPrices[indexCount];
+            lastestMarkPrice[_chainlinkBaseTokenIndex[indexCount]] = _lastPrices[indexCount + 2];
             ++lastPriceTotalObservations[indexCount];
             ++lastPriceTotalObservations[_chainlinkBaseTokenIndex[indexCount]];
 

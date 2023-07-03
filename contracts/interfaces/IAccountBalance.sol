@@ -35,7 +35,7 @@ interface IAccountBalance {
     /// @param trader The address of the trader
     /// @return pnl Settled owedRealizedPnl
     function settleOwedRealizedPnl(address trader) external returns (int256 pnl);
-
+   
     /// @notice Update trader Twap premium info
     /// @dev Only used by `ClearingHouse` contract
     /// @param trader The address of trader
@@ -66,6 +66,8 @@ interface IAccountBalance {
 
     function setSmInterval(uint256 smInterval) external;
 
+    function setSigmaViv(uint256 _baseTokenIndex,uint256 _sigmaViv) external;
+    
     function setSmIntervalLiquidation(uint256 smIntervalLiquidation) external;
 
     /// @notice Get liquidatable position size of trader's baseToken market

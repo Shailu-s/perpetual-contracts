@@ -20,9 +20,14 @@ describe("Periodic Funding payment", function () {
   let AccountBalance;
   let PerpetualOracle;
   let perpetualOracle;
+  let ChainLinkAggregator;
+  let chainlinkAggregator1;
+  let chainlinkAggregator2;
   let VolmexBaseToken;
   let volmexBaseToken;
   let volmexBaseToken1;
+  let volmexBaseToken2;
+  let volmexBaseToken3;
   let VolmexQuoteToken;
   let volmexQuoteToken;
   let VolmexPerpPeriphery;
@@ -48,6 +53,10 @@ describe("Periodic Funding payment", function () {
   const ZERO_ADDR = "0x0000000000000000000000000000000000000000";
   const capRatio = "400000000";
   const proofHash = "0x6c00000000000000000000000000000000000000000000000000000000000000";
+  const chainlinkTokenIndex1 =
+    "57896044618658097711785492504343953926634992332820282019728792003956564819969";
+  const chainlinkTokenIndex2 =
+    "57896044618658097711785492504343953926634992332820282019728792003956564819970";
   async function getSignature(orderObj, signer) {
     return sign(orderObj, signer, positioning.address);
   }
@@ -67,6 +76,7 @@ describe("Periodic Funding payment", function () {
     VolmexBaseToken = await ethers.getContractFactory("VolmexBaseToken");
     VolmexQuoteToken = await ethers.getContractFactory("VolmexQuoteToken");
     VolmexPerpView = await ethers.getContractFactory("VolmexPerpView");
+    ChainLinkAggregator = await ethers.getContractFactory("MockV3Aggregator");
     [owner, account1, account2, account3, account4, alice, bob] = await ethers.getSigners();
     liquidator = encodeAddress(owner.address);
   });
@@ -103,20 +113,58 @@ describe("Periodic Funding payment", function () {
         initializer: "initialize",
       },
     );
-    await volmexBaseToken.deployed();
+    await volmexBaseToken1.deployed();
+    volmexBaseToken2 = await upgrades.deployProxy(
+      VolmexBaseToken,
+      [
+        "VolmexBaseToken", // nameArg
+        "VBT", // symbolArg,
+        owner.address, // priceFeedArg
+        true, // isBase
+      ],
+      {
+        initializer: "initialize",
+      },
+    );
+    await volmexBaseToken2.deployed();
+    volmexBaseToken3 = await upgrades.deployProxy(
+      VolmexBaseToken,
+      [
+        "VolmexBaseToken", // nameArg
+        "VBT", // symbolArg,
+        owner.address, // priceFeedArg
+        true, // isBase
+      ],
+      {
+        initializer: "initialize",
+      },
+    );
+    await volmexBaseToken3.deployed();
+    chainlinkAggregator1 = await ChainLinkAggregator.deploy(8, 180000000000);
+    await chainlinkAggregator1.deployed();
+    chainlinkAggregator2 = await ChainLinkAggregator.deploy(8, 3750000000000);
+    await chainlinkAggregator2.deployed();
     perpetualOracle = await upgrades.deployProxy(
       PerpetualOracle,
       [
-        [volmexBaseToken.address, volmexBaseToken1.address],
-        [70000000, 60000000],
+        [
+          volmexBaseToken.address,
+          volmexBaseToken1.address,
+          volmexBaseToken2.address,
+          volmexBaseToken3.address,
+        ],
+        [70000000, 60000000, 1800000000, 30650000000],
         [75000000, 50000000],
         [proofHash, proofHash],
+        [chainlinkTokenIndex1, chainlinkTokenIndex2],
+        [chainlinkAggregator1.address, chainlinkAggregator2.address],
         owner.address,
       ],
       { initializer: "__PerpetualOracle_init" },
     );
 
     await volmexBaseToken.setPriceFeed(perpetualOracle.address);
+    await volmexBaseToken2.setPriceFeed(perpetualOracle.address);
     volmexQuoteToken = await upgrades.deployProxy(
       VolmexQuoteToken,
       [
@@ -150,7 +198,13 @@ describe("Periodic Funding payment", function () {
 
     accountBalance1 = await upgrades.deployProxy(AccountBalance, [
       positioningConfig.address,
-      [volmexBaseToken.address, volmexBaseToken1.address],
+      [
+        volmexBaseToken.address,
+        volmexBaseToken1.address,
+        volmexBaseToken2.address,
+        volmexBaseToken3.address,
+      ],
+      [chainlinkTokenIndex1, chainlinkTokenIndex2],
       matchingEngine.address,
       owner.address,
     ]);
@@ -177,7 +231,12 @@ describe("Periodic Funding payment", function () {
     (await accountBalance1.grantSettleRealizedPnlRole(vaultController.address)).wait();
     marketRegistry = await upgrades.deployProxy(MarketRegistry, [
       volmexQuoteToken.address,
-      [volmexBaseToken.address, volmexBaseToken1.address],
+      [
+        volmexBaseToken.address,
+        volmexBaseToken1.address,
+        volmexBaseToken2.address,
+        volmexBaseToken3.address,
+      ],
     ]);
     positioning = await upgrades.deployProxy(
       Positioning,
@@ -188,7 +247,13 @@ describe("Periodic Funding payment", function () {
         matchingEngine.address,
         perpetualOracle.address,
         marketRegistry.address,
-        [volmexBaseToken.address, volmexBaseToken1.address],
+        [
+          volmexBaseToken.address,
+          volmexBaseToken1.address,
+          volmexBaseToken2.address,
+          volmexBaseToken3.address,
+        ],
+        [chainlinkTokenIndex1, chainlinkTokenIndex2],
         [owner.address, account1.address],
         ["10000000000000000000", "10000000000000000000"],
       ],
@@ -201,6 +266,8 @@ describe("Periodic Funding payment", function () {
     await (await perpView.setPositioning(positioning.address)).wait();
     await (await perpView.incrementPerpIndex()).wait();
     await (await volmexBaseToken.setMintBurnRole(positioning.address)).wait();
+    await (await volmexBaseToken2.setMintBurnRole(positioning.address)).wait();
+
     await (await volmexQuoteToken.setMintBurnRole(positioning.address)).wait();
 
     await marketRegistry.connect(owner).addBaseToken(volmexBaseToken.address);
@@ -275,6 +342,8 @@ describe("Periodic Funding payment", function () {
         .connect(bob)
         .depositToVault(index, USDC.address, "1000000000000000000000000")
     ).wait();
+    await perpetualOracle.grantCacheChainlinkPriceRole(owner.address);
+    await perpetualOracle.grantCacheChainlinkPriceRole(positioning.address);
     await perpetualOracle.setIndexObservationAdder(owner.address);
     for (let i = 0; i < 10; i++) {
       await perpetualOracle.addIndexObservations([0], [75000000], [proofHash]);
@@ -1349,6 +1418,256 @@ describe("Periodic Funding payment", function () {
       expect(fundingPayment10.toString()).to.not.equal(fundingPayment12.toString());
     });
   });
+  describe(" Periodic funding test for Chainlink integrations", () => {
+    it("funding payment should not change before 8 hours", async () => {
+      await perpetualOracle.grantCacheChainlinkPriceRole(owner.address);
+      const currentTimestamp = await time.latest();
+      await chainlinkAggregator1.updateRoundData(
+        "162863638383902",
+        "3186200000000",
+        currentTimestamp.toString(),
+        currentTimestamp.toString(),
+      );
+      await perpetualOracle.cacheChainlinkPrice(
+        "57896044618658097711785492504343953926634992332820282019728792003956564819969",
+      );
+      const orderLeft = Order(
+        ORDER,
+        87654321987654,
+        account1.address,
+        Asset(volmexBaseToken2.address, "10000000000000000000"),
+        Asset(virtualToken.address, "18000000000000000000000"),
+        1,
+        0,
+        true,
+      );
+
+      const orderRight = Order(
+        ORDER,
+        87654321987654,
+        account2.address,
+        Asset(virtualToken.address, "18000000000000000000000"),
+        Asset(volmexBaseToken2.address, "10000000000000000000"),
+        2,
+        0,
+        false,
+      );
+
+      const signatureLeft = await getSignature(orderLeft, account1.address);
+      const signatureRight = await getSignature(orderRight, account2.address);
+
+      await volmexPerpPeriphery.openPosition(
+        index,
+        orderLeft,
+        signatureLeft,
+        orderRight,
+        signatureRight,
+        liquidator,
+      );
+
+      const accountInfo1 = await accountBalance1.getAccountInfo(
+        account1.address,
+        volmexBaseToken2.address,
+      );
+
+      for (let i = 34; i < 38; i++) {
+        const orderLeft = Order(
+          ORDER,
+          deadline,
+          alice.address,
+          Asset(volmexBaseToken2.address, "10000000000000000000"),
+          Asset(virtualToken.address, "100000000000000000000"),
+          i,
+          (1e6).toString(),
+          true,
+        );
+
+        const orderRight = Order(
+          ORDER,
+          deadline,
+          bob.address,
+          Asset(virtualToken.address, "100000000000000000000"),
+          Asset(volmexBaseToken2.address, "10000000000000000000"),
+          i + 1,
+          (1e6).toString(),
+          false,
+        );
+
+        const signatureLeft = await getSignature(orderLeft, alice.address);
+        const signatureRight = await getSignature(orderRight, bob.address);
+        const tr = await volmexPerpPeriphery.openPosition(
+          index,
+          orderLeft,
+          signatureLeft,
+          orderRight,
+          signatureRight,
+          liquidator,
+        );
+      }
+      const fundingPayment1 = await positioning.getPendingFundingPayment(
+        account1.address,
+        volmexBaseToken2.address,
+      );
+      const fundingPayment2 = await positioning.getPendingFundingPayment(
+        account2.address,
+        volmexBaseToken2.address,
+      );
+
+      await time.increase(20000);
+      await perpetualOracle.cacheChainlinkPrice(
+        "57896044618658097711785492504343953926634992332820282019728792003956564819969",
+      );
+      const stamp = await time.latest();
+      const fundingPayment3 = await positioning.getPendingFundingPayment(
+        account1.address,
+        volmexBaseToken2.address,
+      );
+      const fundingPayment4 = await positioning.getPendingFundingPayment(
+        account2.address,
+        volmexBaseToken2.address,
+      );
+
+      expect(fundingPayment1.toString()).to.equal(fundingPayment3.toString());
+      expect(fundingPayment2.toString()).to.equal(fundingPayment4.toString());
+
+      const accountInfo2 = await accountBalance1.getAccountInfo(
+        account1.address,
+        volmexBaseToken2.address,
+      );
+
+      expect(accountInfo2.lastTwPremiumGrowthGlobal.toString()).to.equal(
+        accountInfo1.lastTwPremiumGrowthGlobal.toString(),
+      );
+    });
+    it("Funding should occur after 8 hours", async () => {
+      await perpetualOracle.grantCacheChainlinkPriceRole(owner.address);
+
+      const currentTimestamp = await time.latest();
+      await chainlinkAggregator1.updateRoundData(
+        "162863638383902",
+        "180000000000",
+        currentTimestamp.toString(),
+        currentTimestamp.toString(),
+      );
+      await perpetualOracle.cacheChainlinkPrice(
+        "57896044618658097711785492504343953926634992332820282019728792003956564819969",
+      );
+      const orderLeft = Order(
+        ORDER,
+        87654321987654,
+        account1.address,
+        Asset(volmexBaseToken2.address, "10000000000000000000"),
+        Asset(virtualToken.address, "18000000000000000000000"),
+        1,
+        0,
+        true,
+      );
+
+      const orderRight = Order(
+        ORDER,
+        87654321987654,
+        account2.address,
+        Asset(virtualToken.address, "18000000000000000000000"),
+        Asset(volmexBaseToken2.address, "10000000000000000000"),
+        2,
+        0,
+        false,
+      );
+
+      const signatureLeft = await getSignature(orderLeft, account1.address);
+      const signatureRight = await getSignature(orderRight, account2.address);
+
+      await volmexPerpPeriphery.openPosition(
+        index,
+        orderLeft,
+        signatureLeft,
+        orderRight,
+        signatureRight,
+        liquidator,
+      );
+
+      const accountInfo1 = await accountBalance1.getAccountInfo(
+        account1.address,
+        volmexBaseToken2.address,
+      );
+
+      for (let i = 34; i < 38; i++) {
+        const orderLeft = Order(
+          ORDER,
+          deadline,
+          alice.address,
+          Asset(volmexBaseToken2.address, "10000000000000000000"),
+          Asset(virtualToken.address, "100000000000000000000"),
+          i,
+          (1e6).toString(),
+          true,
+        );
+
+        const orderRight = Order(
+          ORDER,
+          deadline,
+          bob.address,
+          Asset(virtualToken.address, "100000000000000000000"),
+          Asset(volmexBaseToken2.address, "10000000000000000000"),
+          i + 1,
+          (1e6).toString(),
+          false,
+        );
+
+        const signatureLeft = await getSignature(orderLeft, alice.address);
+        const signatureRight = await getSignature(orderRight, bob.address);
+        const tr = await volmexPerpPeriphery.openPosition(
+          index,
+          orderLeft,
+          signatureLeft,
+          orderRight,
+          signatureRight,
+          liquidator,
+        );
+      }
+      const fundingPayment1 = await positioning.getPendingFundingPayment(
+        account1.address,
+        volmexBaseToken2.address,
+      );
+      const fundingPayment2 = await positioning.getPendingFundingPayment(
+        account2.address,
+        volmexBaseToken2.address,
+      );
+
+      await time.increase(20000);
+      await chainlinkAggregator1.updateRoundData(
+        "162863638383904",
+        "190000000000",
+        currentTimestamp + 20000,
+        currentTimestamp + 20000,
+      );
+      await perpetualOracle.cacheChainlinkPrice(
+        "57896044618658097711785492504343953926634992332820282019728792003956564819969",
+      );
+      await time.increase(10000);
+      await chainlinkAggregator1.updateRoundData(
+        "162863638383905",
+        "190000000000",
+        currentTimestamp.toString() + 30000,
+        currentTimestamp.toString() + 30000,
+      );
+      await perpetualOracle.cacheChainlinkPrice(
+        "57896044618658097711785492504343953926634992332820282019728792003956564819969",
+      );
+      const stamp = await time.latest();
+      const fundingPayment3 = await positioning.getPendingFundingPayment(
+        account1.address,
+        volmexBaseToken2.address,
+      );
+      const fundingPayment4 = await positioning.getPendingFundingPayment(
+        account2.address,
+        volmexBaseToken2.address,
+      );
+
+      expect(fundingPayment1.toString()).to.not.equal(fundingPayment3.toString());
+      expect(fundingPayment2.toString()).to.not.equal(fundingPayment4.toString());
+    });
+  });
 
   describe("funding payment test with numbers", () => {
     let MatchingEngine;
@@ -1367,9 +1686,14 @@ describe("Periodic Funding payment", function () {
     let AccountBalance;
     let PerpetualOracle;
     let perpetualOracle;
+    let ChainLinkAggregator;
+    let chainlinkAggregator1;
+    let chainlinkAggregator2;
     let VolmexBaseToken;
     let volmexBaseToken;
     let volmexBaseToken1;
+    let volmexBaseToken2;
+    let volmexBaseToken3;
     let VolmexQuoteToken;
     let volmexQuoteToken;
     let VolmexPerpPeriphery;
@@ -1394,6 +1718,10 @@ describe("Periodic Funding payment", function () {
     const ZERO_ADDR = "0x0000000000000000000000000000000000000000";
     const capRatio = "400000000";
     const proofHash = "0x6c00000000000000000000000000000000000000000000000000000000000000";
+    const chainlinkTokenIndex1 =
+      "57896044618658097711785492504343953926634992332820282019728792003956564819969";
+    const chainlinkTokenIndex2 =
+      "57896044618658097711785492504343953926634992332820282019728792003956564819970";
     async function getSignature(orderObj, signer) {
       return sign(orderObj, signer, positioning.address);
     }
@@ -1413,6 +1741,7 @@ describe("Periodic Funding payment", function () {
       VolmexBaseToken = await ethers.getContractFactory("VolmexBaseToken");
       VolmexQuoteToken = await ethers.getContractFactory("VolmexQuoteToken");
       VolmexPerpView = await ethers.getContractFactory("VolmexPerpView");
+      ChainLinkAggregator = await ethers.getContractFactory("MockV3Aggregator");
       [owner, account1, account2, account3, account4, alice, bob] = await ethers.getSigners();
       liquidator = encodeAddress(owner.address);
     });
@@ -1451,14 +1780,51 @@ describe("Periodic Funding payment", function () {
         },
       );
       await volmexBaseToken1.deployed();
+      volmexBaseToken2 = await upgrades.deployProxy(
+        VolmexBaseToken,
+        [
+          "VolmexBaseToken", // nameArg
+          "VBT", // symbolArg,
+          owner.address, // priceFeedArg
+          true, // isBase
+        ],
+        {
+          initializer: "initialize",
+        },
+      );
+      await volmexBaseToken2.deployed();
+      volmexBaseToken3 = await upgrades.deployProxy(
+        VolmexBaseToken,
+        [
+          "VolmexBaseToken", // nameArg
+          "VBT", // symbolArg,
+          owner.address, // priceFeedArg
+          true, // isBase
+        ],
+        {
+          initializer: "initialize",
+        },
+      );
+      await volmexBaseToken3.deployed();
+      chainlinkAggregator1 = await ChainLinkAggregator.deploy(8, 3075000000000);
+      await chainlinkAggregator1.deployed();
+      chainlinkAggregator2 = await ChainLinkAggregator.deploy(8, 180000000000);
+      await chainlinkAggregator2.deployed();
       await (await perpView.setBaseToken(volmexBaseToken.address)).wait();
       perpetualOracle = await upgrades.deployProxy(
         PerpetualOracle,
         [
-          [volmexBaseToken.address, volmexBaseToken1.address],
-          [200060000, 200060000],
+          [
+            volmexBaseToken.address,
+            volmexBaseToken1.address,
+            volmexBaseToken2.address,
+            volmexBaseToken3.address,
+          ],
+          [200060000, 200060000, 1862000000, 30650000000],
           [200000000, 200000000],
           [proofHash, proofHash],
+          [chainlinkTokenIndex1, chainlinkTokenIndex2],
+          [chainlinkAggregator1.address, chainlinkAggregator2.address],
           owner.address,
         ],
         { initializer: "__PerpetualOracle_init" },
@@ -1498,7 +1864,13 @@ describe("Periodic Funding payment", function () {
 
       accountBalance1 = await upgrades.deployProxy(AccountBalance, [
         positioningConfig.address,
-        [volmexBaseToken.address, volmexBaseToken1.address],
+        [
+          volmexBaseToken.address,
+          volmexBaseToken1.address,
+          volmexBaseToken2.address,
+          volmexBaseToken3.address,
+        ],
+        [chainlinkTokenIndex1, chainlinkTokenIndex2],
         matchingEngine.address,
         owner.address,
       ]);
@@ -1525,7 +1897,12 @@ describe("Periodic Funding payment", function () {
       (await accountBalance1.grantSettleRealizedPnlRole(vaultController.address)).wait();
       marketRegistry = await upgrades.deployProxy(MarketRegistry, [
         volmexQuoteToken.address,
-        [volmexBaseToken.address, volmexBaseToken1.address],
+        [
+          volmexBaseToken.address,
+          volmexBaseToken1.address,
+          volmexBaseToken2.address,
+          volmexBaseToken3.address,
+        ],
       ]);
       positioning = await upgrades.deployProxy(
         Positioning,
@@ -1536,7 +1913,13 @@ describe("Periodic Funding payment", function () {
           matchingEngine.address,
           perpetualOracle.address,
           marketRegistry.address,
-          [volmexBaseToken.address, volmexBaseToken1.address],
+          [
+            volmexBaseToken.address,
+            volmexBaseToken1.address,
+            volmexBaseToken2.address,
+            volmexBaseToken3.address,
+          ],
+          [chainlinkTokenIndex1, chainlinkTokenIndex2],
           [owner.address, account1.address],
           ["1000000000000000000", "1000000000000000000"],
         ],

@@ -90,7 +90,7 @@ contract Positioning is IPositioning, ReentrancyGuardUpgradeable, PausableUpgrad
         require(marketRegistryArg.isContract(), "V_VPMM");
         _marketRegistry = marketRegistryArg;
     }
-
+   
     /// @inheritdoc IPositioning
     function settleAllFunding(address trader) external virtual override {
         address[] memory baseTokens = IAccountBalance(accountBalance).getBaseTokens(trader);
@@ -99,7 +99,14 @@ contract Positioning is IPositioning, ReentrancyGuardUpgradeable, PausableUpgrad
             _settleFunding(trader, baseTokens[i]);
         }
     }
-
+     
+    function setMinPositionSize(uint256 _minPositionSize, address baseToken) external {
+        _requirePositioningAdmin();
+        require(_minPositionSize >= 1e15, "P_MPSlT1");
+        // P_MPSGT1: Min position size less than 0.001
+        minPositionSizeByBaseToken[baseToken] = _minPositionSize;
+    }
+     
     /// @inheritdoc IPositioning
     function setDefaultFeeReceiver(address newDefaultFeeReceiver) external {
         _requirePositioningAdmin();

@@ -11,7 +11,6 @@ import { IVolmexPerpView } from "../interfaces/IVolmexPerpView.sol";
 import { IPositioning } from "../interfaces/IPositioning.sol";
 
 import { LibOrder } from "../libs/LibOrder.sol";
-
 contract VolmexPerpPeriphery is AccessControlUpgradeable, IVolmexPerpPeriphery {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 

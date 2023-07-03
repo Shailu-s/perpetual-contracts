@@ -24,9 +24,14 @@ describe("Liquidation test in Positioning", function () {
   let accountBalance;
   let PerpetualOracle;
   let perpetualOracle;
+  let ChainLinkAggregator;
+  let chainlinkAggregator1;
+  let chainlinkAggregator2;
   let VolmexBaseToken;
   let volmexBaseToken;
   let volmexBaseToken1;
+  let volmexBaseToken2;
+  let volmexBaseToken3;
   let VolmexPerpPeriphery;
   let volmexPerpPeriphery;
   let Perppetual;
@@ -44,7 +49,10 @@ describe("Liquidation test in Positioning", function () {
   let owner, account1, account2, account3, account4, relayer;
   let liquidator;
   const proofHash = "0x6c00000000000000000000000000000000000000000000000000000000000000";
-
+  const chainlinkTokenIndex1 =
+    "57896044618658097711785492504343953926634992332820282019728792003956564819969";
+  const chainlinkTokenIndex2 =
+    "57896044618658097711785492504343953926634992332820282019728792003956564819970";
   const one = ethers.constants.WeiPerEther; // 1e18
   const two = ethers.constants.WeiPerEther.mul(BigNumber.from("2")); // 2e18
   const fivehundred = ethers.constants.WeiPerEther.mul(BigNumber.from("5000")); // 5e18
@@ -80,6 +88,7 @@ describe("Liquidation test in Positioning", function () {
     BaseToken = await ethers.getContractFactory("VolmexBaseToken");
     TestERC20 = await ethers.getContractFactory("TestERC20");
     VolmexBaseToken = await ethers.getContractFactory("VolmexBaseToken");
+    ChainLinkAggregator = await ethers.getContractFactory("MockV3Aggregator");
     [owner, account1, account2, account3, account4, relayer] = await ethers.getSigners();
   });
 
@@ -114,13 +123,50 @@ describe("Liquidation test in Positioning", function () {
       },
     );
     await volmexBaseToken1.deployed();
+    volmexBaseToken2 = await upgrades.deployProxy(
+      VolmexBaseToken,
+      [
+        "VolmexBaseToken", // nameArg
+        "VBT", // symbolArg,
+        owner.address, // priceFeedArg
+        true, // isBase
+      ],
+      {
+        initializer: "initialize",
+      },
+    );
+    await volmexBaseToken2.deployed();
+    volmexBaseToken3 = await upgrades.deployProxy(
+      VolmexBaseToken,
+      [
+        "VolmexBaseToken", // nameArg
+        "VBT", // symbolArg,
+        owner.address, // priceFeedArg
+        true, // isBase
+      ],
+      {
+        initializer: "initialize",
+      },
+    );
+    await volmexBaseToken3.deployed();
+    chainlinkAggregator1 = await ChainLinkAggregator.deploy(8, 3075000000000);
+    await chainlinkAggregator1.deployed();
+    chainlinkAggregator2 = await ChainLinkAggregator.deploy(8, 180000000000);
+    await chainlinkAggregator2.deployed();
     perpetualOracle = await upgrades.deployProxy(
       PerpetualOracle,
       [
-        [volmexBaseToken.address, volmexBaseToken1.address],
-        [60000000, 58000000],
-        [50060000, 45060000],
+        [
+          volmexBaseToken.address,
+          volmexBaseToken1.address,
+          volmexBaseToken2.address,
+          volmexBaseToken3.address,
+        ],
+        [70000000, 60000000, 1800000000, 30650000000],
+        [75000000, 50000000],
         [proofHash, proofHash],
+        [chainlinkTokenIndex1, chainlinkTokenIndex2],
+        [chainlinkAggregator1.address, chainlinkAggregator2.address],
         owner.address,
       ],
       { initializer: "__PerpetualOracle_init" },
@@ -128,7 +174,7 @@ describe("Liquidation test in Positioning", function () {
 
     await volmexBaseToken.setPriceFeed(perpetualOracle.address);
     await volmexBaseToken1.setPriceFeed(perpetualOracle.address);
-
+    await volmexBaseToken2.setPriceFeed(perpetualOracle.address);
     await perpetualOracle.setIndexObservationAdder(owner.address);
     for (let i = 0; i < 10; i++) {
       await perpetualOracle.addIndexObservations([0], [100000000], [proofHash]);
@@ -161,7 +207,13 @@ describe("Liquidation test in Positioning", function () {
     await virtualToken.setMintBurnRole(owner.address);
     accountBalance1 = await upgrades.deployProxy(AccountBalance, [
       positioningConfig.address,
-      [volmexBaseToken.address, volmexBaseToken1.address],
+      [
+        volmexBaseToken.address,
+        volmexBaseToken1.address,
+        volmexBaseToken2.address,
+        volmexBaseToken3.address,
+      ],
+      [chainlinkTokenIndex1, chainlinkTokenIndex2],
       matchingEngine.address,
       owner.address,
     ]);
@@ -178,7 +230,12 @@ describe("Liquidation test in Positioning", function () {
     ]);
     marketRegistry = await upgrades.deployProxy(MarketRegistry, [
       virtualToken.address,
-      [volmexBaseToken.address, volmexBaseToken1.address],
+      [
+        volmexBaseToken.address,
+        volmexBaseToken1.address,
+        volmexBaseToken2.address,
+        volmexBaseToken3.address,
+      ],
     ]);
     positioning = await upgrades.deployProxy(
       Positioning,
@@ -189,7 +246,13 @@ describe("Liquidation test in Positioning", function () {
         matchingEngine.address,
         perpetualOracle.address,
         marketRegistry.address,
-        [volmexBaseToken.address, volmexBaseToken1.address],
+        [
+          volmexBaseToken.address,
+          volmexBaseToken1.address,
+          volmexBaseToken2.address,
+          volmexBaseToken3.address,
+        ],
+        [chainlinkTokenIndex1, chainlinkTokenIndex2],
         [owner.address, account2.address],
         ["10000000000000000", "10000000000000000"],
       ],
@@ -200,6 +263,9 @@ describe("Liquidation test in Positioning", function () {
     await positioning.deployed();
     await (await volmexBaseToken.setMintBurnRole(positioning.address)).wait();
     await (await volmexBaseToken1.setMintBurnRole(positioning.address)).wait();
+    await (await volmexBaseToken2.setMintBurnRole(positioning.address)).wait();
+    await perpetualOracle.grantCacheChainlinkPriceRole(owner.address);
+    await perpetualOracle.grantCacheChainlinkPriceRole(positioning.address);
     await (await virtualToken.setMintBurnRole(positioning.address)).wait();
 
     perpViewFake = await smock.fake("VolmexPerpView");
@@ -212,8 +278,8 @@ describe("Liquidation test in Positioning", function () {
     ]);
 
     await perpetualOracle.setIndexObservationAdder(owner.address);
-    await marketRegistry.connect(owner).addBaseToken(volmexBaseToken.address);
-    await marketRegistry.connect(owner).addBaseToken(volmexBaseToken1.address);
+    // await marketRegistry.connect(owner).addBaseToken(volmexBaseToken.address);
+    // await marketRegistry.connect(owner).addBaseToken(volmexBaseToken1.address);
     await marketRegistry.connect(owner).setMakerFeeRatio(0.0004e6);
     await marketRegistry.connect(owner).setTakerFeeRatio(0.0009e6);
     await matchingEngine.grantMatchOrders(positioning.address);
