@@ -82,6 +82,12 @@ contract Positioning is IPositioning, ReentrancyGuardUpgradeable, PausableUpgrad
         isLiquidatorWhitelistEnabled = true;
         _grantRole(SM_INTERVAL_ROLE, positioningConfigArg);
         _grantRole(POSITIONING_ADMIN, _msgSender());
+        _grantRole(ADD_UNDERLYING_INDEX, perpetualOracleArg);
+    }
+
+    function setUnderlyingPriceIndex(address volmexBaseToken, uint256 underlyingIndex) external {
+        _requireAddUnderlyingIndexRole();
+        _underlyingPriceIndexes[volmexBaseToken] = underlyingIndex;
     }
 
     function setMarketRegistry(address marketRegistryArg) external {
@@ -644,10 +650,14 @@ contract Positioning is IPositioning, ReentrancyGuardUpgradeable, PausableUpgrad
         require(hasRole(SM_INTERVAL_ROLE, _msgSender()), "Positioning: Not sm interval role");
     }
 
+    function _requireAddUnderlyingIndexRole() internal view {
+        require(hasRole(ADD_UNDERLYING_INDEX, _msgSender()), "Positioning: Not add underlying index role");
+    }
+
     function _requireWhitelistLiquidator(address liquidator) internal view {
         require(isLiquidatorWhitelisted[liquidator], "P_LW"); // Positioning: liquidator not whitelisted
     }
-
+    
     function _isChainlinkToken(uint256 baseTokenIndex) internal view returns (bool) {
         return ((uint256(CHAINLINK_TOKEN_CHECKSUM & bytes32(baseTokenIndex)) >> 255) == 1) ;
     }
