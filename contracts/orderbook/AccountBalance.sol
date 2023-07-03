@@ -62,8 +62,18 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
         _grantRole(CAN_SETTLE_REALIZED_PNL, account);
     }
 
-    function setUnderlyingPriceIndex(address volmexBaseToken, uint256 underlyingIndex) external {
+    function grantAddUnderlyingIndexRole(address account) external {
         _requireAccountBalanceAdmin();
+        _grantRole(ADD_UNDERLYING_INDEX, account);
+    }
+ 
+    function grantSigmaVivRole(address account) external {
+        _requireAccountBalanceAdmin();
+        _grantRole(SIGMA_IV_ROLE, account);
+    }
+
+    function setUnderlyingPriceIndex(address volmexBaseToken, uint256 underlyingIndex) external {
+        _requireAddUnderlyingIndexRole();
         _underlyingPriceIndexes[volmexBaseToken] = underlyingIndex;
         emit UnderlyingPriceIndexSet(underlyingIndex, volmexBaseToken);
     }
@@ -85,8 +95,9 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
     }
 
     function setSigmaViv(uint256 _baseTokenIndex,uint256 _sigmaViv) external virtual {
-        _requireAccountBalanceAdmin();
-         sigmaVolmexIvs[_baseTokenIndex] = _sigmaViv;
+        _requireSigmaIvRole();
+        require(_sigmaViv > 0, "AccountBalance: not zero");
+        sigmaVolmexIvs[_baseTokenIndex] = _sigmaViv;
     }
     
     /// @inheritdoc IAccountBalance
@@ -471,6 +482,10 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
 
     function _requireMinTimeBoundRole() internal view {
         require(hasRole(SIGMA_IV_ROLE, _msgSender()), "AccountBalance: Not sigma IV role");
+    }
+
+    function _requireAddUnderlyingIndexRole() internal view {
+        require(hasRole(ADD_UNDERLYING_INDEX, _msgSender()), "AccountBalance: Not add underlying index role");
     }
 
     function _hasBaseToken(address[] memory baseTokens, address baseToken) internal pure returns (bool) {
