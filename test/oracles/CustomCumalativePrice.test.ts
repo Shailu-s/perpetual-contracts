@@ -210,7 +210,13 @@ describe("Custom Cumulative Price", function () {
 
     accountBalance1 = await upgrades.deployProxy(AccountBalance, [
       positioningConfig.address,
-      [volmexBaseToken.address, volmexBaseToken.address],
+      [
+        volmexBaseToken.address,
+        volmexBaseToken1.address,
+        volmexBaseToken2.address,
+        volmexBaseToken3.address,
+      ],
+      [chainlinkTokenIndex1, chainlinkTokenIndex2],
       matchingEngine.address,
       owner.address,
     ]);
@@ -247,7 +253,12 @@ describe("Custom Cumulative Price", function () {
         matchingEngine.address,
         perpetualOracle.address,
         marketRegistry.address,
-        [volmexBaseToken.address, volmexBaseToken.address],
+        [
+          volmexBaseToken.address,
+          volmexBaseToken1.address,
+          volmexBaseToken2.address,
+          volmexBaseToken3.address,
+        ],
         [owner.address, account1.address],
         ["10000000000000000000", "10000000000000000000"],
       ],
@@ -258,6 +269,7 @@ describe("Custom Cumulative Price", function () {
     await positioning.deployed();
 
     await (await perpView.setPositioning(positioning.address)).wait();
+    await marketRegistry.grantAddBaseTokenRole(owner.address);
 
     await (await perpView.incrementPerpIndex()).wait();
     await (await volmexBaseToken.setMintBurnRole(positioning.address)).wait();

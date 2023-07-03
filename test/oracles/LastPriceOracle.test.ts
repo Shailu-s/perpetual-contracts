@@ -228,6 +228,7 @@ describe("PerpetualOracle - Last Price Oracle", function () {
       vaultController.address,
     ]);
     await vault.deployed();
+
     await (await perpView.incrementVaultIndex()).wait();
 
     (await accountBalance1.grantSettleRealizedPnlRole(vault.address)).wait();
@@ -241,6 +242,7 @@ describe("PerpetualOracle - Last Price Oracle", function () {
         volmexBaseToken3.address,
       ],
     ]);
+    await marketRegistry.grantAddBaseTokenRole(owner.address);
     positioning = await upgrades.deployProxy(
       Positioning,
       [

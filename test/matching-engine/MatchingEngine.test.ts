@@ -266,6 +266,7 @@ describe("MatchingEngine", function () {
       account4.address,
     ]);
     await perpetualOracle.setIndexObservationAdder(owner.address);
+    await marketRegistry.grantAddBaseTokenRole(owner.address);
     await marketRegistry.connect(owner).addBaseToken(volmexBaseToken.address);
 
     await marketRegistry.connect(owner).setMakerFeeRatio(0.0004e6);
