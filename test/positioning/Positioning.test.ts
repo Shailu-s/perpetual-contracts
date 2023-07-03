@@ -635,6 +635,26 @@ describe("Positioning", function () {
         ),
       ).to.be.revertedWith("Positioning: Not add underlying index role");
     });
+    it("should fail to set sigma viv ", async () => {
+      await expect(
+        accountBalance
+          .connect(account1)
+          .setSigmaViv(
+            "57896044618658097711785492504343953926634992332820282019728792003956564819971",
+            "7400",
+          ),
+      ).to.be.revertedWith("AccountBalance: Not sigma IV role");
+    });
+    it("should set sigma viv ", async () => {
+      await accountBalance.setSigmaViv(
+        "57896044618658097711785492504343953926634992332820282019728792003956564819971",
+        "7400",
+      );
+      const sigmaViv = await accountBalance.sigmaVolmexIvs(
+        "57896044618658097711785492504343953926634992332820282019728792003956564819971",
+      );
+      expect(sigmaViv.toString()).to.be.equal("7400");
+    });
     it("should set index price allowed interval", async () => {
       await positioning.setIndexOracleInterval(5000);
       const interval = await positioning.indexPriceAllowedInterval();
