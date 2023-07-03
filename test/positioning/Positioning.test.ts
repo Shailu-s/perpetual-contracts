@@ -302,6 +302,7 @@ describe("Positioning", function () {
     await (await virtualToken.setMintBurnRole(positioning.address)).wait();
 
     // await marketRegistry.connect(owner).addBaseToken(virtualToken.address)
+    await marketRegistry.grantAddBaseTokenRole(owner.address);
     await marketRegistry.connect(owner).addBaseToken(volmexBaseToken.address);
     // await marketRegistry.connect(owner).addBaseToken(baseToken.address)
     await marketRegistry.connect(owner).setMakerFeeRatio(0.0004e6);
@@ -625,6 +626,14 @@ describe("Positioning", function () {
       await expect(accountBalance.updateSigmaVolmexIvs([0, 1], [300, 0])).to.be.revertedWith(
         "AccountBalance: not zero",
       );
+    });
+    it("should fail to update underlying index", async () => {
+      await expect(
+        positioning.setUnderlyingPriceIndex(
+          volmexBaseToken2.address,
+          "57896044618658097711785492504343953926634992332820282019728792003956564819971",
+        ),
+      ).to.be.revertedWith("Positioning: Not add underlying index role");
     });
     it("should set index price allowed interval", async () => {
       await positioning.setIndexOracleInterval(5000);

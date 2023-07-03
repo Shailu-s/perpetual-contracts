@@ -232,7 +232,7 @@ describe("Market Registry", function () {
     await (await perpView.incrementPerpIndex()).wait();
     await (await volmexBaseToken.setMintBurnRole(positioning.address)).wait();
     await (await volmexQuoteToken.setMintBurnRole(positioning.address)).wait();
-
+    await marketRegistry.grantAddBaseTokenRole(owner.address);
     await marketRegistry.connect(owner).addBaseToken(volmexBaseToken.address);
     await marketRegistry.connect(owner).setMakerFeeRatio(0.0004e6);
     await marketRegistry.connect(owner).setTakerFeeRatio(0.0009e6);
@@ -329,10 +329,17 @@ describe("Market Registry", function () {
       const receipt = await marketRegistry.addBaseToken(volmexBaseToken.address);
       expect(receipt.value.toString()).to.be.equal("0");
     });
+
     it("should fail to  add base token is token is not base", async () => {
       await expect(marketRegistry.addBaseToken(virtualToken.address)).to.be.revertedWith(
         "MarketRegistry: not base token",
       );
+    });
+
+    it("should fail to add base tokens", async () => {
+      await expect(
+        marketRegistry.connect(account2).addBaseToken(volmexBaseToken.address),
+      ).to.be.revertedWith("MarketRegistry: Not add base token role");
     });
   });
 });

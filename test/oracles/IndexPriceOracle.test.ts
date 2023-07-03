@@ -685,6 +685,46 @@ describe("PerpetualOracle - Index Price Oracle", function () {
       );
       expect(currentEpochPrice2.toString()).to.be.equal("350000000000");
     });
+    it("should over ride already added token ", async () => {
+      const newTokenIndex =
+        "57896044618658097711785492504343953926634992332820282019728792003956564819980";
+      const chainlinkBaseToken5 = await upgrades.deployProxy(
+        VolmexBaseToken,
+        [
+          "VolmexBaseToken", // nameArg
+          "VBT", // symbolArg,
+          owner.address, // priceFeedArg
+          true, // isBase
+        ],
+        {
+          initializer: "initialize",
+        },
+      );
+      await perpetualOracle.addChainlinkBaseToken(
+        newTokenIndex,
+        chainlinkAggregator1.address,
+        chainlinkBaseToken5.address,
+        "5100000",
+      );
+      const baseTokenByIndex1 = await perpetualOracle.baseTokenByIndex(newTokenIndex);
+      expect(baseTokenByIndex1).to.be.equal(chainlinkBaseToken5.address);
+      const aggregatorByIndex1 = await perpetualOracle.chainlinkAggregatorByIndex(newTokenIndex);
+      expect(aggregatorByIndex1).to.be.equal(chainlinkAggregator1.address);
+      const sigmaViv1 = await accountBalance1.sigmaVolmexIvs(
+        "57896044618658097711785492504343953926634992332820282019728792003956564819980",
+      );
+      expect(sigmaViv1.toString()).to.be.equal("5100000");
+      await perpetualOracle.addChainlinkBaseToken(
+        newTokenIndex,
+        chainlinkAggregator1.address,
+        chainlinkBaseToken5.address,
+        "8100000",
+      );
+      const sigmaViv2 = await accountBalance1.sigmaVolmexIvs(
+        "57896044618658097711785492504343953926634992332820282019728792003956564819980",
+      );
+      expect(sigmaViv2.toString()).to.be.equal("8100000");
+    });
     it("should add baseToken", async () => {
       const newTokenIndex =
         "57896044618658097711785492504343953926634992332820282019728792003956564819980";
