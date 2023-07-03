@@ -51,6 +51,8 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
         matchingEngine = matchingEngineArg;
         sigmaVolmexIvs[0] = 12600; // 0.0126
         sigmaVolmexIvs[1] = 13300; // 0.0133
+        sigmaVolmexIvs[chainlinkBaseTokenIndexArgs[0]] = 4710000; // 4.71
+        sigmaVolmexIvs[chainlinkBaseTokenIndexArgs[1]] = 3600000; // 3.6
         minTimeBound = 600; // 10 minutes
         _grantRole(SM_INTERVAL_ROLE, positioningConfigArg);
         _grantRole(ACCOUNT_BALANCE_ADMIN, _msgSender());
