@@ -85,6 +85,11 @@ contract Positioning is IPositioning, ReentrancyGuardUpgradeable, PausableUpgrad
         _grantRole(ADD_UNDERLYING_INDEX, perpetualOracleArg);
     }
 
+    function grantAddUnderlyingIndexRole(address account) external {
+        _requirePositioningAdmin();
+        _grantRole(ADD_UNDERLYING_INDEX, account);
+    }
+
     function setUnderlyingPriceIndex(address volmexBaseToken, uint256 underlyingIndex) external {
         _requireAddUnderlyingIndexRole();
         _underlyingPriceIndexes[volmexBaseToken] = underlyingIndex;
@@ -331,7 +336,6 @@ contract Positioning is IPositioning, ReentrancyGuardUpgradeable, PausableUpgrad
         );
 
         _requireEnoughFreeCollateral(liquidator);
-
         emit PositionLiquidated(
             trader,
             baseToken,
@@ -588,7 +592,6 @@ contract Positioning is IPositioning, ReentrancyGuardUpgradeable, PausableUpgrad
         uint256 actualLiquidatableSize = IAccountBalance(accountBalance).getNLiquidate(positionSizeToBeLiquidated.abs(), minPositionSizeByBaseToken[baseToken], maxOrderSize);
         int256 liquidatedPositionSize = positionSizeToBeLiquidated >= 0 ? (actualLiquidatableSize.toInt256()).neg256() : actualLiquidatableSize.toInt256();
         int256 liquidatedPositionNotional = liquidatedPositionSize.mulDiv(indexPrice.toInt256(), _ORACLE_BASE);
-
         return (liquidatedPositionSize, liquidatedPositionNotional);
     }
 
