@@ -2,7 +2,7 @@ import { ethers } from "hardhat";
 import { BigNumber, Wallet } from "ethers";
 import { constants } from "./chains";
 
-// liquidator needs TRADER_WHITELISTER and liquidator role and some stable coins deposited into vault
+// liquidator needs TRADER_WHITELISTER and liquidator role and some stable coins deposited into vault and eth
 
 const STABLE_COINS_AMOUNT = ethers.utils.parseUnits("1000000", 6);
 
