@@ -49,7 +49,9 @@ async function setupLiquidator() {
   }
 
   // TODO: add stable coins to liquidator and deposit
-
+  //transfer
+  //approve
+  //depositToVault
 
 
 }
