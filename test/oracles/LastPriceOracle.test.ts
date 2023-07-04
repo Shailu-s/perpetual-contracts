@@ -35,6 +35,8 @@ describe("PerpetualOracle - Last Price Oracle", function () {
   let volmexQuoteToken;
   let VolmexPerpPeriphery;
   let volmexPerpPeriphery;
+  let FundingRate;
+  let fundingRate;
   let VolmexPerpView;
   let perpView;
 
@@ -80,7 +82,7 @@ describe("PerpetualOracle - Last Price Oracle", function () {
     VolmexQuoteToken = await ethers.getContractFactory("VolmexQuoteToken");
     VolmexPerpView = await ethers.getContractFactory("VolmexPerpView");
     ChainLinkAggregator = await ethers.getContractFactory("MockV3Aggregator");
-
+    FundingRate = await ethers.getContractFactory("FundingRate");
     [owner, account1, account2, account3, alice, bob] = await ethers.getSigners();
     liquidator = encodeAddress(owner.address);
   });
@@ -243,6 +245,13 @@ describe("PerpetualOracle - Last Price Oracle", function () {
       ],
     ]);
     await marketRegistry.grantAddBaseTokenRole(owner.address);
+    fundingRate = await upgrades.deployProxy(
+      FundingRate,
+      [perpetualOracle.address, positioningConfig.address, accountBalance1.address, owner.address],
+      {
+        initializer: "FundingRate_init",
+      },
+    );
     positioning = await upgrades.deployProxy(
       Positioning,
       [
@@ -251,6 +260,7 @@ describe("PerpetualOracle - Last Price Oracle", function () {
         accountBalance1.address,
         matchingEngine.address,
         perpetualOracle.address,
+        fundingRate.address,
         marketRegistry.address,
         [
           volmexBaseToken.address,
@@ -292,11 +302,10 @@ describe("PerpetualOracle - Last Price Oracle", function () {
 
     await positioning.connect(owner).setMarketRegistry(marketRegistry.address);
     await positioning.connect(owner).setDefaultFeeReceiver(owner.address);
-    await positioning.connect(owner).setPositioning(positioning.address);
 
     await (await matchingEngine.grantMatchOrders(positioning.address)).wait();
     await perpetualOracle.grantSmaIntervalRole(positioningConfig.address);
-    await perpetualOracle.setPositioning(positioning.address);
+    await perpetualOracle.setFundingRate(fundingRate.address);
     await positioningConfig.setTwapInterval(28800);
 
     volmexPerpPeriphery = await upgrades.deployProxy(VolmexPerpPeriphery, [

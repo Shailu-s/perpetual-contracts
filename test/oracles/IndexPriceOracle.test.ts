@@ -36,6 +36,8 @@ describe("PerpetualOracle - Index Price Oracle", function () {
   let chainlinkBaseToken2;
   let MarketRegistry;
   let marketRegistry;
+  let FundingRate;
+  let fundingRate;
   let TestERC20;
   let USDC;
   let owner, account1;
@@ -65,6 +67,8 @@ describe("PerpetualOracle - Index Price Oracle", function () {
     VolmexQuoteToken = await ethers.getContractFactory("VolmexQuoteToken");
     VolmexPerpView = await ethers.getContractFactory("VolmexPerpView");
     ChainLinkAggregator = await ethers.getContractFactory("MockV3Aggregator");
+    FundingRate = await ethers.getContractFactory("FundingRate");
+
     [owner, account1] = await ethers.getSigners();
     liquidator = encodeAddress(owner.address);
   });
@@ -211,7 +215,13 @@ describe("PerpetualOracle - Index Price Oracle", function () {
         chainlinkBaseToken2.address,
       ],
     ]);
-
+    fundingRate = await upgrades.deployProxy(
+      FundingRate,
+      [perpetualOracle.address, positioningConfig.address, accountBalance1.address, owner.address],
+      {
+        initializer: "FundingRate_init",
+      },
+    );
     positioning = await upgrades.deployProxy(
       Positioning,
       [
@@ -220,6 +230,7 @@ describe("PerpetualOracle - Index Price Oracle", function () {
         accountBalance1.address,
         matchingEngine.address,
         perpetualOracle.address,
+        fundingRate.address,
         marketRegistry.address,
         [
           volmexBaseToken.address,
@@ -262,10 +273,10 @@ describe("PerpetualOracle - Index Price Oracle", function () {
 
     await positioning.connect(owner).setMarketRegistry(marketRegistry.address);
     await positioning.connect(owner).setDefaultFeeReceiver(owner.address);
-    await positioning.connect(owner).setPositioning(positioning.address);
 
     await (await matchingEngine.grantMatchOrders(positioning.address)).wait();
     await perpetualOracle.grantSmaIntervalRole(positioningConfig.address);
+    await perpetualOracle.setFundingRate(fundingRate.address);
     await perpetualOracle.setPositioning(positioning.address);
     await perpetualOracle.setAccountBalance(accountBalance1.address);
     await perpetualOracle.setMarketRegistry(marketRegistry.address);
