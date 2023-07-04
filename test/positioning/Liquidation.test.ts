@@ -4,7 +4,7 @@ const { Order, Asset, sign, encodeAddress } = require("../order");
 import { FakeContract, smock } from "@defi-wonderland/smock";
 import { BigNumber } from "ethers";
 const { expectRevert, time } = require("@openzeppelin/test-helpers");
-describe("Liquidation test in Positioning", function () {
+describe("Liquidation test", function () {
   let MatchingEngine;
   let matchingEngine;
   let VirtualToken;
@@ -41,6 +41,8 @@ describe("Liquidation test in Positioning", function () {
   let marketRegistry;
   let BaseToken;
   let baseToken;
+  let FundingRate;
+  let fundingRate;
   let TestERC20;
   let USDC;
   let perpViewFake;
@@ -89,6 +91,7 @@ describe("Liquidation test in Positioning", function () {
     TestERC20 = await ethers.getContractFactory("TestERC20");
     VolmexBaseToken = await ethers.getContractFactory("VolmexBaseToken");
     ChainLinkAggregator = await ethers.getContractFactory("MockV3Aggregator");
+    FundingRate = await ethers.getContractFactory("FundingRate");
     [owner, account1, account2, account3, account4, relayer] = await ethers.getSigners();
   });
 
@@ -237,6 +240,13 @@ describe("Liquidation test in Positioning", function () {
         volmexBaseToken3.address,
       ],
     ]);
+    fundingRate = await upgrades.deployProxy(
+      FundingRate,
+      [perpetualOracle.address, positioningConfig.address, accountBalance1.address],
+      {
+        initializer: "FundingRate_init",
+      },
+    );
     positioning = await upgrades.deployProxy(
       Positioning,
       [
@@ -245,6 +255,7 @@ describe("Liquidation test in Positioning", function () {
         accountBalance1.address,
         matchingEngine.address,
         perpetualOracle.address,
+        fundingRate.address,
         marketRegistry.address,
         [
           volmexBaseToken.address,
@@ -253,8 +264,8 @@ describe("Liquidation test in Positioning", function () {
           volmexBaseToken3.address,
         ],
         [chainlinkTokenIndex1, chainlinkTokenIndex2],
-        [owner.address, account2.address],
-        ["10000000000000000", "10000000000000000"],
+        [owner.address, account1.address],
+        ["1000000000000000000", "1000000000000000000"],
       ],
       {
         initializer: "initialize",
@@ -267,7 +278,8 @@ describe("Liquidation test in Positioning", function () {
     await perpetualOracle.grantCacheChainlinkPriceRole(owner.address);
     await perpetualOracle.grantCacheChainlinkPriceRole(positioning.address);
     await (await virtualToken.setMintBurnRole(positioning.address)).wait();
-
+    await positioning.whitelistLiquidator(account1.address, true);
+    await positioning.whitelistLiquidator(account2.address, true);
     perpViewFake = await smock.fake("VolmexPerpView");
     volmexPerpPeriphery = await upgrades.deployProxy(VolmexPerpPeriphery, [
       perpViewFake.address,
@@ -300,7 +312,6 @@ describe("Liquidation test in Positioning", function () {
 
     await positioning.connect(owner).setMarketRegistry(marketRegistry.address);
     await positioning.connect(owner).setDefaultFeeReceiver(owner.address);
-    await positioning.connect(owner).setPositioning(positioning.address);
 
     await USDC.mint(account1.address, ten.toString());
     await USDC.mint(account2.address, ten.toString());
@@ -360,7 +371,7 @@ describe("Liquidation test in Positioning", function () {
       0,
       false,
     );
-    await (await perpetualOracle.setPositioning(positioning.address)).wait();
+    await (await perpetualOracle.setFundingRate(fundingRate.address)).wait();
     await (await perpetualOracle.grantSmaIntervalRole(positioningConfig.address)).wait();
     await positioningConfig.setTwapInterval(28800);
     // for (let i = 0; i < 9; i++) {
@@ -370,7 +381,7 @@ describe("Liquidation test in Positioning", function () {
 
   describe("Match orders:", function () {
     describe("Success:", function () {
-      it("should liquidate trader", async () => {
+      it.only("should liquidate trader", async () => {
         for (let index = 0; index < 10; index++) {
           await (await perpetualOracle.addIndexObservations([0], [70000000], [proofHash])).wait();
           await (await perpetualOracle.addIndexObservations([1], [70000000], [proofHash])).wait();

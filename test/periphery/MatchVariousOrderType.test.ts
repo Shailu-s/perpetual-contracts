@@ -39,6 +39,8 @@ describe("Various Order Types", function () {
   let volmexPerpPeriphery;
   let VolmexPerpView;
   let perpView;
+  let FundingRate;
+  let fundingRate;
   let accountBalance1;
   let MarketRegistry;
   let marketRegistry;
@@ -71,6 +73,7 @@ describe("Various Order Types", function () {
     VolmexQuoteToken = await ethers.getContractFactory("VolmexQuoteToken");
     VolmexPerpView = await ethers.getContractFactory("VolmexPerpView");
     ChainLinkAggregator = await ethers.getContractFactory("MockV3Aggregator");
+    FundingRate = await ethers.getContractFactory("FundingRate");
     [owner, account1, account2] = await ethers.getSigners();
     liquidator = encodeAddress(owner.address);
   });

@@ -34,7 +34,8 @@ describe("Periodic Funding payment", function () {
   let volmexPerpPeriphery;
   let VolmexPerpView;
   let perpView;
-
+  let FundingRate;
+  let fundingRate;
   let accountBalance1;
   let MarketRegistry;
   let marketRegistry;
@@ -77,6 +78,7 @@ describe("Periodic Funding payment", function () {
     VolmexQuoteToken = await ethers.getContractFactory("VolmexQuoteToken");
     VolmexPerpView = await ethers.getContractFactory("VolmexPerpView");
     ChainLinkAggregator = await ethers.getContractFactory("MockV3Aggregator");
+    FundingRate = await ethers.getContractFactory("FundingRate");
     [owner, account1, account2, account3, account4, alice, bob] = await ethers.getSigners();
     liquidator = encodeAddress(owner.address);
   });
@@ -238,6 +240,13 @@ describe("Periodic Funding payment", function () {
         volmexBaseToken3.address,
       ],
     ]);
+    fundingRate = await upgrades.deployProxy(
+      FundingRate,
+      [perpetualOracle.address, positioningConfig.address, accountBalance1.address],
+      {
+        initializer: "FundingRate_init",
+      },
+    );
     positioning = await upgrades.deployProxy(
       Positioning,
       [
@@ -246,6 +255,7 @@ describe("Periodic Funding payment", function () {
         accountBalance1.address,
         matchingEngine.address,
         perpetualOracle.address,
+        fundingRate.address,
         marketRegistry.address,
         [
           volmexBaseToken.address,
@@ -290,7 +300,7 @@ describe("Periodic Funding payment", function () {
 
     await positioning.connect(owner).setMarketRegistry(marketRegistry.address);
     await positioning.connect(owner).setDefaultFeeReceiver(owner.address);
-    await positioning.connect(owner).setPositioning(positioning.address);
+    // await positioning.connect(owner).setPositioning(positioning.address);
 
     await (await perpetualOracle.setIndexObservationAdder(owner.address)).wait();
     await (await matchingEngine.grantMatchOrders(positioning.address)).wait();
@@ -302,7 +312,7 @@ describe("Periodic Funding payment", function () {
       owner.address,
       owner.address, // replace with replayer address
     ]);
-    await (await perpetualOracle.setPositioning(positioning.address)).wait();
+    await (await perpetualOracle.setFundingRate(fundingRate.address)).wait();
     await positioningConfig.setPositioning(positioning.address);
     await positioningConfig.setAccountBalance(accountBalance1.address);
     await positioningConfig.setTwapInterval(28800);
@@ -429,24 +439,28 @@ describe("Periodic Funding payment", function () {
           liquidator,
         );
       }
-      const fundingPayment1 = await positioning.getPendingFundingPayment(
+      const fundingPayment1 = await fundingRate.getPendingFundingPayment(
         account1.address,
         volmexBaseToken.address,
+        0,
       );
-      const fundingPayment2 = await positioning.getPendingFundingPayment(
+      const fundingPayment2 = await fundingRate.getPendingFundingPayment(
         account2.address,
         volmexBaseToken.address,
+        0,
       );
 
       await time.increase(20000);
       const stamp = await time.latest();
-      const fundingPayment3 = await positioning.getPendingFundingPayment(
+      const fundingPayment3 = await fundingRate.getPendingFundingPayment(
         account1.address,
         volmexBaseToken.address,
+        0,
       );
-      const fundingPayment4 = await positioning.getPendingFundingPayment(
+      const fundingPayment4 = await fundingRate.getPendingFundingPayment(
         account2.address,
         volmexBaseToken.address,
+        0,
       );
 
       expect(fundingPayment1.toString()).to.equal(fundingPayment3.toString());
@@ -534,13 +548,15 @@ describe("Periodic Funding payment", function () {
         alice.address,
         volmexBaseToken.address,
       );
-      const fundingPayment1 = await positioning.getPendingFundingPayment(
+      const fundingPayment1 = await fundingRate.getPendingFundingPayment(
         account1.address,
         volmexBaseToken.address,
+        0,
       );
-      const fundingPayment2 = await positioning.getPendingFundingPayment(
+      const fundingPayment2 = await fundingRate.getPendingFundingPayment(
         account2.address,
         volmexBaseToken.address,
+        0,
       );
 
       for (let i = 0; i < 10; i++) {
@@ -585,13 +601,15 @@ describe("Periodic Funding payment", function () {
         );
       }
 
-      const fundingPayment3 = await positioning.getPendingFundingPayment(
+      const fundingPayment3 = await fundingRate.getPendingFundingPayment(
         account1.address,
         volmexBaseToken.address,
+        0,
       );
-      const fundingPayment4 = await positioning.getPendingFundingPayment(
+      const fundingPayment4 = await fundingRate.getPendingFundingPayment(
         account2.address,
         volmexBaseToken.address,
+        0,
       );
       expect(parseInt(fundingPayment3)).to.be.greaterThan(parseInt(fundingPayment1));
       expect(parseInt(fundingPayment4)).to.be.lessThan(parseInt(fundingPayment2));
@@ -641,13 +659,15 @@ describe("Periodic Funding payment", function () {
         signatureRight,
         liquidator,
       );
-      const fundingPayment1 = await positioning.getPendingFundingPayment(
+      const fundingPayment1 = await fundingRate.getPendingFundingPayment(
         account1.address,
         volmexBaseToken.address,
+        0,
       );
-      const fundingPayment2 = await positioning.getPendingFundingPayment(
+      const fundingPayment2 = await fundingRate.getPendingFundingPayment(
         account2.address,
         volmexBaseToken.address,
+        0,
       );
 
       expect(fundingPayment1.toString()).to.equal("0");
@@ -688,13 +708,15 @@ describe("Periodic Funding payment", function () {
         );
       }
 
-      const fundingPayment3 = await positioning.getPendingFundingPayment(
+      const fundingPayment3 = await fundingRate.getPendingFundingPayment(
         account1.address,
         volmexBaseToken.address,
+        0,
       );
-      const fundingPayment4 = await positioning.getPendingFundingPayment(
+      const fundingPayment4 = await fundingRate.getPendingFundingPayment(
         account2.address,
         volmexBaseToken.address,
+        0,
       );
       const orderLeft1 = Order(
         ORDER,
@@ -775,13 +797,15 @@ describe("Periodic Funding payment", function () {
         );
       }
 
-      const fundingPayment5 = await positioning.getPendingFundingPayment(
+      const fundingPayment5 = await fundingRate.getPendingFundingPayment(
         account1.address,
         volmexBaseToken.address,
+        0,
       );
-      const fundingPayment6 = await positioning.getPendingFundingPayment(
+      const fundingPayment6 = await fundingRate.getPendingFundingPayment(
         account2.address,
         volmexBaseToken.address,
+        0,
       );
 
       const accountInfo3 = await accountBalance1.getAccountInfo(
@@ -928,13 +952,15 @@ describe("Periodic Funding payment", function () {
         );
       }
 
-      const fundingPayment1 = await positioning.getPendingFundingPayment(
+      const fundingPayment1 = await fundingRate.getPendingFundingPayment(
         account1.address,
         volmexBaseToken.address,
+        0,
       );
-      const fundingPayment2 = await positioning.getPendingFundingPayment(
+      const fundingPayment2 = await fundingRate.getPendingFundingPayment(
         account2.address,
         volmexBaseToken.address,
+        0,
       );
 
       expect(fundingPayment1.toString()).to.equal("0");
@@ -947,13 +973,15 @@ describe("Periodic Funding payment", function () {
       for (let i = 0; i < 10; i++) {
         await perpetualOracle.addIndexObservations([0], [75000000], [proofHash]);
       }
-      const fundingPayment3 = await positioning.getPendingFundingPayment(
+      const fundingPayment3 = await fundingRate.getPendingFundingPayment(
         account1.address,
         volmexBaseToken.address,
+        0,
       );
-      const fundingPayment4 = await positioning.getPendingFundingPayment(
+      const fundingPayment4 = await fundingRate.getPendingFundingPayment(
         account2.address,
         volmexBaseToken.address,
+        0,
       );
 
       expect(fundingPayment3.toString()).to.not.equal(fundingPayment1.toString());
@@ -1091,13 +1119,15 @@ describe("Periodic Funding payment", function () {
           liquidator,
         );
       }
-      const fundingPayment1 = await positioning.getPendingFundingPayment(
+      const fundingPayment1 = await fundingRate.getPendingFundingPayment(
         account1.address,
         volmexBaseToken.address,
+        0,
       );
-      const fundingPayment2 = await positioning.getPendingFundingPayment(
+      const fundingPayment2 = await fundingRate.getPendingFundingPayment(
         account2.address,
         volmexBaseToken.address,
+        0,
       );
       expect(fundingPayment1.toString()).to.equal("0");
       expect(fundingPayment2.toString()).to.equal("0");
@@ -1111,13 +1141,15 @@ describe("Periodic Funding payment", function () {
         await perpetualOracle.addIndexObservations([0], [75000000], [proofHash]);
       }
 
-      const fundingPayment3 = await positioning.getPendingFundingPayment(
+      const fundingPayment3 = await fundingRate.getPendingFundingPayment(
         account1.address,
         volmexBaseToken.address,
+        0,
       );
-      const fundingPayment4 = await positioning.getPendingFundingPayment(
+      const fundingPayment4 = await fundingRate.getPendingFundingPayment(
         account2.address,
         volmexBaseToken.address,
+        0,
       );
       expect(fundingPayment3.toString()).to.not.equal(fundingPayment1.toString());
       expect(fundingPayment4.toString()).to.not.equal(fundingPayment2.toString());
@@ -1161,13 +1193,15 @@ describe("Periodic Funding payment", function () {
       for (let i = 0; i < 10; i++) {
         await perpetualOracle.addIndexObservations([0], [75000000], [proofHash]);
       }
-      const fundingPayment5 = await positioning.getPendingFundingPayment(
+      const fundingPayment5 = await fundingRate.getPendingFundingPayment(
         account1.address,
         volmexBaseToken.address,
+        0,
       );
-      const fundingPayment6 = await positioning.getPendingFundingPayment(
+      const fundingPayment6 = await fundingRate.getPendingFundingPayment(
         account2.address,
         volmexBaseToken.address,
+        0,
       );
 
       expect(fundingPayment5.toString()).to.not.equal(fundingPayment3.toString());
@@ -1260,13 +1294,15 @@ describe("Periodic Funding payment", function () {
         liquidator,
       );
 
-      const fundingPayment1 = await positioning.getPendingFundingPayment(
+      const fundingPayment1 = await fundingRate.getPendingFundingPayment(
         account1.address,
         volmexBaseToken.address,
+        0,
       );
-      const fundingPayment2 = await positioning.getPendingFundingPayment(
+      const fundingPayment2 = await fundingRate.getPendingFundingPayment(
         account2.address,
         volmexBaseToken.address,
+        0,
       );
       expect(fundingPayment1.toString()).to.equal("0");
       expect(fundingPayment2.toString()).to.equal("0");
@@ -1344,21 +1380,25 @@ describe("Periodic Funding payment", function () {
         signatureRight1,
         liquidator,
       );
-      const fundingPayment3 = await positioning.getPendingFundingPayment(
+      const fundingPayment3 = await fundingRate.getPendingFundingPayment(
         account1.address,
         volmexBaseToken.address,
+        0,
       );
-      const fundingPayment4 = await positioning.getPendingFundingPayment(
+      const fundingPayment4 = await fundingRate.getPendingFundingPayment(
         account2.address,
         volmexBaseToken.address,
+        0,
       );
-      const fundingPayment5 = await positioning.getPendingFundingPayment(
+      const fundingPayment5 = await fundingRate.getPendingFundingPayment(
         alice.address,
         volmexBaseToken.address,
+        0,
       );
-      const fundingPayment6 = await positioning.getPendingFundingPayment(
+      const fundingPayment6 = await fundingRate.getPendingFundingPayment(
         bob.address,
         volmexBaseToken.address,
+        0,
       );
       const accountInfo = await accountBalance1.getAccountInfo(
         account1.address,
@@ -1374,22 +1414,26 @@ describe("Periodic Funding payment", function () {
       for (let i = 0; i < 10; i++) {
         await perpetualOracle.addIndexObservations([0], [75000000], [proofHash]);
       }
-      const fundingPayment7 = await positioning.getPendingFundingPayment(
+      const fundingPayment7 = await fundingRate.getPendingFundingPayment(
         account1.address,
         volmexBaseToken.address,
+        0,
       );
 
-      const fundingPayment8 = await positioning.getPendingFundingPayment(
+      const fundingPayment8 = await fundingRate.getPendingFundingPayment(
         account2.address,
         volmexBaseToken.address,
+        0,
       );
-      const fundingPayment9 = await positioning.getPendingFundingPayment(
+      const fundingPayment9 = await fundingRate.getPendingFundingPayment(
         alice.address,
         volmexBaseToken.address,
+        0,
       );
-      const fundingPayment10 = await positioning.getPendingFundingPayment(
+      const fundingPayment10 = await fundingRate.getPendingFundingPayment(
         bob.address,
         volmexBaseToken.address,
+        0,
       );
 
       expect(fundingPayment3.toString()).to.not.equal(fundingPayment7.toString());
@@ -1405,13 +1449,15 @@ describe("Periodic Funding payment", function () {
       for (let i = 0; i < 10; i++) {
         await perpetualOracle.addIndexObservations([0], [75000000], [proofHash]);
       }
-      const fundingPayment11 = await positioning.getPendingFundingPayment(
+      const fundingPayment11 = await fundingRate.getPendingFundingPayment(
         alice.address,
         volmexBaseToken.address,
+        0,
       );
-      const fundingPayment12 = await positioning.getPendingFundingPayment(
+      const fundingPayment12 = await fundingRate.getPendingFundingPayment(
         bob.address,
         volmexBaseToken.address,
+        0,
       );
 
       expect(fundingPayment9.toString()).to.not.equal(fundingPayment11.toString());
@@ -1504,13 +1550,15 @@ describe("Periodic Funding payment", function () {
           liquidator,
         );
       }
-      const fundingPayment1 = await positioning.getPendingFundingPayment(
+      const fundingPayment1 = await fundingRate.getPendingFundingPayment(
         account1.address,
         volmexBaseToken2.address,
+        "57896044618658097711785492504343953926634992332820282019728792003956564819969",
       );
-      const fundingPayment2 = await positioning.getPendingFundingPayment(
+      const fundingPayment2 = await fundingRate.getPendingFundingPayment(
         account2.address,
         volmexBaseToken2.address,
+        "57896044618658097711785492504343953926634992332820282019728792003956564819969",
       );
 
       await time.increase(20000);
@@ -1518,13 +1566,15 @@ describe("Periodic Funding payment", function () {
         "57896044618658097711785492504343953926634992332820282019728792003956564819969",
       );
       const stamp = await time.latest();
-      const fundingPayment3 = await positioning.getPendingFundingPayment(
+      const fundingPayment3 = await fundingRate.getPendingFundingPayment(
         account1.address,
         volmexBaseToken2.address,
+        "57896044618658097711785492504343953926634992332820282019728792003956564819969",
       );
-      const fundingPayment4 = await positioning.getPendingFundingPayment(
+      const fundingPayment4 = await fundingRate.getPendingFundingPayment(
         account2.address,
         volmexBaseToken2.address,
+        "57896044618658097711785492504343953926634992332820282019728792003956564819969",
       );
 
       expect(fundingPayment1.toString()).to.equal(fundingPayment3.toString());
@@ -1625,13 +1675,15 @@ describe("Periodic Funding payment", function () {
           liquidator,
         );
       }
-      const fundingPayment1 = await positioning.getPendingFundingPayment(
+      const fundingPayment1 = await fundingRate.getPendingFundingPayment(
         account1.address,
         volmexBaseToken2.address,
+        "57896044618658097711785492504343953926634992332820282019728792003956564819969",
       );
-      const fundingPayment2 = await positioning.getPendingFundingPayment(
+      const fundingPayment2 = await fundingRate.getPendingFundingPayment(
         account2.address,
         volmexBaseToken2.address,
+        "57896044618658097711785492504343953926634992332820282019728792003956564819969",
       );
 
       await time.increase(20000);
@@ -1655,13 +1707,15 @@ describe("Periodic Funding payment", function () {
         "57896044618658097711785492504343953926634992332820282019728792003956564819969",
       );
       const stamp = await time.latest();
-      const fundingPayment3 = await positioning.getPendingFundingPayment(
+      const fundingPayment3 = await fundingRate.getPendingFundingPayment(
         account1.address,
         volmexBaseToken2.address,
+        "57896044618658097711785492504343953926634992332820282019728792003956564819969",
       );
-      const fundingPayment4 = await positioning.getPendingFundingPayment(
+      const fundingPayment4 = await fundingRate.getPendingFundingPayment(
         account2.address,
         volmexBaseToken2.address,
+        "57896044618658097711785492504343953926634992332820282019728792003956564819969",
       );
 
       expect(fundingPayment1.toString()).to.not.equal(fundingPayment3.toString());
@@ -1700,7 +1754,8 @@ describe("Periodic Funding payment", function () {
     let volmexPerpPeriphery;
     let VolmexPerpView;
     let perpView;
-
+    let FundingRate;
+    let fundingRate;
     let accountBalance1;
     let MarketRegistry;
     let marketRegistry;
@@ -1742,6 +1797,7 @@ describe("Periodic Funding payment", function () {
       VolmexQuoteToken = await ethers.getContractFactory("VolmexQuoteToken");
       VolmexPerpView = await ethers.getContractFactory("VolmexPerpView");
       ChainLinkAggregator = await ethers.getContractFactory("MockV3Aggregator");
+      FundingRate = await ethers.getContractFactory("FundingRate");
       [owner, account1, account2, account3, account4, alice, bob] = await ethers.getSigners();
       liquidator = encodeAddress(owner.address);
     });
@@ -1904,6 +1960,13 @@ describe("Periodic Funding payment", function () {
           volmexBaseToken3.address,
         ],
       ]);
+      fundingRate = await upgrades.deployProxy(
+        FundingRate,
+        [perpetualOracle.address, positioningConfig.address, accountBalance1.address],
+        {
+          initializer: "FundingRate_init",
+        },
+      );
       positioning = await upgrades.deployProxy(
         Positioning,
         [
@@ -1912,6 +1975,7 @@ describe("Periodic Funding payment", function () {
           accountBalance1.address,
           matchingEngine.address,
           perpetualOracle.address,
+          fundingRate.address,
           marketRegistry.address,
           [
             volmexBaseToken.address,
@@ -1951,7 +2015,6 @@ describe("Periodic Funding payment", function () {
 
       await positioning.connect(owner).setMarketRegistry(marketRegistry.address);
       await positioning.connect(owner).setDefaultFeeReceiver(owner.address);
-      await positioning.connect(owner).setPositioning(positioning.address);
 
       await (await perpetualOracle.setIndexObservationAdder(owner.address)).wait();
       await (await matchingEngine.grantMatchOrders(positioning.address)).wait();
@@ -1963,7 +2026,7 @@ describe("Periodic Funding payment", function () {
         owner.address,
         owner.address, // replace with replayer address
       ]);
-      await (await perpetualOracle.setPositioning(positioning.address)).wait();
+      await (await perpetualOracle.setFundingRate(fundingRate.address)).wait();
       await positioningConfig.setPositioning(positioning.address);
       await positioningConfig.setAccountBalance(accountBalance1.address);
       await positioningConfig.setTwapInterval(28800);
@@ -2894,7 +2957,7 @@ describe("Periodic Funding payment", function () {
         account4.address,
         volmexBaseToken.address,
       );
-      const lastFundingrate = await positioning.getLastFundingRate(volmexBaseToken.address);
+      const lastFundingrate = await fundingRate.getLastFundingRate(volmexBaseToken.address);
       expect(lastFundingrate.toString()).to.be.equal("7300");
     });
   });

@@ -38,6 +38,8 @@ describe("Realised pnl tests", function () {
   let PerpetualOracle;
   let perpetualOracle;
   let transferManagerTest;
+  let FundingRate;
+  let fundingRate;
   let accountBalance1;
   let MarketRegistry;
   let marketRegistry;
