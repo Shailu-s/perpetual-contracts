@@ -8,8 +8,9 @@ import { IPositioningConfig } from "./IPositioningConfig.sol";
 interface IFundingRate {
     /// @notice event to emit after funding updated
     event FundingUpdated(address indexed baseToken, uint256 markTwap, uint256 indexTwap, int256 fundingRate);
+    event FundingPeriodSet(uint256 fundingInterval);
 
-    function FundingRate_init(IPerpetualOracle perpetualOracleArg, IPositioningConfig positioningConfigArg, IAccountBalance accountBalanceArg) external;
+    function FundingRate_init(IPerpetualOracle perpetualOracleArg, IPositioningConfig positioningConfigArg, IAccountBalance accountBalanceArg, address admin) external;
     /// @dev this function is used to settle funding f a trader on the basis of given basetoken
     /// @param trader address of the trader
     /// @param baseToken address of the baseToken

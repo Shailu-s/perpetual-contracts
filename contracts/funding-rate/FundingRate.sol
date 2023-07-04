@@ -2,7 +2,7 @@
 pragma solidity =0.8.18;
 pragma abicoder v2;
 
-import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import { AccessControlUpgradeable } from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 
 import { LibSafeCastUint } from "../libs/LibSafeCastUint.sol";
 import { LibPerpMath } from "../libs/LibPerpMath.sol";
@@ -12,16 +12,24 @@ import { IFundingRate } from "../interfaces/IFundingRate.sol";
 import { IPositioningConfig } from "../interfaces/IPositioningConfig.sol";
 import { FundingRateStorage } from "../storage/FundingRateStorage.sol";
 
-contract FundingRate is IFundingRate, FundingRateStorage, Initializable {
+contract FundingRate is IFundingRate, FundingRateStorage, AccessControlUpgradeable {
     using LibPerpMath for uint256;
     using LibPerpMath for int256;
     using LibSafeCastUint for uint256;
 
-    function FundingRate_init(IPerpetualOracle perpetualOracleArg, IPositioningConfig positioningConfigArg, IAccountBalance accountBalanceArg) external initializer {
+    function FundingRate_init(IPerpetualOracle perpetualOracleArg, IPositioningConfig positioningConfigArg, IAccountBalance accountBalanceArg, address admin) external initializer {
         _perpetualOracleArg = perpetualOracleArg;
         positioningConfig = positioningConfigArg;
         accountBalance = accountBalanceArg;
         _fundingPeriod = 8 hours; // this should be the time when funding should be settled
+        _grantRole(FUNDINGRATE_ADMIN, admin);
+        _setRoleAdmin(FUNDINGRATE_ADMIN, FUNDINGRATE_ADMIN);
+    }
+
+    function setFundingPeriod(uint256 period) external {
+        _requireFundingRate();
+        _fundingPeriod = period;
+        emit FundingPeriodSet(period);
     }
 
     /// @inheritdoc IFundingRate
@@ -141,5 +149,9 @@ contract FundingRate is IFundingRate, FundingRateStorage, Initializable {
             absDeltaTwap = indexTwap - markTwap;
             deltaTwap = absDeltaTwap > maxDeltaTwap ? maxDeltaTwap.neg256() : absDeltaTwap.neg256();
         }
+    }
+
+    function _requireFundingRate() internal view {
+        require(hasRole(FUNDINGRATE_ADMIN, _msgSender()), "FR_NA"); // FundingRate: Not admin
     }
 }

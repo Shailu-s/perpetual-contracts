@@ -11,6 +11,7 @@ import { IPositioningConfig } from "../interfaces/IPositioningConfig.sol";
 abstract contract FundingRateStorage {
     int256 internal constant _PRECISION_BASE = 1e18;
     int256 internal constant _IORACLE_BASE = 1e6;
+    bytes32 public constant FUNDINGRATE_ADMIN = keccak256("FUNDINGRATE_ADMIN");
     uint256 internal _fundingPeriod;
     IPerpetualOracle internal _perpetualOracleArg;
     IPositioningConfig public positioningConfig;
