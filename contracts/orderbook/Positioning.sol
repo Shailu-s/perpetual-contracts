@@ -116,7 +116,25 @@ contract Positioning is PositioningStorageV1, IPositioning, ReentrancyGuardUpgra
         emit DefaultFeeReceiverChanged(defaultFeeReceiver);
     }
 
-    // TODO: Cherry pick commit: ec05632b5d7eadab35011f5db00948a368846032
+    function setPerpetualOracle(IPerpetualOracle perpetualOracleArg) external {
+        _requirePositioningAdmin();
+        _perpetualOracleArg = perpetualOracleArg;
+    }
+
+    function setSmInterval(uint256 smInterval) external virtual {
+        _requireSmIntervalRole();
+        _smInterval = smInterval;
+    }
+
+    function setSmIntervalLiquidation(uint256 smIntervalLiquidation) external virtual {
+        _requireSmIntervalRole();
+        _smIntervalLiquidation = smIntervalLiquidation;
+    }
+
+    function setIndexOracleInterval(uint256 _interval) external virtual {
+        _requirePositioningAdmin();
+        indexPriceAllowedInterval = _interval;
+    }
 
     /// @inheritdoc IPositioning
     function whitelistLiquidator(address liquidator, bool isWhitelist) external {
