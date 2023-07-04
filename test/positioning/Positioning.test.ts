@@ -611,6 +611,7 @@ describe("Positioning", function () {
 
   describe("setters", async () => {
     it("should set index price oracle ", async () => {
+      await accountBalance.grantAddUnderlyingIndexRole(owner.address);
       expect(
         await accountBalance.connect(owner).setUnderlyingPriceIndex(volmexBaseToken.address, 0),
       )
@@ -672,7 +673,7 @@ describe("Positioning", function () {
     it("should fail to set index price oracle ", async () => {
       await expect(
         accountBalance.connect(account1).setUnderlyingPriceIndex(volmexBaseToken.address, 0),
-      ).to.be.revertedWith("AccountBalance: Not admin");
+      ).to.be.revertedWith("'AccountBalance: Not add underlying index role");
     });
   });
   describe("set twInterval for liquidation", async () => {
@@ -696,14 +697,16 @@ describe("Positioning", function () {
     });
   });
   describe("set funding period", async () => {
-    it("should set index price oracle ", async () => {
-      expect(await positioning.connect(owner).setFundingPeriod("500"))
+    it("should set funding period", async () => {
+      expect(await fundingRate.connect(owner).setFundingPeriod("500"))
         .to.emit(positioning, "FundingPeriodSet")
         .withArgs("500");
+      const fundingPeriod = await fundingRate.getFundingPeriod();
+      expect(fundingPeriod.toString()).to.be.equal("500");
     });
-    it("should fail to set  index price oracle ", async () => {
-      await expect(positioning.connect(account1).setFundingPeriod(28800)).to.be.revertedWith(
-        "P_NA",
+    it("should fail t set index price oracle ", async () => {
+      await expect(fundingRate.connect(account1).setFundingPeriod("500")).to.be.revertedWith(
+        "FR_NA",
       );
     });
   });

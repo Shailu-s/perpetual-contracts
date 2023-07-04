@@ -1962,7 +1962,12 @@ describe("Periodic Funding payment", function () {
       ]);
       fundingRate = await upgrades.deployProxy(
         FundingRate,
-        [perpetualOracle.address, positioningConfig.address, accountBalance1.address],
+        [
+          perpetualOracle.address,
+          positioningConfig.address,
+          accountBalance1.address,
+          owner.address,
+        ],
         {
           initializer: "FundingRate_init",
         },
