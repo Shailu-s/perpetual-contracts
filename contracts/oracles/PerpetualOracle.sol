@@ -6,7 +6,7 @@ import { AccessControlUpgradeable } from "@openzeppelin/contracts-upgradeable/ac
 import { AggregatorV3Interface } from "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
 import { IPerpetualOracle } from "../interfaces/IPerpetualOracle.sol";
 import { LibSafeCastUint } from "../libs/LibSafeCastUint.sol";
-import { IPositioning } from "../interfaces/IPositioning.sol";
+import { IFundingRate } from "../interfaces/IFundingRate.sol";
 import { LibPerpMath } from "../libs/LibPerpMath.sol";
 
 contract PerpetualOracle is AccessControlUpgradeable, IPerpetualOracle {
@@ -41,7 +41,7 @@ contract PerpetualOracle is AccessControlUpgradeable, IPerpetualOracle {
     uint256 public smInterval;
     uint256 public markSmInterval;
     uint256 public fundingPeriod;
-    IPositioning public positioning;
+    IFundingRate public fundingRate;
 
     function __PerpetualOracle_init(
         address[4] calldata _baseToken, //NOTE: index 2 and 3 is of chainlink base token
@@ -77,9 +77,9 @@ contract PerpetualOracle is AccessControlUpgradeable, IPerpetualOracle {
         _setRoleAdmin(PRICE_ORACLE_ADMIN, PRICE_ORACLE_ADMIN);
     }
 
-    function setPositioning(IPositioning _positioning) external virtual {
+    function setFundingRate(IFundingRate _fundingRate) external virtual {
         _requireOracleAdmin();
-        positioning = _positioning;
+        fundingRate = _fundingRate;
     }
 
     function setMarkObservationAdder(address _adder) external virtual {
@@ -303,8 +303,8 @@ contract PerpetualOracle is AccessControlUpgradeable, IPerpetualOracle {
     }
 
     function _calculateMarkPrice(address _baseToken, uint256 _index) internal view returns (int256 markPrice) {
-        int256 lastFundingRate = positioning.getLastFundingRate(_baseToken);
-        uint256 nextFunding = positioning.getNextFunding(_baseToken);
+        int256 lastFundingRate = fundingRate.getLastFundingRate(_baseToken);
+        uint256 nextFunding = fundingRate.getNextFunding(_baseToken);
 
         int256[3] memory prices;
         int256 indexPrice = latestIndexPrice(_index).toInt256();

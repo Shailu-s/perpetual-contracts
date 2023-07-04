@@ -2,7 +2,7 @@
 
 pragma solidity =0.8.18;
 
-import { IPositioning } from "./IPositioning.sol";
+import { IFundingRate } from "./IFundingRate.sol";
 import { AggregatorV3Interface } from "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
 
 
@@ -43,7 +43,7 @@ interface IPerpetualOracle {
         address _admin
     ) external;
 
-    function setPositioning(IPositioning _positioning) external;
+    function setFundingRate(IFundingRate _fundingRate) external;
 
     function setMarkObservationAdder(address _adder) external;
 
