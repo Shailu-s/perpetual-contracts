@@ -2,9 +2,10 @@
 pragma solidity =0.8.18;
 
 import "../libs/LibOrder.sol";
-import "../interfaces/IFundingRate.sol";
+import { IFundingRate } from "./IFundingRate.sol";
+import { IPerpetualOracle } from "./IPerpetualOracle.sol";
 
-interface IPositioning is IFundingRate {
+interface IPositioning {
     struct InternalData {
         int256 leftExchangedPositionSize;
         int256 leftExchangedPositionNotional;
@@ -78,7 +79,8 @@ interface IPositioning is IFundingRate {
         address vaultControllerArg,
         address accountBalanceArg,
         address matchingEngineArg,
-        address perpetualOracleArg,
+        IPerpetualOracle perpetualOracleArg,
+        IFundingRate fundingRateArg,
         address marketRegistryArg,
         address[4] calldata volmexBaseTokenArgs,
         uint256[2] calldata chainlinkBaseTokenIndexArgs,
@@ -122,11 +124,7 @@ interface IPositioning is IFundingRate {
     /// @param baseToken The address of baseToken
     /// @param positionSize the position size to be liquidated by liquidator
     //    and MUST be the same direction as trader's position size
-    function liquidate(
-        address trader,
-        address baseToken,
-        int256 positionSize
-    ) external;
+    function liquidate(address trader, address baseToken, int256 positionSize) external;
 
     /// @notice liquidate trader's position and will liquidate the max possible position size
     /// @dev If margin ratio >= 0.5 * mmRatio,
