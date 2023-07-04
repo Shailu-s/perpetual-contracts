@@ -35,6 +35,8 @@ describe("Multiple protocols", function () {
   let accountBalance1;
   let MarketRegistry;
   let marketRegistry;
+  let FundingRate;
+  let fundingRate;
   let TestERC20;
   let USDC;
   let owner, account1, account2, account3, account4, alice, bob;
@@ -62,6 +64,7 @@ describe("Multiple protocols", function () {
     VolmexBaseToken = await ethers.getContractFactory("VolmexBaseToken");
     VolmexQuoteToken = await ethers.getContractFactory("VolmexQuoteToken");
     VolmexPerpView = await ethers.getContractFactory("VolmexPerpView");
+    FundingRate = await ethers.getContractFactory("FundingRate");
     [owner, account1, account2, account3, account4, alice, bob] = await ethers.getSigners();
     liquidator = encodeAddress(owner.address);
   });
@@ -204,6 +207,13 @@ describe("Multiple protocols", function () {
       volmexQuoteToken.address,
       [EVIV.address, BVIV.address, chainlinkBaseToken.address, chainlinkBaseToken2.address],
     ]);
+    fundingRate = await upgrades.deployProxy(
+      FundingRate,
+      [perpetualOracle.address, positioningConfig.address, accountBalance1.address, owner.address],
+      {
+        initializer: "FundingRate_init",
+      },
+    );
 
     positioning = await upgrades.deployProxy(
       Positioning,
@@ -213,6 +223,7 @@ describe("Multiple protocols", function () {
         accountBalance1.address,
         matchingEngine.address,
         perpetualOracle.address,
+        fundingRate.address,
         marketRegistry.address,
         [EVIV.address, BVIV.address, chainlinkBaseToken.address, chainlinkBaseToken2.address],
         [chainlinkTokenIndex1, chainlinkTokenIndex2],
@@ -243,7 +254,7 @@ describe("Multiple protocols", function () {
     await vaultController.registerVault(vault.address, USDC.address);
     await vaultController.connect(owner).setPositioning(positioning.address);
     await perpetualOracle.grantSmaIntervalRole(positioningConfig.address);
-    await perpetualOracle.setPositioning(positioning.address);
+    await perpetualOracle.setFundingRate(fundingRate.address);
     await positioningConfig.setPositioning(positioning.address);
     await positioningConfig.setAccountBalance(accountBalance1.address);
     await positioningConfig.connect(owner).setTwapInterval(28800);
@@ -254,7 +265,6 @@ describe("Multiple protocols", function () {
 
     await positioning.connect(owner).setMarketRegistry(marketRegistry.address);
     await positioning.connect(owner).setDefaultFeeReceiver(owner.address);
-    await positioning.connect(owner).setPositioning(positioning.address);
 
     await (await matchingEngine.grantMatchOrders(positioning.address)).wait();
     await (await perpetualOracle.setPositioning(positioning.address)).wait();

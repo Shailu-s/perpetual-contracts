@@ -88,6 +88,7 @@ describe("Realised pnl tests", function () {
     TestERC20 = await ethers.getContractFactory("TestERC20");
     VolmexBaseToken = await ethers.getContractFactory("VolmexBaseToken");
     ChainLinkAggregator = await ethers.getContractFactory("MockV3Aggregator");
+    FundingRate = await ethers.getContractFactory("FundingRate");
     [owner, account1, account2, account3, account4, relayer] = await ethers.getSigners();
   });
 
@@ -274,6 +275,13 @@ describe("Realised pnl tests", function () {
         volmexBaseToken3.address,
       ],
     ]);
+    fundingRate = await upgrades.deployProxy(
+      FundingRate,
+      [perpetualOracle.address, positioningConfig.address, accountBalance1.address, owner.address],
+      {
+        initializer: "FundingRate_init",
+      },
+    );
     // vaultController = await upgrades.deployProxy(VaultController, [positioningConfig.address, accountBalance1.address])
 
     positioning = await upgrades.deployProxy(
@@ -284,6 +292,7 @@ describe("Realised pnl tests", function () {
         accountBalance1.address,
         matchingEngine.address,
         perpetualOracle.address,
+        fundingRate.address,
         marketRegistry.address,
         [
           volmexBaseToken.address,
@@ -321,9 +330,9 @@ describe("Realised pnl tests", function () {
 
     await positioning.connect(owner).setMarketRegistry(marketRegistry.address);
     await positioning.connect(owner).setDefaultFeeReceiver(owner.address);
-    await positioning.connect(owner).setPositioning(positioning.address);
+    // await positioning.connect(owner).setPositioning(positioning.address);
 
-    await (await perpetualOracle.setPositioning(positioning.address)).wait();
+    await (await perpetualOracle.setFundingRate(fundingRate.address)).wait();
     await positioningConfig.setPositioning(positioning.address);
     await positioningConfig.setAccountBalance(accountBalance1.address);
     await positioningConfig.setTwapInterval(28800);
