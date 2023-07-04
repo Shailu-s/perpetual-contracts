@@ -244,6 +244,7 @@ describe("Custom Cumulative Price", function () {
       volmexQuoteToken.address,
       [volmexBaseToken.address, volmexBaseToken.address],
     ]);
+    await marketRegistry.grantAddBaseTokenRole(owner.address);
     positioning = await upgrades.deployProxy(
       Positioning,
       [

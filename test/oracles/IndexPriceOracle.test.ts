@@ -761,7 +761,7 @@ describe("PerpetualOracle - Index Price Oracle", function () {
           "57896044618658097711785492504343953926634992332820282019728792003956564819967",
           chainlinkAggregator1.address,
           volmexBaseToken.address,
-          4710000,
+          "4710000",
         ),
       ).to.be.revertedWith("PerpOracle: invalid chainlink base token index");
     });
