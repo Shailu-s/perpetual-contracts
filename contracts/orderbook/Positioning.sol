@@ -82,7 +82,7 @@ contract Positioning is PositioningStorageV1, IPositioning, ReentrancyGuardUpgra
         isLiquidatorWhitelistEnabled = true;
         _grantRole(SM_INTERVAL_ROLE, positioningConfigArg);
         _grantRole(POSITIONING_ADMIN, _msgSender());
-        _grantRole(ADD_UNDERLYING_INDEX, perpetualOracleArg);
+        _grantRole(ADD_UNDERLYING_INDEX, address(perpetualOracleArg));
     }
 
     function grantAddUnderlyingIndexRole(address account) external {
@@ -271,7 +271,7 @@ contract Positioning is PositioningStorageV1, IPositioning, ReentrancyGuardUpgra
     /// @dev Used to check for stale index oracle
     function isStaleIndexOracle(address baseToken) public view returns (bool) {
         uint256 index = _underlyingPriceIndexes[baseToken];
-        uint256 lastUpdatedTimestamp = IPerpetualOracle(_perpetualOracleArg).lastestTimestamp(index, false);
+        uint256 lastUpdatedTimestamp = _perpetualOracleArg.lastestTimestamp(index, false);
         return block.timestamp - lastUpdatedTimestamp >= indexPriceAllowedInterval;
     }
 
@@ -369,7 +369,7 @@ contract Positioning is PositioningStorageV1, IPositioning, ReentrancyGuardUpgra
         uint256 baseTokenIndex = _underlyingPriceIndexes[baseToken];
         (int256 fundingPayment, int256 globalTwPremiumGrowth) = fundingRate.settleFunding(trader, baseToken, baseTokenIndex);
         if(_isChainlinkToken(baseTokenIndex)){
-            IPerpetualOracle(_perpetualOracleArg).cacheChainlinkPrice(baseTokenIndex);
+            _perpetualOracleArg.cacheChainlinkPrice(baseTokenIndex);
         }
         if (fundingPayment != 0) {
             IAccountBalance(accountBalance).modifyOwedRealizedPnl(trader, fundingPayment.neg256(), baseToken);
