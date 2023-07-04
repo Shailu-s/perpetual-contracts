@@ -21,11 +21,15 @@ contract VolmexPerpPeriphery is AccessControlUpgradeable, IVolmexPerpPeriphery {
     // role for whitelisting traders
     bytes32 public constant TRADER_WHITELISTER = keccak256("TRADER_WHITELISTER");
 
+
     // Store the whitelist Vaults
     mapping(address => bool) private _isVaultWhitelist;
 
     // Store the whitelist traders
     mapping(address => bool) public isTraderWhitelisted;
+    
+    // Store the blacklisted address
+    mapping(address => bool) public isAccountNotBlacklisted;
 
     // Boolean flag to enable / disable whitelisted traders
     bool public isTraderWhitelistEnabled;
@@ -89,6 +93,10 @@ contract VolmexPerpPeriphery is AccessControlUpgradeable, IVolmexPerpPeriphery {
         _requireTraderWhitelister();
         isTraderWhitelisted[_trader] = _isWhitelist;
         emit TraderWhitelisted(_trader, _isWhitelist);
+    }
+
+    function blacklistAccount(address _account, bool _isBlacklist) external {
+        isAccountNotBlacklisted[_account] = _isBlacklist;
     }
 
     function depositToVault(uint256 _index, address _token, uint256 _amount) external {
