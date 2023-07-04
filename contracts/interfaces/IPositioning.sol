@@ -91,6 +91,9 @@ interface IPositioning {
     /// @notice Settle all markets fundingPayment to owedRealized Pnl
     /// @param trader The address of trader
     function settleAllFunding(address trader) external;
+    
+    /// @notice Function to set token's underlying index
+    function setUnderlyingPriceIndex(address volmexBaseToken, uint256 underlyingIndex) external;
 
     /// @notice Function to set fee receiver
     function setDefaultFeeReceiver(address newDefaultFeeReceiver) external;

@@ -240,6 +240,8 @@ describe("Various Order Types", function () {
       },
     );
     await positioning.deployed();
+    await marketRegistry.grantAddBaseTokenRole(owner.address);
+
     await (await perpView.setPositioning(positioning.address)).wait();
     await (await perpView.incrementPerpIndex()).wait();
     await (await volmexBaseToken.setMintBurnRole(positioning.address)).wait();

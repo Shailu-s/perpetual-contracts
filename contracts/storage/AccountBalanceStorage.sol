@@ -31,4 +31,5 @@ abstract contract AccountBalanceStorageV1 {
     mapping(uint256 => uint256) public sigmaVolmexIvs;
     IMatchingEngine public matchingEngine;
     uint256 public minTimeBound;
+    bytes32 public constant ADD_UNDERLYING_INDEX = keccak256("ADD_UNDERLYING_INDEX");
 }

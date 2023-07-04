@@ -15,6 +15,7 @@ abstract contract PositioningStorageV1 {
     bytes32 public constant POSITIONING_ADMIN = keccak256("POSITIONING_ADMIN");
     bytes32 public constant SM_INTERVAL_ROLE = keccak256("SM_INTERVAL_ROLE");
     bytes32 public constant CHAINLINK_TOKEN_CHECKSUM = bytes32(uint256(2 ** 255));    // CHAINLINK_TOKEN_CHECKSUM = 0x8000000000000000000000000000000000000000000000000000000000000000 id for chain link base token indexes
+    bytes32 public constant ADD_UNDERLYING_INDEX = keccak256("ADD_UNDERLYING_INDEX");
     uint8 internal _settlementTokenDecimals;
     address internal _matchingEngine;
     address internal _marketRegistry;
@@ -33,5 +34,5 @@ abstract contract PositioningStorageV1 {
     mapping(address => uint256) public minPositionSizeByBaseToken;
     mapping(address => uint256) internal _underlyingPriceIndexes;
 
-    uint256[48] private __gap;
+    uint256[47] private __gap;
 }

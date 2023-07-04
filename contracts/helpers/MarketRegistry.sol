@@ -36,6 +36,11 @@ contract MarketRegistry is IMarketRegistry, PositioningCallee, MarketRegistrySto
         _grantRole(MARKET_REGISTRY_ADMIN, _msgSender());
     }
 
+    function grantAddBaseTokenRole(address baseTokenAdder) external {
+        _requireMarketRegistryAdmin();
+        _grantRole(ADD_BASE_TOKEN, baseTokenAdder);
+    }
+    
     /// @inheritdoc IMarketRegistry
     function setMakerFeeRatio(uint24 makerFeeRatio) external override checkRatio(makerFeeRatio) {
         _requireMarketRegistryAdmin();
@@ -57,7 +62,7 @@ contract MarketRegistry is IMarketRegistry, PositioningCallee, MarketRegistrySto
 
     /// @inheritdoc IMarketRegistry
     function addBaseToken(address baseToken) external override {
-        _requireMarketRegistryAdmin();
+        _requireAddBaseTokenRole();
         require(IVirtualToken(baseToken).isBase(), "MarketRegistry: not base token");
         address[] storage tokensStorage = _baseTokensMarketMap;
         if (_hasBaseToken(tokensStorage, baseToken)) {
@@ -103,6 +108,10 @@ contract MarketRegistry is IMarketRegistry, PositioningCallee, MarketRegistrySto
 
     function _requireMarketRegistryAdmin() internal view {
         require(hasRole(MARKET_REGISTRY_ADMIN, _msgSender()), "MarketRegistry: Not admin");
+    }
+
+    function _requireAddBaseTokenRole() internal view {
+        require(hasRole(ADD_BASE_TOKEN, _msgSender()), "MarketRegistry: Not add base token role");
     }
 
     function _hasBaseToken(address[] memory baseTokens, address baseToken) internal pure returns (bool) {

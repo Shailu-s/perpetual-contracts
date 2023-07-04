@@ -66,7 +66,7 @@ interface IAccountBalance {
 
     function setSmInterval(uint256 smInterval) external;
 
-    function setSigmaViv(uint256 _baseTokenIndex,uint256 _sigmaViv) external;
+    function setUnderlyingIndexAndSigmaViv(uint256 _baseTokenIndex, address _baseTokenArg, uint256 _sigmaViv) external ;
     
     function setSmIntervalLiquidation(uint256 smIntervalLiquidation) external;
 

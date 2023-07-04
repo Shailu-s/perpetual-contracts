@@ -302,6 +302,7 @@ describe("Positioning", function () {
     await (await virtualToken.setMintBurnRole(positioning.address)).wait();
 
     // await marketRegistry.connect(owner).addBaseToken(virtualToken.address)
+    await marketRegistry.grantAddBaseTokenRole(owner.address);
     await marketRegistry.connect(owner).addBaseToken(volmexBaseToken.address);
     // await marketRegistry.connect(owner).addBaseToken(baseToken.address)
     await marketRegistry.connect(owner).setMakerFeeRatio(0.0004e6);
@@ -616,15 +617,33 @@ describe("Positioning", function () {
     it("should fail to set min time bound less than five min in account balance", async () => {
       await expect(accountBalance.setMinTimeBound(10)).to.be.revertedWith("AB_NS5");
     });
-    it("should update sigva viv ", async () => {
-      await accountBalance.updateSigmaVolmexIvs([0, 1], [300, 500]);
-      const sigmaVIv = await accountBalance.sigmaVolmexIvs(1);
-      expect(sigmaVIv.toString()).to.be.equal("500");
+    it("should fail to update underlying index", async () => {
+      await expect(
+        positioning.setUnderlyingPriceIndex(
+          volmexBaseToken2.address,
+          "57896044618658097711785492504343953926634992332820282019728792003956564819971",
+        ),
+      ).to.be.revertedWith("Positioning: Not add underlying index role");
     });
-    it("should update 0 sigva viv ", async () => {
-      await expect(accountBalance.updateSigmaVolmexIvs([0, 1], [300, 0])).to.be.revertedWith(
-        "AccountBalance: not zero",
+    it("should fail to set sigma viv ", async () => {
+      await expect(
+        accountBalance
+          .connect(account1)
+          .setSigmaViv(
+            "57896044618658097711785492504343953926634992332820282019728792003956564819971",
+            "7400",
+          ),
+      ).to.be.revertedWith("AccountBalance: Not sigma IV role");
+    });
+    it("should set sigma viv ", async () => {
+      await accountBalance.setSigmaViv(
+        "57896044618658097711785492504343953926634992332820282019728792003956564819971",
+        "7400",
       );
+      const sigmaViv = await accountBalance.sigmaVolmexIvs(
+        "57896044618658097711785492504343953926634992332820282019728792003956564819971",
+      );
+      expect(sigmaViv.toString()).to.be.equal("7400");
     });
     it("should set index price allowed interval", async () => {
       await positioning.setIndexOracleInterval(5000);
