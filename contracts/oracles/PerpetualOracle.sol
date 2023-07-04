@@ -98,6 +98,11 @@ contract PerpetualOracle is AccessControlUpgradeable, IPerpetualOracle {
         marketRegistry = _marketRegistry;
     }
 
+    function setPositioning(IPositioning _positioning) external virtual {
+        _requireOracleAdmin();
+        positioning = _positioning;
+    }
+
     function setMarkObservationAdder(address _adder) external virtual {
         _requireOracleAdmin();
         require(_adder != address(0), "PerpOracle: zero address");
