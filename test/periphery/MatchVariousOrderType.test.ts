@@ -238,7 +238,7 @@ describe("Various Order Types", function () {
         marketRegistry.address,
         [
           volmexBaseToken.address,
-          volmexBaseToken1.address,
+          volmexBaseToken.address,
           volmexBaseToken2.address,
           volmexBaseToken3.address,
         ],
