@@ -73,8 +73,19 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
         _requireAccountBalanceAdmin();
         _grantRole(SIGMA_IV_ROLE, account);
     }
-
-    function setUnderlyingPriceIndex(address volmexBaseToken, uint256 underlyingIndex) external {
+    
+    function setUnderlyingIndexAndSigmaViv(uint256 _baseTokenIndex, address _baseTokenArg, uint256 _sigmaViv) external {
+        setUnderlyingPriceIndex(_baseTokenArg, _baseTokenIndex);
+        setSigmaViv(_baseTokenIndex, _sigmaViv);
+    }
+    
+    function setSigmaViv(uint256 _baseTokenIndex,uint256 _sigmaViv ) public {
+        _requireSigmaIvRole();
+        require(_sigmaViv > 0, "AccountBalance: Not zero");
+        sigmaVolmexIvs[_baseTokenIndex] = _sigmaViv;
+    }
+    
+    function setUnderlyingPriceIndex(address volmexBaseToken, uint256 underlyingIndex) public {
         _requireAddUnderlyingIndexRole();
         _underlyingPriceIndexes[volmexBaseToken] = underlyingIndex;
         emit UnderlyingPriceIndexSet(underlyingIndex, volmexBaseToken);
@@ -96,11 +107,6 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
         minTimeBound = minTimeBoundArg;
     }
 
-    function setSigmaViv(uint256 _baseTokenIndex,uint256 _sigmaViv) external virtual {
-        _requireSigmaIvRole();
-        require(_sigmaViv > 0, "AccountBalance: not zero");
-        sigmaVolmexIvs[_baseTokenIndex] = _sigmaViv;
-    }
     
     /// @inheritdoc IAccountBalance
     function modifyOwedRealizedPnl(
@@ -166,15 +172,6 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
         _deregisterBaseToken(trader, baseToken);
     }
 
-    function updateSigmaVolmexIvs(uint256[] memory _indexes, uint256[] memory _sigmaVivs) external virtual {
-        _requireSigmaIvRole();
-        uint256 totalIndex = _indexes.length;
-        for (uint256 index; index < totalIndex; ++index) {
-            require(_sigmaVivs[index] > 0, "AccountBalance: not zero");
-            sigmaVolmexIvs[_indexes[index]] = _sigmaVivs[index];
-        }
-        emit SigmaVolmexIvsUpdated(_indexes, _sigmaVivs);
-    }
 
     /// @inheritdoc IAccountBalance
     function getPositioningConfig() external view override returns (address) {
