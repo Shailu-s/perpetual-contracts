@@ -33,7 +33,6 @@ contract Positioning is PositioningStorageV1, IPositioning, ReentrancyGuardUpgra
     using LibPerpMath for uint256;
     using LibPerpMath for int256;
 
-    /// @dev this function is public for testing
     // solhint-disable-next-line func-order
     function initialize(
         address positioningConfigArg,
@@ -305,7 +304,7 @@ contract Positioning is PositioningStorageV1, IPositioning, ReentrancyGuardUpgra
         int256 positionSizeToBeLiquidated
     ) internal {
         IAccountBalance accountBalanceInst = IAccountBalance(accountBalance);
-        int256 accountValue = getAccountValue(trader);
+        int256 accountValue = _getAccountValue(trader);
         int256 feeCollateralByRatio = _getFreeCollateralByRatio(trader, IPositioningConfig(positioningConfig).getImRatio());
         // P_EAV: enough account value
         require(accountBalanceInst.isAccountLiquidatable(trader, baseToken, minPositionSizeByBaseToken[baseToken], accountValue, feeCollateralByRatio), "P_EAV");
@@ -582,7 +581,7 @@ contract Positioning is PositioningStorageV1, IPositioning, ReentrancyGuardUpgra
             // shore the remaining positions and make sure traders having enough money to pay liquidation penalty.
 
             // CH_NEMRM : not enough minimum required margin after reducing/closing position
-            require(getAccountValue(order.trader) >= _getTotalAbsPositionValue(order.trader).mulRatio(_getLiquidationPenaltyRatio()).toInt256(), "CH_NEMRM");
+            require(_getAccountValue(order.trader) >= _getTotalAbsPositionValue(order.trader).mulRatio(_getLiquidationPenaltyRatio()).toInt256(), "CH_NEMRM");
         }
         return pnlToBeRealized;
     }
@@ -600,18 +599,13 @@ contract Positioning is PositioningStorageV1, IPositioning, ReentrancyGuardUpgra
             positionSizeToBeLiquidated = maxLiquidatablePositionSize;
         }
 
-        uint256 indexPrice = getIndexPrice(baseToken, _smIntervalLiquidation);
+        uint256 indexPrice = IVolmexBaseToken(baseToken).getIndexPrice(_underlyingPriceIndexes[baseToken], _smIntervalLiquidation);
         require(indexPrice != 0, "P_0IP"); // zero index price
         uint256 maxOrderSize = IMatchingEngine(_matchingEngine).getMaxOrderSizeOverTime(baseToken);
         uint256 actualLiquidatableSize = IAccountBalance(accountBalance).getNLiquidate(positionSizeToBeLiquidated.abs(), minPositionSizeByBaseToken[baseToken], maxOrderSize);
         int256 liquidatedPositionSize = positionSizeToBeLiquidated >= 0 ? (actualLiquidatableSize.toInt256()).neg256() : actualLiquidatableSize.toInt256();
         int256 liquidatedPositionNotional = liquidatedPositionSize.mulDiv(indexPrice.toInt256(), _ORACLE_BASE);
         return (liquidatedPositionSize, liquidatedPositionNotional);
-    }
-
-    function getIndexPrice(address baseToken, uint256 twInterval) public view returns (uint256 price) {
-        uint256 index = _underlyingPriceIndexes[baseToken];
-        price = IVolmexBaseToken(baseToken).getIndexPrice(index, twInterval);
     }
 
     function _getTakerOpenNotional(address trader, address baseToken) internal view returns (int256) {
@@ -650,7 +644,7 @@ contract Positioning is PositioningStorageV1, IPositioning, ReentrancyGuardUpgra
     }
 
     /// @dev this function returns total account value of the trader
-    function getAccountValue(address trader) public view returns (int256) {
+    function _getAccountValue(address trader) internal view returns (int256) {
         return IVaultController(vaultController).getAccountValue(trader);
     }
 
@@ -675,7 +669,7 @@ contract Positioning is PositioningStorageV1, IPositioning, ReentrancyGuardUpgra
         require(isLiquidatorWhitelisted[liquidator], "P_LW"); // Positioning: liquidator not whitelisted
     }
     
-    function _isChainlinkToken(uint256 baseTokenIndex) internal view returns (bool) {
+    function _isChainlinkToken(uint256 baseTokenIndex) internal pure returns (bool) {
         return ((uint256(CHAINLINK_TOKEN_CHECKSUM & bytes32(baseTokenIndex)) >> 255) == 1) ;
     }
 
