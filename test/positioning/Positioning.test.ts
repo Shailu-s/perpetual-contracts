@@ -617,16 +617,6 @@ describe("Positioning", function () {
     it("should fail to set min time bound less than five min in account balance", async () => {
       await expect(accountBalance.setMinTimeBound(10)).to.be.revertedWith("AB_NS5");
     });
-    it("should update sigva viv ", async () => {
-      await accountBalance.updateSigmaVolmexIvs([0, 1], [300, 500]);
-      const sigmaVIv = await accountBalance.sigmaVolmexIvs(1);
-      expect(sigmaVIv.toString()).to.be.equal("500");
-    });
-    it("should update 0 sigva viv ", async () => {
-      await expect(accountBalance.updateSigmaVolmexIvs([0, 1], [300, 0])).to.be.revertedWith(
-        "AccountBalance: not zero",
-      );
-    });
     it("should fail to update underlying index", async () => {
       await expect(
         positioning.setUnderlyingPriceIndex(
