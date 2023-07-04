@@ -44,6 +44,8 @@ describe("Custom Cumulative Price", function () {
   let accountBalance1;
   let MarketRegistry;
   let marketRegistry;
+  let FundingRate;
+  let fundingRate;
   let TestERC20;
   let USDC;
   let owner, account1, account2, account3, alice, bob;

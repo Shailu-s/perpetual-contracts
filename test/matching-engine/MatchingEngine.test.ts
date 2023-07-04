@@ -228,7 +228,7 @@ describe("MatchingEngine", function () {
     ]);
     fundingRate = await upgrades.deployProxy(
       FundingRate,
-      [perpetualOracle.address, positioningConfig.address, accountBalance.address],
+      [perpetualOracle.address, positioningConfig.address, accountBalance.address, owner.address],
       {
         initializer: "FundingRate_init",
       },

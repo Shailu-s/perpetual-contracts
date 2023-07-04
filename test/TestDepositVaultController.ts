@@ -25,6 +25,8 @@ describe("Vault Controller deposit tests", function () {
   let chainlinkAggregator2;
   let volmexBaseToken;
   let volmexBaseToken1;
+  let FundingRate;
+  let fundingRate;
   let volmexBaseToken2;
   let volmexBaseToken3;
   let prepViewFake;
@@ -40,6 +42,7 @@ describe("Vault Controller deposit tests", function () {
     VolmexPerpPeriphery = await ethers.getContractFactory("VolmexPerpPeriphery");
     [owner, alice, relayer] = await ethers.getSigners();
     PerpetualOracle = await ethers.getContractFactory("PerpetualOracle");
+    FundingRate = await ethers.getContractFactory("FundingRate");
     VolmexBaseToken = await ethers.getContractFactory("VolmexBaseToken");
     ChainLinkAggregator = await ethers.getContractFactory("MockV3Aggregator");
 
@@ -167,6 +170,13 @@ describe("Vault Controller deposit tests", function () {
       DAI.address,
       vaultController.address,
     ]);
+    fundingRate = await upgrades.deployProxy(
+      FundingRate,
+      [perpetualOracle.address, positioningConfig.address, accountBalance.address, owner.address],
+      {
+        initializer: "FundingRate_init",
+      },
+    );
 
     Positioning = await ethers.getContractFactory("PositioningTest");
     positioning = await upgrades.deployProxy(
@@ -177,6 +187,7 @@ describe("Vault Controller deposit tests", function () {
         accountBalance.address,
         matchingEngineFake.address,
         perpetualOracle.address,
+        fundingRate.address,
         perpetualOracle.address,
         [
           volmexBaseToken.address,

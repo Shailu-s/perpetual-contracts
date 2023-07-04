@@ -19,6 +19,8 @@ describe("Vault Controller Mock tests for account value", function () {
   let positioning;
   let VolmexPerpPeriphery;
   let volmexPerpPeriphery;
+  let FundingRate;
+  let fundingRate;
   let prepViewFake;
   let owner, alice, relayer;
   const proofHash = "0x6c00000000000000000000000000000000000000000000000000000000000000";
@@ -30,7 +32,7 @@ describe("Vault Controller Mock tests for account value", function () {
     [owner, alice, relayer] = await ethers.getSigners();
     PerpetualOracle = await ethers.getContractFactory("PerpetualOracle");
     VolmexPerpPeriphery = await ethers.getContractFactory("VolmexPerpPeriphery");
-
+    FundingRate = await ethers.getContractFactory("FundingRate");
     matchingEngineFake = await smock.fake("MatchingEngine");
     prepViewFake = await smock.fake("VolmexPerpView");
 
@@ -84,7 +86,13 @@ describe("Vault Controller Mock tests for account value", function () {
       vaultController.address,
     ]);
     await vault.deployed();
-
+    fundingRate = await upgrades.deployProxy(
+      FundingRate,
+      [perpetualOracle.address, positioningConfig.address, accountBalance.address, owner.address],
+      {
+        initializer: "FundingRate_init",
+      },
+    );
     Positioning = await ethers.getContractFactory("PositioningTest");
     positioning = await upgrades.deployProxy(
       Positioning,
@@ -94,6 +102,7 @@ describe("Vault Controller Mock tests for account value", function () {
         accountBalance.address,
         matchingEngineFake.address,
         perpetualOracle.address,
+        fundingRate.address,
         perpetualOracle.address,
         [alice.address, alice.address, alice.address, alice.address],
         [chainlinkTokenIndex1, chainlinkTokenIndex2],
