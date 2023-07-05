@@ -220,6 +220,10 @@ contract VolmexPerpPeriphery is AccessControlUpgradeable, IVolmexPerpPeriphery {
         require(hasRole(TRADER_WHITELISTER, _msgSender()), "VolmexPerpPeriphery: Not whitelister");
     }
 
+    function _requireAccountBlacklister() internal view {
+        require(hasRole(ACCOUNT_BLACKLISTER, _msgSender()), "VolmexPerpPeriphery: Not blacklister");
+    }
+
     // Note for V2: Change the logic to round id, if Volmex Oracle implements price by round id functionality
     function _verifyTriggerPrice(LibOrder.Order memory _limitOrder) private view returns (bool result) {
         // Note for V2: Add check for round id, when Volmex Oracle updates functionality
