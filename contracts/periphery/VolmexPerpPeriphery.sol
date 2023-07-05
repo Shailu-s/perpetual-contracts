@@ -104,6 +104,7 @@ contract VolmexPerpPeriphery is AccessControlUpgradeable, IVolmexPerpPeriphery {
     }
 
     function depositToVault(uint256 _index, address _token, uint256 _amount) external {
+        require(!isAccountBlacklisted[_msgSender()],"Periphery: account blacklisted");
         IVaultController vaultController = perpView.vaultControllers(_index);
         vaultController.deposit(IVolmexPerpPeriphery(address(this)), _token, _msgSender(), _amount);
     }
@@ -156,6 +157,7 @@ contract VolmexPerpPeriphery is AccessControlUpgradeable, IVolmexPerpPeriphery {
 
     function transferToVault(IERC20Upgradeable _token, address _from, uint256 _amount) external {
         address caller = _msgSender();
+        require(!isAccountBlacklisted[_from],"Periphery: account blacklisted");
         require(_isVaultWhitelist[caller], "Periphery: vault not whitelisted");
         _token.safeTransferFrom(_from, caller, _amount);
     }
