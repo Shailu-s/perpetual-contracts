@@ -20,7 +20,8 @@ contract VolmexPerpPeriphery is AccessControlUpgradeable, IVolmexPerpPeriphery {
     bytes32 public constant RELAYER_MULTISIG = keccak256("RELAYER_MULTISIG");
     // role for whitelisting traders
     bytes32 public constant TRADER_WHITELISTER = keccak256("TRADER_WHITELISTER");
-
+    // role for whitelisting traders
+    bytes32 public constant ACCOUNT_BLACKLISTER = keccak256("ACCOUNT_BLACKLISTER");
 
     // Store the whitelist Vaults
     mapping(address => bool) private _isVaultWhitelist;
@@ -29,7 +30,7 @@ contract VolmexPerpPeriphery is AccessControlUpgradeable, IVolmexPerpPeriphery {
     mapping(address => bool) public isTraderWhitelisted;
     
     // Store the blacklisted address
-    mapping(address => bool) public isAccountNotBlacklisted;
+    mapping(address => bool) public isAccountBlacklisted;
 
     // Boolean flag to enable / disable whitelisted traders
     bool public isTraderWhitelistEnabled;
@@ -62,6 +63,8 @@ contract VolmexPerpPeriphery is AccessControlUpgradeable, IVolmexPerpPeriphery {
         _grantRole(VOLMEX_PERP_PERIPHERY, _owner);
         _grantRole(TRADER_WHITELISTER, _owner);
         _setRoleAdmin(TRADER_WHITELISTER, TRADER_WHITELISTER);
+        _grantRole(ACCOUNT_BLACKLISTER, _owner);
+        _setRoleAdmin(ACCOUNT_BLACKLISTER, ACCOUNT_BLACKLISTER);
         _grantRole(RELAYER_MULTISIG, _relayer);
         _setRoleAdmin(RELAYER_MULTISIG, RELAYER_MULTISIG);
     }
@@ -96,7 +99,8 @@ contract VolmexPerpPeriphery is AccessControlUpgradeable, IVolmexPerpPeriphery {
     }
 
     function blacklistAccount(address _account, bool _isBlacklist) external {
-        isAccountNotBlacklisted[_account] = _isBlacklist;
+        _requireAccountBlacklister();
+        isAccountBlacklisted[_account] = _isBlacklist;
     }
 
     function depositToVault(uint256 _index, address _token, uint256 _amount) external {
