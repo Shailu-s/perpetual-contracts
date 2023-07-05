@@ -1,0 +1,3 @@
+const blacklistedAddresses = [];
+
+export { blacklistedAddresses };

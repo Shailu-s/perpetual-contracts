@@ -1,16 +1,14 @@
 import { ethers, web3 } from "hardhat";
-
+import { blacklisedAddresses } from "../utils/blacklistedAddresses";
 const blacklistAccounts = async () => {
   const Periphery = await ethers.getContractFactory("VolmexPerpPeriphery");
   const periphery = Periphery.attach(`${process.env.PERIPHERY_ADDRESS}`);
-  const blackListAddresses = [];
-  const iterations = Number((blackListAddresses.length / 100).toFixed(0));
-  const isBlacklist = [];
-  isBlacklist.fill(true, blackListAddresses.length - 1);
+  const iterations = Number((blacklisedAddresses.length / 50).toFixed(0));
+  const isBlacklist = new Array(blacklisedAddresses.length).fill(true);
   for (let index = 0; index < iterations; index++) {
     periphery.blacklistAccounts(
-      blackListAddresses.slice(100 * index, 100 * (index + 1)),
-      isBlacklist.slice(100 * index, 100 * (index + 1)),
+      blacklisedAddresses.slice(50 * index, 50 * (index + 1)),
+      isBlacklist.slice(50 * index, 50 * (index + 1)),
     );
   }
 };
