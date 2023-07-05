@@ -306,6 +306,7 @@ describe("VolmexPerpPeriphery", function () {
     await (await matchingEngine.grantMatchOrders(positioning.address)).wait();
 
     await perpetualOracle.setMarkObservationAdder(matchingEngine.address);
+
     await perpetualOracle.setIndexObservationAdder(owner.address);
     await perpetualOracle.grantCacheChainlinkPriceRole(owner.address);
     await perpetualOracle.grantCacheChainlinkPriceRole(positioning.address);
@@ -319,6 +320,7 @@ describe("VolmexPerpPeriphery", function () {
       owner.address, // replace with replayer address
     ]);
     await volmexPerpPeriphery.deployed();
+    await vaultController.setPeriphery(volmexPerpPeriphery.address);
   });
 
   describe("Funding payment", () => {
@@ -551,6 +553,45 @@ describe("VolmexPerpPeriphery", function () {
           ),
         ).to.emit(positioning, "PositionChanged");
       }
+    });
+    it("should fail to open position when trader is black listed", async () => {
+      await volmexPerpPeriphery.blacklistAccounts([alice.address], [true]);
+      let salt = 250;
+      let orderLeft = Order(
+        ORDER,
+        deadline,
+        alice.address,
+        Asset(volmexBaseToken.address, baseAmount),
+        Asset(volmexQuoteToken.address, quoteAmount),
+        salt,
+        0,
+        true,
+      );
+
+      let orderRight = Order(
+        ORDER,
+        deadline,
+        bob.address,
+        Asset(volmexQuoteToken.address, quoteAmount),
+        Asset(volmexBaseToken.address, baseAmount),
+        salt++,
+        0,
+        false,
+      );
+
+      const signatureLeft = await getSignature(orderLeft, alice.address);
+      const signatureRight = await getSignature(orderRight, bob.address);
+
+      await expect(
+        volmexPerpPeriphery.openPosition(
+          0,
+          orderLeft,
+          signatureLeft,
+          orderRight,
+          signatureRight,
+          liquidator,
+        ),
+      ).to.be.revertedWith("Periphery: account blacklisted");
     });
     it("should not Open position trader is not when not whitelisted", async () => {
       let salt = 250;
@@ -2140,6 +2181,19 @@ describe("VolmexPerpPeriphery", function () {
       vBalAfter = await USDC.balanceOf(vault.address);
       expect(amount).to.equal(vBalAfter.sub(vBalBefore));
     });
+    it("should fail to depsoit to vault if address is black listed", async () => {
+      await await USDC.transfer(account1.address, "100000000000");
+      await await USDC.transfer(account2.address, "100000000000");
+      await USDC.connect(account1).approve(volmexPerpPeriphery.address, "100000000000");
+      await USDC.connect(account2).approve(volmexPerpPeriphery.address, "100000000000");
+      await volmexPerpPeriphery.blacklistAccounts([account1.address], [true]);
+
+      await expect(
+        volmexPerpPeriphery.connect(account1).depositToVault(index, USDC.address, amount),
+      ).to.be.revertedWith("Periphery: account blacklisted");
+      await volmexPerpPeriphery.connect(account2).depositToVault(index, USDC.address, amount);
+    });
+
     it("Should withdraw the collateral from the vault", async () => {
       ownerBalBeforeWithdraw = await USDC.balanceOf(owner.address);
       (
