@@ -98,13 +98,16 @@ contract VolmexPerpPeriphery is AccessControlUpgradeable, IVolmexPerpPeriphery {
         emit TraderWhitelisted(_trader, _isWhitelist);
     }
 
-    function blacklistAccount(address _account, bool _isBlacklist) external {
+    function blacklistAccount(address[] calldata _accounts, bool[] calldata _isBlacklist) external {
         _requireAccountBlacklister();
-        isAccountBlacklisted[_account] = _isBlacklist;
+        uint256 totalAccounts = _accounts.length;
+        for (uint256 index; index < totalAccounts; ++index) {
+            isAccountBlacklisted[_accounts[index]] = _isBlacklist[index];
+        }
     }
 
     function depositToVault(uint256 _index, address _token, uint256 _amount) external {
-        require(!isAccountBlacklisted[_msgSender()],"Periphery: account blacklisted");
+        _requireNotBlacklistedAccount(_msgSender());
         IVaultController vaultController = perpView.vaultControllers(_index);
         vaultController.deposit(IVolmexPerpPeriphery(address(this)), _token, _msgSender(), _amount);
     }
@@ -157,7 +160,7 @@ contract VolmexPerpPeriphery is AccessControlUpgradeable, IVolmexPerpPeriphery {
 
     function transferToVault(IERC20Upgradeable _token, address _from, uint256 _amount) external {
         address caller = _msgSender();
-        require(!isAccountBlacklisted[_from],"Periphery: account blacklisted");
+        _requireNotBlacklistedAccount(_from);
         require(_isVaultWhitelist[caller], "Periphery: vault not whitelisted");
         _token.safeTransferFrom(_from, caller, _amount);
     }
@@ -218,6 +221,10 @@ contract VolmexPerpPeriphery is AccessControlUpgradeable, IVolmexPerpPeriphery {
         require(isTraderWhitelisted[trader], "Periphery: trader not whitelisted");
     }
 
+    function _requireNotBlacklistedAccount(address account) internal view {
+        require(!isAccountBlacklisted[account], "Periphery: account blacklisted");
+    }
+    
     function _requireTraderWhitelister() internal view {
         require(hasRole(TRADER_WHITELISTER, _msgSender()), "VolmexPerpPeriphery: Not whitelister");
     }
