@@ -42,12 +42,19 @@ contract VaultController is ReentrancyGuardUpgradeable, OwnerPausable, VaultCont
         _vaultAddress[_token] = _vault;
     }
 
+    function setPeriphery(address _peripheryArg) external {
+         _requireOnlyVaultControllerAdmin();
+         _periphery = _peripheryArg;
+    }
+
     function deposit(
         IVolmexPerpPeriphery periphery,
         address token,
         address from,
         uint256 amount
     ) external override whenNotPaused nonReentrant {
+        require(address(periphery) == _periphery,"VC_NP");
+        // VC_NP : not periphery
         address _vault = getVault(token);
         // vault of token is not available
         require(_vault != address(0), "VC_VOTNA");

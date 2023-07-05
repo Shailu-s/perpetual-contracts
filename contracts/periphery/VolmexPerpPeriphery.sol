@@ -98,7 +98,7 @@ contract VolmexPerpPeriphery is AccessControlUpgradeable, IVolmexPerpPeriphery {
         emit TraderWhitelisted(_trader, _isWhitelist);
     }
 
-    function blacklistAccount(address[] calldata _accounts, bool[] calldata _isBlacklist) external {
+    function blacklistAccounts(address[] calldata _accounts, bool[] calldata _isBlacklist) external {
         _requireAccountBlacklister();
         uint256 totalAccounts = _accounts.length;
         for (uint256 index; index < totalAccounts; ++index) {
@@ -113,6 +113,7 @@ contract VolmexPerpPeriphery is AccessControlUpgradeable, IVolmexPerpPeriphery {
     }
 
     function withdrawFromVault(uint256 _index, address _token, address _to, uint256 _amount) external {
+        _requireAccountNotBlacklisted(_to);
         IVaultController vaultController = perpView.vaultControllers(_index);
         vaultController.withdraw(_token, _to, _amount);
     }
@@ -126,6 +127,8 @@ contract VolmexPerpPeriphery is AccessControlUpgradeable, IVolmexPerpPeriphery {
         bytes memory liquidator
     ) external {
         _requireVolmexPerpPeripheryRelayer();
+        _requireAccountNotBlacklisted(_makerOrder.trader);
+        _requireAccountNotBlacklisted(_takerOrder.trader);
         if (isTraderWhitelistEnabled) {
             _requireWhitelistedTrader(_makerOrder.trader);
             _requireWhitelistedTrader(_takerOrder.trader);
