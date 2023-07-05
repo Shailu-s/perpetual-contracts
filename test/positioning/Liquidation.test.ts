@@ -288,7 +288,7 @@ describe("Liquidation test", function () {
       owner.address,
       relayer.address,
     ]);
-
+    await vaultController.setPeriphery(volmexPerpPeriphery.address);
     await perpetualOracle.setIndexObservationAdder(owner.address);
     // await marketRegistry.connect(owner).addBaseToken(volmexBaseToken.address);
     // await marketRegistry.connect(owner).addBaseToken(volmexBaseToken1.address);

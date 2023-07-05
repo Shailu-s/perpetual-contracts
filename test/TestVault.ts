@@ -166,6 +166,7 @@ describe("Vault", function () {
       owner.address,
       relayer.address,
     ]);
+    await vaultController.setPeriphery(volmexPerpPeriphery.address);
   });
   describe("deployment", function () {
     it("should fail to deploy vault", async () => {

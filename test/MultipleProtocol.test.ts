@@ -280,6 +280,7 @@ describe("Multiple protocols", function () {
     ]);
     await volmexPerpPeriphery.toggleTraderWhitelistEnabled();
     await volmexPerpPeriphery.deployed();
+    await vaultController.setPeriphery(volmexPerpPeriphery.address);
     await (await USDC.transfer(account1.address, "10000000000")).wait();
     await (await USDC.transfer(account2.address, "10000000000")).wait();
     await USDC.connect(account1).approve(volmexPerpPeriphery.address, "10000000000");

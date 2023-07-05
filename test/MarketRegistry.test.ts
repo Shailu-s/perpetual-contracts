@@ -276,6 +276,7 @@ describe("Market Registry", function () {
       owner.address, // replace with replayer address
     ]);
     await volmexPerpPeriphery.deployed();
+    await vaultController.setPeriphery(volmexPerpPeriphery.address);
     await perpetualOracle.setIndexObservationAdder(owner.address);
   });
   describe("Deploy", async () => {

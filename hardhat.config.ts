@@ -13,27 +13,27 @@ import { HardhatUserConfig } from "hardhat/config";
 import "solidity-coverage";
 import "hardhat-docgen";
 import { config as dotEnvConfig } from "dotenv";
-import "@matterlabs/hardhat-zksync-upgradable";
-import "@matterlabs/hardhat-zksync-solc";
+// import "@matterlabs/hardhat-zksync-upgradable";
+// import "@matterlabs/hardhat-zksync-solc";
 // import "@matterlabs/hardhat-zksync-toolbox";
 
 dotEnvConfig();
 
 const config: HardhatUserConfig = {
-  zksolc: {
-    version: "1.3.10",
-    compilerSource: "binary",
-    settings: {
-      libraries: {},
-      isSystem: false,
-      forceEvmla: false,
-      optimizer: {
-        enabled: true,
-        runs: 100,
-        mode: "3",
-      },
-    },
-  },
+  // zksolc: {
+  //   version: "1.3.10",
+  //   compilerSource: "binary",
+  //   settings: {
+  //     libraries: {},
+  //     isSystem: false,
+  //     forceEvmla: false,
+  //     optimizer: {
+  //       enabled: true,
+  //       runs: 100,
+  //       mode: "3",
+  //     },
+  //   },
+  // },
   solidity: {
     compilers: [
       {

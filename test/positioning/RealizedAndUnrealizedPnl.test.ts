@@ -345,6 +345,7 @@ describe("Realised pnl tests", function () {
       owner.address,
       relayer.address,
     ]);
+    await vaultController.setPeriphery(volmexPerpPeriphery.address);
     deadline;
     await USDC.mint(account1.address, convert("100"));
     await USDC.mint(account2.address, convert("100"));

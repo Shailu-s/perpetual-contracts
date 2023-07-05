@@ -223,6 +223,7 @@ describe("Vault Controller tests for withdrawal", function () {
       owner.address,
       relayer.address,
     ]);
+    await vaultController.setPeriphery(volmexPerpPeriphery.address);
   });
 
   it("Negative Test for withdrawal of token", async () => {

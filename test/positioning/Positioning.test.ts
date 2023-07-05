@@ -371,6 +371,7 @@ describe("Positioning", function () {
       owner.address,
       relayer.address,
     ]);
+    await vaultController.setPeriphery(volmexPerpPeriphery.address);
     deadline;
   });
 

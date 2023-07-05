@@ -290,6 +290,7 @@ describe("PerpetualOracle - Index Price Oracle", function () {
       owner.address, // replace with replayer address
     ]);
     await volmexPerpPeriphery.deployed();
+    await vaultController.setPeriphery(volmexPerpPeriphery.address);
     await perpetualOracle.setIndexObservationAdder(owner.address);
     await perpetualOracle.setMarkObservationAdder(owner.address);
   });

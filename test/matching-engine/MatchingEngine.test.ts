@@ -302,7 +302,7 @@ describe("MatchingEngine", function () {
     await positioningConfig.setPositioning(positioning.address);
     await positioningConfig.setAccountBalance(accountBalance.address);
     await positioningConfig.setTwapInterval(28800);
-
+    await vaultController.setPeriphery(volmexPerpPeriphery.address);
     asset = Asset(virtualToken.address, "10");
 
     await USDC.connect(account1).approve(vault.address, ten.toString());

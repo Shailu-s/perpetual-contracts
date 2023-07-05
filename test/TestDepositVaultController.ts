@@ -226,6 +226,7 @@ describe("Vault Controller deposit tests", function () {
       owner.address,
       relayer.address,
     ]);
+    await vaultController.setPeriphery(volmexPerpPeriphery.address);
   });
   it("shoud fail to initialize again", async () => {
     await expect(

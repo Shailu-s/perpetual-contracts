@@ -69,10 +69,17 @@ describe("ParentToken", function () {
       const volmexPriceOracle = await upgrades.deployProxy(
         PerpetualOracle,
         [
-          [volmexBaseToken.address, volmexBaseToken.address],
-          [200000000, 200000000],
-          [200000000, 200000000],
+          [
+            volmexBaseToken.address,
+            volmexBaseToken.address,
+            volmexBaseToken.address,
+            volmexBaseToken.address,
+          ],
+          [100000000, 100000000, 30000000000, 1800000000],
+          [100000000, 100000000],
           [proofHash, proofHash],
+          [chainlinkTokenIndex1, chainlinkTokenIndex2],
+          [chainlinkAggregator1.address, chainlinkAggregator2.address],
           owner.address,
         ],
         { initializer: "__PerpetualOracle_init" },

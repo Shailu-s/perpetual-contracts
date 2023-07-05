@@ -316,6 +316,7 @@ describe("PerpetualOracle - Last Price Oracle", function () {
       owner.address, // replace with replayer address
     ]);
     await volmexPerpPeriphery.deployed();
+    await vaultController.setPeriphery(volmexPerpPeriphery.address);
     await perpetualOracle.setIndexObservationAdder(owner.address);
 
     const depositAmount = BigNumber.from("1000000000000000000000");
