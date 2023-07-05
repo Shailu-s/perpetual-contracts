@@ -26,6 +26,7 @@ const positioning = async () => {
   const VolmexPerpPeriphery = await ethers.getContractFactory("VolmexPerpPeriphery");
   const TestERC20 = await ethers.getContractFactory("TetherToken");
   const VolmexPerpView = await ethers.getContractFactory("VolmexPerpView");
+  const FundingRate = await ethers.getContractFactory("FundingRate");
   const networkDetail = await ethers.provider.getNetwork();
   const isArbitrum = arbitrumChainId.includes(networkDetail.chainId);
 
@@ -239,7 +240,18 @@ const positioning = async () => {
   await marketRegistry.deployed();
   console.log(marketRegistry.address);
   console.log("grant add base token role...");
+  await marketRegistry.grantAddBaseToken(perpetualOracle.address);
   await (await perpetualOracle.setMarketRegistry(marketRegistry.address)).wait();
+  console.log("Deploying Funding rate ...");
+  const fundingRate = await upgrades.deployProxy(
+    FundingRate,
+    [perpetualOracle.address, positioningConfig.address, accountBalance.address, owner.address],
+    {
+      initializer: "FundingRate_init",
+    },
+  );
+  await fundingRate.deployed();
+  console.log(fundingRate.address);
   console.log("Deploying Positioning ...");
   const positioning = await upgrades.deployProxy(
     Positioning,
@@ -249,6 +261,7 @@ const positioning = async () => {
       accountBalance.address,
       matchingEngine.address,
       perpetualOracle.address,
+      fundingRate.address,
       marketRegistry.address,
       [
         volmexBaseToken1.address,
@@ -272,8 +285,10 @@ const positioning = async () => {
   await (await positioningConfig.setPositioning(positioning.address)).wait();
   console.log("Set positioning - accounts ...");
   await (await accountBalance.setPositioning(positioning.address)).wait();
-  console.log("Set positioning - mark oracle ...");
+  console.log("Set positioning -  oracle ...");
   await (await perpetualOracle.setPositioning(positioning.address)).wait();
+  console.log("Set Funding rate -  oracle ...");
+  await (await perpetualOracle.setFundingRate(fundingRate.address)).wait();
   console.log("Grant match order ...");
   await (await matchingEngine.grantMatchOrders(positioning.address)).wait();
   console.log("Set at perp view ...");
@@ -293,6 +308,7 @@ const positioning = async () => {
   await (await vaultController.setPositioning(positioning.address)).wait();
   console.log("Register vault ...");
   await (await vaultController.registerVault(vault.address, usdtAddress)).wait();
+
   console.log("Set maker fee ...");
   await marketRegistry.setMakerFeeRatio("400");
   console.log("Set taker fee ...");
@@ -308,7 +324,7 @@ const positioning = async () => {
   ]);
   await periphery.deployed();
   console.log(periphery.address);
-
+  await (await vaultController.setPeriphery(periphery.address)).wait();
   const proxyAdmin = await upgrades.admin.getInstance();
   await (await perpView.grantViewStatesRole(owner.address)).wait();
 
@@ -319,6 +335,7 @@ const positioning = async () => {
     BaseToken3: volmexBaseToken3.address,
     BaseToken4: volmexBaseToken4.address,
     PerpetualOracles: perpetualOracle.address,
+    FundingRate: fundingRate.address,
     MarketRegistry: marketRegistry.address,
     MatchingEngine: matchingEngine.address,
     Periphery: periphery.address,
