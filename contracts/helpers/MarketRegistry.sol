@@ -22,15 +22,14 @@ contract MarketRegistry is IMarketRegistry, PositioningCallee, MarketRegistrySto
         _;
     }
 
-    function initialize(address quoteTokenArg, address[4] calldata volmexBaseTokenArgs,uint256[2] calldata chainlinkBaseTokenIndexArgs) external initializer {
+    function initialize(address quoteTokenArg, address[4] calldata volmexBaseTokenArgs,uint256[4] calldata volmexBaseTokenIndexeArgs) external initializer {
         __PositioningCallee_init();
 
         // QuoteToken is not contract
         require(quoteTokenArg.isContract(), "MR_QTNC");
-        for (uint256 index; index < 2; ++index) {
-            _baseTokensMarketMap.push(volmexBaseTokenArgs[index]);
-            _baseTokensMarketMap.push(volmexBaseTokenArgs[index + 2]); // index 2 nad 3 are chainlink base tokens 
-            underlyingPriceIndexes[volmexBaseTokenArgs[index + 2]] = chainlinkBaseTokenIndexArgs[index];
+        for (uint256 index; index < 4; ++index) {
+            _baseTokensMarketMap.push(volmexBaseTokenArgs[index]); 
+            underlyingPriceIndexes[volmexBaseTokenArgs[index]] = volmexBaseTokenIndexeArgs[index];
         }
         // update states
         _quoteToken = quoteTokenArg;
@@ -106,10 +105,13 @@ contract MarketRegistry is IMarketRegistry, PositioningCallee, MarketRegistrySto
         }
     }
 
-    function getBaseTokens() external view returns (address[] memory baseTokens) {
+    function getBaseTokens() external view returns (address[] memory baseTokens, uint256[] memory baseTokenIndexes) {
         baseTokens = _baseTokensMarketMap;
+        for (uint256 index; index< baseTokens.length; ++index) {
+            baseTokenIndexes [index] = underlyingPriceIndexes[baseTokens[index]];
+        }
     }
-
+    
     function _requireMarketRegistryAdmin() internal view {
         require(hasRole(MARKET_REGISTRY_ADMIN, _msgSender()), "MarketRegistry: Not admin");
     }
