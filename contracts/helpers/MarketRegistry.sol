@@ -63,14 +63,16 @@ contract MarketRegistry is IMarketRegistry, PositioningCallee, MarketRegistrySto
     }
 
     /// @inheritdoc IMarketRegistry
-    function addBaseToken(address baseToken) external override {
+    function addBaseToken(address baseToken, uint256 baseTokenIndex) external override {
         _requireAddBaseTokenRole();
         require(IVirtualToken(baseToken).isBase(), "MarketRegistry: not base token");
         address[] storage tokensStorage = _baseTokensMarketMap;
-        if (_hasBaseToken(tokensStorage, baseToken)) {
+        if (_hasBaseToken(tokensStorage, baseToken) && underlyingPriceIndexes[baseToken] == baseTokenIndex) {
             return;
+        } else if (_hasBaseToken(tokensStorage, baseToken)) {
+            underlyingPriceIndexes[baseToken] = baseTokenIndex;
         }
-
+        underlyingPriceIndexes[baseToken] = baseTokenIndex;
         tokensStorage.push(baseToken);
     }
 
