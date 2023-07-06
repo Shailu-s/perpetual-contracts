@@ -294,6 +294,7 @@ describe("Various Order Types", function () {
       owner.address, // replace with replayer address
     ]);
     await volmexPerpPeriphery.deployed();
+    await vaultController.setPeriphery(volmexPerpPeriphery.address);
   });
 
   describe("Deposit, Withdraw & Open position", async () => {

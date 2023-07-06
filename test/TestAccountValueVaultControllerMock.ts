@@ -133,6 +133,7 @@ describe("Vault Controller Mock tests for account value", function () {
       owner.address,
       relayer.address,
     ]);
+    await vaultController.setPeriphery(volmexPerpPeriphery.address);
   });
 
   it("Positive Test for single token getAccountValue", async () => {

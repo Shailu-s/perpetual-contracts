@@ -282,6 +282,7 @@ describe("Global", function () {
       owner.address, // replace with relayer
     ]);
     await periphery.deployed();
+    await vaultController.setPeriphery(periphery.address);
   });
 
   it("should match orders and open position", async () => {

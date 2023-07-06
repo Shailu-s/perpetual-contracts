@@ -326,6 +326,7 @@ describe("Custom Cumulative Price", function () {
       owner.address, // replace with replayer address
     ]);
     await volmexPerpPeriphery.deployed();
+    await vaultController.setPeriphery(volmexPerpPeriphery.address);
     const depositAmount = BigNumber.from("1000000000000000000000");
     let baseAmount = "10000000000000000000"; //500
     let quoteAmount = "700000000000000000000"; //100

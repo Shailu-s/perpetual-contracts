@@ -318,6 +318,7 @@ describe("Periodic Funding payment", function () {
     await positioningConfig.setTwapInterval(28800);
 
     await volmexPerpPeriphery.deployed();
+    await vaultController.setPeriphery(volmexPerpPeriphery.address);
     await USDC.transfer(account1.address, "1000000000000000000000000");
     await USDC.transfer(account2.address, "1000000000000000000000000");
     await USDC.transfer(alice.address, "1000000000000000000000000");
@@ -2031,12 +2032,15 @@ describe("Periodic Funding payment", function () {
         owner.address,
         owner.address, // replace with replayer address
       ]);
+
       await (await perpetualOracle.setFundingRate(fundingRate.address)).wait();
       await positioningConfig.setPositioning(positioning.address);
       await positioningConfig.setAccountBalance(accountBalance1.address);
       await positioningConfig.setTwapInterval(28800);
 
       await volmexPerpPeriphery.deployed();
+      await vaultController.setPeriphery(volmexPerpPeriphery.address);
+
       await USDC.transfer(account1.address, "1000000000000000000000000");
       await USDC.transfer(account2.address, "1000000000000000000000000");
       await USDC.transfer(alice.address, "1000000000000000000000000");
