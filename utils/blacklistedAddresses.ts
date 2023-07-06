@@ -128,6 +128,11 @@ const blacklistedAddresses = [
   "0x3cbded43efdaf0fc77b9c55f6fc9988fcc9b757d",
   "0x2f389ce8bd8ff92de3402ffce4691d17fc4f6535",
   "0x19aa5fe80d33a56d56c78e82ea5e50e5d80b4dff",
+  "0xe7aa314c77f4233c18c6cc84384a9247c0cf367b",
+  "0x308ed4b7b49797e1a98d3818bff6fe5385410370",
+  "0x39D908dac893CBCB53Cc86e0ECc369aA4DeF1A29",
+  "0x38735f03b30FbC022DdD06ABED01F0Ca823C6a94",
+  "0xfec8a60023265364d066a1212fde3930f6ae8da7",
 ];
 
 export { blacklistedAddresses };
