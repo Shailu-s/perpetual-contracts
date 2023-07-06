@@ -183,7 +183,7 @@ contract PerpetualOracle is AccessControlUpgradeable, IPerpetualOracle {
         require(_isChainlinkToken(_baseTokenIndex), "PerpOracle: invalid chainlink base token index");
         positioning.setUnderlyingPriceIndex(_baseTokenArgs, _baseTokenIndex);
         accountBalance.setUnderlyingIndexAndSigmaViv(_baseTokenIndex, _baseTokenArgs, _sigmaViv);
-        marketRegistry.addBaseToken(_baseTokenArgs);
+        marketRegistry.addBaseToken(_baseTokenArgs,_baseTokenIndex);
         indexByBaseToken[_baseTokenArgs] = _baseTokenIndex;
         baseTokenByIndex[_baseTokenIndex] = _baseTokenArgs;
         chainlinkAggregatorByIndex[_baseTokenIndex] = _chainlinkAggregatorArg;
