@@ -99,7 +99,8 @@ contract VolmexPerpPeriphery is AccessControlUpgradeable, IVolmexPerpPeriphery {
     }
 
     function blacklistAccounts(address[] calldata _accounts, bool[] calldata _isBlacklist) external {
-        _requireAccountBlacklister();
+        _requireAccountBlacklisterRole();
+        require(_accounts.length == _isBlacklist.length,"Periphery: mismatch array lengths");
         uint256 totalAccounts = _accounts.length;
         for (uint256 index; index < totalAccounts; ++index) {
             isAccountBlacklisted[_accounts[index]] = _isBlacklist[index];
@@ -232,7 +233,7 @@ contract VolmexPerpPeriphery is AccessControlUpgradeable, IVolmexPerpPeriphery {
         require(hasRole(TRADER_WHITELISTER, _msgSender()), "VolmexPerpPeriphery: Not whitelister");
     }
 
-    function _requireAccountBlacklister() internal view {
+    function _requireAccountBlacklisterRole() internal view {
         require(hasRole(ACCOUNT_BLACKLISTER, _msgSender()), "VolmexPerpPeriphery: Not blacklister");
     }
 
