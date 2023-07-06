@@ -44,6 +44,8 @@ describe("Custom Cumulative Price", function () {
   let accountBalance1;
   let MarketRegistry;
   let marketRegistry;
+  let FundingRate;
+  let fundingRate;
   let TestERC20;
   let USDC;
   let owner, account1, account2, account3, alice, bob;
@@ -88,7 +90,7 @@ describe("Custom Cumulative Price", function () {
     VolmexQuoteToken = await ethers.getContractFactory("VolmexQuoteToken");
     VolmexPerpView = await ethers.getContractFactory("VolmexPerpView");
     ChainLinkAggregator = await ethers.getContractFactory("MockV3Aggregator");
-
+    FundingRate = await ethers.getContractFactory("FundingRate");
     [owner, account1, account2, account3, alice, bob] = await ethers.getSigners();
     liquidator = encodeAddress(owner.address);
   });
@@ -242,9 +244,21 @@ describe("Custom Cumulative Price", function () {
     (await accountBalance1.grantSettleRealizedPnlRole(vaultController.address)).wait();
     marketRegistry = await upgrades.deployProxy(MarketRegistry, [
       volmexQuoteToken.address,
-      [volmexBaseToken.address, volmexBaseToken.address],
+      [
+        volmexBaseToken.address,
+        volmexBaseToken1.address,
+        volmexBaseToken2.address,
+        volmexBaseToken3.address,
+      ],
     ]);
     await marketRegistry.grantAddBaseTokenRole(owner.address);
+    fundingRate = await upgrades.deployProxy(
+      FundingRate,
+      [perpetualOracle.address, positioningConfig.address, accountBalance1.address, owner.address],
+      {
+        initializer: "FundingRate_init",
+      },
+    );
     positioning = await upgrades.deployProxy(
       Positioning,
       [
@@ -253,6 +267,7 @@ describe("Custom Cumulative Price", function () {
         accountBalance1.address,
         matchingEngine.address,
         perpetualOracle.address,
+        fundingRate.address,
         marketRegistry.address,
         [
           volmexBaseToken.address,
@@ -260,6 +275,7 @@ describe("Custom Cumulative Price", function () {
           volmexBaseToken2.address,
           volmexBaseToken3.address,
         ],
+        [chainlinkTokenIndex1, chainlinkTokenIndex2],
         [owner.address, account1.address],
         ["10000000000000000000", "10000000000000000000"],
       ],
@@ -294,9 +310,9 @@ describe("Custom Cumulative Price", function () {
 
     await positioning.connect(owner).setMarketRegistry(marketRegistry.address);
     await positioning.connect(owner).setDefaultFeeReceiver(owner.address);
-    await positioning.connect(owner).setPositioning(positioning.address);
 
     await (await matchingEngine.grantMatchOrders(positioning.address)).wait();
+    await perpetualOracle.setFundingRate(fundingRate.address);
     await perpetualOracle.setPositioning(positioning.address);
     await positioningConfig.setPositioning(positioning.address);
     await positioningConfig.setAccountBalance(accountBalance1.address);

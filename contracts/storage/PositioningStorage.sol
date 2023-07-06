@@ -1,6 +1,9 @@
 // SPDX-License-Identifier: BUSL - 1.1
 pragma solidity =0.8.18;
 
+import { IPerpetualOracle } from "../interfaces/IPerpetualOracle.sol";
+import { IFundingRate } from "../interfaces/IFundingRate.sol";
+
 /// @notice For future upgrades, do not change PositioningStorageV1. Create a new
 /// contract which implements PositioningStorageV1 and following the naming convention
 /// PositioningStorageVX.
@@ -11,7 +14,8 @@ abstract contract PositioningStorageV1 {
     uint256 internal constant _UINT256_MAX = 2**256 - 1;
     bytes32 public constant POSITIONING_ADMIN = keccak256("POSITIONING_ADMIN");
     bytes32 public constant SM_INTERVAL_ROLE = keccak256("SM_INTERVAL_ROLE");
-    mapping(address => uint256) internal _firstTradedTimestampMap;
+    bytes32 public constant CHAINLINK_TOKEN_CHECKSUM = bytes32(uint256(2 ** 255));    // CHAINLINK_TOKEN_CHECKSUM = 0x8000000000000000000000000000000000000000000000000000000000000000 id for chain link base token indexes
+    bytes32 public constant ADD_UNDERLYING_INDEX = keccak256("ADD_UNDERLYING_INDEX");
     uint8 internal _settlementTokenDecimals;
     address internal _matchingEngine;
     address internal _marketRegistry;
@@ -21,18 +25,14 @@ abstract contract PositioningStorageV1 {
     address public vaultController;
     address public accountBalance;
     address public defaultFeeReceiver;
-
-    // the last timestamp when funding is settled
-    mapping(address => uint256) internal _lastSettledTimestampMap;
-    // base token => twPremium
-    mapping(address => int256) internal _globalFundingGrowthMap;
+    IPerpetualOracle internal _perpetualOracleArg;
+    IFundingRate internal fundingRate;
 
     mapping(address => bool) public isLiquidatorWhitelisted;
     bool public isLiquidatorWhitelistEnabled;
     uint256 public indexPriceAllowedInterval;
     mapping(address => uint256) public minPositionSizeByBaseToken;
-    bytes32 public constant CHAINLINK_TOKEN_CHECKSUM = bytes32(uint256(2 ** 255));    // CHAINLINK_TOKEN_CHECKSUM = 0x8000000000000000000000000000000000000000000000000000000000000000 id for chain link base token indexes
-    bytes32 public constant ADD_UNDERLYING_INDEX = keccak256("ADD_UNDERLYING_INDEX");
+    mapping(address => uint256) internal _underlyingPriceIndexes;
 
     uint256[47] private __gap;
 }

@@ -7,10 +7,11 @@ pragma solidity =0.8.18;
 abstract contract MarketRegistryStorageV1 {
     // admin of market registry
     bytes32 public constant MARKET_REGISTRY_ADMIN = keccak256("MARKET_REGISTRY_ADMIN");
+    bytes32 public constant ADD_BASE_TOKEN = keccak256("ADD_BASE_TOKEN");
     address internal _quoteToken;
     uint8 internal _maxOrdersPerMarket;
     address[] internal _baseTokensMarketMap;
     uint24 internal _makerFeeRatio;
     uint24 internal _takerFeeRatio;
-    bytes32 public constant ADD_BASE_TOKEN = keccak256("ADD_BASE_TOKEN");
+    mapping(address => uint256) public underlyingPriceIndexes;
 }

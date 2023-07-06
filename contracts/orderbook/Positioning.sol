@@ -3,14 +3,12 @@ pragma solidity =0.8.18;
 
 import { ReentrancyGuardUpgradeable } from "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 import { PausableUpgradeable } from "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
-import { AddressUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol";
+import { AccessControlUpgradeable } from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 
 import { LibAccountMarket } from "../libs/LibAccountMarket.sol";
 import { LibSafeCastUint } from "../libs/LibSafeCastUint.sol";
 import { LibSafeCastInt } from "../libs/LibSafeCastInt.sol";
-import { LibSignature } from "../libs/LibSignature.sol";
 import { LibPerpMath } from "../libs/LibPerpMath.sol";
-import { LibOrder } from "../libs/LibOrder.sol";
 import { LibFill } from "../libs/LibFill.sol";
 
 import { IPositioningConfig } from "../interfaces/IPositioningConfig.sol";
@@ -22,27 +20,27 @@ import { IMatchingEngine } from "../interfaces/IMatchingEngine.sol";
 import { IMarketRegistry } from "../interfaces/IMarketRegistry.sol";
 import { IVirtualToken } from "../interfaces/IVirtualToken.sol";
 import { IPositioning } from "../interfaces/IPositioning.sol";
+import { IFundingRate } from "../interfaces/IFundingRate.sol";
 
-import { OrderValidator } from "./OrderValidator.sol";
-import { FundingRate } from "../funding-rate/FundingRate.sol";
+import { OrderValidator, AddressUpgradeable, LibOrder } from "./OrderValidator.sol";
+import { PositioningStorageV1 } from "../storage/PositioningStorage.sol";
 
 // never inherit any new stateful contract. never change the orders of parent stateful contracts
-contract Positioning is IPositioning, ReentrancyGuardUpgradeable, PausableUpgradeable, FundingRate, OrderValidator {
+contract Positioning is PositioningStorageV1, IPositioning, ReentrancyGuardUpgradeable, PausableUpgradeable, OrderValidator, AccessControlUpgradeable {
     using AddressUpgradeable for address;
     using LibSafeCastUint for uint256;
     using LibSafeCastInt for int256;
     using LibPerpMath for uint256;
     using LibPerpMath for int256;
-    using LibSignature for bytes32;
 
-    /// @dev this function is public for testing
     // solhint-disable-next-line func-order
     function initialize(
         address positioningConfigArg,
         address vaultControllerArg,
         address accountBalanceArg,
         address matchingEngineArg,
-        address perpetualOracleArg,
+        IPerpetualOracle perpetualOracleArg,
+        IFundingRate fundingRateArg,
         address marketRegistryArg,
         address[4] calldata volmexBaseTokenArgs, //NOTE: index 2 and 3 is of chainlink base token
         uint256[2] calldata chainlinkBaseTokenIndexArgs,
@@ -61,9 +59,10 @@ contract Positioning is IPositioning, ReentrancyGuardUpgradeable, PausableUpgrad
         require(marketRegistryArg.isContract(), "P_MENC");
         __ReentrancyGuard_init();
         __Pausable_init_unchained();
-        __FundingRate_init(perpetualOracleArg);
         __OrderValidator_init_unchained();
 
+        _perpetualOracleArg = perpetualOracleArg;
+        fundingRate = fundingRateArg;
         positioningConfig = positioningConfigArg;
         vaultController = vaultControllerArg;
         accountBalance = accountBalanceArg;
@@ -82,7 +81,7 @@ contract Positioning is IPositioning, ReentrancyGuardUpgradeable, PausableUpgrad
         isLiquidatorWhitelistEnabled = true;
         _grantRole(SM_INTERVAL_ROLE, positioningConfigArg);
         _grantRole(POSITIONING_ADMIN, _msgSender());
-        _grantRole(ADD_UNDERLYING_INDEX, perpetualOracleArg);
+        _grantRole(ADD_UNDERLYING_INDEX, address(perpetualOracleArg));
     }
 
     function grantAddUnderlyingIndexRole(address account) external {
@@ -127,7 +126,25 @@ contract Positioning is IPositioning, ReentrancyGuardUpgradeable, PausableUpgrad
         emit DefaultFeeReceiverChanged(defaultFeeReceiver);
     }
 
-    // TODO: Cherry pick commit: ec05632b5d7eadab35011f5db00948a368846032
+    function setPerpetualOracle(IPerpetualOracle perpetualOracleArg) external {
+        _requirePositioningAdmin();
+        _perpetualOracleArg = perpetualOracleArg;
+    }
+
+    function setSmInterval(uint256 smInterval) external virtual {
+        _requireSmIntervalRole();
+        _smInterval = smInterval;
+    }
+
+    function setSmIntervalLiquidation(uint256 smIntervalLiquidation) external virtual {
+        _requireSmIntervalRole();
+        _smIntervalLiquidation = smIntervalLiquidation;
+    }
+
+    function setIndexOracleInterval(uint256 _interval) external virtual {
+        _requirePositioningAdmin();
+        indexPriceAllowedInterval = _interval;
+    }
 
     /// @inheritdoc IPositioning
     function whitelistLiquidator(address liquidator, bool isWhitelist) external {
@@ -245,7 +262,7 @@ contract Positioning is IPositioning, ReentrancyGuardUpgradeable, PausableUpgrad
         uint256 baseTokenLength = baseTokens.length;
 
         for (uint256 i = 0; i < baseTokenLength; i++) {
-            pendingFundingPayment = pendingFundingPayment + (getPendingFundingPayment(trader, baseTokens[i]));
+            pendingFundingPayment = pendingFundingPayment + (fundingRate.getPendingFundingPayment(trader, baseTokens[i], _underlyingPriceIndexes[baseTokens[i]]));
         }
         return pendingFundingPayment;
     }
@@ -253,7 +270,7 @@ contract Positioning is IPositioning, ReentrancyGuardUpgradeable, PausableUpgrad
     /// @dev Used to check for stale index oracle
     function isStaleIndexOracle(address baseToken) public view returns (bool) {
         uint256 index = _underlyingPriceIndexes[baseToken];
-        uint256 lastUpdatedTimestamp = IPerpetualOracle(_perpetualOracleArg).lastestTimestamp(index, false);
+        uint256 lastUpdatedTimestamp = _perpetualOracleArg.lastestTimestamp(index, false);
         return block.timestamp - lastUpdatedTimestamp >= indexPriceAllowedInterval;
     }
 
@@ -287,7 +304,7 @@ contract Positioning is IPositioning, ReentrancyGuardUpgradeable, PausableUpgrad
         int256 positionSizeToBeLiquidated
     ) internal {
         IAccountBalance accountBalanceInst = IAccountBalance(accountBalance);
-        int256 accountValue = getAccountValue(trader);
+        int256 accountValue = _getAccountValue(trader);
         int256 feeCollateralByRatio = _getFreeCollateralByRatio(trader, IPositioningConfig(positioningConfig).getImRatio());
         // P_EAV: enough account value
         require(accountBalanceInst.isAccountLiquidatable(trader, baseToken, minPositionSizeByBaseToken[baseToken], accountValue, feeCollateralByRatio), "P_EAV");
@@ -348,11 +365,11 @@ contract Positioning is IPositioning, ReentrancyGuardUpgradeable, PausableUpgrad
 
     /// @dev Settle trader's funding payment to his/her realized pnl.
     function _settleFunding(address trader, address baseToken) internal {
-        (int256 fundingPayment, int256 globalTwPremiumGrowth) = settleFunding(trader, baseToken);
         uint256 baseTokenIndex = _underlyingPriceIndexes[baseToken];
         if(_isChainlinkToken(baseTokenIndex)){
-            IPerpetualOracle(_perpetualOracleArg).cacheChainlinkPrice(baseTokenIndex);
+            _perpetualOracleArg.cacheChainlinkPrice(baseTokenIndex);
         }
+        (int256 fundingPayment, int256 globalTwPremiumGrowth) = fundingRate.settleFunding(trader, baseToken, baseTokenIndex);
         if (fundingPayment != 0) {
             IAccountBalance(accountBalance).modifyOwedRealizedPnl(trader, fundingPayment.neg256(), baseToken);
             emit FundingPaymentSettled(trader, baseToken, fundingPayment);
@@ -435,10 +452,6 @@ contract Positioning is IPositioning, ReentrancyGuardUpgradeable, PausableUpgrad
             realizedPnL[1],
             0
         );
-
-        if (_firstTradedTimestampMap[baseToken] == 0) {
-            _firstTradedTimestampMap[baseToken] = block.timestamp;
-        }
 
         // if not closing a position, check margin ratio after swap
         if (internalData.leftPositionSize != 0) {
@@ -568,7 +581,7 @@ contract Positioning is IPositioning, ReentrancyGuardUpgradeable, PausableUpgrad
             // shore the remaining positions and make sure traders having enough money to pay liquidation penalty.
 
             // CH_NEMRM : not enough minimum required margin after reducing/closing position
-            require(getAccountValue(order.trader) >= _getTotalAbsPositionValue(order.trader).mulRatio(_getLiquidationPenaltyRatio()).toInt256(), "CH_NEMRM");
+            require(_getAccountValue(order.trader) >= _getTotalAbsPositionValue(order.trader).mulRatio(_getLiquidationPenaltyRatio()).toInt256(), "CH_NEMRM");
         }
         return pnlToBeRealized;
     }
@@ -586,18 +599,13 @@ contract Positioning is IPositioning, ReentrancyGuardUpgradeable, PausableUpgrad
             positionSizeToBeLiquidated = maxLiquidatablePositionSize;
         }
 
-        uint256 indexPrice = getIndexPrice(baseToken, _smIntervalLiquidation);
+        uint256 indexPrice = IVolmexBaseToken(baseToken).getIndexPrice(_underlyingPriceIndexes[baseToken], _smIntervalLiquidation);
         require(indexPrice != 0, "P_0IP"); // zero index price
         uint256 maxOrderSize = IMatchingEngine(_matchingEngine).getMaxOrderSizeOverTime(baseToken);
         uint256 actualLiquidatableSize = IAccountBalance(accountBalance).getNLiquidate(positionSizeToBeLiquidated.abs(), minPositionSizeByBaseToken[baseToken], maxOrderSize);
         int256 liquidatedPositionSize = positionSizeToBeLiquidated >= 0 ? (actualLiquidatableSize.toInt256()).neg256() : actualLiquidatableSize.toInt256();
         int256 liquidatedPositionNotional = liquidatedPositionSize.mulDiv(indexPrice.toInt256(), _ORACLE_BASE);
         return (liquidatedPositionSize, liquidatedPositionNotional);
-    }
-
-    function getIndexPrice(address baseToken, uint256 twInterval) public view returns (uint256 price) {
-        uint256 index = _underlyingPriceIndexes[baseToken];
-        price = IVolmexBaseToken(baseToken).getIndexPrice(index, twInterval);
     }
 
     function _getTakerOpenNotional(address trader, address baseToken) internal view returns (int256) {
@@ -636,7 +644,7 @@ contract Positioning is IPositioning, ReentrancyGuardUpgradeable, PausableUpgrad
     }
 
     /// @dev this function returns total account value of the trader
-    function getAccountValue(address trader) public view returns (int256) {
+    function _getAccountValue(address trader) internal view returns (int256) {
         return IVaultController(vaultController).getAccountValue(trader);
     }
 
@@ -661,7 +669,7 @@ contract Positioning is IPositioning, ReentrancyGuardUpgradeable, PausableUpgrad
         require(isLiquidatorWhitelisted[liquidator], "P_LW"); // Positioning: liquidator not whitelisted
     }
     
-    function _isChainlinkToken(uint256 baseTokenIndex) internal view returns (bool) {
+    function _isChainlinkToken(uint256 baseTokenIndex) internal pure returns (bool) {
         return ((uint256(CHAINLINK_TOKEN_CHECKSUM & bytes32(baseTokenIndex)) >> 255) == 1) ;
     }
 

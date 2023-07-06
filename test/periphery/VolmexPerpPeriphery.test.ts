@@ -37,7 +37,8 @@ describe("VolmexPerpPeriphery", function () {
   let volmexPerpPeriphery;
   let VolmexPerpView;
   let perpView;
-
+  let FundingRate;
+  let fundingRate;
   let accountBalance1;
   let MarketRegistry;
   let marketRegistry;
@@ -81,6 +82,7 @@ describe("VolmexPerpPeriphery", function () {
     VolmexQuoteToken = await ethers.getContractFactory("VolmexQuoteToken");
     VolmexPerpView = await ethers.getContractFactory("VolmexPerpView");
     ChainLinkAggregator = await ethers.getContractFactory("MockV3Aggregator");
+    FundingRate = await ethers.getContractFactory("FundingRate");
     [owner, account1, account2, account3, account4, alice, bob] = await ethers.getSigners();
     liquidator = encodeAddress(owner.address);
   });
@@ -242,6 +244,13 @@ describe("VolmexPerpPeriphery", function () {
         volmexBaseToken3.address,
       ],
     ]);
+    fundingRate = await upgrades.deployProxy(
+      FundingRate,
+      [perpetualOracle.address, positioningConfig.address, accountBalance1.address, owner.address],
+      {
+        initializer: "FundingRate_init",
+      },
+    );
     positioning = await upgrades.deployProxy(
       Positioning,
       [
@@ -250,6 +259,7 @@ describe("VolmexPerpPeriphery", function () {
         accountBalance1.address,
         matchingEngine.address,
         perpetualOracle.address,
+        fundingRate.address,
         marketRegistry.address,
         [
           volmexBaseToken.address,
@@ -289,13 +299,11 @@ describe("VolmexPerpPeriphery", function () {
     await positioningConfig
       .connect(owner)
       .setSettlementTokenBalanceCap("100000000000000000000000");
-
+    await perpetualOracle.setFundingRate(fundingRate.address);
     await positioning.connect(owner).setMarketRegistry(marketRegistry.address);
     await positioning.connect(owner).setDefaultFeeReceiver(owner.address);
-    await positioning.connect(owner).setPositioning(positioning.address);
 
     await (await matchingEngine.grantMatchOrders(positioning.address)).wait();
-    await (await perpetualOracle.setPositioning(positioning.address)).wait();
 
     await perpetualOracle.setMarkObservationAdder(matchingEngine.address);
     await perpetualOracle.setIndexObservationAdder(owner.address);
@@ -835,9 +843,10 @@ describe("VolmexPerpPeriphery", function () {
       const signatureRight1 = await getSignature(orderRight1, account4.address);
       let indexsma = await perpetualOracle.latestIndexSMA(28800, 0);
       console.log("indexsma", indexsma.toString());
-      let pendingFundingPayment = await positioning.getPendingFundingPayment(
+      let pendingFundingPayment = await fundingRate.getPendingFundingPayment(
         account3.address,
         volmexBaseToken.address,
+        0,
       );
       // expect(pendingFundingPayment.toString()).to.be.equal("730000000000000000");
       console.log("closing positon");
@@ -868,9 +877,10 @@ describe("VolmexPerpPeriphery", function () {
         volmexBaseToken.address,
       );
 
-      pendingFundingPayment = await positioning.getPendingFundingPayment(
+      pendingFundingPayment = await fundingRate.getPendingFundingPayment(
         account3.address,
         volmexBaseToken.address,
+        0,
       );
       expect(pendingFundingPayment.toString()).to.be.equal("0");
       openNotional = await accountBalance1.getOpenNotional(
@@ -881,7 +891,7 @@ describe("VolmexPerpPeriphery", function () {
       // 1 * 0.73%  * 100
       // max funding payment of 0.73 USDT
       // max funding payment = position size in EVIV * max funding rate * indexsma 8 hour
-      const lastFundingrate = await positioning.getLastFundingRate(volmexBaseToken.address);
+      const lastFundingrate = await fundingRate.getLastFundingRate(volmexBaseToken.address);
       const traderCollateral = await vaultController.getFreeCollateralByRatio(
         account3.address,
         200000,
@@ -1030,9 +1040,10 @@ describe("VolmexPerpPeriphery", function () {
       const signatureRight1 = await getSignature(orderRight1, account4.address);
       let indexsma = await perpetualOracle.latestIndexSMA(28800, 0);
       console.log("indexsma", indexsma.toString());
-      let pendingFundingPayment = await positioning.getPendingFundingPayment(
+      let pendingFundingPayment = await fundingRate.getPendingFundingPayment(
         account3.address,
         volmexBaseToken.address,
+        0,
       );
       // expect(pendingFundingPayment.toString()).to.be.equal("730000000000000000");
       console.log("closing positon");
@@ -1063,9 +1074,10 @@ describe("VolmexPerpPeriphery", function () {
         volmexBaseToken.address,
       );
 
-      pendingFundingPayment = await positioning.getPendingFundingPayment(
+      pendingFundingPayment = await fundingRate.getPendingFundingPayment(
         account3.address,
         volmexBaseToken.address,
+        0,
       );
       expect(pendingFundingPayment.toString()).to.be.equal("0");
       openNotional = await accountBalance1.getOpenNotional(
@@ -1076,7 +1088,7 @@ describe("VolmexPerpPeriphery", function () {
       // 1 * 0.73%  * 100
       // max funding payment of 0.73 USDT
       // max funding payment = position size in EVIV * max funding rate * indexsma 8 hour
-      const lastFundingrate = await positioning.getLastFundingRate(volmexBaseToken.address);
+      const lastFundingrate = await fundingRate.getLastFundingRate(volmexBaseToken.address);
       const traderCollateral = await vaultController.getFreeCollateralByRatio(
         account3.address,
         200000,

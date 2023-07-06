@@ -39,6 +39,8 @@ describe("Global", function () {
   let orderLeft, orderRight;
   let chainlinkAggregator1;
   let chainlinkAggregator2;
+  let FundingRate;
+  let fundingRate;
   let liquidator;
   let VirtualToken;
   const chainlinkTokenIndex1 =
@@ -73,6 +75,7 @@ describe("Global", function () {
     VolmexPerpView = await ethers.getContractFactory("VolmexPerpView");
     TestERC20 = await ethers.getContractFactory("TestERC20");
     VirtualToken = await ethers.getContractFactory("VirtualTokenTest");
+    FundingRate = await ethers.getContractFactory("FundingRate");
   });
 
   this.beforeEach(async () => {
@@ -213,7 +216,13 @@ describe("Global", function () {
         chainlinkBaseToken2.address,
       ],
     ]);
-
+    fundingRate = await upgrades.deployProxy(
+      FundingRate,
+      [perpetualOracle.address, positioningConfig.address, accountBalance1.address, owner.address],
+      {
+        initializer: "FundingRate_init",
+      },
+    );
     positioning = await upgrades.deployProxy(
       Positioning,
       [
@@ -222,6 +231,7 @@ describe("Global", function () {
         accountBalance1.address,
         matchingEngine.address,
         perpetualOracle.address,
+        fundingRate.address,
         marketRegistry.address,
         [
           volmexBaseToken.address,
@@ -249,7 +259,7 @@ describe("Global", function () {
     await (await vaultController.setPositioning(positioning.address)).wait();
     await (await vaultController.registerVault(vault.address, USDC.address)).wait();
     await (await accountBalance1.setPositioning(positioning.address)).wait();
-    await (await perpetualOracle.setPositioning(positioning.address)).wait();
+    await (await perpetualOracle.setFundingRate(fundingRate.address)).wait();
 
     await perpetualOracle.grantSmaIntervalRole(positioningConfig.address);
     await positioningConfig.setPositioning(positioning.address);

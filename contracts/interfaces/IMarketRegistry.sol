@@ -6,7 +6,7 @@ interface IMarketRegistry {
     /// @param maxOrdersPerMarket Max orders per market
     event MaxOrdersPerMarketChanged(uint8 maxOrdersPerMarket);
 
-    function initialize(address quoteTokenArg, address[4] calldata volmexBaseTokenArgs) external;
+    function initialize(address quoteTokenArg, address[4] calldata volmexBaseTokenArgs, uint256[4] calldata chainlinkBaseTokenIndexArgs) external;
 
     /// @dev Set max allowed orders per market
     /// @param maxOrdersPerMarketArg The max allowed orders per market
@@ -22,7 +22,7 @@ interface IMarketRegistry {
 
     /// @dev Function to add base token in the market
     /// @param baseToken address of the baseToken
-    function addBaseToken(address baseToken) external;
+    function addBaseToken(address baseToken, uint256 baseTokenIndex) external;
 
     /// @dev Function to check base token in the market
     /// @param baseToken address of the baseToken
@@ -42,5 +42,5 @@ interface IMarketRegistry {
     /// @return maxOrdersPerMarket The max allowed orders per market
     function getMaxOrdersPerMarket() external view returns (uint8 maxOrdersPerMarket);
 
-    function getBaseTokens() external view returns (address[] memory baseTokens);
+    function getBaseTokens() external view returns (address[] memory basetokens, uint256[] memory baseTokenIndexes);
 }

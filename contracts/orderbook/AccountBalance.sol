@@ -79,12 +79,14 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
         setSigmaViv(_baseTokenIndex, _sigmaViv);
     }
     
-    function setSigmaViv(uint256 _baseTokenIndex,uint256 _sigmaViv ) public {
-        _requireSigmaIvRole();
-        require(_sigmaViv > 0, "AccountBalance: Not zero");
-        sigmaVolmexIvs[_baseTokenIndex] = _sigmaViv;
-    }
     
+    function updateSigmaVolmexIvs(uint256[] memory _indexes, uint256[] memory _sigmaVivs) external  {
+        _requireSigmaIvRole();
+        for (uint256 index; index < _indexes.length; ++index ) {
+            setSigmaViv(_indexes[index], _sigmaVivs[index]);
+        }
+    }
+
     function setUnderlyingPriceIndex(address volmexBaseToken, uint256 underlyingIndex) public {
         _requireAddUnderlyingIndexRole();
         _underlyingPriceIndexes[volmexBaseToken] = underlyingIndex;
@@ -99,6 +101,12 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
     function setSmIntervalLiquidation(uint256 smIntervalLiquidation) external virtual {
         _requireSmIntervalRole();
         _smIntervalLiquidation = smIntervalLiquidation;
+    }
+
+    function setSigmaViv(uint256 _baseTokenIndex, uint256 _sigmaViv) public {
+        _requireSigmaIvRole();
+        require(_sigmaViv > 0, "AccountBalance: Not zero");
+        sigmaVolmexIvs[_baseTokenIndex] = _sigmaViv;
     }
 
     function setMinTimeBound(uint256 minTimeBoundArg) external virtual {

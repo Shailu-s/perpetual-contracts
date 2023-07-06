@@ -33,6 +33,8 @@ describe("Market Registry", function () {
   let chainlinkAggregator2;
   let MarketRegistry;
   let marketRegistry;
+  let FundingRate;
+  let fundingRate;
   let TestERC20;
   let USDC;
   let owner, account1, account2;
@@ -60,6 +62,7 @@ describe("Market Registry", function () {
     VolmexQuoteToken = await ethers.getContractFactory("VolmexQuoteToken");
     VolmexPerpView = await ethers.getContractFactory("VolmexPerpView");
     ChainLinkAggregator = await ethers.getContractFactory("MockV3Aggregator");
+    FundingRate = await ethers.getContractFactory("FundingRate");
     [owner, account1, account2] = await ethers.getSigners();
   });
 
@@ -201,7 +204,13 @@ describe("Market Registry", function () {
         chainlinkBaseToken2.address,
       ],
     ]);
-
+    fundingRate = await upgrades.deployProxy(
+      FundingRate,
+      [perpetualOracle.address, positioningConfig.address, accountBalance1.address, owner.address],
+      {
+        initializer: "FundingRate_init",
+      },
+    );
     positioning = await upgrades.deployProxy(
       Positioning,
       [
@@ -210,6 +219,7 @@ describe("Market Registry", function () {
         accountBalance1.address,
         matchingEngine.address,
         perpetualOracle.address,
+        fundingRate.address,
         marketRegistry.address,
         [
           volmexBaseToken.address,
@@ -252,11 +262,10 @@ describe("Market Registry", function () {
 
     await positioning.connect(owner).setMarketRegistry(marketRegistry.address);
     await positioning.connect(owner).setDefaultFeeReceiver(owner.address);
-    await positioning.connect(owner).setPositioning(positioning.address);
 
     await (await matchingEngine.grantMatchOrders(positioning.address)).wait();
     await perpetualOracle.grantSmaIntervalRole(positioningConfig.address);
-    await perpetualOracle.setPositioning(positioning.address);
+    await perpetualOracle.setFundingRate(fundingRate.address);
     await positioningConfig.setTwapInterval(28800);
     await perpetualOracle.grantCacheChainlinkPriceRole(owner.address);
     volmexPerpPeriphery = await upgrades.deployProxy(VolmexPerpPeriphery, [

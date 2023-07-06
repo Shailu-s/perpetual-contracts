@@ -24,6 +24,8 @@ describe("Vault Controller tests for withdrawal", function () {
   let volmexBaseToken1;
   let volmexBaseToken2;
   let volmexBaseToken3;
+  let FundingRate;
+  let fundingRate;
   let Positioning;
   let positioning;
   let VolmexPerpPeriphery;
@@ -44,6 +46,7 @@ describe("Vault Controller tests for withdrawal", function () {
     PerpetualOracle = await ethers.getContractFactory("PerpetualOracle");
     VolmexBaseToken = await ethers.getContractFactory("VolmexBaseToken");
     perpViewFake = await smock.fake("VolmexPerpView");
+    FundingRate = await ethers.getContractFactory("FundingRate");
     ChainLinkAggregator = await ethers.getContractFactory("MockV3Aggregator");
 
     volmexBaseToken = await upgrades.deployProxy(
@@ -165,6 +168,14 @@ describe("Vault Controller tests for withdrawal", function () {
     ]);
 
     Positioning = await ethers.getContractFactory("PositioningTest");
+    fundingRate = await upgrades.deployProxy(
+      FundingRate,
+      [perpetualOracle.address, positioningConfig.address, accountBalance.address, owner.address],
+      {
+        initializer: "FundingRate_init",
+      },
+    );
+
     positioning = await upgrades.deployProxy(
       Positioning,
       [
@@ -173,6 +184,7 @@ describe("Vault Controller tests for withdrawal", function () {
         accountBalance.address,
         matchingEngineFake.address,
         perpetualOracle.address,
+        fundingRate.address,
         perpetualOracle.address,
         [
           volmexBaseToken.address,
@@ -233,6 +245,7 @@ describe("Vault Controller tests for withdrawal", function () {
         accountBalance.address,
         matchingEngineFake.address,
         perpetualOracle.address,
+        fundingRate.address,
         perpetualOracle.address,
         [
           volmexBaseToken.address,

@@ -39,6 +39,8 @@ describe("Various Order Types", function () {
   let volmexPerpPeriphery;
   let VolmexPerpView;
   let perpView;
+  let FundingRate;
+  let fundingRate;
   let accountBalance1;
   let MarketRegistry;
   let marketRegistry;
@@ -71,6 +73,7 @@ describe("Various Order Types", function () {
     VolmexQuoteToken = await ethers.getContractFactory("VolmexQuoteToken");
     VolmexPerpView = await ethers.getContractFactory("VolmexPerpView");
     ChainLinkAggregator = await ethers.getContractFactory("MockV3Aggregator");
+    FundingRate = await ethers.getContractFactory("FundingRate");
     [owner, account1, account2] = await ethers.getSigners();
     liquidator = encodeAddress(owner.address);
   });
@@ -216,6 +219,13 @@ describe("Various Order Types", function () {
         volmexBaseToken3.address,
       ],
     ]);
+    fundingRate = await upgrades.deployProxy(
+      FundingRate,
+      [perpetualOracle.address, positioningConfig.address, accountBalance1.address, owner.address],
+      {
+        initializer: "FundingRate_init",
+      },
+    );
     positioning = await upgrades.deployProxy(
       Positioning,
       [
@@ -224,6 +234,7 @@ describe("Various Order Types", function () {
         accountBalance1.address,
         matchingEngine.address,
         perpetualOracle.address,
+        fundingRate.address,
         marketRegistry.address,
         [
           volmexBaseToken.address,
@@ -267,10 +278,9 @@ describe("Various Order Types", function () {
 
     await positioning.connect(owner).setMarketRegistry(marketRegistry.address);
     await positioning.connect(owner).setDefaultFeeReceiver(owner.address);
-    await positioning.connect(owner).setPositioning(positioning.address);
 
     await (await matchingEngine.grantMatchOrders(positioning.address)).wait();
-    await (await perpetualOracle.setPositioning(positioning.address)).wait();
+    await (await perpetualOracle.setFundingRate(fundingRate.address)).wait();
 
     await perpetualOracle.setMarkObservationAdder(matchingEngine.address);
     await perpetualOracle.setIndexObservationAdder(owner.address);

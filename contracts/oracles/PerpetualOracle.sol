@@ -6,6 +6,7 @@ import { AccessControlUpgradeable } from "@openzeppelin/contracts-upgradeable/ac
 import { AggregatorV3Interface } from "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
 import { IPerpetualOracle } from "../interfaces/IPerpetualOracle.sol";
 import { LibSafeCastUint } from "../libs/LibSafeCastUint.sol";
+import { IFundingRate } from "../interfaces/IFundingRate.sol";
 import { IPositioning } from "../interfaces/IPositioning.sol";
 import { LibPerpMath } from "../libs/LibPerpMath.sol";
 import { IMarketRegistry } from "../interfaces/IMarketRegistry.sol";
@@ -43,6 +44,7 @@ contract PerpetualOracle is AccessControlUpgradeable, IPerpetualOracle {
     uint256 public smInterval;
     uint256 public markSmInterval;
     uint256 public fundingPeriod;
+    IFundingRate public fundingRate;
     IPositioning public positioning;
     IMarketRegistry public marketRegistry;
     IAccountBalance public accountBalance;
@@ -81,9 +83,9 @@ contract PerpetualOracle is AccessControlUpgradeable, IPerpetualOracle {
         _setRoleAdmin(PRICE_ORACLE_ADMIN, PRICE_ORACLE_ADMIN);
     }
 
-    function setPositioning(IPositioning _positioning) external virtual {
+    function setFundingRate(IFundingRate _fundingRate) external virtual {
         _requireOracleAdmin();
-        positioning = _positioning;
+        fundingRate = _fundingRate;
     }
 
     function setAccountBalance(IAccountBalance _accountBalance) external virtual {
@@ -94,6 +96,11 @@ contract PerpetualOracle is AccessControlUpgradeable, IPerpetualOracle {
     function setMarketRegistry(IMarketRegistry _marketRegistry) external virtual {
         _requireOracleAdmin();
         marketRegistry = _marketRegistry;
+    }
+
+    function setPositioning(IPositioning _positioning) external virtual {
+        _requireOracleAdmin();
+        positioning = _positioning;
     }
 
     function setMarkObservationAdder(address _adder) external virtual {
@@ -176,7 +183,7 @@ contract PerpetualOracle is AccessControlUpgradeable, IPerpetualOracle {
         require(_isChainlinkToken(_baseTokenIndex), "PerpOracle: invalid chainlink base token index");
         positioning.setUnderlyingPriceIndex(_baseTokenArgs, _baseTokenIndex);
         accountBalance.setUnderlyingIndexAndSigmaViv(_baseTokenIndex, _baseTokenArgs, _sigmaViv);
-        marketRegistry.addBaseToken(_baseTokenArgs);
+        marketRegistry.addBaseToken(_baseTokenArgs,_baseTokenIndex);
         indexByBaseToken[_baseTokenArgs] = _baseTokenIndex;
         baseTokenByIndex[_baseTokenIndex] = _baseTokenArgs;
         chainlinkAggregatorByIndex[_baseTokenIndex] = _chainlinkAggregatorArg;
@@ -320,8 +327,8 @@ contract PerpetualOracle is AccessControlUpgradeable, IPerpetualOracle {
     }
 
     function _calculateMarkPrice(address _baseToken, uint256 _index) internal view returns (int256 markPrice) {
-        int256 lastFundingRate = positioning.getLastFundingRate(_baseToken);
-        uint256 nextFunding = positioning.getNextFunding(_baseToken);
+        int256 lastFundingRate = fundingRate.getLastFundingRate(_baseToken);
+        uint256 nextFunding = fundingRate.getNextFunding(_baseToken);
 
         int256[3] memory prices;
         int256 indexPrice = latestIndexPrice(_index).toInt256();

@@ -24,6 +24,8 @@ describe("Vault", function () {
   let ethPositioning;
   let VolmexPerpPeriphery;
   let volmexPerpPeriphery;
+  let FundingRate;
+  let fundingRate;
   let perpViewFake;
   let volmexPerpPeripheryEth;
   let owner, alice, relayer, bob, cole;
@@ -39,7 +41,7 @@ describe("Vault", function () {
     VolmexPerpPeriphery = await ethers.getContractFactory("VolmexPerpPeriphery");
     [owner, alice, relayer, bob, cole] = await ethers.getSigners();
     PerpetualOracle = await ethers.getContractFactory("PerpetualOracle");
-
+    FundingRate = await ethers.getContractFactory("FundingRate");
     MatchingEngine = await ethers.getContractFactory("MatchingEngineTest");
     perpViewFake = await smock.fake("VolmexPerpView");
 
@@ -112,6 +114,13 @@ describe("Vault", function () {
     ]);
 
     Positioning = await ethers.getContractFactory("PositioningTest");
+    fundingRate = await upgrades.deployProxy(
+      FundingRate,
+      [perpetualOracle.address, positioningConfig.address, accountBalance.address, owner.address],
+      {
+        initializer: "FundingRate_init",
+      },
+    );
     positioning = await upgrades.deployProxy(
       Positioning,
       [
@@ -120,6 +129,7 @@ describe("Vault", function () {
         accountBalance.address,
         matchingEngine.address,
         perpetualOracle.address,
+        fundingRate.address,
         accountBalance.address,
         [alice.address, alice.address, alice.address, alice.address],
         [chainlinkTokenIndex1, chainlinkTokenIndex2],
@@ -494,6 +504,7 @@ describe("Vault", function () {
           accountBalance.address,
           matchingEngine.address,
           perpetualOracle.address,
+          fundingRate.address,
           perpetualOracle.address,
           [alice.address, alice.address, alice.address, alice.address],
           [chainlinkTokenIndex1, chainlinkTokenIndex2],
@@ -651,6 +662,7 @@ describe("Vault", function () {
           accountBalance.address,
           matchingEngine.address,
           perpetualOracle.address,
+          fundingRate.address,
           perpetualOracle.address,
           [alice.address, alice.address, alice.address, alice.address],
           [chainlinkTokenIndex1, chainlinkTokenIndex2],
@@ -963,6 +975,7 @@ describe("Vault", function () {
           accountBalance.address,
           matchingEngine.address,
           perpetualOracle.address,
+          fundingRate.address,
           perpetualOracle.address,
           [alice.address, alice.address, alice.address, alice.address],
           [chainlinkTokenIndex1, chainlinkTokenIndex2],
