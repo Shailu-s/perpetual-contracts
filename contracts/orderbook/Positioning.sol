@@ -366,10 +366,10 @@ contract Positioning is PositioningStorageV1, IPositioning, ReentrancyGuardUpgra
     /// @dev Settle trader's funding payment to his/her realized pnl.
     function _settleFunding(address trader, address baseToken) internal {
         uint256 baseTokenIndex = _underlyingPriceIndexes[baseToken];
-        (int256 fundingPayment, int256 globalTwPremiumGrowth) = fundingRate.settleFunding(trader, baseToken, baseTokenIndex);
         if(_isChainlinkToken(baseTokenIndex)){
             _perpetualOracleArg.cacheChainlinkPrice(baseTokenIndex);
         }
+        (int256 fundingPayment, int256 globalTwPremiumGrowth) = fundingRate.settleFunding(trader, baseToken, baseTokenIndex);
         if (fundingPayment != 0) {
             IAccountBalance(accountBalance).modifyOwedRealizedPnl(trader, fundingPayment.neg256(), baseToken);
             emit FundingPaymentSettled(trader, baseToken, fundingPayment);
