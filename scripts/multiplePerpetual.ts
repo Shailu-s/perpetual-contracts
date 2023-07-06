@@ -236,6 +236,7 @@ const positioning = async () => {
       volmexBaseToken3.address,
       volmexBaseToken4.address,
     ],
+    [0, 1, chainlinkTokenIndex1, chainlinkTokenIndex2],
   ]);
   await marketRegistry.deployed();
   console.log(marketRegistry.address);
