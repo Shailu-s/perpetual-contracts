@@ -274,6 +274,7 @@ describe("Realised pnl tests", function () {
         volmexBaseToken2.address,
         volmexBaseToken3.address,
       ],
+      [0, 1, chainlinkTokenIndex1, chainlinkTokenIndex2],
     ]);
     fundingRate = await upgrades.deployProxy(
       FundingRate,

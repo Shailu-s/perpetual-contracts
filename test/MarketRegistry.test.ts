@@ -203,6 +203,7 @@ describe("Market Registry", function () {
         chainlinkBaseToken.address,
         chainlinkBaseToken2.address,
       ],
+      [0, 1, chainlinkTokenIndex1, chainlinkTokenIndex2],
     ]);
     fundingRate = await upgrades.deployProxy(
       FundingRate,
