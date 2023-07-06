@@ -280,7 +280,6 @@ describe("Periodic Funding payment", function () {
 
     await (await volmexQuoteToken.setMintBurnRole(positioning.address)).wait();
     await marketRegistry.grantAddBaseTokenRole(owner.address);
-    await marketRegistry.connect(owner).addBaseToken(volmexBaseToken.address);
     await marketRegistry.connect(owner).setMakerFeeRatio(0.0004e6);
     await marketRegistry.connect(owner).setTakerFeeRatio(0.0009e6);
 
@@ -2004,7 +2003,6 @@ describe("Periodic Funding payment", function () {
       await (await volmexBaseToken.setMintBurnRole(positioning.address)).wait();
       await (await volmexQuoteToken.setMintBurnRole(positioning.address)).wait();
       await marketRegistry.grantAddBaseTokenRole(owner.address);
-      await marketRegistry.connect(owner).addBaseToken(volmexBaseToken.address);
       await marketRegistry.connect(owner).setMakerFeeRatio(0.0004e6);
       await marketRegistry.connect(owner).setTakerFeeRatio(0.0004e6);
 

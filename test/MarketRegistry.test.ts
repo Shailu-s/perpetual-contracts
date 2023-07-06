@@ -244,7 +244,7 @@ describe("Market Registry", function () {
     await (await volmexBaseToken.setMintBurnRole(positioning.address)).wait();
     await (await volmexQuoteToken.setMintBurnRole(positioning.address)).wait();
     await marketRegistry.grantAddBaseTokenRole(owner.address);
-    await marketRegistry.connect(owner).addBaseToken(volmexBaseToken.address);
+    await marketRegistry.connect(owner).addBaseToken(volmexBaseToken.address, 0);
     await marketRegistry.connect(owner).setMakerFeeRatio(0.0004e6);
     await marketRegistry.connect(owner).setTakerFeeRatio(0.0009e6);
 
@@ -337,19 +337,19 @@ describe("Market Registry", function () {
       ).to.be.revertedWith("PositioningCallee: Not admin");
     });
     it("should not add base token if already added", async () => {
-      const receipt = await marketRegistry.addBaseToken(volmexBaseToken.address);
+      const receipt = await marketRegistry.addBaseToken(volmexBaseToken.address, 0);
       expect(receipt.value.toString()).to.be.equal("0");
     });
 
     it("should fail to  add base token is token is not base", async () => {
-      await expect(marketRegistry.addBaseToken(virtualToken.address)).to.be.revertedWith(
+      await expect(marketRegistry.addBaseToken(virtualToken.address, 0)).to.be.revertedWith(
         "MarketRegistry: not base token",
       );
     });
 
     it("should fail to add base tokens", async () => {
       await expect(
-        marketRegistry.connect(account2).addBaseToken(volmexBaseToken.address),
+        marketRegistry.connect(account2).addBaseToken(volmexBaseToken.address, 0),
       ).to.be.revertedWith("MarketRegistry: Not add base token role");
     });
   });

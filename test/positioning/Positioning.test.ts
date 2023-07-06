@@ -314,7 +314,6 @@ describe("Positioning", function () {
 
     // await marketRegistry.connect(owner).addBaseToken(virtualToken.address)
     await marketRegistry.grantAddBaseTokenRole(owner.address);
-    await marketRegistry.connect(owner).addBaseToken(volmexBaseToken.address);
     // await marketRegistry.connect(owner).addBaseToken(baseToken.address)
     await marketRegistry.connect(owner).setMakerFeeRatio(0.0004e6);
     await marketRegistry.connect(owner).setTakerFeeRatio(0.0009e6);
@@ -2614,7 +2613,7 @@ describe("Positioning", function () {
           },
         );
         await volmexBaseToken1.deployed();
-        await marketRegistry.addBaseToken(volmexBaseToken1.address);
+        await marketRegistry.addBaseToken(volmexBaseToken1.address, 1);
         await positioningConfig.setMaxMarketsPerAccount(1);
         await matchingEngine.grantMatchOrders(positioning.address);
 

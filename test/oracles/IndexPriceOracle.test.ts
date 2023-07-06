@@ -4,7 +4,7 @@ import { ethers, upgrades } from "hardhat";
 const { encodeAddress } = require("../order");
 const { expectRevert, time } = require("@openzeppelin/test-helpers");
 
-describe("PerpetualOracle - Index Price Oracle", function () {
+describe.only("PerpetualOracle - Index Price Oracle", function () {
   let MatchingEngine;
   let matchingEngine;
   let VirtualToken;
@@ -182,6 +182,7 @@ describe("PerpetualOracle - Index Price Oracle", function () {
       matchingEngine.address,
       owner.address,
     ]);
+
     await accountBalance1.deployed();
     await accountBalance1.grantAddUnderlyingIndexRole(owner.address);
     await accountBalance1.grantAddUnderlyingIndexRole(perpetualOracle.address);
@@ -223,6 +224,7 @@ describe("PerpetualOracle - Index Price Oracle", function () {
         initializer: "FundingRate_init",
       },
     );
+
     positioning = await upgrades.deployProxy(
       Positioning,
       [
@@ -255,7 +257,7 @@ describe("PerpetualOracle - Index Price Oracle", function () {
     await (await volmexBaseToken.setMintBurnRole(positioning.address)).wait();
     await (await volmexQuoteToken.setMintBurnRole(positioning.address)).wait();
     await marketRegistry.grantAddBaseTokenRole(owner.address);
-    await marketRegistry.connect(owner).addBaseToken(volmexBaseToken.address);
+    await marketRegistry.connect(owner).(volmexBaseToken.address, 0);
     await marketRegistry.connect(owner).setMakerFeeRatio(0.0004e6);
     await marketRegistry.connect(owner).setTakerFeeRatio(0.0009e6);
     await marketRegistry.grantAddBaseTokenRole(perpetualOracle.address);

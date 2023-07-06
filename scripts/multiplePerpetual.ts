@@ -241,7 +241,7 @@ const positioning = async () => {
   await marketRegistry.deployed();
   console.log(marketRegistry.address);
   console.log("grant add base token role...");
-  await marketRegistry.grantAddBaseToken(perpetualOracle.address);
+  await marketRegistry.grantAddBaseTokenRole(perpetualOracle.address);
   await (await perpetualOracle.setMarketRegistry(marketRegistry.address)).wait();
   console.log("Deploying Funding rate ...");
   const fundingRate = await upgrades.deployProxy(
@@ -314,6 +314,9 @@ const positioning = async () => {
   await marketRegistry.setMakerFeeRatio("400");
   console.log("Set taker fee ...");
   await marketRegistry.setTakerFeeRatio("900");
+  console.log(" set min position size ...");
+  await positioning.setMinPositionSize("1000000000000000", volmexBaseToken3.address);
+  await positioning.setMinPositionSize("3000000000000000", volmexBaseToken4.address);
 
   console.log("Deploying Periphery contract ...");
   const periphery = await upgrades.deployProxy(VolmexPerpPeriphery, [
