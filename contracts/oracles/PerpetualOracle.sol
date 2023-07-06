@@ -8,6 +8,8 @@ import { IPerpetualOracle } from "../interfaces/IPerpetualOracle.sol";
 import { LibSafeCastUint } from "../libs/LibSafeCastUint.sol";
 import { IPositioning } from "../interfaces/IPositioning.sol";
 import { LibPerpMath } from "../libs/LibPerpMath.sol";
+import { IMarketRegistry } from "../interfaces/IMarketRegistry.sol";
+import { IAccountBalance } from "../interfaces/IAccountBalance.sol";
 
 contract PerpetualOracle is AccessControlUpgradeable, IPerpetualOracle {
     using LibSafeCastUint for uint256;
@@ -42,6 +44,8 @@ contract PerpetualOracle is AccessControlUpgradeable, IPerpetualOracle {
     uint256 public markSmInterval;
     uint256 public fundingPeriod;
     IPositioning public positioning;
+    IMarketRegistry public marketRegistry;
+    IAccountBalance public accountBalance;
 
     function __PerpetualOracle_init(
         address[4] calldata _baseToken, //NOTE: index 2 and 3 is of chainlink base token
@@ -80,6 +84,16 @@ contract PerpetualOracle is AccessControlUpgradeable, IPerpetualOracle {
     function setPositioning(IPositioning _positioning) external virtual {
         _requireOracleAdmin();
         positioning = _positioning;
+    }
+
+    function setAccountBalance(IAccountBalance _accountBalance) external virtual {
+        _requireOracleAdmin();
+        accountBalance = _accountBalance;
+    }
+
+    function setMarketRegistry(IMarketRegistry _marketRegistry) external virtual {
+        _requireOracleAdmin();
+        marketRegistry = _marketRegistry;
     }
 
     function setMarkObservationAdder(address _adder) external virtual {
@@ -157,9 +171,12 @@ contract PerpetualOracle is AccessControlUpgradeable, IPerpetualOracle {
         emit ChainlinkPriceAdded(_baseTokenIndex, price10x6, block.timestamp);
     }
 
-    function addChainlinkBaseToken(uint256 _baseTokenIndex, AggregatorV3Interface _chainlinkAggregatorArg, address _baseTokenArgs) external virtual {
+    function addChainlinkBaseToken(uint256 _baseTokenIndex, AggregatorV3Interface _chainlinkAggregatorArg, address _baseTokenArgs, uint256 _sigmaViv) external virtual {
         _requireOracleAdmin();
         require(_isChainlinkToken(_baseTokenIndex), "PerpOracle: invalid chainlink base token index");
+        positioning.setUnderlyingPriceIndex(_baseTokenArgs, _baseTokenIndex);
+        accountBalance.setUnderlyingIndexAndSigmaViv(_baseTokenIndex, _baseTokenArgs, _sigmaViv);
+        marketRegistry.addBaseToken(_baseTokenArgs);
         indexByBaseToken[_baseTokenArgs] = _baseTokenIndex;
         baseTokenByIndex[_baseTokenIndex] = _baseTokenArgs;
         chainlinkAggregatorByIndex[_baseTokenIndex] = _chainlinkAggregatorArg;

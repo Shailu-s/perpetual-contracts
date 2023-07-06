@@ -12,4 +12,5 @@ abstract contract MarketRegistryStorageV1 {
     address[] internal _baseTokensMarketMap;
     uint24 internal _makerFeeRatio;
     uint24 internal _takerFeeRatio;
+    bytes32 public constant ADD_BASE_TOKEN = keccak256("ADD_BASE_TOKEN");
 }

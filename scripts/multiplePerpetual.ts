@@ -1,3 +1,4 @@
+import { access } from "fs";
 import { ethers, upgrades, run } from "hardhat";
 const proofHash = "0x6c00000000000000000000000000000000000000000000000000000000000000";
 const capRatio = "400000000";
@@ -38,8 +39,8 @@ const positioning = async () => {
   const volmexBaseToken1 = await upgrades.deployProxy(
     VolmexBaseToken,
     [
-      "Virtual ETH Index Token", // nameArg
-      "VEVIV", // symbolArg,
+      "ETH Volmex IV Token", // nameArg
+      "EVIV", // symbolArg,
       owner.address, // zero address on init
       true, // isBase
     ],
@@ -54,7 +55,7 @@ const positioning = async () => {
   const volmexBaseToken2 = await upgrades.deployProxy(
     VolmexBaseToken,
     [
-      "Bitcoin Volmex Implied Volatility Index", // nameArg
+      "Bitcoin Volmex IV Token", // nameArg
       "BVIV", // symbolArg,
       owner.address, // priceFeedArg
       true, // isBase
@@ -70,8 +71,8 @@ const positioning = async () => {
   const volmexBaseToken3 = await upgrades.deployProxy(
     VolmexBaseToken,
     [
-      "Virtual Ethereum Perp Futures", // nameArg
-      "VETHUSD", // symbolArg,
+      "Ethereum USD", // nameArg
+      "ETHUSD", // symbolArg,
       owner.address, // priceFeedArg
       true, // isBase
     ],
@@ -86,8 +87,8 @@ const positioning = async () => {
   const volmexBaseToken4 = await upgrades.deployProxy(
     VolmexBaseToken,
     [
-      "Virtual Bitcoin Perp Futures", // nameArg
-      "VBTCUSD", // symbolArg,
+      "Bitcoin USD", // nameArg
+      "BTCUSD", // symbolArg,
       owner.address, // priceFeedArg
       true, // isBase
     ],
@@ -138,8 +139,8 @@ const positioning = async () => {
   const volmexQuoteToken = await upgrades.deployProxy(
     VolmexQuoteToken,
     [
-      "Virtual USD Coin", // nameArg
-      "VUSDT", // symbolArg,
+      `${isArbitrum ? "Tether Token" : "USD Coin"}`, // nameArg
+      `"USD${isArbitrum ? "T" : "C"}"`, // symbolArg,
       false, // isBase
     ],
     {
@@ -198,10 +199,13 @@ const positioning = async () => {
   ]);
   await accountBalance.deployed();
   console.log(accountBalance.address);
+  console.log("grant add underlying index role...");
+  await (await accountBalance.grantAddUnderlyingIndexRole(perpetualOracle.address)).wait();
+  await (await accountBalance.grantSigmaVivRole(perpetualOracle.address)).wait();
   await (await perpView.setAccount(accountBalance.address)).wait();
   console.log("Set accounts - positioning config ...");
   await (await positioningConfig.setAccountBalance(accountBalance.address)).wait();
-
+  await (await perpetualOracle.setAccountBalance(accountBalance.address)).wait();
   console.log("Deploying Vault Controller ...");
   const vaultController = await upgrades.deployProxy(VaultController, [
     positioningConfig.address,
@@ -234,6 +238,8 @@ const positioning = async () => {
   ]);
   await marketRegistry.deployed();
   console.log(marketRegistry.address);
+  console.log("grant add base token role...");
+  await (await perpetualOracle.setMarketRegistry(marketRegistry.address)).wait();
   console.log("Deploying Positioning ...");
   const positioning = await upgrades.deployProxy(
     Positioning,
@@ -260,6 +266,8 @@ const positioning = async () => {
   );
   await positioning.deployed();
   console.log(positioning.address);
+  console.log("grant add underlying index");
+  await (await positioning.grantAddUnderlyingIndexRole(owner.address)).wait();
   console.log("Set positioning - positioning config ...");
   await (await positioningConfig.setPositioning(positioning.address)).wait();
   console.log("Set positioning - accounts ...");

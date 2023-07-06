@@ -67,7 +67,7 @@ interface IPerpetualOracle {
     
     function cacheChainlinkPrice(uint256 _baseTokenIndex) external;
 
-    function addChainlinkBaseToken(uint256 _baseTokenIndex, AggregatorV3Interface _chainlinkAggregatorArg, address _baseTokenArgs) external;
+    function addChainlinkBaseToken(uint256 _baseTokenIndex, AggregatorV3Interface _chainlinkAggregatorArg, address _baseTokenArgs, uint256 _sigmaViv) external;
 
     function latestIndexPrice(uint256 _index) external view returns (uint256 latestIndexPrice);
 

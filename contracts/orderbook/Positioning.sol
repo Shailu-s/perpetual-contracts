@@ -82,6 +82,17 @@ contract Positioning is IPositioning, ReentrancyGuardUpgradeable, PausableUpgrad
         isLiquidatorWhitelistEnabled = true;
         _grantRole(SM_INTERVAL_ROLE, positioningConfigArg);
         _grantRole(POSITIONING_ADMIN, _msgSender());
+        _grantRole(ADD_UNDERLYING_INDEX, perpetualOracleArg);
+    }
+
+    function grantAddUnderlyingIndexRole(address account) external {
+        _requirePositioningAdmin();
+        _grantRole(ADD_UNDERLYING_INDEX, account);
+    }
+
+    function setUnderlyingPriceIndex(address volmexBaseToken, uint256 underlyingIndex) external {
+        _requireAddUnderlyingIndexRole();
+        _underlyingPriceIndexes[volmexBaseToken] = underlyingIndex;
     }
 
     function setMarketRegistry(address marketRegistryArg) external {
@@ -325,7 +336,6 @@ contract Positioning is IPositioning, ReentrancyGuardUpgradeable, PausableUpgrad
         );
 
         _requireEnoughFreeCollateral(liquidator);
-
         emit PositionLiquidated(
             trader,
             baseToken,
@@ -582,7 +592,6 @@ contract Positioning is IPositioning, ReentrancyGuardUpgradeable, PausableUpgrad
         uint256 actualLiquidatableSize = IAccountBalance(accountBalance).getNLiquidate(positionSizeToBeLiquidated.abs(), minPositionSizeByBaseToken[baseToken], maxOrderSize);
         int256 liquidatedPositionSize = positionSizeToBeLiquidated >= 0 ? (actualLiquidatableSize.toInt256()).neg256() : actualLiquidatableSize.toInt256();
         int256 liquidatedPositionNotional = liquidatedPositionSize.mulDiv(indexPrice.toInt256(), _ORACLE_BASE);
-
         return (liquidatedPositionSize, liquidatedPositionNotional);
     }
 
@@ -644,10 +653,14 @@ contract Positioning is IPositioning, ReentrancyGuardUpgradeable, PausableUpgrad
         require(hasRole(SM_INTERVAL_ROLE, _msgSender()), "Positioning: Not sm interval role");
     }
 
+    function _requireAddUnderlyingIndexRole() internal view {
+        require(hasRole(ADD_UNDERLYING_INDEX, _msgSender()), "Positioning: Not add underlying index role");
+    }
+
     function _requireWhitelistLiquidator(address liquidator) internal view {
         require(isLiquidatorWhitelisted[liquidator], "P_LW"); // Positioning: liquidator not whitelisted
     }
-
+    
     function _isChainlinkToken(uint256 baseTokenIndex) internal view returns (bool) {
         return ((uint256(CHAINLINK_TOKEN_CHECKSUM & bytes32(baseTokenIndex)) >> 255) == 1) ;
     }

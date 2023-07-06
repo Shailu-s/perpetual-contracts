@@ -230,7 +230,7 @@ describe("Multiple protocols", function () {
     await (await BVIV.setMintBurnRole(positioning.address)).wait();
 
     await (await volmexQuoteToken.setMintBurnRole(positioning.address)).wait();
-
+    await marketRegistry.grantAddBaseTokenRole(owner.address);
     await marketRegistry.connect(owner).addBaseToken(EVIV.address);
     await marketRegistry.connect(owner).addBaseToken(BVIV.address);
     await marketRegistry.connect(owner).setMakerFeeRatio(0.0004e6);
