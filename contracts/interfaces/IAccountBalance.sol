@@ -18,7 +18,7 @@ interface IAccountBalance {
     event TraderBadDebt(address indexed trader, int256 accountValue);
     event ZeroMaxTimeBound(address indexed trader, uint256 maxTimeBound);
 
-    function initialize(address positioningConfigArg, address[2] calldata volmexBaseTokenArgs, IMatchingEngine matchingEngineArg, address adminArg) external;
+    function initialize(address positioningConfigArg, address[4] calldata volmexBaseTokenArgs, uint256[2] calldata chainlinkBaseTokenIndexArgs, IMatchingEngine matchingEngineArg, address adminArg) external;
 
     /// @notice Modify trader owedRealizedPnl
     /// @dev Only used by `Positioning` contract
@@ -35,7 +35,7 @@ interface IAccountBalance {
     /// @param trader The address of the trader
     /// @return pnl Settled owedRealizedPnl
     function settleOwedRealizedPnl(address trader) external returns (int256 pnl);
-
+   
     /// @notice Update trader Twap premium info
     /// @dev Only used by `ClearingHouse` contract
     /// @param trader The address of trader
@@ -66,6 +66,8 @@ interface IAccountBalance {
 
     function setSmInterval(uint256 smInterval) external;
 
+    function setUnderlyingIndexAndSigmaViv(uint256 _baseTokenIndex, address _baseTokenArg, uint256 _sigmaViv) external ;
+    
     function setSmIntervalLiquidation(uint256 smIntervalLiquidation) external;
 
     /// @notice Get liquidatable position size of trader's baseToken market

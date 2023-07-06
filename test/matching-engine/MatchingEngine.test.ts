@@ -35,12 +35,23 @@ describe("MatchingEngine", function () {
   let marketRegistry;
   let volmexPerpPeriphery;
   let VolmexPerpPeriphery;
+  let chainlinkBaseToken;
+  let chainlinkBaseToken2;
+  let ChainLinkAggregator;
   let volmexBaseToken1;
+  let FundingRate;
+  let fundingRate;
   let perpViewFake;
   let TestERC20;
+  let chainlinkAggregator1;
+  let chainlinkAggregator2;
   let USDC;
   const proofHash = "0x6c00000000000000000000000000000000000000000000000000000000000000";
   const capRatio = "400000000";
+  const chainlinkTokenIndex1 =
+    "57896044618658097711785492504343953926634992332820282019728792008524463585424";
+  const chainlinkTokenIndex2 =
+    "57896044618658097711785492504343953926634992332820282019728792008524463585425";
   let transferManagerTest;
   const deadline = 87654321987654;
   const VirtualTokenAdmin = "0xf24678cc6ef041b5bac447b5fa553504d5f318f8003914a05215b2ac7d7314e2";
@@ -69,6 +80,8 @@ describe("MatchingEngine", function () {
     AccountBalance = await ethers.getContractFactory("AccountBalance");
     ERC20TransferProxyTest = await ethers.getContractFactory("ERC20TransferProxyTest");
     TransferManagerTest = await ethers.getContractFactory("TransferManagerTest");
+    ChainLinkAggregator = await ethers.getContractFactory("MockV3Aggregator");
+    FundingRate = await ethers.getContractFactory("FundingRate");
     TestERC20 = await ethers.getContractFactory("TestERC20");
   });
 
@@ -103,14 +116,52 @@ describe("MatchingEngine", function () {
       },
     );
     await volmexBaseToken.deployed();
+    chainlinkBaseToken = await upgrades.deployProxy(
+      VolmexBaseToken,
+      [
+        "VolmexBaseToken", // nameArg
+        "VBT", // symbolArg,
+        owner.address, // priceFeedArg
+        true, // isBase
+      ],
+      {
+        initializer: "initialize",
+      },
+    );
+    chainlinkBaseToken2 = await upgrades.deployProxy(
+      VolmexBaseToken,
+      [
+        "VolmexBaseToken", // nameArg
+        "VBT", // symbolArg,
+        owner.address, // priceFeedArg
+        true, // isBase
+      ],
+      {
+        initializer: "initialize",
+      },
+    );
+
+    // await (await perpView.setBaseToken(volmexBaseToken.address)).wait();
+
+    chainlinkAggregator1 = await ChainLinkAggregator.deploy(8, 3075000000000);
+    await chainlinkAggregator1.deployed();
+    chainlinkAggregator2 = await ChainLinkAggregator.deploy(8, 3048000000000);
+    await chainlinkAggregator2.deployed();
 
     perpetualOracle = await upgrades.deployProxy(
       PerpetualOracle,
       [
-        [volmexBaseToken.address, volmexBaseToken1.address],
-        [10000000, 10000000],
-        [10000000, 10000000],
+        [
+          volmexBaseToken.address,
+          volmexBaseToken.address,
+          chainlinkBaseToken.address,
+          chainlinkBaseToken2.address,
+        ],
+        [60000000, 60000000, 3075000000000, 1800000000],
+        [60000000, 60000000],
         [proofHash, proofHash],
+        [chainlinkTokenIndex1, chainlinkTokenIndex2],
+        [chainlinkAggregator1.address, chainlinkAggregator2.address],
         owner.address,
       ],
       { initializer: "__PerpetualOracle_init" },
@@ -118,6 +169,7 @@ describe("MatchingEngine", function () {
 
     await volmexBaseToken.setPriceFeed(perpetualOracle.address);
     await volmexBaseToken1.setPriceFeed(perpetualOracle.address);
+
     positioningConfig = await upgrades.deployProxy(PositioningConfig, [perpetualOracle.address]);
     await positioningConfig.deployed();
     await perpetualOracle.grantSmaIntervalRole(positioningConfig.address);
@@ -130,7 +182,13 @@ describe("MatchingEngine", function () {
     );
     accountBalance = await upgrades.deployProxy(AccountBalance, [
       positioningConfig.address,
-      [volmexBaseToken.address, volmexBaseToken1.address],
+      [
+        volmexBaseToken.address,
+        volmexBaseToken.address,
+        chainlinkBaseToken.address,
+        chainlinkBaseToken2.address,
+      ],
+      [chainlinkTokenIndex1, chainlinkTokenIndex2],
       matchingEngine.address,
       owner.address,
     ]);
@@ -161,8 +219,20 @@ describe("MatchingEngine", function () {
     await virtualToken.deployed();
     marketRegistry = await upgrades.deployProxy(MarketRegistry, [
       virtualToken.address,
-      [volmexBaseToken.address, volmexBaseToken1.address],
+      [
+        volmexBaseToken.address,
+        volmexBaseToken1.address,
+        chainlinkBaseToken.address,
+        chainlinkBaseToken2.address,
+      ],
     ]);
+    fundingRate = await upgrades.deployProxy(
+      FundingRate,
+      [perpetualOracle.address, positioningConfig.address, accountBalance.address, owner.address],
+      {
+        initializer: "FundingRate_init",
+      },
+    );
     positioning = await upgrades.deployProxy(
       Positioning,
       [
@@ -171,10 +241,17 @@ describe("MatchingEngine", function () {
         accountBalance.address,
         matchingEngine.address,
         perpetualOracle.address,
+        fundingRate.address,
         marketRegistry.address,
-        [volmexBaseToken.address, volmexBaseToken.address],
-        [owner.address, account2.address],
-        ["1000000000000000000", "1000000000000000000"],
+        [
+          volmexBaseToken.address,
+          volmexBaseToken.address,
+          chainlinkBaseToken.address,
+          chainlinkBaseToken2.address,
+        ],
+        [chainlinkTokenIndex1, chainlinkTokenIndex2],
+        [owner.address, account1.address],
+        ["10000000000000000000", "10000000000000000000"],
       ],
       {
         initializer: "initialize",
@@ -200,6 +277,7 @@ describe("MatchingEngine", function () {
       account4.address,
     ]);
     await perpetualOracle.setIndexObservationAdder(owner.address);
+    await marketRegistry.grantAddBaseTokenRole(owner.address);
     await marketRegistry.connect(owner).addBaseToken(volmexBaseToken.address);
 
     await marketRegistry.connect(owner).setMakerFeeRatio(0.0004e6);
@@ -220,12 +298,11 @@ describe("MatchingEngine", function () {
 
     await positioning.connect(owner).setMarketRegistry(marketRegistry.address);
     await positioning.connect(owner).setDefaultFeeReceiver(owner.address);
-    await positioning.connect(owner).setPositioning(positioning.address);
-    await (await perpetualOracle.setPositioning(positioning.address)).wait();
+    await (await perpetualOracle.setFundingRate(fundingRate.address)).wait();
     await positioningConfig.setPositioning(positioning.address);
     await positioningConfig.setAccountBalance(accountBalance.address);
     await positioningConfig.setTwapInterval(28800);
-
+    await vaultController.setPeriphery(volmexPerpPeriphery.address);
     asset = Asset(virtualToken.address, "10");
 
     await USDC.connect(account1).approve(vault.address, ten.toString());
@@ -282,13 +359,6 @@ describe("MatchingEngine", function () {
       0,
       false,
     );
-    let signatureLeft = await getSignature(orderLeft2, account1.address);
-    let signatureRight = await getSignature(orderRight2, account2.address);
-    await expect(
-      positioning
-        .connect(account1)
-        .openPosition(orderLeft2, signatureLeft, orderRight2, signatureRight, liquidator),
-    ).to.emit(positioning, "PositionChanged");
   });
 
   describe("Deployment", function () {
@@ -774,7 +844,10 @@ describe("MatchingEngine", function () {
           true,
         );
 
-        await expect(matchingEngine.matchOrders(orderRight, orderLeft)).to.emit(matchingEngine, "Matched");
+        await expect(matchingEngine.matchOrders(orderRight, orderLeft)).to.emit(
+          matchingEngine,
+          "Matched",
+        );
       });
       it("should fail if trader for both the orders in same", async () => {
         const [owner, account1] = await ethers.getSigners();
@@ -908,12 +981,11 @@ describe("MatchingEngine", function () {
           false,
         );
 
-
         await expect(matchingEngine.matchOrders(orderRight, orderLeft))
           .to.emit(matchingEngine, "Matched")
-          .to.emit(matchingEngine, "OrdersFilled")
+          .to.emit(matchingEngine, "OrdersFilled");
       });
-      
+
       it("should match orders & emit event", async () => {
         await expect(matchingEngine.matchOrders(orderLeft, orderRight))
           .to.emit(matchingEngine, "Matched")

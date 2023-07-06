@@ -70,7 +70,7 @@ contract PositioningConfig is IPositioningConfig, PositioningConfigStorageV1, Ac
         require(twapIntervalArg != 0, "PC_ITI");
         _twapInterval = twapIntervalArg;
         perpetualOracle.setMarkSmInterval(twapIntervalArg);
-        positioning.setSmInterval(twapIntervalArg);
+        // positioning.setSmInterval(twapIntervalArg);
         accountBalance.setSmInterval(twapIntervalArg);
         emit TwapIntervalChanged(twapIntervalArg);
     }
@@ -80,7 +80,7 @@ contract PositioningConfig is IPositioningConfig, PositioningConfigStorageV1, Ac
         // PC_ITIL: invalid twapInterval in liquidation
         require(twapInterval != 0, "PC_ITIL");
         _twapIntervalLiquidation = twapInterval;
-        positioning.setSmIntervalLiquidation(twapInterval);
+        // positioning.setSmIntervalLiquidation(twapInterval);
         accountBalance.setSmIntervalLiquidation(twapInterval);
     }
 

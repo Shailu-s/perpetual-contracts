@@ -3,15 +3,26 @@ import { ethers, upgrades } from "hardhat";
 
 describe("ParentToken", function () {
   let VolmexBaseToken;
+  let ChainLinkAggregator;
+  let chainlinkAggregator1;
+  let chainlinkAggregator2;
   let volmexBaseToken;
+  let volmexBaseToken1;
+  let volmexBaseToken2;
+  let volmexBaseToken3;
   let PerpetualOracle;
   let perpetualOracle;
   let owner, account1, account2;
   const proofHash = "0x6c00000000000000000000000000000000000000000000000000000000000000";
+  const chainlinkTokenIndex1 =
+    "57896044618658097711785492504343953926634992332820282019728792003956564819969";
+  const chainlinkTokenIndex2 =
+    "57896044618658097711785492504343953926634992332820282019728792003956564819970";
   const capRatio = "250";
   this.beforeAll(async () => {
     VolmexBaseToken = await ethers.getContractFactory("VolmexBaseToken");
     PerpetualOracle = await ethers.getContractFactory("PerpetualOracle");
+    ChainLinkAggregator = await ethers.getContractFactory("MockV3Aggregator");
   });
   beforeEach(async () => {
     [owner, account1, account2] = await ethers.getSigners();
@@ -23,19 +34,28 @@ describe("ParentToken", function () {
         initializer: "initialize",
       },
     );
+    chainlinkAggregator1 = await ChainLinkAggregator.deploy(8, 3075000000000);
+    await chainlinkAggregator1.deployed();
+    chainlinkAggregator2 = await ChainLinkAggregator.deploy(8, 180000000000);
+    await chainlinkAggregator2.deployed();
     perpetualOracle = await upgrades.deployProxy(
       PerpetualOracle,
       [
-        [volmexBaseToken.address, volmexBaseToken.address],
-        [200000000, 200000000],
-        [200000000, 200000000],
+        [
+          volmexBaseToken.address,
+          volmexBaseToken.address,
+          volmexBaseToken.address,
+          volmexBaseToken.address,
+        ],
+        [100000000, 100000000, 30000000000, 1800000000],
+        [100000000, 100000000],
         [proofHash, proofHash],
+        [chainlinkTokenIndex1, chainlinkTokenIndex2],
+        [chainlinkAggregator1.address, chainlinkAggregator2.address],
         owner.address,
       ],
       { initializer: "__PerpetualOracle_init" },
     );
-
-    await volmexBaseToken.setPriceFeed(perpetualOracle.address);
   });
   describe("deployment", function () {
     it("should fail to again", async () => {
@@ -49,10 +69,17 @@ describe("ParentToken", function () {
       const volmexPriceOracle = await upgrades.deployProxy(
         PerpetualOracle,
         [
-          [volmexBaseToken.address, volmexBaseToken.address],
-          [200000000, 200000000],
-          [200000000, 200000000],
+          [
+            volmexBaseToken.address,
+            volmexBaseToken.address,
+            volmexBaseToken.address,
+            volmexBaseToken.address,
+          ],
+          [100000000, 100000000, 30000000000, 1800000000],
+          [100000000, 100000000],
           [proofHash, proofHash],
+          [chainlinkTokenIndex1, chainlinkTokenIndex2],
+          [chainlinkAggregator1.address, chainlinkAggregator2.address],
           owner.address,
         ],
         { initializer: "__PerpetualOracle_init" },

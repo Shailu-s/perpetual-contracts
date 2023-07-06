@@ -30,7 +30,7 @@ const config: HardhatUserConfig = {
       optimizer: {
         enabled: true,
         runs: 100,
-        mode: "3"
+        mode: "3",
       },
     },
   },
@@ -39,7 +39,7 @@ const config: HardhatUserConfig = {
       {
         version: "0.8.18",
         settings: {
-          optimizer: { enabled: true, runs: 100 },
+          optimizer: { enabled: true, runs: 50 },
           evmVersion: "berlin",
           // for smock to mock contracts
           outputSelection: {
