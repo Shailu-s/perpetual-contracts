@@ -10,6 +10,7 @@ import { IVirtualToken } from "../interfaces/IVirtualToken.sol";
 
 import { PositioningCallee } from "./PositioningCallee.sol";
 import { MarketRegistryStorageV1 } from "../storage/MarketRegistryStorage.sol";
+import "hardhat/console.sol";
 
 // never inherit any new stateful contract. never change the orders of parent stateful contracts
 contract MarketRegistry is IMarketRegistry, PositioningCallee, MarketRegistryStorageV1 {
@@ -105,10 +106,11 @@ contract MarketRegistry is IMarketRegistry, PositioningCallee, MarketRegistrySto
         }
     }
 
-    function getBaseTokens() external view returns (address[] memory baseTokens, uint256[] memory baseTokenIndexes) {
-        baseTokens = _baseTokensMarketMap;
-        for (uint256 index; index< baseTokens.length; ++index) {
-            baseTokenIndexes [index] = underlyingPriceIndexes[baseTokens[index]];
+    function getBaseTokens() external view returns (address[] memory baseTokens, uint256[] memory baseTokenIndexes ) {
+       baseTokens = _baseTokensMarketMap; 
+       baseTokenIndexes = new uint256[](baseTokens.length);
+       for (uint256 index; index < _baseTokensMarketMap.length; index++) {
+            baseTokenIndexes[index] = underlyingPriceIndexes[_baseTokensMarketMap[index]];
         }
     }
     
