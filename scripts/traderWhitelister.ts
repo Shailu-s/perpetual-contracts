@@ -2,8 +2,8 @@ import { ethers } from "hardhat";
 import { BigNumber, Wallet } from "ethers";
 import { constants } from "./chains";
 // yarn hardhat run scripts/traderWhitelister.ts --network base-goerli --no-compile
-const contracts = constants["arbitrum-goerli"]
-const rpcUrl = constants["arbitrum-goerli"].RPC_URL;
+const contracts = constants["base-goerli"]
+const rpcUrl = constants["base-goerli"].RPC_URL;
 
 
 // this script will grant the traderWhitelister role to the following address
