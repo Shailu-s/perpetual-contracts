@@ -11,6 +11,7 @@ const rpcUrl = contracts.RPC_URL;
 const proofHash = "0x6c00000000000000000000000000000000000000000000000000000000000000";
 
 async function main() {
+  console.log('main() called')
   const provider = new ethers.providers.JsonRpcProvider(rpcUrl);
   const account0 = new ethers.Wallet(process.env.DEPLOYER_PRIVATE_KEY, provider); // deployer account
 
@@ -27,16 +28,18 @@ async function main() {
   const res = await perpetualOracle.addIndexObservations(
     [0, 1],
     [ethers.utils.parseUnits("47", 6), ethers.utils.parseUnits("47", 6)],
-    [proofHash, proofHash],
+    [proofHash, proofHash], {
+      gasPrice: ethers.utils.parseUnits("20", "gwei"),
+    }
   );
   await res.wait();
   console.log("res123", res);
 }
 main()
 setInterval(main, 1000 * 30 * 60)
-// main()
-//   .then(() => process.exit(0))
-//   .catch(error => {
-//     console.error("Error: ", error);
-//     process.exit(1);
-//   });
+// // main()
+// //   .then(() => process.exit(0))
+// //   .catch(error => {
+// //     console.error("Error: ", error);
+// //     process.exit(1);
+// //   });

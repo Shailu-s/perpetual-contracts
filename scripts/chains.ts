@@ -18,7 +18,7 @@ export const constants = {
     Perp_View: '0x4b9B35648Cd2A70f530683C712fCc40d245e860B',
     PERP_FACTORY: '0xf2726eaD68ab70b13Bf79303017e29581cafE5c3',
     RPC_URL:
-      "https://icy-fabled-meadow.base-goerli.quiknode.pro/5552ae4af262e5dca077a7a9c26b3cb484599925/",
+      "https://goerli.base.org",
   },
   "base-goerli": {
     PERPETUAL_ORACLE: '0x26AC26788bd7fdEd6B1AB70629214C2Aa211d8c9',
@@ -38,7 +38,7 @@ export const constants = {
     Perp_View: '0x4b9B35648Cd2A70f530683C712fCc40d245e860B',
     PERP_FACTORY: '0xf2726eaD68ab70b13Bf79303017e29581cafE5c3',
     RPC_URL:
-      "https://icy-fabled-meadow.base-goerli.quiknode.pro/5552ae4af262e5dca077a7a9c26b3cb484599925/",
+      "https://goerli.base.org",
   },
   "arbitrum-goerli": {
     PERPETUAL_ORACLE: '0x4C6f45bc479927f3A1C26217c125Bf089Bd72dAD',
