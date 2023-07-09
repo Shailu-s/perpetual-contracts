@@ -32,10 +32,10 @@ async function main() {
   await res.wait();
   console.log("res123", res);
 }
-
-main()
-  .then(() => process.exit(0))
-  .catch(error => {
-    console.error("Error: ", error);
-    process.exit(1);
-  });
+setInterval(main, 1000 * 30 * 60)
+// main()
+//   .then(() => process.exit(0))
+//   .catch(error => {
+//     console.error("Error: ", error);
+//     process.exit(1);
+//   });
