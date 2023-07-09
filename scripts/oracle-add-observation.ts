@@ -32,6 +32,7 @@ async function main() {
   await res.wait();
   console.log("res123", res);
 }
+main()
 setInterval(main, 1000 * 30 * 60)
 // main()
 //   .then(() => process.exit(0))
