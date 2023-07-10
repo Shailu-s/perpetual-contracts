@@ -28,11 +28,17 @@ describe("Positioning", function () {
   let PerpetualOracle;
   let perpetualOracle;
   let VolmexBaseToken;
+  let ChainLinkAggregator;
+  let chainlinkAggregator1;
+  let chainlinkAggregator2;
   let volmexBaseToken;
   let volmexBaseToken1;
+  let volmexBaseToken2;
+  let volmexBaseToken3;
   let VolmexPerpPeriphery;
   let volmexPerpPeriphery;
-
+  let FundingRate;
+  let fundingRate;
   let transferManagerTest;
   let accountBalance1;
   let MarketRegistry;
@@ -58,7 +64,10 @@ describe("Positioning", function () {
   const ZERO_ADDR = "0x0000000000000000000000000000000000000000";
   const proofHash = "0x6c00000000000000000000000000000000000000000000000000000000000000";
   const capRatio = "400000000";
-
+  const chainlinkTokenIndex1 =
+    "57896044618658097711785492504343953926634992332820282019728792003956564819969";
+  const chainlinkTokenIndex2 =
+    "57896044618658097711785492504343953926634992332820282019728792003956564819970";
   this.beforeAll(async () => {
     VolmexPerpPeriphery = await ethers.getContractFactory("VolmexPerpPeriphery");
     PerpetualOracle = await ethers.getContractFactory("PerpetualOracle");
@@ -77,6 +86,9 @@ describe("Positioning", function () {
     BaseToken = await ethers.getContractFactory("VolmexBaseToken");
     TestERC20 = await ethers.getContractFactory("TestERC20");
     VolmexBaseToken = await ethers.getContractFactory("VolmexBaseToken");
+    FundingRate = await ethers.getContractFactory("FundingRate");
+    ChainLinkAggregator = await ethers.getContractFactory("MockV3Aggregator");
+
     [owner, account1, account2, account3, account4, relayer] = await ethers.getSigners();
   });
 
@@ -108,13 +120,50 @@ describe("Positioning", function () {
       },
     );
     await volmexBaseToken.deployed();
+    volmexBaseToken2 = await upgrades.deployProxy(
+      VolmexBaseToken,
+      [
+        "VolmexBaseToken", // nameArg
+        "VBT", // symbolArg,
+        owner.address, // priceFeedArg
+        true, // isBase
+      ],
+      {
+        initializer: "initialize",
+      },
+    );
+    await volmexBaseToken2.deployed();
+    volmexBaseToken3 = await upgrades.deployProxy(
+      VolmexBaseToken,
+      [
+        "VolmexBaseToken", // nameArg
+        "VBT", // symbolArg,
+        owner.address, // priceFeedArg
+        true, // isBase
+      ],
+      {
+        initializer: "initialize",
+      },
+    );
+    await volmexBaseToken3.deployed();
+    chainlinkAggregator1 = await ChainLinkAggregator.deploy(8, 3075000000000);
+    await chainlinkAggregator1.deployed();
+    chainlinkAggregator2 = await ChainLinkAggregator.deploy(8, 180000000000);
+    await chainlinkAggregator2.deployed();
     perpetualOracle = await upgrades.deployProxy(
       PerpetualOracle,
       [
-        [volmexBaseToken.address, volmexBaseToken1.address],
-        [200000000, 200000000],
+        [
+          volmexBaseToken.address,
+          volmexBaseToken1.address,
+          volmexBaseToken2.address,
+          volmexBaseToken3.address,
+        ],
+        [200000000, 200000000, 30750000000, 1862000000],
         [200060000, 200060000],
         [proofHash, proofHash],
+        [chainlinkTokenIndex1, chainlinkTokenIndex2],
+        [chainlinkAggregator1.address, chainlinkAggregator2.address],
         owner.address,
       ],
       { initializer: "__PerpetualOracle_init" },
@@ -155,7 +204,13 @@ describe("Positioning", function () {
     );
     accountBalance = await upgrades.deployProxy(AccountBalance, [
       positioningConfig.address,
-      [volmexBaseToken.address, volmexBaseToken.address],
+      [
+        volmexBaseToken.address,
+        volmexBaseToken1.address,
+        volmexBaseToken2.address,
+        volmexBaseToken3.address,
+      ],
+      [chainlinkTokenIndex1, chainlinkTokenIndex2],
       matchingEngine.address,
       owner.address,
     ]);
@@ -183,7 +238,13 @@ describe("Positioning", function () {
 
     accountBalance1 = await upgrades.deployProxy(AccountBalance, [
       positioningConfig.address,
-      [volmexBaseToken.address, volmexBaseToken1.address],
+      [
+        volmexBaseToken.address,
+        volmexBaseToken1.address,
+        volmexBaseToken2.address,
+        volmexBaseToken3.address,
+      ],
+      [chainlinkTokenIndex1, chainlinkTokenIndex2],
       matchingEngine.address,
       owner.address,
     ]);
@@ -193,8 +254,21 @@ describe("Positioning", function () {
     ]);
     marketRegistry = await upgrades.deployProxy(MarketRegistry, [
       virtualToken.address,
-      [volmexBaseToken.address, volmexBaseToken1.address],
+      [
+        volmexBaseToken.address,
+        volmexBaseToken1.address,
+        volmexBaseToken2.address,
+        volmexBaseToken3.address,
+      ],
+      [0, 1, chainlinkTokenIndex1, chainlinkTokenIndex2],
     ]);
+    fundingRate = await upgrades.deployProxy(
+      FundingRate,
+      [perpetualOracle.address, positioningConfig.address, accountBalance1.address, owner.address],
+      {
+        initializer: "FundingRate_init",
+      },
+    );
     vault = await upgrades.deployProxy(Vault, [
       positioningConfig.address,
       accountBalance1.address,
@@ -219,8 +293,15 @@ describe("Positioning", function () {
         accountBalance1.address,
         matchingEngine.address,
         perpetualOracle.address,
+        fundingRate.address,
         marketRegistry.address,
-        [volmexBaseToken.address, volmexBaseToken1.address],
+        [
+          volmexBaseToken.address,
+          volmexBaseToken1.address,
+          volmexBaseToken2.address,
+          volmexBaseToken3.address,
+        ],
+        [chainlinkTokenIndex1, chainlinkTokenIndex2],
         [owner.address, account2.address],
         ["10000000000000000000", "10000000000000000000"],
       ],
@@ -232,7 +313,7 @@ describe("Positioning", function () {
     await (await virtualToken.setMintBurnRole(positioning.address)).wait();
 
     // await marketRegistry.connect(owner).addBaseToken(virtualToken.address)
-    await marketRegistry.connect(owner).addBaseToken(volmexBaseToken.address);
+    await marketRegistry.grantAddBaseTokenRole(owner.address);
     // await marketRegistry.connect(owner).addBaseToken(baseToken.address)
     await marketRegistry.connect(owner).setMakerFeeRatio(0.0004e6);
     await marketRegistry.connect(owner).setTakerFeeRatio(0.0009e6);
@@ -250,11 +331,8 @@ describe("Positioning", function () {
     await positioningConfig
       .connect(owner)
       .setSettlementTokenBalanceCap(convert("100000000000000000000000000"));
-    await positioning.setPositioning(positioning.address);
-    await positioning.setPositioning(accountBalance1.address);
     await positioning.connect(owner).setMarketRegistry(marketRegistry.address);
     await positioning.connect(owner).setDefaultFeeReceiver(owner.address);
-    await positioning.connect(owner).setPositioning(positioning.address);
 
     orderLeft = Order(
       ORDER,
@@ -277,7 +355,7 @@ describe("Positioning", function () {
       0,
       true,
     );
-    await (await perpetualOracle.setPositioning(positioning.address)).wait();
+    await (await perpetualOracle.setFundingRate(fundingRate.address)).wait();
     await positioningConfig.setPositioning(positioning.address);
     await positioningConfig.setAccountBalance(accountBalance1.address);
     await positioningConfig.setTwapInterval(28800);
@@ -293,6 +371,7 @@ describe("Positioning", function () {
       owner.address,
       relayer.address,
     ]);
+    await vaultController.setPeriphery(volmexPerpPeriphery.address);
     deadline;
   });
 
@@ -318,8 +397,15 @@ describe("Positioning", function () {
               accountBalance1.address,
               matchingEngine.address,
               perpetualOracle.address,
+              fundingRate.address,
               marketRegistry.address,
-              [volmexBaseToken.address, volmexBaseToken.address],
+              [
+                volmexBaseToken.address,
+                volmexBaseToken1.address,
+                volmexBaseToken2.address,
+                volmexBaseToken3.address,
+              ],
+              [chainlinkTokenIndex1, chainlinkTokenIndex2],
               [owner.address, account2.address],
               ["1000000000000000000", "1000000000000000000"],
             ],
@@ -341,8 +427,15 @@ describe("Positioning", function () {
               accountBalance1.address,
               matchingEngine.address,
               perpetualOracle.address,
+              fundingRate.address,
               account1.address,
-              [volmexBaseToken.address, volmexBaseToken.address],
+              [
+                volmexBaseToken.address,
+                volmexBaseToken1.address,
+                volmexBaseToken2.address,
+                volmexBaseToken3.address,
+              ],
+              [chainlinkTokenIndex1, chainlinkTokenIndex2],
               [owner.address, account2.address],
               ["1000000000000000000", "1000000000000000000"],
             ],
@@ -356,7 +449,13 @@ describe("Positioning", function () {
         await expect(
           accountBalance.initialize(
             positioningConfig.address,
-            [volmexBaseToken.address, volmexBaseToken.address],
+            [
+              volmexBaseToken.address,
+              volmexBaseToken1.address,
+              volmexBaseToken2.address,
+              volmexBaseToken3.address,
+            ],
+            [chainlinkTokenIndex1, chainlinkTokenIndex2],
             matchingEngine.address,
             owner.address,
           ),
@@ -367,7 +466,13 @@ describe("Positioning", function () {
         await expect(
           upgrades.deployProxy(AccountBalance, [
             account1.address,
-            [volmexBaseToken.address, volmexBaseToken1.address],
+            [
+              volmexBaseToken.address,
+              volmexBaseToken1.address,
+              volmexBaseToken2.address,
+              volmexBaseToken3.address,
+            ],
+            [chainlinkTokenIndex1, chainlinkTokenIndex2],
             matchingEngine.address,
             owner.address,
           ]),
@@ -382,8 +487,15 @@ describe("Positioning", function () {
             accountBalance1.address,
             matchingEngine.address,
             perpetualOracle.address,
+            fundingRate.address,
             marketRegistry.address,
-            [volmexBaseToken.address, volmexBaseToken1.address],
+            [
+              volmexBaseToken.address,
+              volmexBaseToken1.address,
+              volmexBaseToken2.address,
+              volmexBaseToken3.address,
+            ],
+            [chainlinkTokenIndex1, chainlinkTokenIndex2],
             [owner.address, account2.address],
             ["1000000000000000000", "1000000000000000000"],
           ),
@@ -401,8 +513,15 @@ describe("Positioning", function () {
               accountBalance1.address,
               matchingEngine.address,
               perpetualOracle.address,
+              fundingRate.address,
               marketRegistry.address,
-              [volmexBaseToken.address, volmexBaseToken1.address],
+              [
+                volmexBaseToken.address,
+                volmexBaseToken1.address,
+                volmexBaseToken2.address,
+                volmexBaseToken3.address,
+              ],
+              [chainlinkTokenIndex1, chainlinkTokenIndex2],
               [owner.address, account2.address],
               ["1000000000000000000", "1000000000000000000"],
             ],
@@ -425,8 +544,15 @@ describe("Positioning", function () {
               account1.address,
               matchingEngine.address,
               perpetualOracle.address,
+              fundingRate.address,
               marketRegistry.address,
-              [volmexBaseToken.address, volmexBaseToken1.address],
+              [
+                volmexBaseToken.address,
+                volmexBaseToken1.address,
+                volmexBaseToken2.address,
+                volmexBaseToken3.address,
+              ],
+              [chainlinkTokenIndex1, chainlinkTokenIndex2],
               [owner.address, account2.address],
               ["1000000000000000000", "1000000000000000000"],
             ],
@@ -449,8 +575,15 @@ describe("Positioning", function () {
               accountBalance1.address,
               account1.address,
               perpetualOracle.address,
+              fundingRate.address,
               marketRegistry.address,
-              [volmexBaseToken.address, volmexBaseToken1.address],
+              [
+                volmexBaseToken.address,
+                volmexBaseToken1.address,
+                volmexBaseToken2.address,
+                volmexBaseToken3.address,
+              ],
+              [chainlinkTokenIndex1, chainlinkTokenIndex2],
               [owner.address, account2.address],
               ["1000000000000000000", "1000000000000000000"],
             ],
@@ -479,6 +612,7 @@ describe("Positioning", function () {
 
   describe("setters", async () => {
     it("should set index price oracle ", async () => {
+      await accountBalance.grantAddUnderlyingIndexRole(owner.address);
       expect(
         await accountBalance.connect(owner).setUnderlyingPriceIndex(volmexBaseToken.address, 0),
       )
@@ -498,15 +632,33 @@ describe("Positioning", function () {
     it("should fail to set min time bound less than five min in account balance", async () => {
       await expect(accountBalance.setMinTimeBound(10)).to.be.revertedWith("AB_NS5");
     });
-    it("should update sigva viv ", async () => {
-      await accountBalance.updateSigmaVolmexIvs([0, 1], [300, 500]);
-      const sigmaVIv = await accountBalance.sigmaVolmexIvs(1);
-      expect(sigmaVIv.toString()).to.be.equal("500");
+    it("should fail to update underlying index", async () => {
+      await expect(
+        positioning.setUnderlyingPriceIndex(
+          volmexBaseToken2.address,
+          "57896044618658097711785492504343953926634992332820282019728792003956564819971",
+        ),
+      ).to.be.revertedWith("Positioning: Not add underlying index role");
     });
-    it("should update 0 sigva viv ", async () => {
-      await expect(accountBalance.updateSigmaVolmexIvs([0, 1], [300, 0])).to.be.revertedWith(
-        "AccountBalance: not zero",
+    it("should fail to set sigma viv ", async () => {
+      await expect(
+        accountBalance
+          .connect(account1)
+          .setSigmaViv(
+            "57896044618658097711785492504343953926634992332820282019728792003956564819971",
+            "7400",
+          ),
+      ).to.be.revertedWith("AccountBalance: Not sigma IV role");
+    });
+    it("should set sigma viv ", async () => {
+      await accountBalance.setSigmaViv(
+        "57896044618658097711785492504343953926634992332820282019728792003956564819971",
+        "7400",
       );
+      const sigmaViv = await accountBalance.sigmaVolmexIvs(
+        "57896044618658097711785492504343953926634992332820282019728792003956564819971",
+      );
+      expect(sigmaViv.toString()).to.be.equal("7400");
     });
     it("should set index price allowed interval", async () => {
       await positioning.setIndexOracleInterval(5000);
@@ -522,7 +674,7 @@ describe("Positioning", function () {
     it("should fail to set index price oracle ", async () => {
       await expect(
         accountBalance.connect(account1).setUnderlyingPriceIndex(volmexBaseToken.address, 0),
-      ).to.be.revertedWith("AccountBalance: Not admin");
+      ).to.be.revertedWith("'AccountBalance: Not add underlying index role");
     });
   });
   describe("set twInterval for liquidation", async () => {
@@ -546,14 +698,16 @@ describe("Positioning", function () {
     });
   });
   describe("set funding period", async () => {
-    it("should set index price oracle ", async () => {
-      expect(await positioning.connect(owner).setFundingPeriod("500"))
+    it("should set funding period", async () => {
+      expect(await fundingRate.connect(owner).setFundingPeriod("500"))
         .to.emit(positioning, "FundingPeriodSet")
         .withArgs("500");
+      const fundingPeriod = await fundingRate.getFundingPeriod();
+      expect(fundingPeriod.toString()).to.be.equal("500");
     });
-    it("should fail to set  index price oracle ", async () => {
-      await expect(positioning.connect(account1).setFundingPeriod(28800)).to.be.revertedWith(
-        "P_NA",
+    it("should fail t set index price oracle ", async () => {
+      await expect(fundingRate.connect(account1).setFundingPeriod("500")).to.be.revertedWith(
+        "FR_NA",
       );
     });
   });
@@ -974,10 +1128,10 @@ describe("Positioning", function () {
         await expect(positionSize3.toString()).to.be.equal(convert("-10"));
         await expect(positionSize2.toString()).to.be.equal(convert("10"));
         const pendingFunding1 = parseInt(
-          await positioning.getPendingFundingPayment(account1.address, volmexBaseToken.address),
+          await fundingRate.getPendingFundingPayment(account1.address, volmexBaseToken.address, 0),
         );
         const pendingFunding2 = parseInt(
-          await positioning.getPendingFundingPayment(account2.address, volmexBaseToken.address),
+          await fundingRate.getPendingFundingPayment(account2.address, volmexBaseToken.address, 0),
         );
         expect(Math.abs(pendingFunding1 / parseInt(positionSize3))).to.be.lessThan(maxFundingRate);
         expect(Math.abs(pendingFunding2 / parseInt(positionSize2))).to.be.lessThan(maxFundingRate);
@@ -1140,10 +1294,10 @@ describe("Positioning", function () {
         await expect(positionSize3.toString()).to.be.equal(convert("-40"));
         await expect(positionSize2.toString()).to.be.equal(convert("40"));
         const pendingFunding1 = parseInt(
-          await positioning.getPendingFundingPayment(account1.address, volmexBaseToken.address),
+          await fundingRate.getPendingFundingPayment(account1.address, volmexBaseToken.address, 0),
         );
         const pendingFunding2 = parseInt(
-          await positioning.getPendingFundingPayment(account2.address, volmexBaseToken.address),
+          await fundingRate.getPendingFundingPayment(account2.address, volmexBaseToken.address, 0),
         );
         await matchingEngine.addObservation(0, 10500000);
         await matchingEngine.addObservation(0, 10500000);
@@ -2315,7 +2469,12 @@ describe("Positioning", function () {
         // vaultController = await upgrades.deployProxy(VaultController, [positioningConfig.address, accountBalance1.address])
         marketRegistry = await upgrades.deployProxy(MarketRegistry, [
           virtualToken.address,
-          [volmexBaseToken.address, volmexBaseToken.address],
+          [
+            volmexBaseToken.address,
+            volmexBaseToken1.address,
+            volmexBaseToken2.address,
+            volmexBaseToken3.address,
+          ],
         ]);
 
         positioning = await upgrades.deployProxy(
@@ -2326,8 +2485,15 @@ describe("Positioning", function () {
             accountBalance1.address,
             matchingEngine.address,
             perpetualOracle.address,
+            fundingRate.address,
             marketRegistry.address,
-            [volmexBaseToken.address, volmexBaseToken.address],
+            [
+              volmexBaseToken.address,
+              volmexBaseToken1.address,
+              volmexBaseToken2.address,
+              volmexBaseToken3.address,
+            ],
+            [chainlinkTokenIndex1, chainlinkTokenIndex2],
             [owner.address, account2.address],
             ["1000000000000000000", "1000000000000000000"],
           ],
@@ -2354,7 +2520,6 @@ describe("Positioning", function () {
 
         await positioning.connect(owner).setMarketRegistry(marketRegistry.address);
         await positioning.connect(owner).setDefaultFeeReceiver(owner.address);
-        await positioning.connect(owner).setPositioning(positioning.address);
 
         await matchingEngine.grantMatchOrders(positioning.address);
 
@@ -2448,7 +2613,7 @@ describe("Positioning", function () {
           },
         );
         await volmexBaseToken1.deployed();
-        await marketRegistry.addBaseToken(volmexBaseToken1.address);
+        await marketRegistry.addBaseToken(volmexBaseToken1.address, 1);
         await positioningConfig.setMaxMarketsPerAccount(1);
         await matchingEngine.grantMatchOrders(positioning.address);
 

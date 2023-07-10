@@ -1,4 +1,6 @@
 artifacts
+artifacts-zk
+cache-zk
 cache
 node_modules
 coverage.json
@@ -13,3 +15,4 @@ contracts/hardhat-dependency-compiler/*
 .env
 .husky
 docs
+blackListAddress.ts

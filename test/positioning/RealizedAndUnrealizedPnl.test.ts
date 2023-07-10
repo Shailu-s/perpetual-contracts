@@ -25,14 +25,21 @@ describe("Realised pnl tests", function () {
   let vaultController;
   let AccountBalance;
   let accountBalance;
+  let ChainLinkAggregator;
+  let chainlinkAggregator1;
+  let chainlinkAggregator2;
   let VolmexBaseToken;
   let volmexBaseToken;
   let volmexBaseToken1;
+  let volmexBaseToken2;
+  let volmexBaseToken3;
   let VolmexPerpPeriphery;
   let volmexPerpPeriphery;
   let PerpetualOracle;
   let perpetualOracle;
   let transferManagerTest;
+  let FundingRate;
+  let fundingRate;
   let accountBalance1;
   let MarketRegistry;
   let marketRegistry;
@@ -55,6 +62,10 @@ describe("Realised pnl tests", function () {
   const TAKE_PROFIT_LIMIT_ORDER = "0xe0fc7f94";
   const ZERO_ADDR = "0x0000000000000000000000000000000000000000";
   const proofHash = "0x6c00000000000000000000000000000000000000000000000000000000000000";
+  const chainlinkTokenIndex1 =
+    "57896044618658097711785492504343953926634992332820282019728792003956564819969";
+  const chainlinkTokenIndex2 =
+    "57896044618658097711785492504343953926634992332820282019728792003956564819970";
   const capRatio = "400000000";
 
   this.beforeAll(async () => {
@@ -76,6 +87,8 @@ describe("Realised pnl tests", function () {
     BaseToken = await ethers.getContractFactory("VolmexBaseToken");
     TestERC20 = await ethers.getContractFactory("TestERC20");
     VolmexBaseToken = await ethers.getContractFactory("VolmexBaseToken");
+    ChainLinkAggregator = await ethers.getContractFactory("MockV3Aggregator");
+    FundingRate = await ethers.getContractFactory("FundingRate");
     [owner, account1, account2, account3, account4, relayer] = await ethers.getSigners();
   });
 
@@ -108,13 +121,50 @@ describe("Realised pnl tests", function () {
       },
     );
     await volmexBaseToken.deployed();
+    volmexBaseToken2 = await upgrades.deployProxy(
+      VolmexBaseToken,
+      [
+        "VolmexBaseToken", // nameArg
+        "VBT", // symbolArg,
+        owner.address, // priceFeedArg
+        true, // isBase
+      ],
+      {
+        initializer: "initialize",
+      },
+    );
+    await volmexBaseToken2.deployed();
+    volmexBaseToken3 = await upgrades.deployProxy(
+      VolmexBaseToken,
+      [
+        "VolmexBaseToken", // nameArg
+        "VBT", // symbolArg,
+        owner.address, // priceFeedArg
+        true, // isBase
+      ],
+      {
+        initializer: "initialize",
+      },
+    );
+    await volmexBaseToken3.deployed();
+    chainlinkAggregator1 = await ChainLinkAggregator.deploy(8, 3075000000000);
+    await chainlinkAggregator1.deployed();
+    chainlinkAggregator2 = await ChainLinkAggregator.deploy(8, 180000000000);
+    await chainlinkAggregator2.deployed();
     perpetualOracle = await upgrades.deployProxy(
       PerpetualOracle,
       [
-        [volmexBaseToken.address, volmexBaseToken1.address],
-        [200000000, 200000000],
+        [
+          volmexBaseToken.address,
+          volmexBaseToken1.address,
+          volmexBaseToken2.address,
+          volmexBaseToken3.address,
+        ],
+        [200000000, 200000000, 1800000000, 30650000000],
         [200000000, 200000000],
         [proofHash, proofHash],
+        [chainlinkTokenIndex1, chainlinkTokenIndex2],
+        [chainlinkAggregator1.address, chainlinkAggregator2.address],
         owner.address,
       ],
       { initializer: "__PerpetualOracle_init" },
@@ -155,14 +205,20 @@ describe("Realised pnl tests", function () {
     );
     accountBalance = await upgrades.deployProxy(AccountBalance, [
       positioningConfig.address,
-      [volmexBaseToken.address, volmexBaseToken1.address],
+      [
+        volmexBaseToken.address,
+        volmexBaseToken1.address,
+        volmexBaseToken2.address,
+        volmexBaseToken3.address,
+      ],
+      [chainlinkTokenIndex1, chainlinkTokenIndex2],
       matchingEngine.address,
       owner.address,
     ]);
     await accountBalance.deployed();
 
     USDC = await TestERC20.deploy();
-    await USDC.__TestERC20_init("TestUSDC", "USDC", 6);
+    await USDC.__TestERC20_init("TestUSDC", "USDC", 18);
     await USDC.deployed();
 
     await perpetualOracle.setMarkObservationAdder(matchingEngine.address);
@@ -172,20 +228,6 @@ describe("Realised pnl tests", function () {
     });
     await virtualToken.deployed();
     await virtualToken.setMintBurnRole(owner.address);
-
-    vault = await upgrades.deployProxy(Vault, [
-      positioningConfig.address,
-      accountBalance.address,
-      virtualToken.address,
-      accountBalance.address,
-    ]);
-
-    vault2 = await upgrades.deployProxy(Vault, [
-      positioningConfig.address,
-      accountBalance.address,
-      virtualToken.address,
-      accountBalance.address,
-    ]);
 
     transferManagerTest = await upgrades.deployProxy(
       TransferManagerTest,
@@ -197,7 +239,13 @@ describe("Realised pnl tests", function () {
 
     accountBalance1 = await upgrades.deployProxy(AccountBalance, [
       positioningConfig.address,
-      [volmexBaseToken.address, volmexBaseToken1.address],
+      [
+        volmexBaseToken.address,
+        volmexBaseToken1.address,
+        volmexBaseToken2.address,
+        volmexBaseToken3.address,
+      ],
+      [chainlinkTokenIndex1, chainlinkTokenIndex2],
       matchingEngine.address,
       owner.address,
     ]);
@@ -205,10 +253,36 @@ describe("Realised pnl tests", function () {
       positioningConfig.address,
       accountBalance1.address,
     ]);
+    vault = await upgrades.deployProxy(Vault, [
+      positioningConfig.address,
+      accountBalance.address,
+      USDC.address,
+      vaultController.address,
+    ]);
+
+    vault2 = await upgrades.deployProxy(Vault, [
+      positioningConfig.address,
+      accountBalance.address,
+      USDC.address,
+      vaultController.address,
+    ]);
     marketRegistry = await upgrades.deployProxy(MarketRegistry, [
       virtualToken.address,
-      [volmexBaseToken.address, volmexBaseToken1.address],
+      [
+        volmexBaseToken.address,
+        volmexBaseToken1.address,
+        volmexBaseToken2.address,
+        volmexBaseToken3.address,
+      ],
+      [0, 1, chainlinkTokenIndex1, chainlinkTokenIndex2],
     ]);
+    fundingRate = await upgrades.deployProxy(
+      FundingRate,
+      [perpetualOracle.address, positioningConfig.address, accountBalance1.address, owner.address],
+      {
+        initializer: "FundingRate_init",
+      },
+    );
     // vaultController = await upgrades.deployProxy(VaultController, [positioningConfig.address, accountBalance1.address])
 
     positioning = await upgrades.deployProxy(
@@ -219,8 +293,15 @@ describe("Realised pnl tests", function () {
         accountBalance1.address,
         matchingEngine.address,
         perpetualOracle.address,
+        fundingRate.address,
         marketRegistry.address,
-        [volmexBaseToken.address, volmexBaseToken1.address],
+        [
+          volmexBaseToken.address,
+          volmexBaseToken1.address,
+          volmexBaseToken2.address,
+          volmexBaseToken3.address,
+        ],
+        [chainlinkTokenIndex1, chainlinkTokenIndex2],
         [owner.address, account2.address],
         ["1000000000000000000", "1000000000000000000"],
       ],
@@ -240,7 +321,7 @@ describe("Realised pnl tests", function () {
 
     await vault.connect(owner).setPositioning(positioning.address);
     await vault.connect(owner).setVaultController(vaultController.address);
-    await vaultController.registerVault(vault.address, virtualToken.address);
+    await vaultController.registerVault(vault.address, USDC.address);
     await vaultController.connect(owner).setPositioning(positioning.address);
 
     await positioningConfig.connect(owner).setMaxMarketsPerAccount(5);
@@ -250,9 +331,9 @@ describe("Realised pnl tests", function () {
 
     await positioning.connect(owner).setMarketRegistry(marketRegistry.address);
     await positioning.connect(owner).setDefaultFeeReceiver(owner.address);
-    await positioning.connect(owner).setPositioning(positioning.address);
+    // await positioning.connect(owner).setPositioning(positioning.address);
 
-    await (await perpetualOracle.setPositioning(positioning.address)).wait();
+    await (await perpetualOracle.setFundingRate(fundingRate.address)).wait();
     await positioningConfig.setPositioning(positioning.address);
     await positioningConfig.setAccountBalance(accountBalance1.address);
     await positioningConfig.setTwapInterval(28800);
@@ -265,30 +346,21 @@ describe("Realised pnl tests", function () {
       owner.address,
       relayer.address,
     ]);
+    await vaultController.setPeriphery(volmexPerpPeriphery.address);
     deadline;
-    await virtualToken.mint(account1.address, convert("100"));
-    await virtualToken.mint(account2.address, convert("100"));
-    await virtualToken.connect(account1).approve(vault.address, convert("100"));
-    await virtualToken.connect(account2).approve(vault.address, convert("100"));
-    await virtualToken.connect(account1).approve(volmexPerpPeriphery.address, convert("100"));
-    await virtualToken.connect(account2).approve(volmexPerpPeriphery.address, convert("100"));
+    await USDC.mint(account1.address, convert("100"));
+    await USDC.mint(account2.address, convert("100"));
+    await USDC.connect(account1).approve(vault.address, convert("100"));
+    await USDC.connect(account2).approve(vault.address, convert("100"));
+    await USDC.connect(account1).approve(volmexPerpPeriphery.address, convert("100"));
+    await USDC.connect(account2).approve(volmexPerpPeriphery.address, convert("100"));
     await perpetualOracle.setIndexObservationAdder(owner.address);
     await vaultController
       .connect(account1)
-      .deposit(
-        volmexPerpPeriphery.address,
-        virtualToken.address,
-        account1.address,
-        convert("100"),
-      );
+      .deposit(volmexPerpPeriphery.address, USDC.address, account1.address, convert("100"));
     await vaultController
       .connect(account2)
-      .deposit(
-        volmexPerpPeriphery.address,
-        virtualToken.address,
-        account2.address,
-        convert("100"),
-      );
+      .deposit(volmexPerpPeriphery.address, USDC.address, account2.address, convert("100"));
     for (let i = 0; i < 10; i++) {
       await perpetualOracle.addIndexObservations([0], [200000000], [proofHash]);
       await perpetualOracle.addIndexObservations([1], [200000000], [proofHash]);

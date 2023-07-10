@@ -26,13 +26,21 @@ describe("Various Order Types", function () {
   let PerpetualOracle;
   let perpetualOracle;
   let VolmexBaseToken;
+  let ChainLinkAggregator;
+  let chainlinkAggregator1;
+  let chainlinkAggregator2;
   let volmexBaseToken;
+  let volmexBaseToken1;
+  let volmexBaseToken2;
+  let volmexBaseToken3;
   let VolmexQuoteToken;
   let volmexQuoteToken;
   let VolmexPerpPeriphery;
   let volmexPerpPeriphery;
   let VolmexPerpView;
   let perpView;
+  let FundingRate;
+  let fundingRate;
   let accountBalance1;
   let MarketRegistry;
   let marketRegistry;
@@ -44,6 +52,10 @@ describe("Various Order Types", function () {
 
   const ORDER = "0xf555eb98";
   const proofHash = "0x6c00000000000000000000000000000000000000000000000000000000000000";
+  const chainlinkTokenIndex1 =
+    "57896044618658097711785492504343953926634992332820282019728792003956564819969";
+  const chainlinkTokenIndex2 =
+    "57896044618658097711785492504343953926634992332820282019728792003956564819970";
 
   this.beforeAll(async () => {
     VolmexPerpPeriphery = await ethers.getContractFactory("VolmexPerpPeriphery");
@@ -60,6 +72,8 @@ describe("Various Order Types", function () {
     VolmexBaseToken = await ethers.getContractFactory("VolmexBaseToken");
     VolmexQuoteToken = await ethers.getContractFactory("VolmexQuoteToken");
     VolmexPerpView = await ethers.getContractFactory("VolmexPerpView");
+    ChainLinkAggregator = await ethers.getContractFactory("MockV3Aggregator");
+    FundingRate = await ethers.getContractFactory("FundingRate");
     [owner, account1, account2] = await ethers.getSigners();
     liquidator = encodeAddress(owner.address);
   });
@@ -84,13 +98,52 @@ describe("Various Order Types", function () {
     await volmexBaseToken.deployed();
     await (await perpView.setBaseToken(volmexBaseToken.address)).wait();
 
+    volmexBaseToken2 = await upgrades.deployProxy(
+      VolmexBaseToken,
+      [
+        "VolmexBaseToken", // nameArg
+        "VBT", // symbolArg,
+        owner.address, // priceFeedArg
+        true, // isBase
+      ],
+      {
+        initializer: "initialize",
+      },
+    );
+    await volmexBaseToken2.deployed();
+    await (await perpView.setBaseToken(volmexBaseToken2.address)).wait();
+    volmexBaseToken3 = await upgrades.deployProxy(
+      VolmexBaseToken,
+      [
+        "VolmexBaseToken", // nameArg
+        "VBT", // symbolArg,
+        owner.address, // priceFeedArg
+        true, // isBase
+      ],
+      {
+        initializer: "initialize",
+      },
+    );
+    await volmexBaseToken3.deployed();
+    await (await perpView.setBaseToken(volmexBaseToken3.address)).wait();
+    chainlinkAggregator1 = await ChainLinkAggregator.deploy(8, 3075000000000);
+    await chainlinkAggregator1.deployed();
+    chainlinkAggregator2 = await ChainLinkAggregator.deploy(8, 180000000000);
+    await chainlinkAggregator2.deployed();
     perpetualOracle = await upgrades.deployProxy(
       PerpetualOracle,
       [
-        [volmexBaseToken.address, volmexBaseToken.address],
-        [10000000, 10000000],
-        [10000000, 10000000],
+        [
+          volmexBaseToken.address,
+          volmexBaseToken.address,
+          volmexBaseToken2.address,
+          volmexBaseToken3.address,
+        ],
+        [100000000, 100000000, 30000000000, 1800000000],
+        [100000000, 100000000],
         [proofHash, proofHash],
+        [chainlinkTokenIndex1, chainlinkTokenIndex2],
+        [chainlinkAggregator1.address, chainlinkAggregator2.address],
         owner.address,
       ],
       { initializer: "__PerpetualOracle_init" },
@@ -127,7 +180,13 @@ describe("Various Order Types", function () {
 
     accountBalance1 = await upgrades.deployProxy(AccountBalance, [
       positioningConfig.address,
-      [volmexBaseToken.address, volmexBaseToken.address],
+      [
+        volmexBaseToken.address,
+        volmexBaseToken.address,
+        volmexBaseToken2.address,
+        volmexBaseToken3.address,
+      ],
+      [chainlinkTokenIndex1, chainlinkTokenIndex2],
       matchingEngine.address,
       owner.address,
     ]);
@@ -153,8 +212,21 @@ describe("Various Order Types", function () {
     (await accountBalance1.grantSettleRealizedPnlRole(vaultController.address)).wait();
     marketRegistry = await upgrades.deployProxy(MarketRegistry, [
       volmexQuoteToken.address,
-      [volmexBaseToken.address, volmexBaseToken.address],
+      [
+        volmexBaseToken.address,
+        volmexBaseToken.address,
+        volmexBaseToken2.address,
+        volmexBaseToken3.address,
+      ],
+      [0, 1, chainlinkTokenIndex1, chainlinkTokenIndex2],
     ]);
+    fundingRate = await upgrades.deployProxy(
+      FundingRate,
+      [perpetualOracle.address, positioningConfig.address, accountBalance1.address, owner.address],
+      {
+        initializer: "FundingRate_init",
+      },
+    );
     positioning = await upgrades.deployProxy(
       Positioning,
       [
@@ -163,8 +235,15 @@ describe("Various Order Types", function () {
         accountBalance1.address,
         matchingEngine.address,
         perpetualOracle.address,
+        fundingRate.address,
         marketRegistry.address,
-        [volmexBaseToken.address, volmexBaseToken.address],
+        [
+          volmexBaseToken.address,
+          volmexBaseToken.address,
+          volmexBaseToken2.address,
+          volmexBaseToken3.address,
+        ],
+        [chainlinkTokenIndex1, chainlinkTokenIndex2],
         [owner.address, account1.address],
         ["10000000000000000000", "10000000000000000000"],
       ],
@@ -173,6 +252,8 @@ describe("Various Order Types", function () {
       },
     );
     await positioning.deployed();
+    await marketRegistry.grantAddBaseTokenRole(owner.address);
+
     await (await perpView.setPositioning(positioning.address)).wait();
     await (await perpView.incrementPerpIndex()).wait();
     await (await volmexBaseToken.setMintBurnRole(positioning.address)).wait();
@@ -198,10 +279,9 @@ describe("Various Order Types", function () {
 
     await positioning.connect(owner).setMarketRegistry(marketRegistry.address);
     await positioning.connect(owner).setDefaultFeeReceiver(owner.address);
-    await positioning.connect(owner).setPositioning(positioning.address);
 
     await (await matchingEngine.grantMatchOrders(positioning.address)).wait();
-    await (await perpetualOracle.setPositioning(positioning.address)).wait();
+    await (await perpetualOracle.setFundingRate(fundingRate.address)).wait();
 
     await perpetualOracle.setMarkObservationAdder(matchingEngine.address);
     await perpetualOracle.setIndexObservationAdder(owner.address);
@@ -215,6 +295,7 @@ describe("Various Order Types", function () {
       owner.address, // replace with replayer address
     ]);
     await volmexPerpPeriphery.deployed();
+    await vaultController.setPeriphery(volmexPerpPeriphery.address);
   });
 
   describe("Deposit, Withdraw & Open position", async () => {

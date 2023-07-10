@@ -10,6 +10,7 @@ import { IVirtualToken } from "../interfaces/IVirtualToken.sol";
 
 import { PositioningCallee } from "./PositioningCallee.sol";
 import { MarketRegistryStorageV1 } from "../storage/MarketRegistryStorage.sol";
+import "hardhat/console.sol";
 
 // never inherit any new stateful contract. never change the orders of parent stateful contracts
 contract MarketRegistry is IMarketRegistry, PositioningCallee, MarketRegistryStorageV1 {
@@ -22,13 +23,14 @@ contract MarketRegistry is IMarketRegistry, PositioningCallee, MarketRegistrySto
         _;
     }
 
-    function initialize(address quoteTokenArg, address[2] calldata volmexBaseTokenArgs) external initializer {
+    function initialize(address quoteTokenArg, address[4] calldata volmexBaseTokenArgs,uint256[4] calldata volmexBaseTokenIndexeArgs) external initializer {
         __PositioningCallee_init();
 
         // QuoteToken is not contract
         require(quoteTokenArg.isContract(), "MR_QTNC");
-        for (uint256 index; index < 2; ++index) {
-            _baseTokensMarketMap.push(volmexBaseTokenArgs[index]);
+        for (uint256 index; index < 4; ++index) {
+            _baseTokensMarketMap.push(volmexBaseTokenArgs[index]); 
+            underlyingPriceIndexes[volmexBaseTokenArgs[index]] = volmexBaseTokenIndexeArgs[index];
         }
         // update states
         _quoteToken = quoteTokenArg;
@@ -36,6 +38,11 @@ contract MarketRegistry is IMarketRegistry, PositioningCallee, MarketRegistrySto
         _grantRole(MARKET_REGISTRY_ADMIN, _msgSender());
     }
 
+    function grantAddBaseTokenRole(address baseTokenAdder) external {
+        _requireMarketRegistryAdmin();
+        _grantRole(ADD_BASE_TOKEN, baseTokenAdder);
+    }
+    
     /// @inheritdoc IMarketRegistry
     function setMakerFeeRatio(uint24 makerFeeRatio) external override checkRatio(makerFeeRatio) {
         _requireMarketRegistryAdmin();
@@ -56,14 +63,16 @@ contract MarketRegistry is IMarketRegistry, PositioningCallee, MarketRegistrySto
     }
 
     /// @inheritdoc IMarketRegistry
-    function addBaseToken(address baseToken) external override {
-        _requireMarketRegistryAdmin();
+    function addBaseToken(address baseToken, uint256 baseTokenIndex) external override {
+        _requireAddBaseTokenRole();
         require(IVirtualToken(baseToken).isBase(), "MarketRegistry: not base token");
         address[] storage tokensStorage = _baseTokensMarketMap;
-        if (_hasBaseToken(tokensStorage, baseToken)) {
+        if (_hasBaseToken(tokensStorage, baseToken) && underlyingPriceIndexes[baseToken] == baseTokenIndex) {
             return;
+        } else if (_hasBaseToken(tokensStorage, baseToken)) {
+            underlyingPriceIndexes[baseToken] = baseTokenIndex;
         }
-
+        underlyingPriceIndexes[baseToken] = baseTokenIndex;
         tokensStorage.push(baseToken);
     }
 
@@ -97,12 +106,20 @@ contract MarketRegistry is IMarketRegistry, PositioningCallee, MarketRegistrySto
         }
     }
 
-    function getBaseTokens() external view returns (address[] memory baseTokens) {
-        baseTokens = _baseTokensMarketMap;
+    function getBaseTokens() external view returns (address[] memory baseTokens, uint256[] memory baseTokenIndexes ) {
+       baseTokens = _baseTokensMarketMap; 
+       baseTokenIndexes = new uint256[](baseTokens.length);
+       for (uint256 index; index < _baseTokensMarketMap.length; index++) {
+            baseTokenIndexes[index] = underlyingPriceIndexes[_baseTokensMarketMap[index]];
+        }
     }
-
+    
     function _requireMarketRegistryAdmin() internal view {
         require(hasRole(MARKET_REGISTRY_ADMIN, _msgSender()), "MarketRegistry: Not admin");
+    }
+
+    function _requireAddBaseTokenRole() internal view {
+        require(hasRole(ADD_BASE_TOKEN, _msgSender()), "MarketRegistry: Not add base token role");
     }
 
     function _hasBaseToken(address[] memory baseTokens, address baseToken) internal pure returns (bool) {

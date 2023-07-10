@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity =0.8.18;
 
+import { BaseTokenStorageV1 } from "../storage/BaseTokenStorage.sol";
 import { IPerpetualOracle } from "../interfaces/IPerpetualOracle.sol";
 import { IVolmexBaseToken } from "../interfaces/IVolmexBaseToken.sol";
 import { VirtualToken } from "./VirtualToken.sol";
-import { BaseTokenStorageV1 } from "../storage/BaseTokenStorage.sol";
 
 contract VolmexBaseToken is IVolmexBaseToken, VirtualToken, BaseTokenStorageV1 {
     function initialize(
@@ -25,8 +25,8 @@ contract VolmexBaseToken is IVolmexBaseToken, VirtualToken, BaseTokenStorageV1 {
     }
 
     /// @dev Get price of underlying asset with sma interval
-    function getIndexPrice(uint256 index, uint256 _twInterval) external view returns (uint256 answer) {
-        (answer, ) = IPerpetualOracle(_priceFeed).latestIndexSMA(_twInterval, index);
+    function getIndexPrice(uint256 index, uint256 smInterval) external view returns (uint256 answer) {
+        answer = IPerpetualOracle(_priceFeed).getIndexPriceForLiquidation(index, smInterval);
     }
 
     /// @inheritdoc IVolmexBaseToken

@@ -4,7 +4,7 @@ const { Order, Asset, sign, encodeAddress } = require("../order");
 import { FakeContract, smock } from "@defi-wonderland/smock";
 import { BigNumber } from "ethers";
 const { expectRevert, time } = require("@openzeppelin/test-helpers");
-describe("Liquidation test in Positioning", function () {
+describe("Liquidation test", function () {
   let MatchingEngine;
   let matchingEngine;
   let VirtualToken;
@@ -24,9 +24,14 @@ describe("Liquidation test in Positioning", function () {
   let accountBalance;
   let PerpetualOracle;
   let perpetualOracle;
+  let ChainLinkAggregator;
+  let chainlinkAggregator1;
+  let chainlinkAggregator2;
   let VolmexBaseToken;
   let volmexBaseToken;
   let volmexBaseToken1;
+  let volmexBaseToken2;
+  let volmexBaseToken3;
   let VolmexPerpPeriphery;
   let volmexPerpPeriphery;
   let Perppetual;
@@ -36,6 +41,8 @@ describe("Liquidation test in Positioning", function () {
   let marketRegistry;
   let BaseToken;
   let baseToken;
+  let FundingRate;
+  let fundingRate;
   let TestERC20;
   let USDC;
   let perpViewFake;
@@ -44,11 +51,14 @@ describe("Liquidation test in Positioning", function () {
   let owner, account1, account2, account3, account4, relayer;
   let liquidator;
   const proofHash = "0x6c00000000000000000000000000000000000000000000000000000000000000";
-
+  const chainlinkTokenIndex1 =
+    "57896044618658097711785492504343953926634992332820282019728792003956564819969";
+  const chainlinkTokenIndex2 =
+    "57896044618658097711785492504343953926634992332820282019728792003956564819970";
   const one = ethers.constants.WeiPerEther; // 1e18
   const two = ethers.constants.WeiPerEther.mul(BigNumber.from("2")); // 2e18
   const fivehundred = ethers.constants.WeiPerEther.mul(BigNumber.from("5000")); // 5e18
-  const twoThousand = ethers.constants.WeiPerEther.mul(BigNumber.from("2000"));
+  const twoThousand = ethers.constants.WeiPerEther.mul(BigNumber.from("5000"));
   const oneThousand = ethers.constants.WeiPerEther.mul(BigNumber.from("1000"));
   const ten = ethers.constants.WeiPerEther.mul(BigNumber.from("100")); // 10e18
   const nine = ethers.constants.WeiPerEther.mul(BigNumber.from("4")); // 10e18
@@ -80,6 +90,8 @@ describe("Liquidation test in Positioning", function () {
     BaseToken = await ethers.getContractFactory("VolmexBaseToken");
     TestERC20 = await ethers.getContractFactory("TestERC20");
     VolmexBaseToken = await ethers.getContractFactory("VolmexBaseToken");
+    ChainLinkAggregator = await ethers.getContractFactory("MockV3Aggregator");
+    FundingRate = await ethers.getContractFactory("FundingRate");
     [owner, account1, account2, account3, account4, relayer] = await ethers.getSigners();
   });
 
@@ -114,13 +126,50 @@ describe("Liquidation test in Positioning", function () {
       },
     );
     await volmexBaseToken1.deployed();
+    volmexBaseToken2 = await upgrades.deployProxy(
+      VolmexBaseToken,
+      [
+        "VolmexBaseToken", // nameArg
+        "VBT", // symbolArg,
+        owner.address, // priceFeedArg
+        true, // isBase
+      ],
+      {
+        initializer: "initialize",
+      },
+    );
+    await volmexBaseToken2.deployed();
+    volmexBaseToken3 = await upgrades.deployProxy(
+      VolmexBaseToken,
+      [
+        "VolmexBaseToken", // nameArg
+        "VBT", // symbolArg,
+        owner.address, // priceFeedArg
+        true, // isBase
+      ],
+      {
+        initializer: "initialize",
+      },
+    );
+    await volmexBaseToken3.deployed();
+    chainlinkAggregator1 = await ChainLinkAggregator.deploy(8, 3075000000000);
+    await chainlinkAggregator1.deployed();
+    chainlinkAggregator2 = await ChainLinkAggregator.deploy(8, 180000000000);
+    await chainlinkAggregator2.deployed();
     perpetualOracle = await upgrades.deployProxy(
       PerpetualOracle,
       [
-        [volmexBaseToken.address, volmexBaseToken1.address],
-        [60000000, 58000000],
-        [50060000, 45060000],
+        [
+          volmexBaseToken.address,
+          volmexBaseToken1.address,
+          volmexBaseToken2.address,
+          volmexBaseToken3.address,
+        ],
+        [70000000, 60000000, 1800000000, 30650000000],
+        [75000000, 50000000],
         [proofHash, proofHash],
+        [chainlinkTokenIndex1, chainlinkTokenIndex2],
+        [chainlinkAggregator1.address, chainlinkAggregator2.address],
         owner.address,
       ],
       { initializer: "__PerpetualOracle_init" },
@@ -128,7 +177,7 @@ describe("Liquidation test in Positioning", function () {
 
     await volmexBaseToken.setPriceFeed(perpetualOracle.address);
     await volmexBaseToken1.setPriceFeed(perpetualOracle.address);
-
+    await volmexBaseToken2.setPriceFeed(perpetualOracle.address);
     await perpetualOracle.setIndexObservationAdder(owner.address);
     for (let i = 0; i < 10; i++) {
       await perpetualOracle.addIndexObservations([0], [100000000], [proofHash]);
@@ -161,7 +210,13 @@ describe("Liquidation test in Positioning", function () {
     await virtualToken.setMintBurnRole(owner.address);
     accountBalance1 = await upgrades.deployProxy(AccountBalance, [
       positioningConfig.address,
-      [volmexBaseToken.address, volmexBaseToken1.address],
+      [
+        volmexBaseToken.address,
+        volmexBaseToken1.address,
+        volmexBaseToken2.address,
+        volmexBaseToken3.address,
+      ],
+      [chainlinkTokenIndex1, chainlinkTokenIndex2],
       matchingEngine.address,
       owner.address,
     ]);
@@ -178,8 +233,21 @@ describe("Liquidation test in Positioning", function () {
     ]);
     marketRegistry = await upgrades.deployProxy(MarketRegistry, [
       virtualToken.address,
-      [volmexBaseToken.address, volmexBaseToken1.address],
+      [
+        volmexBaseToken.address,
+        volmexBaseToken1.address,
+        volmexBaseToken2.address,
+        volmexBaseToken3.address,
+      ],
+      [0, 1, chainlinkTokenIndex1, chainlinkTokenIndex2],
     ]);
+    fundingRate = await upgrades.deployProxy(
+      FundingRate,
+      [perpetualOracle.address, positioningConfig.address, accountBalance1.address, owner.address],
+      {
+        initializer: "FundingRate_init",
+      },
+    );
     positioning = await upgrades.deployProxy(
       Positioning,
       [
@@ -188,9 +256,16 @@ describe("Liquidation test in Positioning", function () {
         accountBalance1.address,
         matchingEngine.address,
         perpetualOracle.address,
+        fundingRate.address,
         marketRegistry.address,
-        [volmexBaseToken.address, volmexBaseToken1.address],
-        [owner.address, account2.address],
+        [
+          volmexBaseToken.address,
+          volmexBaseToken1.address,
+          volmexBaseToken2.address,
+          volmexBaseToken3.address,
+        ],
+        [chainlinkTokenIndex1, chainlinkTokenIndex2],
+        [owner.address, account1.address],
         ["10000000000000000", "10000000000000000"],
       ],
       {
@@ -200,8 +275,12 @@ describe("Liquidation test in Positioning", function () {
     await positioning.deployed();
     await (await volmexBaseToken.setMintBurnRole(positioning.address)).wait();
     await (await volmexBaseToken1.setMintBurnRole(positioning.address)).wait();
+    await (await volmexBaseToken2.setMintBurnRole(positioning.address)).wait();
+    await perpetualOracle.grantCacheChainlinkPriceRole(owner.address);
+    await perpetualOracle.grantCacheChainlinkPriceRole(positioning.address);
     await (await virtualToken.setMintBurnRole(positioning.address)).wait();
-
+    await positioning.whitelistLiquidator(account1.address, true);
+    await positioning.whitelistLiquidator(account2.address, true);
     perpViewFake = await smock.fake("VolmexPerpView");
     volmexPerpPeriphery = await upgrades.deployProxy(VolmexPerpPeriphery, [
       perpViewFake.address,
@@ -210,10 +289,11 @@ describe("Liquidation test in Positioning", function () {
       owner.address,
       relayer.address,
     ]);
-
+    await vaultController.setPeriphery(volmexPerpPeriphery.address);
     await perpetualOracle.setIndexObservationAdder(owner.address);
-    await marketRegistry.connect(owner).addBaseToken(volmexBaseToken.address);
-    await marketRegistry.connect(owner).addBaseToken(volmexBaseToken1.address);
+    // await marketRegistry.connect(owner).addBaseToken(volmexBaseToken.address);
+    // await marketRegistry.connect(owner).addBaseToken(volmexBaseToken1.address);
+    await marketRegistry.grantAddBaseTokenRole(owner.address);
     await marketRegistry.connect(owner).setMakerFeeRatio(0.0004e6);
     await marketRegistry.connect(owner).setTakerFeeRatio(0.0009e6);
     await matchingEngine.grantMatchOrders(positioning.address);
@@ -233,7 +313,6 @@ describe("Liquidation test in Positioning", function () {
 
     await positioning.connect(owner).setMarketRegistry(marketRegistry.address);
     await positioning.connect(owner).setDefaultFeeReceiver(owner.address);
-    await positioning.connect(owner).setPositioning(positioning.address);
 
     await USDC.mint(account1.address, ten.toString());
     await USDC.mint(account2.address, ten.toString());
@@ -293,7 +372,7 @@ describe("Liquidation test in Positioning", function () {
       0,
       false,
     );
-    await (await perpetualOracle.setPositioning(positioning.address)).wait();
+    await (await perpetualOracle.setFundingRate(fundingRate.address)).wait();
     await (await perpetualOracle.grantSmaIntervalRole(positioningConfig.address)).wait();
     await positioningConfig.setTwapInterval(28800);
     // for (let i = 0; i < 9; i++) {
@@ -354,7 +433,7 @@ describe("Liquidation test in Positioning", function () {
         await expect(
           positioning
             .connect(account2)
-            .liquidate(account1.address, volmexBaseToken.address, "-1000000000000000000"),
+            .liquidate(account1.address, volmexBaseToken.address, "-100000000000000000"),
         ).to.emit(positioning, "PositionLiquidated");
 
         const positionSizeAfter = await accountBalance1.getPositionSize(
@@ -369,6 +448,159 @@ describe("Liquidation test in Positioning", function () {
 
         await expect(positionSizeAfter.toString()).to.be.equal("-1990000000000000000");
         await expect(positionSizeLiquidator.toString()).to.be.equal("1990000000000000000");
+      });
+      it("should liquidate trader with chain link base tokens", async () => {
+        await positioning.setMinPositionSize("1000000000000000000", volmexBaseToken2.address);
+        let currentTimestamp = await time.latest();
+        await chainlinkAggregator1.updateRoundData(
+          "162863638383902",
+          "180000000000",
+          currentTimestamp.toString(),
+          currentTimestamp.toString(),
+        );
+        await perpetualOracle.cacheChainlinkPrice(
+          "57896044618658097711785492504343953926634992332820282019728792003956564819969",
+        );
+        await USDC.mint(account1.address, oneThousand.toString());
+        await USDC.mint(account2.address, twoThousand.toString());
+
+        await USDC.connect(account1).approve(vault.address, oneThousand.toString());
+        await USDC.connect(account2).approve(vault.address, twoThousand.toString());
+        await USDC.connect(account1).approve(volmexPerpPeriphery.address, oneThousand.toString());
+        await USDC.connect(account2).approve(volmexPerpPeriphery.address, twoThousand.toString());
+
+        // volmexPerpPeriphery.address, USDC.address, alice.address, amount
+        await vaultController
+          .connect(account1)
+          .deposit(
+            volmexPerpPeriphery.address,
+            USDC.address,
+            account1.address,
+            oneThousand.toString(),
+          );
+        await vaultController
+          .connect(account2)
+          .deposit(
+            volmexPerpPeriphery.address,
+            USDC.address,
+            account2.address,
+            twoThousand.toString(),
+          );
+
+        orderLeft = Order(
+          ORDER,
+          87654321987654,
+          account1.address,
+          Asset(volmexBaseToken2.address, BigNumber.from("1").mul(two).toString()),
+          Asset(virtualToken.address, BigNumber.from("1800").mul(two).toString()),
+          1,
+          0,
+          true,
+        );
+
+        orderRight = Order(
+          ORDER,
+          87654321987654,
+          account2.address,
+          Asset(virtualToken.address, BigNumber.from("1800").mul(two).toString()),
+          Asset(volmexBaseToken2.address, BigNumber.from("1").mul(two).toString()),
+          1,
+          0,
+          false,
+        );
+        let signatureLeft = await getSignature(orderLeft, account1.address);
+        let signatureRight = await getSignature(orderRight, account2.address);
+
+        await expect(
+          positioning.openPosition(
+            orderLeft,
+            signatureLeft,
+            orderRight,
+            signatureRight,
+            liquidator,
+          ),
+        ).to.emit(positioning, "PositionChanged");
+
+        const positionSize = await accountBalance1.getPositionSize(
+          account1.address,
+          volmexBaseToken2.address,
+        );
+        const positionSize1 = await accountBalance1.getPositionSize(
+          account2.address,
+          volmexBaseToken2.address,
+        );
+
+        expect(positionSize.toString()).to.be.equal("-2000000000000000000");
+        expect(positionSize1.toString()).to.be.equal("2000000000000000000");
+
+        let accountValue = await vaultController.getAccountValue(account1.address);
+
+        let liquidatbalePositionSize = await accountBalance1.getLiquidatablePositionSize(
+          account1.address,
+          volmexBaseToken2.address,
+          accountValue.toString(),
+        );
+        expect(liquidatbalePositionSize.toString()).to.be.equal("0");
+        currentTimestamp = await time.latest();
+        await chainlinkAggregator1.updateRoundData(
+          "162863638383904",
+          "180000000000",
+          currentTimestamp.toString(),
+          currentTimestamp.toString(),
+        );
+        await perpetualOracle.cacheChainlinkPrice(
+          "57896044618658097711785492504343953926634992332820282019728792003956564819969",
+        );
+
+        await time.increase(30000);
+        currentTimestamp = await time.latest();
+        await chainlinkAggregator1.updateRoundData(
+          "162863638383905",
+          "400000000000",
+          currentTimestamp.toString(),
+          currentTimestamp.toString(),
+        );
+        await perpetualOracle.cacheChainlinkPrice(
+          "57896044618658097711785492504343953926634992332820282019728792003956564819969",
+        );
+        await USDC.mint(account2.address, twoThousand.toString());
+        await USDC.connect(account2).approve(vault.address, twoThousand.toString());
+        await USDC.connect(account2).approve(volmexPerpPeriphery.address, twoThousand.toString());
+
+        await vaultController
+          .connect(account2)
+          .deposit(
+            volmexPerpPeriphery.address,
+            USDC.address,
+            account2.address,
+            twoThousand.toString(),
+          );
+
+        // liquidating the position
+        accountValue = await vaultController.getAccountValue(account1.address);
+        liquidatbalePositionSize = await accountBalance1.getLiquidatablePositionSize(
+          account1.address,
+          volmexBaseToken2.address,
+          accountValue.toString(),
+        );
+        const liquidated = await expect(
+          positioning
+            .connect(account2)
+            .liquidate(account1.address, volmexBaseToken2.address, "-10000000000000000"),
+        ).to.emit(positioning, "PositionLiquidated");
+
+        const positionSizeAfter = await accountBalance1.getPositionSize(
+          account1.address,
+          volmexBaseToken2.address,
+        );
+
+        const positionSizeLiquidator = await accountBalance1.getPositionSize(
+          account2.address,
+          volmexBaseToken2.address,
+        );
+
+        await expect(positionSizeAfter.toString()).to.be.equal("-1000000000000000000");
+        await expect(positionSizeLiquidator.toString()).to.be.equal("1000000000000000000");
       });
       it("should return zero liquidatable position size for different base token", async () => {
         let signatureLeft = await getSignature(orderLeft, account1.address);
@@ -570,7 +802,7 @@ describe("Liquidation test in Positioning", function () {
         // liquidating the position
         await expect(
           positioning
-            .connect(account1)
+            .connect(account3)
             .liquidate(account1.address, volmexBaseToken.address, "-1000000000000000000"),
         ).to.be.revertedWith("P_LW");
       });
@@ -1567,13 +1799,16 @@ describe("Liquidation test in Positioning", function () {
         await positioning.whitelistLiquidator(account1.address, true);
         await USDC.mint(account1.address, twoThousand.toString());
         await USDC.mint(account3.address, twoThousand.toString());
-        await USDC.mint(account4.address, twoThousand.toString());
+        await USDC.mint(account4.address, oneThousand.toString());
+        await USDC.mint(account2.address, oneThousand.toString());
+        await USDC.connect(account2).approve(vault.address, oneThousand.toString());
         await USDC.connect(account1).approve(vault.address, twoThousand.toString());
-        await USDC.connect(account4).approve(vault.address, twoThousand.toString());
+        await USDC.connect(account4).approve(vault.address, oneThousand.toString());
         await USDC.connect(account3).approve(vault.address, fivehundred.toString());
         await USDC.connect(account1).approve(volmexPerpPeriphery.address, twoThousand.toString());
         await USDC.connect(account3).approve(volmexPerpPeriphery.address, twoThousand.toString());
-        await USDC.connect(account4).approve(volmexPerpPeriphery.address, twoThousand.toString());
+        await USDC.connect(account4).approve(volmexPerpPeriphery.address, oneThousand.toString());
+        await USDC.connect(account2).approve(volmexPerpPeriphery.address, oneThousand.toString());
         await vaultController
           .connect(account3)
           .deposit(
@@ -1588,7 +1823,15 @@ describe("Liquidation test in Positioning", function () {
             volmexPerpPeriphery.address,
             USDC.address,
             account4.address,
-            twoThousand.toString(),
+            oneThousand.toString(),
+          );
+        await vaultController
+          .connect(account2)
+          .deposit(
+            volmexPerpPeriphery.address,
+            USDC.address,
+            account2.address,
+            oneThousand.toString(),
           );
         await vaultController
           .connect(account1)
@@ -1602,7 +1845,7 @@ describe("Liquidation test in Positioning", function () {
           ORDER,
           87654321987654,
           account3.address,
-          Asset(volmexBaseToken.address, BigNumber.from("40").mul(one).toString()),
+          Asset(volmexBaseToken.address, BigNumber.from("70").mul(one).toString()),
           Asset(virtualToken.address, BigNumber.from("4000").mul(one).toString()),
           1,
           0,
@@ -1614,7 +1857,7 @@ describe("Liquidation test in Positioning", function () {
           87654321987654,
           account4.address,
           Asset(virtualToken.address, BigNumber.from("4000").mul(one).toString()),
-          Asset(volmexBaseToken.address, BigNumber.from("40").mul(one).toString()),
+          Asset(volmexBaseToken.address, BigNumber.from("70").mul(one).toString()),
           1,
           0,
           false,
@@ -1641,8 +1884,8 @@ describe("Liquidation test in Positioning", function () {
           orderLeft.makeAsset.virtualToken,
         );
 
-        expect(positionSize.toString()).to.be.equal("-40000000000000000000");
-        expect(positionSize1.toString()).to.be.equal("40000000000000000000");
+        expect(positionSize.toString()).to.be.equal("-70000000000000000000");
+        expect(positionSize1.toString()).to.be.equal("70000000000000000000");
 
         const accountValue = await vaultController.getAccountValue(account4.address);
 
@@ -1657,7 +1900,7 @@ describe("Liquidation test in Positioning", function () {
           await (await perpetualOracle.addIndexObservations([1], [70000000], [proofHash])).wait();
         }
         await time.increase(30000);
-        for (let index = 0; index < 10; index++) {
+        for (let index = 0; index < 1; index++) {
           await (await perpetualOracle.addIndexObservations([0], [70000000], [proofHash])).wait();
           await (await perpetualOracle.addIndexObservations([1], [70000000], [proofHash])).wait();
         }
@@ -1670,9 +1913,9 @@ describe("Liquidation test in Positioning", function () {
         const orderLeft1 = Order(
           ORDER,
           87654321987654,
-          account3.address,
+          account2.address,
           Asset(volmexBaseToken.address, BigNumber.from("20").mul(one).toString()),
-          Asset(virtualToken.address, BigNumber.from("500").mul(one).toString()),
+          Asset(virtualToken.address, BigNumber.from("1000").mul(one).toString()),
           1,
           0,
           true,
@@ -1681,15 +1924,15 @@ describe("Liquidation test in Positioning", function () {
         const orderRight1 = Order(
           ORDER,
           87654321987654,
-          account4.address,
-          Asset(virtualToken.address, BigNumber.from("500").mul(one).toString()),
+          account1.address,
+          Asset(virtualToken.address, BigNumber.from("1000").mul(one).toString()),
           Asset(volmexBaseToken.address, BigNumber.from("20").mul(one).toString()),
           1,
           0,
           false,
         );
-        let signatureLeft1 = await getSignature(orderLeft1, account3.address);
-        let signatureRight1 = await getSignature(orderRight1, account4.address);
+        let signatureLeft1 = await getSignature(orderLeft1, account2.address);
+        let signatureRight1 = await getSignature(orderRight1, account1.address);
 
         await expect(
           positioning.openPosition(
@@ -1700,14 +1943,17 @@ describe("Liquidation test in Positioning", function () {
             liquidator,
           ),
         ).to.emit(positioning, "PositionChanged");
-        await time.increase(1000);
-        for (let index = 0; index < 10; index++) {
+
+        await time.increase(2000);
+        for (let index = 0; index < 50; index++) {
           await (await perpetualOracle.addIndexObservations([0], [25000000], [proofHash])).wait();
           await (await perpetualOracle.addIndexObservations([1], [25000000], [proofHash])).wait();
         }
         const n_maxOrderSize = await matchingEngine.getMaxOrderSizeOverTime(
           volmexBaseToken.address,
         );
+        // 238097140000000000000;
+        // 41142852000000000000;
         const n_max_08 = n_maxOrderSize.mul(BigNumber.from("80")).div(BigNumber.from("100"));
         console.log(n_max_08.toString(), "80 % of n max");
         const accountValueafter = await vaultController.getAccountValue(account4.address);

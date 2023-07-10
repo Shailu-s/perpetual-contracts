@@ -24,10 +24,16 @@ describe("Vault", function () {
   let ethPositioning;
   let VolmexPerpPeriphery;
   let volmexPerpPeriphery;
+  let FundingRate;
+  let fundingRate;
   let perpViewFake;
   let volmexPerpPeripheryEth;
   let owner, alice, relayer, bob, cole;
   const proofHash = "0x6c00000000000000000000000000000000000000000000000000000000000000";
+  const chainlinkTokenIndex1 =
+    "57896044618658097711785492504343953926634992332820282019728792003956564819969";
+  const chainlinkTokenIndex2 =
+    "57896044618658097711785492504343953926634992332820282019728792003956564819970";
   const capRatio = "250";
   const twapType = "0x1444f8cf";
 
@@ -35,7 +41,7 @@ describe("Vault", function () {
     VolmexPerpPeriphery = await ethers.getContractFactory("VolmexPerpPeriphery");
     [owner, alice, relayer, bob, cole] = await ethers.getSigners();
     PerpetualOracle = await ethers.getContractFactory("PerpetualOracle");
-
+    FundingRate = await ethers.getContractFactory("FundingRate");
     MatchingEngine = await ethers.getContractFactory("MatchingEngineTest");
     perpViewFake = await smock.fake("VolmexPerpView");
 
@@ -56,10 +62,12 @@ describe("Vault", function () {
     perpetualOracle = await upgrades.deployProxy(
       PerpetualOracle,
       [
-        [alice.address, alice.address],
-        [10000000, 10000000],
+        [alice.address, alice.address, alice.address, alice.address],
+        [10000000, 10000000, 10000000, 10000000],
         [10000000, 10000000],
         [proofHash, proofHash],
+        [chainlinkTokenIndex1, chainlinkTokenIndex2],
+        [alice.address, alice.address],
         owner.address,
       ],
       { initializer: "__PerpetualOracle_init" },
@@ -79,7 +87,8 @@ describe("Vault", function () {
     );
     accountBalance = await upgrades.deployProxy(accountBalanceFactory, [
       positioningConfig.address,
-      [alice.address, alice.address],
+      [alice.address, alice.address, alice.address, alice.address],
+      [chainlinkTokenIndex1, chainlinkTokenIndex2],
       matchingEngine.address,
       owner.address,
     ]);
@@ -105,6 +114,13 @@ describe("Vault", function () {
     ]);
 
     Positioning = await ethers.getContractFactory("PositioningTest");
+    fundingRate = await upgrades.deployProxy(
+      FundingRate,
+      [perpetualOracle.address, positioningConfig.address, accountBalance.address, owner.address],
+      {
+        initializer: "FundingRate_init",
+      },
+    );
     positioning = await upgrades.deployProxy(
       Positioning,
       [
@@ -113,8 +129,10 @@ describe("Vault", function () {
         accountBalance.address,
         matchingEngine.address,
         perpetualOracle.address,
+        fundingRate.address,
         accountBalance.address,
-        [alice.address, alice.address],
+        [alice.address, alice.address, alice.address, alice.address],
+        [chainlinkTokenIndex1, chainlinkTokenIndex2],
         [owner.address, alice.address],
         ["1000000000000000000", "1000000000000000000"],
       ],
@@ -148,6 +166,7 @@ describe("Vault", function () {
       owner.address,
       relayer.address,
     ]);
+    await vaultController.setPeriphery(volmexPerpPeriphery.address);
   });
   describe("deployment", function () {
     it("should fail to deploy vault", async () => {
@@ -427,10 +446,12 @@ describe("Vault", function () {
       perpetualOracle = await upgrades.deployProxy(
         PerpetualOracle,
         [
-          [alice.address, alice.address],
-          [10000000, 10000000],
+          [alice.address, alice.address, alice.address, alice.address],
+          [10000000, 10000000, 10000000, 10000000],
           [10000000, 10000000],
           [proofHash, proofHash],
+          [chainlinkTokenIndex1, chainlinkTokenIndex2],
+          [alice.address, alice.address],
           owner.address,
         ],
         { initializer: "__PerpetualOracle_init" },
@@ -449,7 +470,8 @@ describe("Vault", function () {
       );
       accountBalance = await upgrades.deployProxy(accountBalanceFactory, [
         positioningConfig.address,
-        [alice.address, alice.address],
+        [alice.address, alice.address, alice.address, alice.address],
+        [chainlinkTokenIndex1, chainlinkTokenIndex2],
         matchingEngine.address,
         owner.address,
       ]);
@@ -483,8 +505,10 @@ describe("Vault", function () {
           accountBalance.address,
           matchingEngine.address,
           perpetualOracle.address,
+          fundingRate.address,
           perpetualOracle.address,
-          [alice.address, alice.address],
+          [alice.address, alice.address, alice.address, alice.address],
+          [chainlinkTokenIndex1, chainlinkTokenIndex2],
           [owner.address, alice.address],
           ["1000000000000000000", "1000000000000000000"],
         ],
@@ -580,10 +604,12 @@ describe("Vault", function () {
       perpetualOracle = await upgrades.deployProxy(
         PerpetualOracle,
         [
-          [alice.address, alice.address],
-          [10000000, 10000000],
+          [alice.address, alice.address, alice.address, alice.address],
+          [10000000, 10000000, 10000000, 10000000],
           [10000000, 10000000],
           [proofHash, proofHash],
+          [chainlinkTokenIndex1, chainlinkTokenIndex2],
+          [alice.address, alice.address],
           owner.address,
         ],
         { initializer: "__PerpetualOracle_init" },
@@ -602,7 +628,8 @@ describe("Vault", function () {
       );
       accountBalance = await upgrades.deployProxy(accountBalanceFactory, [
         positioningConfig.address,
-        [alice.address, alice.address],
+        [alice.address, alice.address, alice.address, alice.address],
+        [chainlinkTokenIndex1, chainlinkTokenIndex2],
         matchingEngine.address,
         owner.address,
       ]);
@@ -636,8 +663,10 @@ describe("Vault", function () {
           accountBalance.address,
           matchingEngine.address,
           perpetualOracle.address,
+          fundingRate.address,
           perpetualOracle.address,
-          [alice.address, alice.address],
+          [alice.address, alice.address, alice.address, alice.address],
+          [chainlinkTokenIndex1, chainlinkTokenIndex2],
           [owner.address, alice.address],
           ["1000000000000000000", "1000000000000000000"],
         ],
@@ -888,10 +917,12 @@ describe("Vault", function () {
       perpetualOracle = await upgrades.deployProxy(
         PerpetualOracle,
         [
-          [alice.address, alice.address],
-          [10000000, 10000000],
+          [alice.address, alice.address, alice.address, alice.address],
+          [10000000, 10000000, 10000000, 10000000],
           [10000000, 10000000],
           [proofHash, proofHash],
+          [chainlinkTokenIndex1, chainlinkTokenIndex2],
+          [alice.address, alice.address],
           owner.address,
         ],
         { initializer: "__PerpetualOracle_init" },
@@ -910,7 +941,8 @@ describe("Vault", function () {
       const accountBalanceFactory = await ethers.getContractFactory("AccountBalance");
       accountBalance = await upgrades.deployProxy(accountBalanceFactory, [
         positioningConfig.address,
-        [alice.address, alice.address],
+        [alice.address, alice.address, alice.address, alice.address],
+        [chainlinkTokenIndex1, chainlinkTokenIndex2],
         matchingEngine.address,
         owner.address,
       ]);
@@ -944,8 +976,10 @@ describe("Vault", function () {
           accountBalance.address,
           matchingEngine.address,
           perpetualOracle.address,
+          fundingRate.address,
           perpetualOracle.address,
-          [alice.address, alice.address],
+          [alice.address, alice.address, alice.address, alice.address],
+          [chainlinkTokenIndex1, chainlinkTokenIndex2],
           [owner.address, alice.address],
           ["1000000000000000000", "1000000000000000000"],
         ],

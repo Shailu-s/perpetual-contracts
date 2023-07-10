@@ -2,9 +2,10 @@
 pragma solidity =0.8.18;
 
 import "../libs/LibOrder.sol";
-import "../interfaces/IFundingRate.sol";
+import { IFundingRate } from "./IFundingRate.sol";
+import { IPerpetualOracle } from "./IPerpetualOracle.sol";
 
-interface IPositioning is IFundingRate {
+interface IPositioning {
     struct InternalData {
         int256 leftExchangedPositionSize;
         int256 leftExchangedPositionNotional;
@@ -78,16 +79,21 @@ interface IPositioning is IFundingRate {
         address vaultControllerArg,
         address accountBalanceArg,
         address matchingEngineArg,
-        address perpetualOracleArg,
+        IPerpetualOracle perpetualOracleArg,
+        IFundingRate fundingRateArg,
         address marketRegistryArg,
-        address[2] calldata volmexBaseTokenArgs,
+        address[4] calldata volmexBaseTokenArgs,
+        uint256[2] calldata chainlinkBaseTokenIndexArgs,
         address[2] calldata liquidators,
-        uint256[2] calldata minPositionSizeByBaseToken
+        uint256[2] calldata _minPositionSizeByBaseToken
     ) external;
 
     /// @notice Settle all markets fundingPayment to owedRealized Pnl
     /// @param trader The address of trader
     function settleAllFunding(address trader) external;
+    
+    /// @notice Function to set token's underlying index
+    function setUnderlyingPriceIndex(address volmexBaseToken, uint256 underlyingIndex) external;
 
     /// @notice Function to set fee receiver
     function setDefaultFeeReceiver(address newDefaultFeeReceiver) external;
@@ -95,14 +101,6 @@ interface IPositioning is IFundingRate {
     /// @notice Update whitelist for a liquidator
     /// @param isWhitelist if true, whitelist. is false remove whitelist
     function whitelistLiquidator(address liquidator, bool isWhitelist) external;
-
-    /// @notice Update funding rate inteval
-    /// @param period should be the funding settlement period
-    function setFundingPeriod(uint256 period) external;
-
-    function setSmInterval(uint256 smInterval) external;
-
-    function setSmIntervalLiquidation(uint256 smIntervalLiquidation) external;
 
     /// @notice If true, allows only whitelisted liquidators, else everyone can be liquidator
     function toggleLiquidatorWhitelist() external;
@@ -129,11 +127,7 @@ interface IPositioning is IFundingRate {
     /// @param baseToken The address of baseToken
     /// @param positionSize the position size to be liquidated by liquidator
     //    and MUST be the same direction as trader's position size
-    function liquidate(
-        address trader,
-        address baseToken,
-        int256 positionSize
-    ) external;
+    function liquidate(address trader, address baseToken, int256 positionSize) external;
 
     /// @notice liquidate trader's position and will liquidate the max possible position size
     /// @dev If margin ratio >= 0.5 * mmRatio,

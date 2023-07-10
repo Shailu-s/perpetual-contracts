@@ -4,20 +4,20 @@ pragma solidity =0.8.18;
 import { AddressUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol";
 
 import { LibAccountMarket } from "../libs/LibAccountMarket.sol";
-import { LibPerpMath } from "../libs/LibPerpMath.sol";
-import { LibFullMath } from "../libs/LibFullMath.sol";
 import { LibSafeCastUint } from "../libs/LibSafeCastUint.sol";
 import { LibSafeCastInt } from "../libs/LibSafeCastInt.sol";
+import { LibPerpMath } from "../libs/LibPerpMath.sol";
+import { LibFullMath } from "../libs/LibFullMath.sol";
 
-import { IAccountBalance } from "../interfaces/IAccountBalance.sol";
-import { IVolmexBaseToken } from "../interfaces/IVolmexBaseToken.sol";
 import { IPositioningConfig } from "../interfaces/IPositioningConfig.sol";
-import { IVirtualToken } from "../interfaces/IVirtualToken.sol";
+import { IVolmexBaseToken } from "../interfaces/IVolmexBaseToken.sol";
+import { IAccountBalance } from "../interfaces/IAccountBalance.sol";
 import { IMatchingEngine } from "../interfaces/IMatchingEngine.sol";
+import { IVirtualToken } from "../interfaces/IVirtualToken.sol";
 
 import { AccountBalanceStorageV1 } from "../storage/AccountBalanceStorage.sol";
-import { BlockContext } from "../helpers/BlockContext.sol";
 import { PositioningCallee } from "../helpers/PositioningCallee.sol";
+import { BlockContext } from "../helpers/BlockContext.sol";
 
 // never inherit any new stateful contract. never change the orders of parent stateful contracts
 contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, AccountBalanceStorageV1 {
@@ -31,7 +31,8 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
 
     function initialize(
         address positioningConfigArg,
-        address[2] calldata volmexBaseTokenArgs,
+        address[4] calldata volmexBaseTokenArgs,
+        uint256[2] calldata chainlinkBaseTokenIndexArgs,
         IMatchingEngine matchingEngineArg,
         address adminArg
     ) external initializer {
@@ -45,10 +46,13 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
         _smIntervalLiquidation = 3600;
         for (uint256 index; index < 2; index++) {
             _underlyingPriceIndexes[volmexBaseTokenArgs[index]] = index;
+            _underlyingPriceIndexes[volmexBaseTokenArgs[index+2]] = chainlinkBaseTokenIndexArgs[index];
         }
         matchingEngine = matchingEngineArg;
         sigmaVolmexIvs[0] = 12600; // 0.0126
         sigmaVolmexIvs[1] = 13300; // 0.0133
+        sigmaVolmexIvs[chainlinkBaseTokenIndexArgs[0]] = 9600; // 0.0096
+        sigmaVolmexIvs[chainlinkBaseTokenIndexArgs[1]] = 7400; // 0.0074
         minTimeBound = 600; // 10 minutes
         _grantRole(SM_INTERVAL_ROLE, positioningConfigArg);
         _grantRole(ACCOUNT_BALANCE_ADMIN, _msgSender());
@@ -60,8 +64,31 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
         _grantRole(CAN_SETTLE_REALIZED_PNL, account);
     }
 
-    function setUnderlyingPriceIndex(address volmexBaseToken, uint256 underlyingIndex) external {
+    function grantAddUnderlyingIndexRole(address account) external {
         _requireAccountBalanceAdmin();
+        _grantRole(ADD_UNDERLYING_INDEX, account);
+    }
+ 
+    function grantSigmaVivRole(address account) external {
+        _requireAccountBalanceAdmin();
+        _grantRole(SIGMA_IV_ROLE, account);
+    }
+    
+    function setUnderlyingIndexAndSigmaViv(uint256 _baseTokenIndex, address _baseTokenArg, uint256 _sigmaViv) external {
+        setUnderlyingPriceIndex(_baseTokenArg, _baseTokenIndex);
+        setSigmaViv(_baseTokenIndex, _sigmaViv);
+    }
+    
+    
+    function updateSigmaVolmexIvs(uint256[] memory _indexes, uint256[] memory _sigmaVivs) external  {
+        _requireSigmaIvRole();
+        for (uint256 index; index < _indexes.length; ++index ) {
+            setSigmaViv(_indexes[index], _sigmaVivs[index]);
+        }
+    }
+
+    function setUnderlyingPriceIndex(address volmexBaseToken, uint256 underlyingIndex) public {
+        _requireAddUnderlyingIndexRole();
         _underlyingPriceIndexes[volmexBaseToken] = underlyingIndex;
         emit UnderlyingPriceIndexSet(underlyingIndex, volmexBaseToken);
     }
@@ -76,12 +103,19 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
         _smIntervalLiquidation = smIntervalLiquidation;
     }
 
+    function setSigmaViv(uint256 _baseTokenIndex, uint256 _sigmaViv) public {
+        _requireSigmaIvRole();
+        require(_sigmaViv > 0, "AccountBalance: Not zero");
+        sigmaVolmexIvs[_baseTokenIndex] = _sigmaViv;
+    }
+
     function setMinTimeBound(uint256 minTimeBoundArg) external virtual {
         _requireMinTimeBoundRole();
         require(minTimeBoundArg > 300, "AB_NS5"); // not smaller than 5 mins
         minTimeBound = minTimeBoundArg;
     }
 
+    
     /// @inheritdoc IAccountBalance
     function modifyOwedRealizedPnl(
         address trader,
@@ -146,15 +180,6 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
         _deregisterBaseToken(trader, baseToken);
     }
 
-    function updateSigmaVolmexIvs(uint256[] memory _indexes, uint256[] memory _sigmaVivs) external virtual {
-        _requireSigmaIvRole();
-        uint256 totalIndex = _indexes.length;
-        for (uint256 index; index < totalIndex; ++index) {
-            require(_sigmaVivs[index] > 0, "AccountBalance: not zero");
-            sigmaVolmexIvs[_indexes[index]] = _sigmaVivs[index];
-        }
-        emit SigmaVolmexIvsUpdated(_indexes, _sigmaVivs);
-    }
 
     /// @inheritdoc IAccountBalance
     function getPositioningConfig() external view override returns (address) {
@@ -362,6 +387,8 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
         require(isLiquidationPossible, "AB_LNZ");
         if (timeToWait > 0) require(nextLiquidationTime[trader] <= block.timestamp, "AB_ELT"); // early liquidation triggered
         nextLiquidationTime[trader] = block.timestamp + timeToWait;
+        if (accountValue < 0) emit TraderBadDebt(trader, accountValue);
+        if (timeToWait == 0) emit ZeroMaxTimeBound(trader, timeToWait);
         emit TraderNextLiquidationUpdated(trader, baseToken, nextLiquidationTime[trader]);
     }
 
@@ -462,6 +489,10 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
 
     function _requireMinTimeBoundRole() internal view {
         require(hasRole(SIGMA_IV_ROLE, _msgSender()), "AccountBalance: Not sigma IV role");
+    }
+
+    function _requireAddUnderlyingIndexRole() internal view {
+        require(hasRole(ADD_UNDERLYING_INDEX, _msgSender()), "AccountBalance: Not add underlying index role");
     }
 
     function _hasBaseToken(address[] memory baseTokens, address baseToken) internal pure returns (bool) {

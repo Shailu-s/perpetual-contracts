@@ -1,5 +1,4 @@
 import { expect } from "chai";
-import { Signer } from "ethers";
 import { ethers, upgrades } from "hardhat";
 const order = require("../order");
 
