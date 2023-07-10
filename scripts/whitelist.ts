@@ -1,12 +1,12 @@
 import { ethers } from "hardhat";
 import { BigNumber } from "ethers";
-// yarn hardhat run scripts/whitelist.ts --network arbitrum-goerli --no-compile
+// yarn hardhat run scripts/whitelist.ts --network base-goerli --no-compile
 
 import { config as dotEnvConfig } from "dotenv";
 import { constants } from "./chains";
 dotEnvConfig();
 
-const contracts = constants["arbitrum-goerli"];
+const contracts = constants["base-goerli-staging"];
 const rpcUrl = contracts.RPC_URL;
 const TRADER_TO_WHITELIST = "0xcfEBfD8278D41078c8f0ad8C6a867bA8ACb7a093";
 
