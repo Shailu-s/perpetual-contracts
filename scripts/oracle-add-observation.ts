@@ -6,7 +6,7 @@ import { config as dotEnvConfig } from "dotenv";
 import { constants } from "./chains";
 dotEnvConfig();
 
-const contracts = constants["base-goerli"];
+const contracts = constants["base-goerli-staging"];
 const rpcUrl = contracts.RPC_URL;
 const proofHash = "0x6c00000000000000000000000000000000000000000000000000000000000000";
 
