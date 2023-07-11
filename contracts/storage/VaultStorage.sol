@@ -13,4 +13,5 @@ abstract contract VaultStorageV1 {
     address internal _positioning;
     uint256 internal _totalDebt;
     address internal _vaultController;
+    uint256 public highWeightedAmount; // Not used in new upgrade should be removed with new deployment
 }
