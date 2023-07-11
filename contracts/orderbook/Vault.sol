@@ -77,11 +77,6 @@ contract Vault is IVault, ReentrancyGuardUpgradeable, OwnerPausable, VaultStorag
         _vaultController = vaultControllerArg;
     }
 
-    function setHighWeightedAmount(uint256 amountArg) external {
-        _requireVaultAdmin();
-        require(amountArg > 10 ** _decimals, "V_SWM"); // small weighted amount
-        highWeightedAmount = amountArg;
-    }
 
     /// @inheritdoc IVault
     function deposit(
