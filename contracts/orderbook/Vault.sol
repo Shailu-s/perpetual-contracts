@@ -77,7 +77,6 @@ contract Vault is IVault, ReentrancyGuardUpgradeable, OwnerPausable, VaultStorag
         _vaultController = vaultControllerArg;
     }
 
-
     /// @inheritdoc IVault
     function deposit(
         IVolmexPerpPeriphery periphery,
@@ -103,7 +102,7 @@ contract Vault is IVault, ReentrancyGuardUpgradeable, OwnerPausable, VaultStorag
         }
         amount = amount - remainingAmount;
         SafeERC20Upgradeable.safeTransfer(IERC20Upgradeable(_settlementToken), to, amount);
-        if (amount > highWeightedAmount) emit HighWeightAmountWithdrawn(to, amount);
+        if (_checkHighWeightedAmount(vaultBalance,amount)) emit HighWeightAmountWithdrawn(to, amount);
         emit Withdrawn(_settlementToken, to, amount);
     }
 
@@ -183,8 +182,13 @@ contract Vault is IVault, ReentrancyGuardUpgradeable, OwnerPausable, VaultStorag
         uint256 settlementTokenBalanceCap = IPositioningConfig(_positioningConfig).getSettlementTokenBalanceCap();
         // V_GTSTBC: greater than settlement token balance cap
         require(_vaultBalance <= settlementTokenBalanceCap, "V_GTSTBC");
-        if (amount > highWeightedAmount) emit HighWeightAmountDeposited(from, amount);
+        if (_checkHighWeightedAmount(balanceBefore, amount)) emit HighWeightAmountDeposited(from, amount);
         emit Deposited(_settlementToken, from, amount);
+    }
+    
+    function _checkHighWeightedAmount(uint256 _vaultBalance, uint256 amount) internal pure returns (bool) {
+        uint256 onePercentOfVaultBalance = _vaultBalance / 100;
+        return amount >= onePercentOfVaultBalance;
     }
 
     function _msgSender() internal view override(ContextUpgradeable, OwnerPausable) returns (address) {
