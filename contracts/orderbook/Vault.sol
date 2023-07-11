@@ -59,7 +59,6 @@ contract Vault is IVault, ReentrancyGuardUpgradeable, OwnerPausable, VaultStorag
         _positioningConfig = positioningConfigArg;
         _accountBalance = accountBalanceArg;
         _vaultController = vaultControllerArg;
-        highWeightedAmount = 10000000000;
         _grantRole(VAULT_ADMIN, _msgSender());
     }
 
