@@ -102,7 +102,7 @@ contract Vault is IVault, ReentrancyGuardUpgradeable, OwnerPausable, VaultStorag
         }
         amount = amount - remainingAmount;
         SafeERC20Upgradeable.safeTransfer(IERC20Upgradeable(_settlementToken), to, amount);
-        if (_checkHighWeightedAmount(vaultBalance,amount)) emit HighWeightAmountWithdrawn(to, amount);
+        if (_checkHighWeightedAmount(vaultBalance,amount)) emit HighWeightAmountWithdrawn(to, amount, vaultBalance - amount);
         emit Withdrawn(_settlementToken, to, amount);
     }
 
@@ -182,7 +182,7 @@ contract Vault is IVault, ReentrancyGuardUpgradeable, OwnerPausable, VaultStorag
         uint256 settlementTokenBalanceCap = IPositioningConfig(_positioningConfig).getSettlementTokenBalanceCap();
         // V_GTSTBC: greater than settlement token balance cap
         require(_vaultBalance <= settlementTokenBalanceCap, "V_GTSTBC");
-        if (_checkHighWeightedAmount(balanceBefore, amount)) emit HighWeightAmountDeposited(from, amount);
+        if (_checkHighWeightedAmount(balanceBefore, amount)) emit HighWeightAmountDeposited(from, amount, _vaultBalance);
         emit Deposited(_settlementToken, from, amount);
     }
     
