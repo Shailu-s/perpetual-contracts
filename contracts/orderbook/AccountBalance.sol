@@ -264,6 +264,12 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
         return (totalQuoteDebtValue + totalBaseDebtValue).abs();
     }
 
+    function getInitialDebtValue(int256 positionSize, int256 openNotional, address baseToken) external view override returns(uint256){
+        int256 positionValue = getInitialPositionValue(positionSize, baseToken);
+        int256 totalQuoteDebtValue = openNotional >= int256(0) ? int256(0) : openNotional;
+        return (positionValue + totalQuoteDebtValue).abs();
+    }
+
     /// @inheritdoc IAccountBalance
     function getPnlAndPendingFee(address trader) public view virtual override returns (int256, int256) {
         int256 totalPositionValue;
@@ -308,6 +314,10 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
     function getPositionSize(address trader, address baseToken) public view override returns (int256) {
         int256 positionSize = _accountMarketMap[trader][baseToken].positionSize;
         return positionSize.abs() < _DUST ? int256(0) : positionSize;
+    }
+
+    function getInitialPositionValue(int256 positionSize, address baseToken) public view override returns (int256) {
+        return (positionSize * _getIndexPrice(baseToken, _smIntervalLiquidation).toInt256()) / _ORACLE_BASE;
     }
 
     /// @inheritdoc IAccountBalance
