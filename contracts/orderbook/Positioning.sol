@@ -606,7 +606,8 @@ contract Positioning is PositioningStorageV1, IPositioning, ReentrancyGuardUpgra
         require(indexPrice != 0, "P_0IP"); // zero index price
         uint256 maxOrderSize = IMatchingEngine(_matchingEngine).getMaxOrderSizeOverTime(baseToken);
         uint256 actualLiquidatableSize = IAccountBalance(accountBalance).getNLiquidate(positionSizeToBeLiquidated.abs(), minPositionSizeByBaseToken[baseToken], maxOrderSize);
-        int256 liquidatedPositionSize = positionSizeToBeLiquidated >= 0 ? (actualLiquidatableSize.toInt256()).neg256() : actualLiquidatableSize.toInt256();        int256 liquidatedPositionNotional = liquidatedPositionSize.mulDiv(indexPrice.toInt256(), _ORACLE_BASE);
+        int256 liquidatedPositionSize = positionSizeToBeLiquidated >= 0 ? (actualLiquidatableSize.toInt256()).neg256() : actualLiquidatableSize.toInt256();
+        int256 liquidatedPositionNotional = liquidatedPositionSize.mulDiv(indexPrice.toInt256(), _ORACLE_BASE);
         return (liquidatedPositionSize, liquidatedPositionNotional);
     }
 
