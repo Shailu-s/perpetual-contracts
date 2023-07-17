@@ -250,10 +250,13 @@ contract Positioning is PositioningStorageV1, IPositioning, ReentrancyGuardUpgra
         LibOrder.validate(order);
 
         uint24 imRatio = IPositioningConfig(positioningConfig).getImRatio();
-       int256 intialFreeCollateral = _getInitialFreeCollateralByRatio(order.trader,baseValue, quoteValue,baseToken,imRatio );
+        // if user is closing, then we need to add previous collateral with the collateral freed by this new position
+        int256 intialFreeCollateral = (currentTraderPositionSize > 0 && order.isShort) || (currentTraderPositionSize < 0 && !order.isShort)  ?
+        _getInitialFreeCollateralByRatio(order.trader,baseValue, quoteValue,baseToken,imRatio ).neg256() : 
+        _getInitialFreeCollateralByRatio(order.trader,baseValue, quoteValue,baseToken,imRatio );
 
         require(
-            (_getFreeCollateralByRatio(order.trader, imRatio) * 1e6) / uint256(imRatio).toInt256() + intialFreeCollateral > 0 ,
+            _getFreeCollateralByRatio(order.trader, imRatio) + intialFreeCollateral > 0 ,
             "V_NEFC"
         );
         return true;
