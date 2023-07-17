@@ -188,7 +188,8 @@ contract VaultController is ReentrancyGuardUpgradeable, OwnerPausable, VaultCont
     function initialFreeCollateral(address trader, int256 positionSize, int256 openNotional, address baseToken, uint24 ratio) external view override returns(int256){
         int256 positionValue = IAccountBalance(_accountBalance).getInitialPositionValue(positionSize, baseToken);
         int256 fundingPayment = IPositioning(_positioning).getAllPendingFundingPayment(trader);
-        int256 accountValue = positionValue + openNotional - fundingPayment;
+        (int256 owedRealisedPnl, ) = IAccountBalance(_accountBalance).getPnlAndPendingFee(trader);
+        int256 accountValue = positionValue + openNotional + owedRealisedPnl - fundingPayment;
         uint256 totalDebtValue = IAccountBalance(_accountBalance).getInitialDebtValue(positionSize, openNotional, baseToken);
         uint256 marginRequired = totalDebtValue.mulRatio(ratio);
         return LibPerpMath.min(fundingPayment.neg256(), accountValue) - (marginRequired.toInt256());
