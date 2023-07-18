@@ -235,6 +235,8 @@ contract Positioning is PositioningStorageV1, IPositioning, ReentrancyGuardUpgra
         address baseToken = order.isShort ? order.makeAsset.virtualToken : order.takeAsset.virtualToken;
         uint256 minPositionSize = minPositionSizeByBaseToken[baseToken];
         int256 baseValue = order.isShort ? order.makeAsset.value.neg256() : order.takeAsset.value.toInt256();
+        int256 quoteValue = order.isShort ? order.takeAsset.value.toInt256() : order.makeAsset.value.neg256();
+
         int256 currentTraderPositionSize = _getTakerPosition(order.trader, baseToken);
         int256 finalPositionSize = currentTraderPositionSize + baseValue;
         // V_PERP: Trader below min position size
@@ -248,9 +250,13 @@ contract Positioning is PositioningStorageV1, IPositioning, ReentrancyGuardUpgra
         LibOrder.validate(order);
 
         uint24 imRatio = IPositioningConfig(positioningConfig).getImRatio();
+        // if user is closing, then we need to add previous collateral with the collateral freed by this new position
+        int256 intialFreeCollateral = (currentTraderPositionSize > 0 && order.isShort) || (currentTraderPositionSize < 0 && !order.isShort)  ?
+        _getInitialFreeCollateralByRatio(order.trader,baseValue, quoteValue,baseToken,imRatio ).neg256() : 
+        _getInitialFreeCollateralByRatio(order.trader,baseValue, quoteValue,baseToken,imRatio );
 
         require(
-            int256(order.isShort ? order.takeAsset.value : order.makeAsset.value) < (_getFreeCollateralByRatio(order.trader, imRatio) * 1e6) / uint256(imRatio).toInt256(),
+            _getFreeCollateralByRatio(order.trader, imRatio) + intialFreeCollateral > 0 ,
             "V_NEFC"
         );
         return true;
@@ -652,6 +658,12 @@ contract Positioning is PositioningStorageV1, IPositioning, ReentrancyGuardUpgra
     function _getFreeCollateralByRatio(address trader, uint24 ratio) internal view returns (int256) {
         return IVaultController(vaultController).getFreeCollateralByRatio(trader, ratio);
     }
+
+    /// @dev this function returns total free collateral available of trader
+    function _getInitialFreeCollateralByRatio(address trader, int256 positionSize, int256 openNotional, address baseToken, uint24 ratio) internal view returns (int256) {
+        return IVaultController(vaultController).initialFreeCollateral(trader, positionSize,openNotional,baseToken,ratio);
+    }
+
 
     function _requirePositioningAdmin() internal view {
         require(hasRole(POSITIONING_ADMIN, _msgSender()), "P_NA"); // Positioning: Not admin

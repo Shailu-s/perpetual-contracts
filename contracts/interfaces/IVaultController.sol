@@ -27,4 +27,5 @@ interface IVaultController {
     function getBalanceByToken(address trader, address token) external view returns (int256);
     /// @notice Function to set positioning contract
     function setPositioning(address PositioningArg) external;
+    function initialFreeCollateral(address trader, int256 positionSize, int256 openNotional, address baseToken, uint24 ratio) external view returns(int256);
 }

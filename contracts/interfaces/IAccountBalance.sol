@@ -159,4 +159,6 @@ interface IAccountBalance {
     function isAccountLiquidatable(address trader, address baseToken, uint256 minOrderSize, int256 accountValue, int256 freeCollateralByRatio) external view returns (bool isLiquidatable);
     function checkAndUpdateLiquidationTimeToWait(address trader, address baseToken, int256 accountValue, uint256 minOrderSize, int256 freeCollateralByRatio) external;
     function getNLiquidate(uint256 liquidatablePositionSize, uint256 minOrderSize, uint256 maxOrderSize) external view returns (uint256 nLiquidate);
+    function getInitialPositionValue(int256 positionSize, address baseToken) external view returns (int256);
+
 }

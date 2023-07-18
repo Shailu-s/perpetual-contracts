@@ -310,6 +310,10 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
         return positionSize.abs() < _DUST ? int256(0) : positionSize;
     }
 
+    function getInitialPositionValue(int256 positionSize, address baseToken) public view override returns (int256) {
+        return (positionSize * _getIndexPrice(baseToken, _smIntervalLiquidation).toInt256()) / _ORACLE_BASE;
+    }
+
     /// @inheritdoc IAccountBalance
     function getTotalPositionValue(
         address trader,
