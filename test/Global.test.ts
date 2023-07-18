@@ -696,7 +696,7 @@ describe.only("Global", function () {
     console.log("observations", observations.toString());
   });
 
-  it("open position all in and then all in flip", async () => {
+  it("open position all in and then all in flip with getOrderValidate", async () => {
     await matchingEngine.grantMatchOrders(positioning.address);
     console.log(await positioningConfig.getMmRatio());
     // should only need 2 dollars with 5x leverage to long 10 EVIV and short 20 EVIV @ $1/EVIV
@@ -800,6 +800,9 @@ describe.only("Global", function () {
       false,
     );
 
+    const isOrderValid = await positioning.getOrderValidate(orderLeft);
+    expect(isOrderValid).to.equal(true);
+
     signatureLeft = await getSignature(orderLeft, account1.address);
     signatureRight = await getSignature(orderRight, account2.address);
     // left 1, 2
@@ -841,7 +844,7 @@ describe.only("Global", function () {
     expect(positionSize1).to.be.equal("10000000000000000000");
   });
 
-  it("open position all in and small order", async () => {
+  it("open position all in and small order with getOrderValidate", async () => {
     await matchingEngine.grantMatchOrders(positioning.address);
     console.log(await positioningConfig.getMmRatio());
     await USDC.connect(owner).mint(account1.address, "4100000");
@@ -944,6 +947,9 @@ describe.only("Global", function () {
       false,
     );
 
+    const isOrderValid = await positioning.getOrderValidate(orderLeft);
+    expect(isOrderValid).to.equal(true);
+    
     signatureLeft = await getSignature(orderLeft, account1.address);
     signatureRight = await getSignature(orderRight, account2.address);
     // left 1, 2
