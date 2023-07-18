@@ -25,8 +25,8 @@ interface IVault {
     /// @param to The address which fund was refunded
     /// @param amount The amount of the fund
     event DebtRepayed(address to, uint256 amount);
-    event HighWeightAmountDeposited(address indexed from, uint256 amount);
-    event HighWeightAmountWithdrawn(address indexed from, uint256 amount);
+    event HighWeightAmountDeposited(address indexed from, uint256 amount, uint256 updatedVaultBalance);
+    event HighWeightAmountWithdrawn(address indexed from, uint256 amount, uint256 updatedVaultBalance);
 
     function initialize(address PositioningConfigArg, address accountBalanceArg, address tokenArg, address vaultControllerArg) external;
     /// @notice Deposit collateral into vault

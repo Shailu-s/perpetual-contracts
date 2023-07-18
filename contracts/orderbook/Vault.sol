@@ -59,7 +59,6 @@ contract Vault is IVault, ReentrancyGuardUpgradeable, OwnerPausable, VaultStorag
         _positioningConfig = positioningConfigArg;
         _accountBalance = accountBalanceArg;
         _vaultController = vaultControllerArg;
-        highWeightedAmount = 10000000000;
         _grantRole(VAULT_ADMIN, _msgSender());
     }
 
@@ -76,12 +75,6 @@ contract Vault is IVault, ReentrancyGuardUpgradeable, OwnerPausable, VaultStorag
         // V_VPMM: Vault controller is not contract
         require(vaultControllerArg.isContract(), "V_VPMM");
         _vaultController = vaultControllerArg;
-    }
-
-    function setHighWeightedAmount(uint256 amountArg) external {
-        _requireVaultAdmin();
-        require(amountArg > 10 ** _decimals, "V_SWM"); // small weighted amount
-        highWeightedAmount = amountArg;
     }
 
     /// @inheritdoc IVault
@@ -109,7 +102,7 @@ contract Vault is IVault, ReentrancyGuardUpgradeable, OwnerPausable, VaultStorag
         }
         amount = amount - remainingAmount;
         SafeERC20Upgradeable.safeTransfer(IERC20Upgradeable(_settlementToken), to, amount);
-        if (amount > highWeightedAmount) emit HighWeightAmountWithdrawn(to, amount);
+        if (_checkHighWeightedAmount(vaultBalance,amount)) emit HighWeightAmountWithdrawn(to, amount, vaultBalance - amount);
         emit Withdrawn(_settlementToken, to, amount);
     }
 
@@ -189,8 +182,13 @@ contract Vault is IVault, ReentrancyGuardUpgradeable, OwnerPausable, VaultStorag
         uint256 settlementTokenBalanceCap = IPositioningConfig(_positioningConfig).getSettlementTokenBalanceCap();
         // V_GTSTBC: greater than settlement token balance cap
         require(_vaultBalance <= settlementTokenBalanceCap, "V_GTSTBC");
-        if (amount > highWeightedAmount) emit HighWeightAmountDeposited(from, amount);
+        if (_checkHighWeightedAmount(balanceBefore, amount)) emit HighWeightAmountDeposited(from, amount, _vaultBalance);
         emit Deposited(_settlementToken, from, amount);
+    }
+    
+    function _checkHighWeightedAmount(uint256 _vaultBalance, uint256 amount) internal pure returns (bool) {
+        uint256 onePercentOfVaultBalance = _vaultBalance / 100;
+        return amount >= onePercentOfVaultBalance;
     }
 
     function _msgSender() internal view override(ContextUpgradeable, OwnerPausable) returns (address) {

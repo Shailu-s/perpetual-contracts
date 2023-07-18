@@ -809,6 +809,24 @@
         "storage": [],
         "types": {}
       }
+    },
+    "e2876bfc503a0c51449d9fe3b7526f9bb45c22772e2cc36209353fc88e351a40": {
+      "address": "0x9978149fa97042206d04835A9261166164F21F22",
+      "txHash": "0xd4207ce43f15b081b56914721ce71739e90a421a33abdfdfc45bb50648e8a2b6",
+      "layout": {
+        "solcVersion": "0.8.18",
+        "storage": [],
+        "types": {}
+      }
+    },
+    "7e94812a7934685e6862750b55311e2fc9e162e2e98bbb00ffbf42e64ee24dd6": {
+      "address": "0xc5eb1A2006Fd68B38A105ad929F2a2aAE8dC9E4F",
+      "txHash": "0xc2d5a339f9bc4199ae1f57bf2b3bd607ef8e845ca9096b7615f9322c43276d1d",
+      "layout": {
+        "solcVersion": "0.8.18",
+        "storage": [],
+        "types": {}
+      }
     }
   }
 }
