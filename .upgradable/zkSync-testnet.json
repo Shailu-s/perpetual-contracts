@@ -827,6 +827,15 @@
         "storage": [],
         "types": {}
       }
+    },
+    "5a81d98b6c3ac75188e0bf473f995971cf48ef41d78e907266cf58b18b47335c": {
+      "address": "0x8a6f831A399CCAEe546D486161e8f1eFc3EBe832",
+      "txHash": "0xfaa917a1285e03685969a1c62d7dfd470803c7cc12df846a9bf51407a67ada83",
+      "layout": {
+        "solcVersion": "0.8.18",
+        "storage": [],
+        "types": {}
+      }
     }
   }
 }

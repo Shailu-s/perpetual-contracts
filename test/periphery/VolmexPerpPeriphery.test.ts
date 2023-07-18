@@ -44,7 +44,7 @@ describe("VolmexPerpPeriphery", function () {
   let marketRegistry;
   let TestERC20;
   let USDC;
-  let owner, account1, account2, account3, account4, alice, bob;
+  let owner, account1, account2, account3, account4, alice, bob, mike, spike;
   let liquidator;
   const deadline = 87654321987654;
   const one = ethers.constants.WeiPerEther; // 1e18
@@ -83,7 +83,8 @@ describe("VolmexPerpPeriphery", function () {
     VolmexPerpView = await ethers.getContractFactory("VolmexPerpView");
     ChainLinkAggregator = await ethers.getContractFactory("MockV3Aggregator");
     FundingRate = await ethers.getContractFactory("FundingRate");
-    [owner, account1, account2, account3, account4, alice, bob] = await ethers.getSigners();
+    [owner, account1, account2, account3, account4, alice, bob, mike, spike] =
+      await ethers.getSigners();
     liquidator = encodeAddress(owner.address);
   });
 
@@ -281,6 +282,8 @@ describe("VolmexPerpPeriphery", function () {
     await (await perpView.incrementPerpIndex()).wait();
     await (await volmexBaseToken.setMintBurnRole(positioning.address)).wait();
     await (await volmexBaseToken2.setMintBurnRole(positioning.address)).wait();
+    await (await volmexBaseToken3.setMintBurnRole(positioning.address)).wait();
+
     await (await volmexQuoteToken.setMintBurnRole(positioning.address)).wait();
 
     await marketRegistry.connect(owner).setMakerFeeRatio(0.0004e6);
@@ -307,6 +310,7 @@ describe("VolmexPerpPeriphery", function () {
     await (await matchingEngine.grantMatchOrders(positioning.address)).wait();
 
     await perpetualOracle.setMarkObservationAdder(matchingEngine.address);
+    await perpetualOracle.setMarkObservationAdder(owner.address);
 
     await perpetualOracle.setIndexObservationAdder(owner.address);
     await perpetualOracle.grantCacheChainlinkPriceRole(owner.address);
@@ -331,7 +335,7 @@ describe("VolmexPerpPeriphery", function () {
     this.beforeEach(async () => {
       // transfer balances
       for (let i = 0; i < 10; i++) {
-        await perpetualOracle.addIndexObservations([0], [100000000], [proofHash]);
+        await perpetualOracle.addIndexObservations([0], [43000000], [proofHash]);
       }
       await (await USDC.connect(owner).transfer(alice.address, depositAmount)).wait();
       await (await USDC.connect(owner).transfer(bob.address, depositAmount)).wait();
@@ -352,7 +356,158 @@ describe("VolmexPerpPeriphery", function () {
         await volmexPerpPeriphery.connect(bob).depositToVault(0, USDC.address, depositAmount)
       ).wait();
     });
+    it("extra withdrawal issue scenario replication", async () => {
+      await (await USDC.connect(owner).transfer(mike.address, "10000000000")).wait();
+      await (await USDC.connect(owner).transfer(spike.address, "10000000000")).wait();
 
+      // approve to vault
+      await (await USDC.connect(owner).approve(volmexPerpPeriphery.address, "10000000000")).wait();
+      await (await USDC.connect(mike).approve(volmexPerpPeriphery.address, "10000000000")).wait();
+      await (await USDC.connect(spike).approve(volmexPerpPeriphery.address, "10000000000")).wait();
+
+      // deposit to vault
+      await (
+        await volmexPerpPeriphery.connect(owner).depositToVault(0, USDC.address, "10000000000")
+      ).wait();
+      await (
+        await volmexPerpPeriphery.connect(spike).depositToVault(0, USDC.address, "10000000000")
+      ).wait();
+      await (
+        await volmexPerpPeriphery.connect(mike).depositToVault(0, USDC.address, "10000000000")
+      ).wait();
+      await expect(volmexPerpPeriphery.whitelistTrader(mike.address, true)).to.emit(
+        volmexPerpPeriphery,
+        "TraderWhitelisted",
+      );
+      await expect(volmexPerpPeriphery.whitelistTrader(spike.address, true)).to.emit(
+        volmexPerpPeriphery,
+        "TraderWhitelisted",
+      );
+
+      let currentTimestamp = await time.latest();
+      await chainlinkAggregator2.updateRoundData(
+        "162863638383902",
+        "3031900000000",
+        currentTimestamp.toString(),
+        currentTimestamp.toString(),
+      );
+      await perpetualOracle.cacheChainlinkPrice(
+        "57896044618658097711785492504343953926634992332820282019728792003956564819970",
+      );
+
+      let orderLeft = Order(
+        ORDER,
+        deadline,
+        spike.address,
+        Asset(volmexBaseToken3.address, "10000000000000000"),
+        Asset(volmexQuoteToken.address, "300120000000000000000"),
+        56,
+        0,
+        true,
+      );
+
+      let orderRight = Order(
+        ORDER,
+        deadline,
+        mike.address,
+        Asset(volmexQuoteToken.address, "300120000000000000000"),
+        Asset(volmexBaseToken3.address, "10000000000000000"),
+        45,
+        0,
+        false,
+      );
+
+      const signatureLeft = await getSignature(orderLeft, spike.address);
+      const signatureRight = await getSignature(orderRight, mike.address);
+      let tx = await volmexPerpPeriphery.openPosition(
+        0,
+        orderLeft,
+        signatureLeft,
+        orderRight,
+        signatureRight,
+        liquidator,
+      );
+      await tx.wait();
+
+      await time.increase(3600);
+      await perpetualOracle.setIndexObservationAdder(owner.address);
+      for (let index = 0; index <= 1; index++) {
+        await perpetualOracle.addIndexObservations([0], [43000000], [proofHash]);
+      }
+      currentTimestamp = await time.latest();
+      await chainlinkAggregator2.updateRoundData(
+        "162863638383903",
+        "3031900000000",
+        currentTimestamp.toString(),
+        currentTimestamp.toString(),
+      );
+      await perpetualOracle.cacheChainlinkPrice(
+        "57896044618658097711785492504343953926634992332820282019728792003956564819970",
+      );
+
+      let orderLeft1 = Order(
+        ORDER,
+        deadline,
+        mike.address,
+        Asset(volmexBaseToken.address, "20018000000000000000"),
+        Asset(volmexQuoteToken.address, "2222000000000000000000"),
+        56,
+        0,
+        true,
+      );
+
+      let orderRight1 = Order(
+        ORDER,
+        deadline,
+        spike.address,
+        Asset(volmexQuoteToken.address, "2222000000000000000000"),
+        Asset(volmexBaseToken.address, "20018000000000000000"),
+        45,
+        0,
+        false,
+      );
+
+      const signatureLeft1 = await getSignature(orderLeft1, mike.address);
+      const signatureRight1 = await getSignature(orderRight1, spike.address);
+      tx = await volmexPerpPeriphery.openPosition(
+        0,
+        orderLeft1,
+        signatureLeft1,
+        orderRight1,
+        signatureRight1,
+        liquidator,
+      );
+      await tx.wait();
+      await time.increase(2000);
+      currentTimestamp = await time.latest();
+      await chainlinkAggregator2.updateRoundData(
+        "162863638383904",
+        "3045000000000",
+        currentTimestamp.toString(),
+        currentTimestamp.toString(),
+      );
+      await perpetualOracle.cacheChainlinkPrice(
+        "57896044618658097711785492504343953926634992332820282019728792003956564819970",
+      );
+      for (let index = 0; index <= 10; index++) {
+        await perpetualOracle.addIndexObservations([0], [100000000], [proofHash]);
+      }
+      const accountValue = await vaultController.getAccountValue(mike.address);
+      console.log(accountValue.toString(), "account value");
+
+      const liquidatbleSize = (
+        await accountBalance1.getLiquidatablePositionSize(
+          mike.address,
+          volmexBaseToken.address,
+          accountValue.toString(),
+        )
+      ).toString();
+      console.log("Liquidatble size", liquidatbleSize);
+      await expect(
+        positioning.liquidate(mike.address, volmexBaseToken.address, liquidatbleSize),
+      ).to.be.revertedWith("P_EAV");
+      // await positioning.liquidate();
+    });
     it("Open position", async () => {
       await expect(volmexPerpPeriphery.whitelistTrader(alice.address, true)).to.emit(
         volmexPerpPeriphery,
