@@ -264,12 +264,6 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
         return (totalQuoteDebtValue + totalBaseDebtValue).abs();
     }
 
-    function getInitialDebtValue(int256 positionSize, int256 openNotional, address baseToken) external view override returns(uint256){
-        int256 positionValue = getInitialPositionValue(positionSize, baseToken);
-        int256 totalQuoteDebtValue = openNotional >= int256(0) ? int256(0) : openNotional;
-        return (positionValue + totalQuoteDebtValue).abs();
-    }
-
     /// @inheritdoc IAccountBalance
     function getPnlAndPendingFee(address trader) public view virtual override returns (int256, int256) {
         int256 totalPositionValue;

@@ -190,7 +190,6 @@ contract VaultController is ReentrancyGuardUpgradeable, OwnerPausable, VaultCont
         int256 fundingPayment = IPositioning(_positioning).getAllPendingFundingPayment(trader);
         (int256 owedRealisedPnl, ) = IAccountBalance(_accountBalance).getPnlAndPendingFee(trader);
         int256 accountValue = positionValue + openNotional + owedRealisedPnl - fundingPayment;
-        // uint256 totalDebtValue = IAccountBalance(_accountBalance).getInitialDebtValue(positionSize, openNotional, baseToken);
         uint256 marginRequired = positionValue.abs().mulRatio(ratio);
         return LibPerpMath.min(fundingPayment.neg256(), accountValue) - (marginRequired.toInt256());
     }
