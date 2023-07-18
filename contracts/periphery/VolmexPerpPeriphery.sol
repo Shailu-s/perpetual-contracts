@@ -172,20 +172,13 @@ contract VolmexPerpPeriphery is AccessControlUpgradeable, IVolmexPerpPeriphery {
     function batchOrderValidate(LibOrder.Order[] memory order, uint256 _index) external view returns (bool[] memory) {
         uint256 ordersLength = order.length;
         bool[] memory _result = new bool[](ordersLength);
-        bool valid;
-        IPositioning positioning = perpView.positionings(_index);
         for (uint256 orderIndex = 0; orderIndex < ordersLength; orderIndex++) {
-            try positioning.getOrderValidate(order[orderIndex]) {
-                valid = true;
-            } catch {
-                valid = false;
-            }
-            _result[orderIndex] = valid;
+            _result[orderIndex] = getTraderOrderValidate(_index, order[orderIndex]);
         }
         return _result;
     }
 
-    function getTraderOrderValidate(uint256 _index, LibOrder.Order memory _order) external view returns (bool) {
+    function getTraderOrderValidate(uint256 _index, LibOrder.Order memory _order) public view returns (bool) {
         if (!isTraderWhitelisted[_order.trader]) return false;
         IPositioning positioning = perpView.positionings(_index);
         try positioning.getOrderValidate(_order) {
