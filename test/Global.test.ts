@@ -4,7 +4,7 @@ const { Order, Asset, sign, encodeAddress } = require("./order");
 import { BigNumber } from "ethers";
 const { expectRevert, time } = require("@openzeppelin/test-helpers");
 
-describe("Global", function () {
+describe.only("Global", function () {
   let owner;
   let account1, account2;
   let MatchingEngine;
@@ -696,11 +696,11 @@ describe("Global", function () {
     console.log("observations", observations.toString());
   });
 
-  it.only("open position all in and then all in flip", async () => {
+  it("open position all in and then all in flip", async () => {
     await matchingEngine.grantMatchOrders(positioning.address);
-    console.log(await positioningConfig.getMmRatio())
+    console.log(await positioningConfig.getMmRatio());
     // should only need 2 dollars with 5x leverage to long 10 EVIV and short 20 EVIV @ $1/EVIV
-    await USDC.connect(owner).mint(account1.address, "2100000"); 
+    await USDC.connect(owner).mint(account1.address, "2100000");
     await USDC.connect(owner).mint(account2.address, "2100000");
 
     await USDC.connect(account1).approve(periphery.address, "2100000");
@@ -709,7 +709,7 @@ describe("Global", function () {
     await periphery.connect(account2).depositToVault(0, USDC.address, "2100000");
 
     const proofHash = "0x6c00000000000000000000000000000000000000000000000000000000000000";
-    time.increase(60 * 60 * 24) // 24 hour increase to clear any old index observations
+    time.increase(60 * 60 * 24); // 24 hour increase to clear any old index observations
     for (let index = 0; index < 10; index++) {
       await (await perpetualOracle.addIndexObservations([0], [1000000], [proofHash])).wait();
       await (await perpetualOracle.addIndexObservations([1], [1000000], [proofHash])).wait();
@@ -778,8 +778,6 @@ describe("Global", function () {
     expect(positionSize).to.be.equal("10000000000000000000");
     expect(positionSize1).to.be.equal("-10000000000000000000");
 
-
-
     orderLeft = Order(
       ORDER,
       deadline,
@@ -801,7 +799,6 @@ describe("Global", function () {
       0,
       false,
     );
-
 
     signatureLeft = await getSignature(orderLeft, account1.address);
     signatureRight = await getSignature(orderRight, account2.address);
@@ -844,10 +841,9 @@ describe("Global", function () {
     expect(positionSize1).to.be.equal("10000000000000000000");
   });
 
-
-  it.only("open position all in and small order", async () => {
+  it("open position all in and small order", async () => {
     await matchingEngine.grantMatchOrders(positioning.address);
-    console.log(await positioningConfig.getMmRatio())
+    console.log(await positioningConfig.getMmRatio());
     await USDC.connect(owner).mint(account1.address, "4100000");
     await USDC.connect(owner).mint(account2.address, "4100000");
 
@@ -857,7 +853,7 @@ describe("Global", function () {
     await periphery.connect(account2).depositToVault(0, USDC.address, "4100000");
 
     const proofHash = "0x6c00000000000000000000000000000000000000000000000000000000000000";
-    time.increase(60 * 60 * 24) // 24 hour increase to clear any old index observations
+    time.increase(60 * 60 * 24); // 24 hour increase to clear any old index observations
     for (let index = 0; index < 10; index++) {
       await (await perpetualOracle.addIndexObservations([0], [1000000], [proofHash])).wait();
       await (await perpetualOracle.addIndexObservations([1], [1000000], [proofHash])).wait();
@@ -926,8 +922,6 @@ describe("Global", function () {
     expect(positionSize).to.be.equal("20000000000000000000");
     expect(positionSize1).to.be.equal("-20000000000000000000");
 
-
-
     orderLeft = Order(
       ORDER,
       deadline,
@@ -949,7 +943,6 @@ describe("Global", function () {
       0,
       false,
     );
-
 
     signatureLeft = await getSignature(orderLeft, account1.address);
     signatureRight = await getSignature(orderRight, account2.address);
@@ -989,11 +982,11 @@ describe("Global", function () {
     ]);
     expect(positionSize).to.be.equal("10000000000000000000");
     expect(positionSize1).to.be.equal("-10000000000000000000");
-  })
+  });
 
-  it.only("open position all in and small order with getOrderValidate", async () => {
+  it("open position all in and small order with getOrderValidate", async () => {
     await matchingEngine.grantMatchOrders(positioning.address);
-    console.log(await positioningConfig.getMmRatio())
+    console.log(await positioningConfig.getMmRatio());
     await USDC.connect(owner).mint(account1.address, "4100000");
     await USDC.connect(owner).mint(account2.address, "4100000");
 
@@ -1003,7 +996,7 @@ describe("Global", function () {
     await periphery.connect(account2).depositToVault(0, USDC.address, "4100000");
 
     const proofHash = "0x6c00000000000000000000000000000000000000000000000000000000000000";
-    time.increase(60 * 60 * 24) // 24 hour increase to clear any old index observations
+    time.increase(60 * 60 * 24); // 24 hour increase to clear any old index observations
     for (let index = 0; index < 10; index++) {
       await (await perpetualOracle.addIndexObservations([0], [1000000], [proofHash])).wait();
       await (await perpetualOracle.addIndexObservations([1], [1000000], [proofHash])).wait();
@@ -1072,8 +1065,6 @@ describe("Global", function () {
     expect(positionSize).to.be.equal("20000000000000000000");
     expect(positionSize1).to.be.equal("-20000000000000000000");
 
-
-
     orderLeft = Order(
       ORDER,
       deadline,
@@ -1096,8 +1087,8 @@ describe("Global", function () {
       false,
     );
 
-    const isOrderValid = await positioning.getOrderValidate(orderLeft)
-    expect(isOrderValid).to.equal(true)
+    const isOrderValid = await positioning.getOrderValidate(orderLeft);
+    expect(isOrderValid).to.equal(true);
     signatureLeft = await getSignature(orderLeft, account1.address);
     signatureRight = await getSignature(orderRight, account2.address);
     // left 1, 2
@@ -1136,7 +1127,372 @@ describe("Global", function () {
     ]);
     expect(positionSize).to.be.equal("10000000000000000000");
     expect(positionSize1).to.be.equal("-10000000000000000000");
-  })
+  });
+
+  it("open position all in and close all with getOrderValidate", async () => {
+    await matchingEngine.grantMatchOrders(positioning.address);
+    console.log(await positioningConfig.getMmRatio());
+    await USDC.connect(owner).mint(account1.address, "4100000");
+    await USDC.connect(owner).mint(account2.address, "4100000");
+
+    await USDC.connect(account1).approve(periphery.address, "4100000");
+    await USDC.connect(account2).approve(periphery.address, "4100000");
+    await periphery.connect(account1).depositToVault(0, USDC.address, "4100000");
+    await periphery.connect(account2).depositToVault(0, USDC.address, "4100000");
+
+    const proofHash = "0x6c00000000000000000000000000000000000000000000000000000000000000";
+    time.increase(60 * 60 * 24); // 24 hour increase to clear any old index observations
+    for (let index = 0; index < 10; index++) {
+      await (await perpetualOracle.addIndexObservations([0], [1000000], [proofHash])).wait();
+      await (await perpetualOracle.addIndexObservations([1], [1000000], [proofHash])).wait();
+    }
+
+    orderLeft = Order(
+      ORDER,
+      deadline,
+      account1.address,
+      Asset(volmexQuoteToken.address, "20000000000000000000"),
+      Asset(volmexBaseToken.address, "20000000000000000000"),
+      5,
+      0,
+      false,
+    );
+
+    orderRight = Order(
+      ORDER,
+      deadline,
+      account2.address,
+      Asset(volmexBaseToken.address, "20000000000000000000"),
+      Asset(volmexQuoteToken.address, "20000000000000000000"),
+      6,
+      0,
+      true,
+    );
+
+    let signatureLeft = await getSignature(orderLeft, account1.address);
+    let signatureRight = await getSignature(orderRight, account2.address);
+
+    // left 1, 2
+    // right 2, 1
+    await expect(
+      positioning
+        .connect(account1)
+        .openPosition(orderLeft, signatureLeft, orderRight, signatureRight, liquidator),
+    ).to.emit(positioning, "PositionChanged");
+    console.log("here");
+    let positionSize = await accountBalance1.getPositionSize(
+      account1.address,
+      orderLeft.takeAsset.virtualToken,
+    );
+    let positionSize1 = await accountBalance1.getPositionSize(
+      account2.address,
+      orderLeft.takeAsset.virtualToken,
+    );
+    console.table([
+      ["positionSize", positionSize.toString()],
+      [
+        "open notional",
+        (
+          await accountBalance1.getOpenNotional(account1.address, orderLeft.takeAsset.virtualToken)
+        ).toString(),
+      ],
+      ["", ""],
+      ["positionSize 1", positionSize1.toString()],
+      [
+        "open notional 1",
+        (
+          await accountBalance1.getOpenNotional(account2.address, orderLeft.takeAsset.virtualToken)
+        ).toString(),
+      ],
+    ]);
+    console.log("Another call \n");
+
+    expect(positionSize).to.be.equal("20000000000000000000");
+    expect(positionSize1).to.be.equal("-20000000000000000000");
+
+    orderLeft = Order(
+      ORDER,
+      deadline,
+      account1.address,
+      Asset(volmexBaseToken.address, "20000000000000000000"),
+      Asset(volmexQuoteToken.address, "20000000000000000000"),
+      1,
+      0,
+      true,
+    );
+
+    orderRight = Order(
+      ORDER,
+      deadline,
+      account2.address,
+      Asset(volmexQuoteToken.address, "20000000000000000000"),
+      Asset(volmexBaseToken.address, "20000000000000000000"),
+      2,
+      0,
+      false,
+    );
+
+    const isOrderValid = await positioning.getOrderValidate(orderLeft);
+    expect(isOrderValid).to.equal(true);
+    signatureLeft = await getSignature(orderLeft, account1.address);
+    signatureRight = await getSignature(orderRight, account2.address);
+    // left 1, 2
+    // right 2, 1
+    await expect(
+      positioning
+        .connect(account1)
+        .openPosition(orderLeft, signatureLeft, orderRight, signatureRight, liquidator),
+    ).to.emit(positioning, "PositionChanged");
+
+    positionSize = await accountBalance1.getPositionSize(
+      account1.address,
+      orderLeft.makeAsset.virtualToken,
+    );
+    positionSize1 = await accountBalance1.getPositionSize(
+      account2.address,
+      orderLeft.makeAsset.virtualToken,
+    );
+
+    console.table([
+      ["positionSize", positionSize.toString()],
+      [
+        "open notional",
+        (
+          await accountBalance1.getOpenNotional(account1.address, orderLeft.makeAsset.virtualToken)
+        ).toString(),
+      ],
+      ["", ""],
+      ["positionSize 1", positionSize1.toString()],
+      [
+        "open notional 1",
+        (
+          await accountBalance1.getOpenNotional(account2.address, orderLeft.makeAsset.virtualToken)
+        ).toString(),
+      ],
+    ]);
+    expect(positionSize).to.be.equal("0");
+    expect(positionSize1).to.be.equal("0");
+  });
+
+  it("failing test open position all in for long then long again with not enough collateral", async () => {
+    await matchingEngine.grantMatchOrders(positioning.address);
+    console.log(await positioningConfig.getMmRatio());
+    await USDC.connect(owner).mint(account1.address, "4100000");
+    await USDC.connect(owner).mint(account2.address, "4100000");
+
+    await USDC.connect(account1).approve(periphery.address, "4100000");
+    await USDC.connect(account2).approve(periphery.address, "4100000");
+    await periphery.connect(account1).depositToVault(0, USDC.address, "4100000");
+    await periphery.connect(account2).depositToVault(0, USDC.address, "4100000");
+
+    const proofHash = "0x6c00000000000000000000000000000000000000000000000000000000000000";
+    time.increase(60 * 60 * 24); // 24 hour increase to clear any old index observations
+    for (let index = 0; index < 10; index++) {
+      await (await perpetualOracle.addIndexObservations([0], [1000000], [proofHash])).wait();
+      await (await perpetualOracle.addIndexObservations([1], [1000000], [proofHash])).wait();
+    }
+
+    orderLeft = Order(
+      ORDER,
+      deadline,
+      account1.address,
+      Asset(volmexQuoteToken.address, "20000000000000000000"),
+      Asset(volmexBaseToken.address, "20000000000000000000"),
+      5,
+      0,
+      false,
+    );
+
+    orderRight = Order(
+      ORDER,
+      deadline,
+      account2.address,
+      Asset(volmexBaseToken.address, "20000000000000000000"),
+      Asset(volmexQuoteToken.address, "20000000000000000000"),
+      6,
+      0,
+      true,
+    );
+
+    let signatureLeft = await getSignature(orderLeft, account1.address);
+    let signatureRight = await getSignature(orderRight, account2.address);
+
+    // left 1, 2
+    // right 2, 1
+    await expect(
+      positioning
+        .connect(account1)
+        .openPosition(orderLeft, signatureLeft, orderRight, signatureRight, liquidator),
+    ).to.emit(positioning, "PositionChanged");
+    console.log("here");
+    let positionSize = await accountBalance1.getPositionSize(
+      account1.address,
+      orderLeft.takeAsset.virtualToken,
+    );
+    let positionSize1 = await accountBalance1.getPositionSize(
+      account2.address,
+      orderLeft.takeAsset.virtualToken,
+    );
+    console.table([
+      ["positionSize", positionSize.toString()],
+      [
+        "open notional",
+        (
+          await accountBalance1.getOpenNotional(account1.address, orderLeft.takeAsset.virtualToken)
+        ).toString(),
+      ],
+      ["", ""],
+      ["positionSize 1", positionSize1.toString()],
+      [
+        "open notional 1",
+        (
+          await accountBalance1.getOpenNotional(account2.address, orderLeft.takeAsset.virtualToken)
+        ).toString(),
+      ],
+    ]);
+    console.log("Another call \n");
+
+    expect(positionSize).to.be.equal("20000000000000000000");
+    expect(positionSize1).to.be.equal("-20000000000000000000");
+
+    orderLeft = Order(
+      ORDER,
+      deadline,
+      account1.address,
+      Asset(volmexQuoteToken.address, "10000000000000000000"),
+      Asset(volmexBaseToken.address, "10000000000000000000"),
+      1,
+      0,
+      false,
+    );
+
+    orderRight = Order(
+      ORDER,
+      deadline,
+      account2.address,
+      Asset(volmexBaseToken.address, "10000000000000000000"),
+      Asset(volmexQuoteToken.address, "10000000000000000000"),
+      2,
+      0,
+      true,
+    );
+
+    await expect(
+      positioning.getOrderValidate(orderLeft),
+     ).to.be.revertedWith("V_NEFC");
+     await expect(
+      positioning.getOrderValidate(orderRight),
+     ).to.be.revertedWith("V_NEFC");
+  });
+  it("failing test open position all in for short then short again with not enough collateral", async () => {
+    await matchingEngine.grantMatchOrders(positioning.address);
+    console.log(await positioningConfig.getMmRatio());
+    await USDC.connect(owner).mint(account1.address, "4100000");
+    await USDC.connect(owner).mint(account2.address, "4100000");
+
+    await USDC.connect(account1).approve(periphery.address, "4100000");
+    await USDC.connect(account2).approve(periphery.address, "4100000");
+    await periphery.connect(account1).depositToVault(0, USDC.address, "4100000");
+    await periphery.connect(account2).depositToVault(0, USDC.address, "4100000");
+
+    const proofHash = "0x6c00000000000000000000000000000000000000000000000000000000000000";
+    time.increase(60 * 60 * 24); // 24 hour increase to clear any old index observations
+    for (let index = 0; index < 10; index++) {
+      await (await perpetualOracle.addIndexObservations([0], [1000000], [proofHash])).wait();
+      await (await perpetualOracle.addIndexObservations([1], [1000000], [proofHash])).wait();
+    }
+    orderLeft = Order(
+      ORDER,
+      deadline,
+      account1.address,
+      Asset(volmexBaseToken.address, "20000000000000000000"),
+      Asset(volmexQuoteToken.address, "20000000000000000000"),
+      5,
+      0,
+      true,
+    );
+
+    orderRight = Order(
+      ORDER,
+      deadline,
+      account2.address,
+      Asset(volmexQuoteToken.address, "20000000000000000000"),
+      Asset(volmexBaseToken.address, "20000000000000000000"),
+      6,
+      0,
+      false,
+    );
+
+    let signatureLeft = await getSignature(orderLeft, account1.address);
+    let signatureRight = await getSignature(orderRight, account2.address);
+
+    // left 1, 2
+    // right 2, 1
+    await expect(
+      positioning
+        .connect(account1)
+        .openPosition(orderLeft, signatureLeft, orderRight, signatureRight, liquidator),
+    ).to.emit(positioning, "PositionChanged");
+    console.log("here");
+    let positionSize = await accountBalance1.getPositionSize(
+      account1.address,
+      orderLeft.makeAsset.virtualToken,
+    );
+    let positionSize1 = await accountBalance1.getPositionSize(
+      account2.address,
+      orderLeft.makeAsset.virtualToken,
+    );
+    console.table([
+      ["positionSize", positionSize.toString()],
+      [
+        "open notional",
+        (
+          await accountBalance1.getOpenNotional(account1.address, orderLeft.takeAsset.virtualToken)
+        ).toString(),
+      ],
+      ["", ""],
+      ["positionSize 1", positionSize1.toString()],
+      [
+        "open notional 1",
+        (
+          await accountBalance1.getOpenNotional(account2.address, orderLeft.takeAsset.virtualToken)
+        ).toString(),
+      ],
+    ]);
+    console.log("Another call \n");
+
+    expect(positionSize).to.be.equal("-20000000000000000000");
+    expect(positionSize1).to.be.equal("20000000000000000000");
+
+    orderLeft = Order(
+      ORDER,
+      deadline,
+      account1.address,
+      Asset(volmexBaseToken.address, "10000000000000000000"),
+      Asset(volmexQuoteToken.address, "10000000000000000000"),
+      1,
+      0,
+      true,
+    );
+
+    orderRight = Order(
+      ORDER,
+      deadline,
+      account2.address,
+      Asset(volmexQuoteToken.address, "10000000000000000000"),
+      Asset(volmexBaseToken.address, "10000000000000000000"),
+      2,
+      0,
+      false,
+    );
+
+    await expect(
+      positioning.getOrderValidate(orderLeft),
+     ).to.be.revertedWith("V_NEFC");
+     await expect(
+      positioning.getOrderValidate(orderRight),
+     ).to.be.revertedWith("V_NEFC");
+  });
 
   async function getSignature(orderObj, signer) {
     return sign(orderObj, signer, positioning.address);
