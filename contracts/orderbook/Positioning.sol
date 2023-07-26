@@ -493,7 +493,7 @@ contract Positioning is PositioningStorageV1, IPositioning, ReentrancyGuardUpgra
                 IVirtualToken(baseToken).burn(trader, exchangedPositionSize.abs());
             }
             
-        } else {
+        } else if (exchangedPositionSize > 0) {
             IVirtualToken(baseToken).mint(trader, uint256(exchangedPositionSize));
         }
         if (exchangedNotionalAmount < 0 && currentQuoteTokenBalance > 0) {
@@ -502,7 +502,7 @@ contract Positioning is PositioningStorageV1, IPositioning, ReentrancyGuardUpgra
             } else {
                 IVirtualToken(quoteToken).burn(trader, exchangedNotionalAmount.abs());
             }
-        } else {
+        } else if (exchangedNotionalAmount > 0) {
             IVirtualToken(quoteToken).mint(trader, uint256(exchangedNotionalAmount));
         }
     }
