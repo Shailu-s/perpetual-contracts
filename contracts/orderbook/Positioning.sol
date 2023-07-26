@@ -482,7 +482,7 @@ contract Positioning is PositioningStorageV1, IPositioning, ReentrancyGuardUpgra
         );
     }
 
-    function _updateTokenAmount(address trader, address baseToken) internal {
+    function _updateTokenAmount(address trader, address baseToken, int256 exchangedPositionSize, int256 exchangedNotionalAmount) internal {
         int256 position = _getTakerPosition(trader, baseToken);
         int256 notional = _getTakerOpenNotional(trader, baseToken);
         address quoteToken = IMarketRegistry(_marketRegistry).getQuoteToken();
