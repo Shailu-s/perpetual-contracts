@@ -624,6 +624,86 @@ describe("VolmexPerpPeriphery", function () {
         }
       }
     });
+    it("should update correct token amount", async () => {
+      await expect(volmexPerpPeriphery.whitelistTrader(alice.address, true)).to.emit(
+        volmexPerpPeriphery,
+        "TraderWhitelisted",
+      );
+      await expect(volmexPerpPeriphery.whitelistTrader(bob.address, true)).to.emit(
+        volmexPerpPeriphery,
+        "TraderWhitelisted",
+      );
+
+      let orderLeft = Order(
+        ORDER,
+        deadline,
+        alice.address,
+        Asset(volmexBaseToken.address, baseAmount),
+        Asset(volmexQuoteToken.address, quoteAmount),
+        900,
+        0,
+        true,
+      );
+
+      let orderRight = Order(
+        ORDER,
+        deadline,
+        bob.address,
+        Asset(volmexQuoteToken.address, quoteAmount),
+        Asset(volmexBaseToken.address, baseAmount),
+        600,
+        0,
+        false,
+      );
+
+      const signatureLeft = await getSignature(orderLeft, alice.address);
+      const signatureRight = await getSignature(orderRight, bob.address);
+      await volmexPerpPeriphery.openPosition(
+        0,
+        orderLeft,
+        signatureLeft,
+        orderRight,
+        signatureRight,
+        liquidator,
+      );
+      console.log((await volmexBaseToken.balanceOf(bob.address)).toString(), "balance");
+      orderLeft = Order(
+        ORDER,
+        deadline,
+        alice.address,
+        Asset(volmexBaseToken.address, baseAmount),
+        Asset(volmexQuoteToken.address, quoteAmount),
+        890,
+        0,
+        true,
+      );
+
+      orderRight = Order(
+        ORDER,
+        deadline,
+        bob.address,
+        Asset(volmexQuoteToken.address, quoteAmount),
+        Asset(volmexBaseToken.address, baseAmount),
+        789,
+        0,
+        false,
+      );
+
+      const signatureLeft1 = await getSignature(orderLeft, alice.address);
+      const signatureRight1 = await getSignature(orderRight, bob.address);
+      await volmexPerpPeriphery.openPosition(
+        0,
+        orderLeft,
+        signatureLeft1,
+        orderRight,
+        signatureRight1,
+        liquidator,
+      );
+      const baseTokenBalanceBoB = (await volmexBaseToken.balanceOf(bob.address)).toString();
+      const quoteTokenBalanceAlice = (await volmexQuoteToken.balanceOf(alice.address)).toString();
+      expect(baseTokenBalanceBoB).to.be.equal("20000000000000000000");
+      expect(quoteTokenBalanceAlice).to.be.equal("199920000000000000000");
+    });
 
     it("Open position when not whitelisted", async () => {
       let salt = 250;
