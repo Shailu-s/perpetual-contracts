@@ -482,28 +482,22 @@ contract Positioning is PositioningStorageV1, IPositioning, ReentrancyGuardUpgra
         );
     }
 
-    function _updateTokenAmount(address trader, address baseToken, int256 exchangedPositionSize, int256 exchangedNotionalAmount) internal {
+    function _updateTokenAmount(address trader, address baseToken, int256 exchangedPositionSize, int256 exchangedPositionNotional) internal {
         address quoteToken = IMarketRegistry(_marketRegistry).getQuoteToken();
         uint256 currentBaseTokenBalance = IVirtualToken(baseToken).balanceOf(trader);
         uint256 currentQuoteTokenBalance = IVirtualToken(quoteToken).balanceOf(trader);
         if (exchangedPositionSize < 0 && currentBaseTokenBalance > 0) {
-            if (exchangedPositionSize.abs() > currentBaseTokenBalance) {
-                IVirtualToken(baseToken).burn(trader, currentBaseTokenBalance);
-            } else {
-                IVirtualToken(baseToken).burn(trader, exchangedPositionSize.abs());
-            }
-            
+            uint256 positionSize =  exchangedPositionSize.abs() > currentBaseTokenBalance ? currentBaseTokenBalance : exchangedPositionSize.abs();
+            IVirtualToken(baseToken).burn(trader, positionSize);
         } else if (exchangedPositionSize > 0) {
             IVirtualToken(baseToken).mint(trader, uint256(exchangedPositionSize));
         }
-        if (exchangedNotionalAmount < 0 && currentQuoteTokenBalance > 0) {
-             if (exchangedNotionalAmount.abs() > currentQuoteTokenBalance) {
-                IVirtualToken(quoteToken).burn(trader, currentQuoteTokenBalance);
-            } else {
-                IVirtualToken(quoteToken).burn(trader, exchangedNotionalAmount.abs());
-            }
-        } else if (exchangedNotionalAmount > 0) {
-            IVirtualToken(quoteToken).mint(trader, uint256(exchangedNotionalAmount));
+        if (exchangedPositionNotional < 0 && currentQuoteTokenBalance > 0) {
+            uint256 positionNotional = exchangedPositionNotional.abs() > currentQuoteTokenBalance ? currentQuoteTokenBalance : exchangedPositionNotional.abs();
+            IVirtualToken(quoteToken).burn(trader, positionNotional);
+            
+        } else if (exchangedPositionNotional > 0) {
+            IVirtualToken(quoteToken).mint(trader, uint256(exchangedPositionNotional));
         }
     }
 
