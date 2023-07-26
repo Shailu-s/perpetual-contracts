@@ -483,22 +483,27 @@ contract Positioning is PositioningStorageV1, IPositioning, ReentrancyGuardUpgra
     }
 
     function _updateTokenAmount(address trader, address baseToken, int256 exchangedPositionSize, int256 exchangedNotionalAmount) internal {
-        int256 position = _getTakerPosition(trader, baseToken);
-        int256 notional = _getTakerOpenNotional(trader, baseToken);
         address quoteToken = IMarketRegistry(_marketRegistry).getQuoteToken();
-        if (position > 0) {
-            uint256 currentBalance = IVirtualToken(baseToken).balanceOf(trader);
-            if (currentBalance != 0) {
-                IVirtualToken(baseToken).burn(trader, currentBalance);
+        uint256 currentBaseTokenBalance = IVirtualToken(baseToken).balanceOf(trader);
+        uint256 currentQuoteTokenBalance = IVirtualToken(quoteToken).balanceOf(trader);
+        if (exchangedPositionSize < 0 && currentBaseTokenBalance > 0) {
+            if (exchangedPositionSize.abs() > currentBaseTokenBalance) {
+                IVirtualToken(baseToken).burn(trader, currentBaseTokenBalance);
+            } else {
+                IVirtualToken(baseToken).burn(trader, exchangedPositionSize.abs());
             }
-            IVirtualToken(baseToken).mint(trader, uint256(position));
+            
+        } else {
+            IVirtualToken(baseToken).mint(trader, uint256(exchangedPositionSize));
         }
-        if (notional > 0) {
-            uint256 currentBalance = IVirtualToken(quoteToken).balanceOf(trader);
-            if (currentBalance != 0) {
-                IVirtualToken(quoteToken).burn(trader, currentBalance);
+        if (exchangedNotionalAmount < 0 && currentQuoteTokenBalance > 0) {
+             if (exchangedNotionalAmount.abs() > currentQuoteTokenBalance) {
+                IVirtualToken(quoteToken).burn(trader, currentQuoteTokenBalance);
+            } else {
+                IVirtualToken(quoteToken).burn(trader, exchangedNotionalAmount.abs());
             }
-            IVirtualToken(quoteToken).mint(trader, uint256(notional));
+        } else {
+            IVirtualToken(quoteToken).mint(trader, uint256(exchangedNotionalAmount));
         }
     }
 
