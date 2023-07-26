@@ -468,8 +468,8 @@ contract Positioning is PositioningStorageV1, IPositioning, ReentrancyGuardUpgra
             _requireEnoughFreeCollateral(takerOrder.trader);
         }
 
-        _updateTokenAmount(makerOrder.trader, baseToken);
-        _updateTokenAmount(takerOrder.trader, baseToken);
+        _updateTokenAmount(makerOrder.trader, baseToken, internalData.leftExchangedPositionSize, internalData.leftExchangedPositionNotional - orderFees.makerOrderFee.toInt256());
+        _updateTokenAmount(takerOrder.trader, baseToken, internalData.rightExchangedPositionSize, internalData.rightExchangedPositionNotional - orderFees.takerOrderFee.toInt256());
 
         emit PositionChanged(
             [makerOrder.trader, takerOrder.trader],
