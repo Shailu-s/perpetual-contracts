@@ -468,8 +468,8 @@ contract Positioning is PositioningStorageV1, IPositioning, ReentrancyGuardUpgra
             _requireEnoughFreeCollateral(takerOrder.trader);
         }
 
-        _updateTokenAmount(makerOrder.trader, baseToken);
-        _updateTokenAmount(takerOrder.trader, baseToken);
+        _updateTokenAmount(makerOrder.trader, baseToken, internalData.leftExchangedPositionSize, internalData.leftExchangedPositionNotional - orderFees.makerOrderFee.toInt256());
+        _updateTokenAmount(takerOrder.trader, baseToken, internalData.rightExchangedPositionSize, internalData.rightExchangedPositionNotional - orderFees.takerOrderFee.toInt256());
 
         emit PositionChanged(
             [makerOrder.trader, takerOrder.trader],
@@ -482,23 +482,22 @@ contract Positioning is PositioningStorageV1, IPositioning, ReentrancyGuardUpgra
         );
     }
 
-    function _updateTokenAmount(address trader, address baseToken) internal {
-        int256 position = _getTakerPosition(trader, baseToken);
-        int256 notional = _getTakerOpenNotional(trader, baseToken);
+    function _updateTokenAmount(address trader, address baseToken, int256 exchangedPositionSize, int256 exchangedPositionNotional) internal {
         address quoteToken = IMarketRegistry(_marketRegistry).getQuoteToken();
-        if (position > 0) {
-            uint256 currentBalance = IVirtualToken(baseToken).balanceOf(trader);
-            if (currentBalance != 0) {
-                IVirtualToken(baseToken).burn(trader, currentBalance);
-            }
-            IVirtualToken(baseToken).mint(trader, uint256(position));
+        uint256 currentBaseTokenBalance = IVirtualToken(baseToken).balanceOf(trader);
+        uint256 currentQuoteTokenBalance = IVirtualToken(quoteToken).balanceOf(trader);
+        if (exchangedPositionSize < 0 && currentBaseTokenBalance > 0) {
+            uint256 positionSize =  exchangedPositionSize.abs() > currentBaseTokenBalance ? currentBaseTokenBalance : exchangedPositionSize.abs();
+            IVirtualToken(baseToken).burn(trader, positionSize);
+        } else if (exchangedPositionSize > 0) {
+            IVirtualToken(baseToken).mint(trader, uint256(exchangedPositionSize));
         }
-        if (notional > 0) {
-            uint256 currentBalance = IVirtualToken(quoteToken).balanceOf(trader);
-            if (currentBalance != 0) {
-                IVirtualToken(quoteToken).burn(trader, currentBalance);
-            }
-            IVirtualToken(quoteToken).mint(trader, uint256(notional));
+        if (exchangedPositionNotional < 0 && currentQuoteTokenBalance > 0) {
+            uint256 positionNotional = exchangedPositionNotional.abs() > currentQuoteTokenBalance ? currentQuoteTokenBalance : exchangedPositionNotional.abs();
+            IVirtualToken(quoteToken).burn(trader, positionNotional);
+            
+        } else if (exchangedPositionNotional > 0) {
+            IVirtualToken(quoteToken).mint(trader, uint256(exchangedPositionNotional));
         }
     }
 
