@@ -33,13 +33,13 @@ const approveDeposit = async () => {
   // await vaultController.registerVault(vaultaddress, "0xB3011837c08D3A447AC1e08CCBAb30caBFC50511");
   // const arts = await deployer.loadArtifact("PerpetualOracle");
   // const Oracle = new ContractFactory(arts.abi, arts.bytecode, deployer.zkWallet);
-  // const peripheryarts = await deployer1.loadArtifact("VolmexPerpPeriphery");
+  // const peripheryarts = await deployer1.loadArtifact("PerpPeriphery");
   // const Periphery = new ContractFactory(
   //   peripheryarts.abi,
   //   peripheryarts.bytecode,
   //   deployer1.zkWallet,
   // );
-  const Periphery = await ethers.getContractFactory("VolmexPerpPeriphery");
+  const Periphery = await ethers.getContractFactory("PerpPeriphery");
   const periphery = Periphery.attach(peripheryAddress);
   // const transfer = await usdc
   //   .connect(account1)

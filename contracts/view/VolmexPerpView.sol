@@ -3,12 +3,12 @@ pragma solidity =0.8.18;
 
 import { AccessControlUpgradeable } from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 
-import { IVolmexPerpView, IPositioning, IVaultController, IVolmexBaseToken, IVolmexQuoteToken, IAccountBalance, IMarketRegistry } from "../interfaces/IVolmexPerpView.sol";
+import { IPerpView, IPositioning, IVaultController, IBaseToken, IQuoteToken, IAccountBalance, IMarketRegistry } from "../interfaces/IPerpView.sol";
 import { LibOrder } from "../libs/LibOrder.sol";
 
-contract VolmexPerpView is IVolmexPerpView, AccessControlUpgradeable {
+contract PerpView is IPerpView, AccessControlUpgradeable {
     // admin of perp view contract
-    bytes32 public constant VOLMEX_PERP_VIEW = keccak256("VOLMEX_PERP_VIEW");
+    bytes32 public constant _PERP_VIEW = keccak256("_PERP_VIEW");
     // perp view role to set contracts
     bytes32 public constant PERP_VIEW_STATES = keccak256("PERP_VIEW_STATES");
     // Store the addresses of positionings { index => positioning address }
@@ -16,9 +16,9 @@ contract VolmexPerpView is IVolmexPerpView, AccessControlUpgradeable {
     // Store the addresses of vaultControllers { index => vaultController address }
     mapping(uint256 => IVaultController) public vaultControllers;
     // To store the address of volatility.
-    mapping(uint256 => IVolmexBaseToken) public baseTokens;
+    mapping(uint256 => IBaseToken) public baseTokens;
     // To store the address of collateral.
-    mapping(uint256 => IVolmexQuoteToken) public quoteTokens;
+    mapping(uint256 => IQuoteToken) public quoteTokens;
     // Store the addresses of account balance by index
     mapping(uint256 => IAccountBalance) public accounts;
     // Store the addresses of market regsitry by index
@@ -33,61 +33,61 @@ contract VolmexPerpView is IVolmexPerpView, AccessControlUpgradeable {
     uint256 public quoteTokenIndexCount;
 
     function initialize(address _viewRole) external initializer {
-        _grantRole(VOLMEX_PERP_VIEW, _viewRole);
+        _grantRole(_PERP_VIEW, _viewRole);
     }
 
     function grantViewStatesRole(address _viewStateRole) external {
-        _requireVolmexPerpViewAdmin();
+        _requirePerpViewAdmin();
         _grantRole(PERP_VIEW_STATES, _viewStateRole);
     }
 
-    function setBaseToken(IVolmexBaseToken _baseToken) external {
-        _requireVolmexPerpViewCaller();
+    function setBaseToken(IBaseToken _baseToken) external {
+        _requirePerpViewCaller();
         baseTokens[baseTokenIndexCount] = _baseToken;
         baseTokenIndexCount++;
     }
 
-    function setQuoteToken(IVolmexQuoteToken _quoteToken) external {
-        _requireVolmexPerpViewCaller();
+    function setQuoteToken(IQuoteToken _quoteToken) external {
+        _requirePerpViewCaller();
         quoteTokens[quoteTokenIndexCount] = _quoteToken;
         quoteTokenIndexCount++;
     }
 
     function setPositioning(IPositioning _positioning) external {
-        _requireVolmexPerpViewCaller();
+        _requirePerpViewCaller();
         positionings[perpIndexCount] = _positioning;
     }
 
     function setVaultController(IVaultController _vaultController) external {
-        _requireVolmexPerpViewCaller();
+        _requirePerpViewCaller();
         vaultControllers[perpIndexCount] = _vaultController;
     }
 
     function setAccount(IAccountBalance _account) external {
-        _requireVolmexPerpViewCaller();
+        _requirePerpViewCaller();
         accounts[perpIndexCount] = _account;
     }
 
     function setMarketRegistry(IMarketRegistry _marketRegistry) external {
-        _requireVolmexPerpViewCaller();
+        _requirePerpViewCaller();
         marketRegistries[perpIndexCount] = _marketRegistry;
     }
 
     function incrementPerpIndex() external {
-        _requireVolmexPerpViewCaller();
+        _requirePerpViewCaller();
         perpIndexCount++;
     }
 
     function incrementVaultIndex() external {
-        _requireVolmexPerpViewCaller();
+        _requirePerpViewCaller();
         vaultIndexCount++;
     }
 
-    function _requireVolmexPerpViewAdmin() internal view {
-        require(hasRole(VOLMEX_PERP_VIEW, _msgSender()), "VolmexPerpView: Not admin");
+    function _requirePerpViewAdmin() internal view {
+        require(hasRole(_PERP_VIEW, _msgSender()), "PerpView: Not admin");
     }
 
-    function _requireVolmexPerpViewCaller() internal view {
-        require(hasRole(PERP_VIEW_STATES, _msgSender()), "VolmexPerpView: Not state update caller");
+    function _requirePerpViewCaller() internal view {
+        require(hasRole(PERP_VIEW_STATES, _msgSender()), "PerpView: Not state update caller");
     }
 }

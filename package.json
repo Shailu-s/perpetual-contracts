@@ -1,15 +1,15 @@
 {
-  "name": "volmex-perpetuals",
+  "name": "-perpetuals",
   "version": "1.0.15",
-  "description": "Volmex Perpetual core contracts",
+  "description": " Perpetual core contracts",
   "author": {
-    "name": "Volmex Finance",
-    "email": "security@volmexlabs.com",
+    "name": " Finance",
+    "email": "security@labs.com",
     "url": ""
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/volmexfinance/perpetual.git"
+    "url": "https://github.com/finance/perpetual.git"
   },
   "homepage": "",
   "keywords": [

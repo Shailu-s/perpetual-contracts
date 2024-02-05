@@ -23,12 +23,12 @@ describe("Multiple protocols", function () {
   let perpetualOracle;
   let EVIV;
   let BVIV;
-  let VolmexBaseToken;
-  let VolmexQuoteToken;
-  let volmexQuoteToken;
-  let VolmexPerpPeriphery;
-  let volmexPerpPeriphery;
-  let VolmexPerpView;
+  let BaseToken;
+  let QuoteToken;
+  let QuoteToken;
+  let PerpPeriphery;
+  let PerpPeriphery;
+  let PerpView;
   let perpView;
   let chainlinkBaseToken;
   let chainlinkBaseToken2;
@@ -49,7 +49,7 @@ describe("Multiple protocols", function () {
   const ORDER = "0xf555eb98";
   const proofHash = "0x6c00000000000000000000000000000000000000000000000000000000000000";
   this.beforeAll(async () => {
-    VolmexPerpPeriphery = await ethers.getContractFactory("VolmexPerpPeriphery");
+    PerpPeriphery = await ethers.getContractFactory("PerpPeriphery");
     PerpetualOracle = await ethers.getContractFactory("PerpetualOracle");
     MatchingEngine = await ethers.getContractFactory("MatchingEngine");
     VirtualToken = await ethers.getContractFactory("VirtualTokenTest");
@@ -61,23 +61,23 @@ describe("Multiple protocols", function () {
     AccountBalance = await ethers.getContractFactory("AccountBalance");
     ChainLinkAggregator = await ethers.getContractFactory("MockV3Aggregator");
     TestERC20 = await ethers.getContractFactory("TetherToken");
-    VolmexBaseToken = await ethers.getContractFactory("VolmexBaseToken");
-    VolmexQuoteToken = await ethers.getContractFactory("VolmexQuoteToken");
-    VolmexPerpView = await ethers.getContractFactory("VolmexPerpView");
+    BaseToken = await ethers.getContractFactory("BaseToken");
+    QuoteToken = await ethers.getContractFactory("QuoteToken");
+    PerpView = await ethers.getContractFactory("PerpView");
     FundingRate = await ethers.getContractFactory("FundingRate");
     [owner, account1, account2, account3, account4, alice, bob] = await ethers.getSigners();
     liquidator = encodeAddress(owner.address);
   });
 
   this.beforeEach(async () => {
-    perpView = await upgrades.deployProxy(VolmexPerpView, [owner.address]);
+    perpView = await upgrades.deployProxy(PerpView, [owner.address]);
     await perpView.deployed();
     await (await perpView.grantViewStatesRole(owner.address)).wait();
 
     EVIV = await upgrades.deployProxy(
-      VolmexBaseToken,
+      BaseToken,
       [
-        "Ethereum Volmex Implied Volatility Index", // nameArg
+        "Ethereum  Implied Volatility Index", // nameArg
         "EVIV", // symbolArg,
         owner.address, // priceFeedArg
         true, // isBase
@@ -88,9 +88,9 @@ describe("Multiple protocols", function () {
     );
     await EVIV.deployed();
     BVIV = await upgrades.deployProxy(
-      VolmexBaseToken,
+      BaseToken,
       [
-        "Bitcoin Volmex Implied Volatility Index", // nameArg
+        "Bitcoin  Implied Volatility Index", // nameArg
         "BVIV", // symbolArg,
         owner.address, // priceFeedArg
         true, // isBase
@@ -101,9 +101,9 @@ describe("Multiple protocols", function () {
     );
     await EVIV.deployed();
     chainlinkBaseToken = await upgrades.deployProxy(
-      VolmexBaseToken,
+      BaseToken,
       [
-        "VolmexBaseToken", // nameArg
+        "BaseToken", // nameArg
         "VBT", // symbolArg,
         owner.address, // priceFeedArg
         true, // isBase
@@ -113,9 +113,9 @@ describe("Multiple protocols", function () {
       },
     );
     chainlinkBaseToken2 = await upgrades.deployProxy(
-      VolmexBaseToken,
+      BaseToken,
       [
-        "VolmexBaseToken", // nameArg
+        "BaseToken", // nameArg
         "VBT", // symbolArg,
         owner.address, // priceFeedArg
         true, // isBase
@@ -147,10 +147,10 @@ describe("Multiple protocols", function () {
     );
     await EVIV.setPriceFeed(perpetualOracle.address);
     await BVIV.setPriceFeed(perpetualOracle.address);
-    volmexQuoteToken = await upgrades.deployProxy(
-      VolmexQuoteToken,
+    QuoteToken = await upgrades.deployProxy(
+      QuoteToken,
       [
-        "VolmexQuoteToken", // nameArg
+        "QuoteToken", // nameArg
         "VUSDT", // symbolArg,
         false, // isBase
       ],
@@ -158,8 +158,8 @@ describe("Multiple protocols", function () {
         initializer: "initialize",
       },
     );
-    await volmexQuoteToken.deployed();
-    await (await perpView.setQuoteToken(volmexQuoteToken.address)).wait();
+    await QuoteToken.deployed();
+    await (await perpView.setQuoteToken(QuoteToken.address)).wait();
 
     positioningConfig = await upgrades.deployProxy(PositioningConfig, [perpetualOracle.address]);
 
@@ -204,7 +204,7 @@ describe("Multiple protocols", function () {
     (await accountBalance1.grantSettleRealizedPnlRole(vault.address)).wait();
     (await accountBalance1.grantSettleRealizedPnlRole(vaultController.address)).wait();
     marketRegistry = await upgrades.deployProxy(MarketRegistry, [
-      volmexQuoteToken.address,
+      QuoteToken.address,
       [EVIV.address, BVIV.address, chainlinkBaseToken.address, chainlinkBaseToken2.address],
       [0, 1, chainlinkTokenIndex1, chainlinkTokenIndex2],
     ]);
@@ -241,7 +241,7 @@ describe("Multiple protocols", function () {
     await (await EVIV.setMintBurnRole(positioning.address)).wait();
     await (await BVIV.setMintBurnRole(positioning.address)).wait();
 
-    await (await volmexQuoteToken.setMintBurnRole(positioning.address)).wait();
+    await (await QuoteToken.setMintBurnRole(positioning.address)).wait();
     await marketRegistry.grantAddBaseTokenRole(owner.address);
     await marketRegistry.connect(owner).addBaseToken(EVIV.address);
     await marketRegistry.connect(owner).addBaseToken(BVIV.address);
@@ -272,25 +272,25 @@ describe("Multiple protocols", function () {
 
     await perpetualOracle.setMarkObservationAdder(matchingEngine.address);
 
-    volmexPerpPeriphery = await upgrades.deployProxy(VolmexPerpPeriphery, [
+    PerpPeriphery = await upgrades.deployProxy(PerpPeriphery, [
       perpView.address,
       perpetualOracle.address,
       [vault.address, vault.address],
       owner.address,
       owner.address, // replace with replayer address
     ]);
-    await volmexPerpPeriphery.toggleTraderWhitelistEnabled();
-    await volmexPerpPeriphery.deployed();
-    await vaultController.setPeriphery(volmexPerpPeriphery.address);
+    await PerpPeriphery.toggleTraderWhitelistEnabled();
+    await PerpPeriphery.deployed();
+    await vaultController.setPeriphery(PerpPeriphery.address);
     await (await USDC.transfer(account1.address, "10000000000")).wait();
     await (await USDC.transfer(account2.address, "10000000000")).wait();
-    await USDC.connect(account1).approve(volmexPerpPeriphery.address, "10000000000");
-    await USDC.connect(account2).approve(volmexPerpPeriphery.address, "10000000000");
+    await USDC.connect(account1).approve(PerpPeriphery.address, "10000000000");
+    await USDC.connect(account2).approve(PerpPeriphery.address, "10000000000");
 
-    await volmexPerpPeriphery.connect(account1).depositToVault(0, USDC.address, "10000000000");
-    await volmexPerpPeriphery.connect(account2).depositToVault(0, USDC.address, "10000000000");
-    await volmexPerpPeriphery.whitelistTrader(account1.address, true);
-    await volmexPerpPeriphery.whitelistTrader(account2.address, true);
+    await PerpPeriphery.connect(account1).depositToVault(0, USDC.address, "10000000000");
+    await PerpPeriphery.connect(account2).depositToVault(0, USDC.address, "10000000000");
+    await PerpPeriphery.whitelistTrader(account1.address, true);
+    await PerpPeriphery.whitelistTrader(account2.address, true);
   });
   describe("trader should be able to trade with both protocols", async () => {
     it("should trade only in EVIV", async () => {
@@ -301,7 +301,7 @@ describe("Multiple protocols", function () {
         deadline,
         account1.address,
         Asset(EVIV.address, "10000000000000000000"),
-        Asset(volmexQuoteToken.address, "700000000000000000000"),
+        Asset(QuoteToken.address, "700000000000000000000"),
         89,
         0,
         true,
@@ -310,7 +310,7 @@ describe("Multiple protocols", function () {
         ORDER,
         deadline,
         account2.address,
-        Asset(volmexQuoteToken.address, "700000000000000000000"),
+        Asset(QuoteToken.address, "700000000000000000000"),
         Asset(EVIV.address, "10000000000000000000"),
         987,
         0,
@@ -319,7 +319,7 @@ describe("Multiple protocols", function () {
       const signatureLeft = await getSignature(orderLeft, account1.address);
       const signatureRight = await getSignature(orderRight, account2.address);
       await expect(
-        volmexPerpPeriphery.openPosition(
+        PerpPeriphery.openPosition(
           0,
           orderLeft,
           signatureLeft,
@@ -344,7 +344,7 @@ describe("Multiple protocols", function () {
         deadline,
         account1.address,
         Asset(BVIV.address, "10000000000000000000"),
-        Asset(volmexQuoteToken.address, "600000000000000000000"),
+        Asset(QuoteToken.address, "600000000000000000000"),
         89,
         0,
         true,
@@ -353,7 +353,7 @@ describe("Multiple protocols", function () {
         ORDER,
         deadline,
         account2.address,
-        Asset(volmexQuoteToken.address, "600000000000000000000"),
+        Asset(QuoteToken.address, "600000000000000000000"),
         Asset(BVIV.address, "10000000000000000000"),
         987,
         0,
@@ -362,7 +362,7 @@ describe("Multiple protocols", function () {
       const signatureLeft = await getSignature(orderLeft, account1.address);
       const signatureRight = await getSignature(orderRight, account2.address);
       await expect(
-        volmexPerpPeriphery.openPosition(
+        PerpPeriphery.openPosition(
           0,
           orderLeft,
           signatureLeft,

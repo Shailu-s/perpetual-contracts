@@ -82,7 +82,7 @@ interface IPositioning {
         IPerpetualOracle perpetualOracleArg,
         IFundingRate fundingRateArg,
         address marketRegistryArg,
-        address[4] calldata volmexBaseTokenArgs,
+        address[4] calldata BaseTokenArgs,
         uint256[2] calldata chainlinkBaseTokenIndexArgs,
         address[2] calldata liquidators,
         uint256[2] calldata _minPositionSizeByBaseToken
@@ -93,7 +93,7 @@ interface IPositioning {
     function settleAllFunding(address trader) external;
     
     /// @notice Function to set token's underlying index
-    function setUnderlyingPriceIndex(address volmexBaseToken, uint256 underlyingIndex) external;
+    function setUnderlyingPriceIndex(address BaseToken, uint256 underlyingIndex) external;
 
     /// @notice Function to set fee receiver
     function setDefaultFeeReceiver(address newDefaultFeeReceiver) external;

@@ -21,8 +21,8 @@ async function main() {
   const VirtualToken = await ethers.getContractFactory("VirtualToken");
   const virtualToken = await VirtualToken.attach(contracts.USDC);
 
-  const VolmexPerpPeriphery = await ethers.getContractFactory("VolmexPerpPeriphery");
-  const perpPeriphery = await VolmexPerpPeriphery.attach(contracts.PERIPHERY);
+  const PerpPeriphery = await ethers.getContractFactory("PerpPeriphery");
+  const perpPeriphery = await PerpPeriphery.attach(contracts.PERIPHERY);
 
   const Positioning = await ethers.getContractFactory("PositioningTest");
   const positioning = await Positioning.attach(contracts.POSITIONING);

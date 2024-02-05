@@ -85,7 +85,7 @@ async function getSignature() {
   console.log("signatureLeft", signatureLeft);
   console.log("signatureRight", signatureRight);
   console.log("Signature created !!!");
-  const Periphery = await ethers.getContractFactory("VolmexPerpPeriphery");
+  const Periphery = await ethers.getContractFactory("PerpPeriphery");
   const periphery = Periphery.attach(peripheryAddress);
   console.log("Opening position ...");
   const tx = await periphery

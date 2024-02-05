@@ -2,12 +2,12 @@
 
 pragma solidity =0.8.18;
 import "../interfaces/IVaultController.sol";
-import "../interfaces/IVolmexPerpPeriphery.sol";
+import "../interfaces/IPerpPeriphery.sol";
 import "hardhat/console.sol";
 
 contract VaultMock {
     function deposit(
-        IVolmexPerpPeriphery periphery,
+        IPerpPeriphery periphery,
         uint256 amount,
         address from
     ) external {

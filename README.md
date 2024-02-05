@@ -1,4 +1,4 @@
-# Volmex Perpetuals
+# Perpetuals
 
 ## Generate UML diagram for solidity files
    ### using sol2uml

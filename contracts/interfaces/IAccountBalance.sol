@@ -13,12 +13,12 @@ interface IAccountBalance {
     event PnlRealized(address indexed trader, address indexed baseToken, int256 amount);
     /// @dev Emit when underlying price index is set
     event UnderlyingPriceIndexSet(uint256 indexed underlyingIndex, address baseToken);
-    event SigmaVolmexIvsUpdated(uint256[] index, uint256[] sigmaVivs);
+    event SigmaIvsUpdated(uint256[] index, uint256[] sigmaVivs);
     event TraderNextLiquidationUpdated(address indexed trader, address indexed baseToken, uint256 nextLiquidateTime);
     event TraderBadDebt(address indexed trader, int256 accountValue);
     event ZeroMaxTimeBound(address indexed trader, uint256 maxTimeBound);
 
-    function initialize(address positioningConfigArg, address[4] calldata volmexBaseTokenArgs, uint256[2] calldata chainlinkBaseTokenIndexArgs, IMatchingEngine matchingEngineArg, address adminArg) external;
+    function initialize(address positioningConfigArg, address[4] calldata BaseTokenArgs, uint256[2] calldata chainlinkBaseTokenIndexArgs, IMatchingEngine matchingEngineArg, address adminArg) external;
 
     /// @notice Modify trader owedRealizedPnl
     /// @dev Only used by `Positioning` contract

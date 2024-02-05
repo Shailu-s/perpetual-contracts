@@ -27,13 +27,13 @@ describe("Liquidation test", function () {
   let ChainLinkAggregator;
   let chainlinkAggregator1;
   let chainlinkAggregator2;
-  let VolmexBaseToken;
-  let volmexBaseToken;
-  let volmexBaseToken1;
-  let volmexBaseToken2;
-  let volmexBaseToken3;
-  let VolmexPerpPeriphery;
-  let volmexPerpPeriphery;
+  let BaseToken;
+  let BaseToken;
+  let BaseToken1;
+  let BaseToken2;
+  let BaseToken3;
+  let PerpPeriphery;
+  let PerpPeriphery;
   let Perppetual;
   let transferManagerTest;
   let accountBalance1;
@@ -70,7 +70,7 @@ describe("Liquidation test", function () {
   const capRatio = "400000000";
 
   this.beforeAll(async () => {
-    VolmexPerpPeriphery = await ethers.getContractFactory("VolmexPerpPeriphery");
+    PerpPeriphery = await ethers.getContractFactory("PerpPeriphery");
     PerpetualOracle = await ethers.getContractFactory("PerpetualOracle");
     // indexPriceOracle = await smock.fake("IndexPriceOracle")
     // indexPriceFake = await smock.fake("IndexPriceOracle")
@@ -87,9 +87,9 @@ describe("Liquidation test", function () {
     VaultController = await ethers.getContractFactory("VaultController");
     MarketRegistry = await ethers.getContractFactory("MarketRegistry");
     AccountBalance = await ethers.getContractFactory("AccountBalance");
-    BaseToken = await ethers.getContractFactory("VolmexBaseToken");
+    BaseToken = await ethers.getContractFactory("BaseToken");
     TestERC20 = await ethers.getContractFactory("TestERC20");
-    VolmexBaseToken = await ethers.getContractFactory("VolmexBaseToken");
+    BaseToken = await ethers.getContractFactory("BaseToken");
     ChainLinkAggregator = await ethers.getContractFactory("MockV3Aggregator");
     FundingRate = await ethers.getContractFactory("FundingRate");
     [owner, account1, account2, account3, account4, relayer] = await ethers.getSigners();
@@ -99,10 +99,10 @@ describe("Liquidation test", function () {
     const [owner, account4] = await ethers.getSigners();
     liquidator = encodeAddress(owner.address);
 
-    volmexBaseToken = await upgrades.deployProxy(
-      VolmexBaseToken,
+    BaseToken = await upgrades.deployProxy(
+      BaseToken,
       [
-        "VolmexBaseToken", // nameArg
+        "BaseToken", // nameArg
         "VBT", // symbolArg,
         account1.address, // priceFeedArg
         true, // isBase
@@ -111,12 +111,12 @@ describe("Liquidation test", function () {
         initializer: "initialize",
       },
     );
-    await volmexBaseToken.deployed();
+    await BaseToken.deployed();
 
-    volmexBaseToken1 = await upgrades.deployProxy(
-      VolmexBaseToken,
+    BaseToken1 = await upgrades.deployProxy(
+      BaseToken,
       [
-        "VolmexBaseToken", // nameArg
+        "BaseToken", // nameArg
         "VBT", // symbolArg,
         account1.address, // priceFeedArg
         true, // isBase
@@ -125,11 +125,11 @@ describe("Liquidation test", function () {
         initializer: "initialize",
       },
     );
-    await volmexBaseToken1.deployed();
-    volmexBaseToken2 = await upgrades.deployProxy(
-      VolmexBaseToken,
+    await BaseToken1.deployed();
+    BaseToken2 = await upgrades.deployProxy(
+      BaseToken,
       [
-        "VolmexBaseToken", // nameArg
+        "BaseToken", // nameArg
         "VBT", // symbolArg,
         owner.address, // priceFeedArg
         true, // isBase
@@ -138,11 +138,11 @@ describe("Liquidation test", function () {
         initializer: "initialize",
       },
     );
-    await volmexBaseToken2.deployed();
-    volmexBaseToken3 = await upgrades.deployProxy(
-      VolmexBaseToken,
+    await BaseToken2.deployed();
+    BaseToken3 = await upgrades.deployProxy(
+      BaseToken,
       [
-        "VolmexBaseToken", // nameArg
+        "BaseToken", // nameArg
         "VBT", // symbolArg,
         owner.address, // priceFeedArg
         true, // isBase
@@ -151,7 +151,7 @@ describe("Liquidation test", function () {
         initializer: "initialize",
       },
     );
-    await volmexBaseToken3.deployed();
+    await BaseToken3.deployed();
     chainlinkAggregator1 = await ChainLinkAggregator.deploy(8, 3075000000000);
     await chainlinkAggregator1.deployed();
     chainlinkAggregator2 = await ChainLinkAggregator.deploy(8, 180000000000);
@@ -160,10 +160,10 @@ describe("Liquidation test", function () {
       PerpetualOracle,
       [
         [
-          volmexBaseToken.address,
-          volmexBaseToken1.address,
-          volmexBaseToken2.address,
-          volmexBaseToken3.address,
+          BaseToken.address,
+          BaseToken1.address,
+          BaseToken2.address,
+          BaseToken3.address,
         ],
         [70000000, 60000000, 1800000000, 30650000000],
         [75000000, 50000000],
@@ -175,9 +175,9 @@ describe("Liquidation test", function () {
       { initializer: "__PerpetualOracle_init" },
     );
 
-    await volmexBaseToken.setPriceFeed(perpetualOracle.address);
-    await volmexBaseToken1.setPriceFeed(perpetualOracle.address);
-    await volmexBaseToken2.setPriceFeed(perpetualOracle.address);
+    await BaseToken.setPriceFeed(perpetualOracle.address);
+    await BaseToken1.setPriceFeed(perpetualOracle.address);
+    await BaseToken2.setPriceFeed(perpetualOracle.address);
     await perpetualOracle.setIndexObservationAdder(owner.address);
     for (let i = 0; i < 10; i++) {
       await perpetualOracle.addIndexObservations([0], [100000000], [proofHash]);
@@ -211,10 +211,10 @@ describe("Liquidation test", function () {
     accountBalance1 = await upgrades.deployProxy(AccountBalance, [
       positioningConfig.address,
       [
-        volmexBaseToken.address,
-        volmexBaseToken1.address,
-        volmexBaseToken2.address,
-        volmexBaseToken3.address,
+        BaseToken.address,
+        BaseToken1.address,
+        BaseToken2.address,
+        BaseToken3.address,
       ],
       [chainlinkTokenIndex1, chainlinkTokenIndex2],
       matchingEngine.address,
@@ -234,10 +234,10 @@ describe("Liquidation test", function () {
     marketRegistry = await upgrades.deployProxy(MarketRegistry, [
       virtualToken.address,
       [
-        volmexBaseToken.address,
-        volmexBaseToken1.address,
-        volmexBaseToken2.address,
-        volmexBaseToken3.address,
+        BaseToken.address,
+        BaseToken1.address,
+        BaseToken2.address,
+        BaseToken3.address,
       ],
       [0, 1, chainlinkTokenIndex1, chainlinkTokenIndex2],
     ]);
@@ -259,10 +259,10 @@ describe("Liquidation test", function () {
         fundingRate.address,
         marketRegistry.address,
         [
-          volmexBaseToken.address,
-          volmexBaseToken1.address,
-          volmexBaseToken2.address,
-          volmexBaseToken3.address,
+          BaseToken.address,
+          BaseToken1.address,
+          BaseToken2.address,
+          BaseToken3.address,
         ],
         [chainlinkTokenIndex1, chainlinkTokenIndex2],
         [owner.address, account1.address],
@@ -273,26 +273,26 @@ describe("Liquidation test", function () {
       },
     );
     await positioning.deployed();
-    await (await volmexBaseToken.setMintBurnRole(positioning.address)).wait();
-    await (await volmexBaseToken1.setMintBurnRole(positioning.address)).wait();
-    await (await volmexBaseToken2.setMintBurnRole(positioning.address)).wait();
+    await (await BaseToken.setMintBurnRole(positioning.address)).wait();
+    await (await BaseToken1.setMintBurnRole(positioning.address)).wait();
+    await (await BaseToken2.setMintBurnRole(positioning.address)).wait();
     await perpetualOracle.grantCacheChainlinkPriceRole(owner.address);
     await perpetualOracle.grantCacheChainlinkPriceRole(positioning.address);
     await (await virtualToken.setMintBurnRole(positioning.address)).wait();
     await positioning.whitelistLiquidator(account1.address, true);
     await positioning.whitelistLiquidator(account2.address, true);
-    perpViewFake = await smock.fake("VolmexPerpView");
-    volmexPerpPeriphery = await upgrades.deployProxy(VolmexPerpPeriphery, [
+    perpViewFake = await smock.fake("PerpView");
+    PerpPeriphery = await upgrades.deployProxy(PerpPeriphery, [
       perpViewFake.address,
       perpetualOracle.address,
       [vault.address, vault.address],
       owner.address,
       relayer.address,
     ]);
-    await vaultController.setPeriphery(volmexPerpPeriphery.address);
+    await vaultController.setPeriphery(PerpPeriphery.address);
     await perpetualOracle.setIndexObservationAdder(owner.address);
-    // await marketRegistry.connect(owner).addBaseToken(volmexBaseToken.address);
-    // await marketRegistry.connect(owner).addBaseToken(volmexBaseToken1.address);
+    // await marketRegistry.connect(owner).addBaseToken(BaseToken.address);
+    // await marketRegistry.connect(owner).addBaseToken(BaseToken1.address);
     await marketRegistry.grantAddBaseTokenRole(owner.address);
     await marketRegistry.connect(owner).setMakerFeeRatio(0.0004e6);
     await marketRegistry.connect(owner).setTakerFeeRatio(0.0009e6);
@@ -319,22 +319,22 @@ describe("Liquidation test", function () {
 
     await USDC.connect(account1).approve(vault.address, ten.toString());
     await USDC.connect(account2).approve(vault.address, ten.toString());
-    await USDC.connect(account1).approve(volmexPerpPeriphery.address, ten.toString());
-    await USDC.connect(account2).approve(volmexPerpPeriphery.address, ten.toString());
+    await USDC.connect(account1).approve(PerpPeriphery.address, ten.toString());
+    await USDC.connect(account2).approve(PerpPeriphery.address, ten.toString());
 
-    // volmexPerpPeriphery.address, USDC.address, alice.address, amount
+    // PerpPeriphery.address, USDC.address, alice.address, amount
     await vaultController
       .connect(account1)
-      .deposit(volmexPerpPeriphery.address, USDC.address, account1.address, ten.toString());
+      .deposit(PerpPeriphery.address, USDC.address, account1.address, ten.toString());
     await vaultController
       .connect(account2)
-      .deposit(volmexPerpPeriphery.address, USDC.address, account2.address, ten.toString());
+      .deposit(PerpPeriphery.address, USDC.address, account2.address, ten.toString());
 
     orderLeft = Order(
       ORDER,
       87654321987654,
       account1.address,
-      Asset(volmexBaseToken.address, BigNumber.from("1").mul(two).toString()),
+      Asset(BaseToken.address, BigNumber.from("1").mul(two).toString()),
       Asset(virtualToken.address, BigNumber.from("100").mul(two).toString()),
       1,
       0,
@@ -346,7 +346,7 @@ describe("Liquidation test", function () {
       87654321987654,
       account2.address,
       Asset(virtualToken.address, BigNumber.from("100").mul(two).toString()),
-      Asset(volmexBaseToken.address, BigNumber.from("1").mul(two).toString()),
+      Asset(BaseToken.address, BigNumber.from("1").mul(two).toString()),
       1,
       0,
       false,
@@ -355,7 +355,7 @@ describe("Liquidation test", function () {
       ORDER,
       87654321987654,
       account1.address,
-      Asset(volmexBaseToken1.address, BigNumber.from("1").mul(one).toString()),
+      Asset(BaseToken1.address, BigNumber.from("1").mul(one).toString()),
       Asset(virtualToken.address, BigNumber.from("100").mul(one).toString()),
       10,
       0,
@@ -367,7 +367,7 @@ describe("Liquidation test", function () {
       87654321987654,
       account2.address,
       Asset(virtualToken.address, BigNumber.from("100").mul(one).toString()),
-      Asset(volmexBaseToken1.address, BigNumber.from("1").mul(one).toString()),
+      Asset(BaseToken1.address, BigNumber.from("1").mul(one).toString()),
       100,
       0,
       false,
@@ -416,7 +416,7 @@ describe("Liquidation test", function () {
 
         const liquidatbalePositionSize = await accountBalance1.getLiquidatablePositionSize(
           account1.address,
-          volmexBaseToken.address,
+          BaseToken.address,
           accountValue.toString(),
         );
         expect(liquidatbalePositionSize.toString()).to.be.equal("0");
@@ -433,24 +433,24 @@ describe("Liquidation test", function () {
         await expect(
           positioning
             .connect(account2)
-            .liquidate(account1.address, volmexBaseToken.address, "-100000000000000000"),
+            .liquidate(account1.address, BaseToken.address, "-100000000000000000"),
         ).to.emit(positioning, "PositionLiquidated");
 
         const positionSizeAfter = await accountBalance1.getPositionSize(
           account1.address,
-          volmexBaseToken.address,
+          BaseToken.address,
         );
 
         const positionSizeLiquidator = await accountBalance1.getPositionSize(
           account2.address,
-          volmexBaseToken.address,
+          BaseToken.address,
         );
 
         await expect(positionSizeAfter.toString()).to.be.equal("-1990000000000000000");
         await expect(positionSizeLiquidator.toString()).to.be.equal("1990000000000000000");
       });
       it("should liquidate trader with chain link base tokens", async () => {
-        await positioning.setMinPositionSize("1000000000000000000", volmexBaseToken2.address);
+        await positioning.setMinPositionSize("1000000000000000000", BaseToken2.address);
         let currentTimestamp = await time.latest();
         await chainlinkAggregator1.updateRoundData(
           "162863638383902",
@@ -466,14 +466,14 @@ describe("Liquidation test", function () {
 
         await USDC.connect(account1).approve(vault.address, oneThousand.toString());
         await USDC.connect(account2).approve(vault.address, twoThousand.toString());
-        await USDC.connect(account1).approve(volmexPerpPeriphery.address, oneThousand.toString());
-        await USDC.connect(account2).approve(volmexPerpPeriphery.address, twoThousand.toString());
+        await USDC.connect(account1).approve(PerpPeriphery.address, oneThousand.toString());
+        await USDC.connect(account2).approve(PerpPeriphery.address, twoThousand.toString());
 
-        // volmexPerpPeriphery.address, USDC.address, alice.address, amount
+        // PerpPeriphery.address, USDC.address, alice.address, amount
         await vaultController
           .connect(account1)
           .deposit(
-            volmexPerpPeriphery.address,
+            PerpPeriphery.address,
             USDC.address,
             account1.address,
             oneThousand.toString(),
@@ -481,7 +481,7 @@ describe("Liquidation test", function () {
         await vaultController
           .connect(account2)
           .deposit(
-            volmexPerpPeriphery.address,
+            PerpPeriphery.address,
             USDC.address,
             account2.address,
             twoThousand.toString(),
@@ -491,7 +491,7 @@ describe("Liquidation test", function () {
           ORDER,
           87654321987654,
           account1.address,
-          Asset(volmexBaseToken2.address, BigNumber.from("1").mul(two).toString()),
+          Asset(BaseToken2.address, BigNumber.from("1").mul(two).toString()),
           Asset(virtualToken.address, BigNumber.from("1800").mul(two).toString()),
           1,
           0,
@@ -503,7 +503,7 @@ describe("Liquidation test", function () {
           87654321987654,
           account2.address,
           Asset(virtualToken.address, BigNumber.from("1800").mul(two).toString()),
-          Asset(volmexBaseToken2.address, BigNumber.from("1").mul(two).toString()),
+          Asset(BaseToken2.address, BigNumber.from("1").mul(two).toString()),
           1,
           0,
           false,
@@ -523,11 +523,11 @@ describe("Liquidation test", function () {
 
         const positionSize = await accountBalance1.getPositionSize(
           account1.address,
-          volmexBaseToken2.address,
+          BaseToken2.address,
         );
         const positionSize1 = await accountBalance1.getPositionSize(
           account2.address,
-          volmexBaseToken2.address,
+          BaseToken2.address,
         );
 
         expect(positionSize.toString()).to.be.equal("-2000000000000000000");
@@ -537,7 +537,7 @@ describe("Liquidation test", function () {
 
         let liquidatbalePositionSize = await accountBalance1.getLiquidatablePositionSize(
           account1.address,
-          volmexBaseToken2.address,
+          BaseToken2.address,
           accountValue.toString(),
         );
         expect(liquidatbalePositionSize.toString()).to.be.equal("0");
@@ -565,12 +565,12 @@ describe("Liquidation test", function () {
         );
         await USDC.mint(account2.address, twoThousand.toString());
         await USDC.connect(account2).approve(vault.address, twoThousand.toString());
-        await USDC.connect(account2).approve(volmexPerpPeriphery.address, twoThousand.toString());
+        await USDC.connect(account2).approve(PerpPeriphery.address, twoThousand.toString());
 
         await vaultController
           .connect(account2)
           .deposit(
-            volmexPerpPeriphery.address,
+            PerpPeriphery.address,
             USDC.address,
             account2.address,
             twoThousand.toString(),
@@ -580,23 +580,23 @@ describe("Liquidation test", function () {
         accountValue = await vaultController.getAccountValue(account1.address);
         liquidatbalePositionSize = await accountBalance1.getLiquidatablePositionSize(
           account1.address,
-          volmexBaseToken2.address,
+          BaseToken2.address,
           accountValue.toString(),
         );
         const liquidated = await expect(
           positioning
             .connect(account2)
-            .liquidate(account1.address, volmexBaseToken2.address, "-10000000000000000"),
+            .liquidate(account1.address, BaseToken2.address, "-10000000000000000"),
         ).to.emit(positioning, "PositionLiquidated");
 
         const positionSizeAfter = await accountBalance1.getPositionSize(
           account1.address,
-          volmexBaseToken2.address,
+          BaseToken2.address,
         );
 
         const positionSizeLiquidator = await accountBalance1.getPositionSize(
           account2.address,
-          volmexBaseToken2.address,
+          BaseToken2.address,
         );
 
         await expect(positionSizeAfter.toString()).to.be.equal("-1000000000000000000");
@@ -638,7 +638,7 @@ describe("Liquidation test", function () {
 
         const liquidatbalePositionSize = await accountBalance1.getLiquidatablePositionSize(
           account1.address,
-          volmexBaseToken.address,
+          BaseToken.address,
           accountValue.toString(),
         );
         expect(liquidatbalePositionSize.toString()).to.be.equal("-2000000000000000000");
@@ -650,7 +650,7 @@ describe("Liquidation test", function () {
 
         const liquidatbalePositionSize1 = await accountBalance1.getLiquidatablePositionSize(
           account1.address,
-          volmexBaseToken1.address,
+          BaseToken1.address,
           accountValue.toString(),
         );
         expect(liquidatbalePositionSize1.toString()).to.be.equal("0");
@@ -698,17 +698,17 @@ describe("Liquidation test", function () {
         await expect(
           positioning
             .connect(account2)
-            .liquidate(account1.address, volmexBaseToken.address, "-1000000000000000000"),
+            .liquidate(account1.address, BaseToken.address, "-1000000000000000000"),
         ).to.emit(positioning, "PositionLiquidated");
 
         const positionSizeAfter = await accountBalance1.getPositionSize(
           account1.address,
-          volmexBaseToken.address,
+          BaseToken.address,
         );
 
         const positionSizeLiquidator = await accountBalance1.getPositionSize(
           account2.address,
-          volmexBaseToken.address,
+          BaseToken.address,
         );
 
         await expect(positionSizeAfter.toString()).to.be.equal("-1990000000000000000");
@@ -758,7 +758,7 @@ describe("Liquidation test", function () {
         await expect(
           positioning
             .connect(account2)
-            .liquidate(account1.address, volmexBaseToken.address, "-1000000000000000000"),
+            .liquidate(account1.address, BaseToken.address, "-1000000000000000000"),
         ).to.be.revertedWith("Pausable: paused");
       });
       it("should not liquidate when liquidator is not white listed", async () => {
@@ -803,7 +803,7 @@ describe("Liquidation test", function () {
         await expect(
           positioning
             .connect(account3)
-            .liquidate(account1.address, volmexBaseToken.address, "-1000000000000000000"),
+            .liquidate(account1.address, BaseToken.address, "-1000000000000000000"),
         ).to.be.revertedWith("P_LW");
       });
       it("should liquidate trader when position size / total position size < 1 liquidatable position size > 0  ", async () => {
@@ -865,17 +865,17 @@ describe("Liquidation test", function () {
         await expect(
           positioning
             .connect(account2)
-            .liquidate(account1.address, volmexBaseToken.address, "-1000000000000000000"),
+            .liquidate(account1.address, BaseToken.address, "-1000000000000000000"),
         ).to.emit(positioning, "PositionLiquidated");
 
         const positionSizeAfter = await accountBalance1.getPositionSize(
           account1.address,
-          volmexBaseToken.address,
+          BaseToken.address,
         );
 
         const positionSizeLiquidator = await accountBalance1.getPositionSize(
           account2.address,
-          volmexBaseToken.address,
+          BaseToken.address,
         );
 
         await expect(positionSizeAfter.toString()).to.be.equal("-1990000000000000000");
@@ -892,8 +892,8 @@ describe("Liquidation test", function () {
 
         await USDC.connect(account1).approve(vault.address, ten.toString());
         await USDC.connect(account2).approve(vault.address, ten.toString());
-        await USDC.connect(account1).approve(volmexPerpPeriphery.address, ten.toString());
-        await USDC.connect(account2).approve(volmexPerpPeriphery.address, ten.toString());
+        await USDC.connect(account1).approve(PerpPeriphery.address, ten.toString());
+        await USDC.connect(account2).approve(PerpPeriphery.address, ten.toString());
 
         await expect(
           positioning.openPosition(
@@ -949,17 +949,17 @@ describe("Liquidation test", function () {
         await expect(
           positioning
             .connect(account2)
-            .liquidate(account1.address, volmexBaseToken.address, "-1000000000000000000"),
+            .liquidate(account1.address, BaseToken.address, "-1000000000000000000"),
         ).to.emit(positioning, "PositionLiquidated");
 
         const positionSizeAfter = await accountBalance1.getPositionSize(
           account1.address,
-          volmexBaseToken.address,
+          BaseToken.address,
         );
 
         const positionSizeLiquidator = await accountBalance1.getPositionSize(
           account2.address,
-          volmexBaseToken.address,
+          BaseToken.address,
         );
 
         await expect(positionSizeAfter.toString()).to.be.equal("-1990000000000000000");
@@ -974,8 +974,8 @@ describe("Liquidation test", function () {
 
         await USDC.connect(account1).approve(vault.address, ten.toString());
         await USDC.connect(account2).approve(vault.address, ten.toString());
-        await USDC.connect(account1).approve(volmexPerpPeriphery.address, ten.toString());
-        await USDC.connect(account2).approve(volmexPerpPeriphery.address, ten.toString());
+        await USDC.connect(account1).approve(PerpPeriphery.address, ten.toString());
+        await USDC.connect(account2).approve(PerpPeriphery.address, ten.toString());
 
         await expect(
           positioning.openPosition(
@@ -1009,17 +1009,17 @@ describe("Liquidation test", function () {
         await expect(
           positioning
             .connect(account2)
-            .liquidateFullPosition(account1.address, volmexBaseToken.address),
+            .liquidateFullPosition(account1.address, BaseToken.address),
         ).to.emit(positioning, "PositionLiquidated");
 
         const positionSizeAfter = await accountBalance1.getPositionSize(
           account1.address,
-          volmexBaseToken.address,
+          BaseToken.address,
         );
 
         const positionSizeLiquidator = await accountBalance1.getPositionSize(
           account2.address,
-          volmexBaseToken.address,
+          BaseToken.address,
         );
 
         await expect(positionSizeAfter.toString()).to.be.equal("-1990000000000000000");
@@ -1033,8 +1033,8 @@ describe("Liquidation test", function () {
 
         await USDC.connect(account1).approve(vault.address, ten.toString());
         await USDC.connect(account2).approve(vault.address, ten.toString());
-        await USDC.connect(account1).approve(volmexPerpPeriphery.address, ten.toString());
-        await USDC.connect(account2).approve(volmexPerpPeriphery.address, ten.toString());
+        await USDC.connect(account1).approve(PerpPeriphery.address, ten.toString());
+        await USDC.connect(account2).approve(PerpPeriphery.address, ten.toString());
 
         await expect(
           positioning.openPosition(
@@ -1075,7 +1075,7 @@ describe("Liquidation test", function () {
         await expect(
           positioning
             .connect(account2)
-            .liquidateFullPosition(account1.address, volmexBaseToken.address),
+            .liquidateFullPosition(account1.address, BaseToken.address),
         ).to.be.revertedWith("Pausable: paused");
       });
       it("should not liquidate when trader account value is enough", async () => {
@@ -1086,11 +1086,11 @@ describe("Liquidation test", function () {
 
         await USDC.connect(account1).approve(vault.address, ten.toString());
         await USDC.connect(account2).approve(vault.address, ten.toString());
-        await USDC.connect(account1).approve(volmexPerpPeriphery.address, ten.toString());
-        await USDC.connect(account2).approve(volmexPerpPeriphery.address, ten.toString());
+        await USDC.connect(account1).approve(PerpPeriphery.address, ten.toString());
+        await USDC.connect(account2).approve(PerpPeriphery.address, ten.toString());
         await vaultController
           .connect(account1)
-          .deposit(volmexPerpPeriphery.address, USDC.address, account1.address, ten.toString());
+          .deposit(PerpPeriphery.address, USDC.address, account1.address, ten.toString());
 
         await expect(
           positioning.openPosition(
@@ -1117,7 +1117,7 @@ describe("Liquidation test", function () {
         await expect(
           positioning
             .connect(account2)
-            .liquidate(account2.address, volmexBaseToken.address, "1000000000000000000"),
+            .liquidate(account2.address, BaseToken.address, "1000000000000000000"),
         ).to.be.revertedWith("P_EAV");
       });
       it("should not liquidate in wrong direction", async () => {
@@ -1163,12 +1163,12 @@ describe("Liquidation test", function () {
         await expect(
           positioning
             .connect(account2)
-            .liquidate(account1.address, volmexBaseToken.address, "1000000000000000000"),
+            .liquidate(account1.address, BaseToken.address, "1000000000000000000"),
         ).to.be.revertedWith("P_WLD");
       });
 
       it("should not liquidate again if index price increases", async () => {
-        await positioning.setMinPositionSize("10000000000000000000", volmexBaseToken.address);
+        await positioning.setMinPositionSize("10000000000000000000", BaseToken.address);
         await positioning.whitelistLiquidator(account1.address, true);
         await USDC.mint(account1.address, fivehundred.toString());
         await USDC.mint(account3.address, fivehundred.toString());
@@ -1176,13 +1176,13 @@ describe("Liquidation test", function () {
         await USDC.connect(account1).approve(vault.address, fivehundred.toString());
         await USDC.connect(account4).approve(vault.address, fivehundred.toString());
         await USDC.connect(account3).approve(vault.address, fivehundred.toString());
-        await USDC.connect(account1).approve(volmexPerpPeriphery.address, fivehundred.toString());
-        await USDC.connect(account3).approve(volmexPerpPeriphery.address, fivehundred.toString());
-        await USDC.connect(account4).approve(volmexPerpPeriphery.address, fivehundred.toString());
+        await USDC.connect(account1).approve(PerpPeriphery.address, fivehundred.toString());
+        await USDC.connect(account3).approve(PerpPeriphery.address, fivehundred.toString());
+        await USDC.connect(account4).approve(PerpPeriphery.address, fivehundred.toString());
         await vaultController
           .connect(account3)
           .deposit(
-            volmexPerpPeriphery.address,
+            PerpPeriphery.address,
             USDC.address,
             account3.address,
             fivehundred.toString(),
@@ -1190,7 +1190,7 @@ describe("Liquidation test", function () {
         await vaultController
           .connect(account4)
           .deposit(
-            volmexPerpPeriphery.address,
+            PerpPeriphery.address,
             USDC.address,
             account4.address,
             fivehundred.toString(),
@@ -1198,7 +1198,7 @@ describe("Liquidation test", function () {
         await vaultController
           .connect(account1)
           .deposit(
-            volmexPerpPeriphery.address,
+            PerpPeriphery.address,
             USDC.address,
             account1.address,
             fivehundred.toString(),
@@ -1207,7 +1207,7 @@ describe("Liquidation test", function () {
           ORDER,
           87654321987654,
           account3.address,
-          Asset(volmexBaseToken.address, BigNumber.from("100").mul(one).toString()),
+          Asset(BaseToken.address, BigNumber.from("100").mul(one).toString()),
           Asset(virtualToken.address, BigNumber.from("10000").mul(one).toString()),
           1,
           0,
@@ -1219,7 +1219,7 @@ describe("Liquidation test", function () {
           87654321987654,
           account4.address,
           Asset(virtualToken.address, BigNumber.from("10000").mul(one).toString()),
-          Asset(volmexBaseToken.address, BigNumber.from("100").mul(one).toString()),
+          Asset(BaseToken.address, BigNumber.from("100").mul(one).toString()),
           1,
           0,
           false,
@@ -1253,7 +1253,7 @@ describe("Liquidation test", function () {
 
         const liquidatbalePositionSize = await accountBalance1.getLiquidatablePositionSize(
           account4.address,
-          volmexBaseToken.address,
+          BaseToken.address,
           accountValue.toString(),
         );
         expect(liquidatbalePositionSize.toString()).to.be.equal("0");
@@ -1276,14 +1276,14 @@ describe("Liquidation test", function () {
         // liquidating the position
         const liquidatbalePositionSize1 = await accountBalance1.getLiquidatablePositionSize(
           account4.address,
-          volmexBaseToken.address,
+          BaseToken.address,
           accountValueafter.toString(),
         );
         console.log(liquidatbalePositionSize1.toString(), " position size liquidatable after");
         await expect(
           positioning
             .connect(account1)
-            .liquidate(account4.address, volmexBaseToken.address, "20000000000000000000"),
+            .liquidate(account4.address, BaseToken.address, "20000000000000000000"),
         ).to.emit(positioning, "PositionLiquidated");
         for (let index = 0; index < 10; index++) {
           await (await perpetualOracle.addIndexObservations([0], [200000000], [proofHash])).wait();
@@ -1293,11 +1293,11 @@ describe("Liquidation test", function () {
         await expect(
           positioning
             .connect(account1)
-            .liquidate(account4.address, volmexBaseToken.address, "20000000000000000000"),
+            .liquidate(account4.address, BaseToken.address, "20000000000000000000"),
         ).to.be.revertedWith("P_EAV");
       });
       it("should fail to liquidate again if liquidation triggered bofore time to liquidate", async () => {
-        await positioning.setMinPositionSize("10000000000000000000", volmexBaseToken.address);
+        await positioning.setMinPositionSize("10000000000000000000", BaseToken.address);
         await positioning.whitelistLiquidator(account1.address, true);
         await USDC.mint(account1.address, fivehundred.toString());
         await USDC.mint(account3.address, fivehundred.toString());
@@ -1305,13 +1305,13 @@ describe("Liquidation test", function () {
         await USDC.connect(account1).approve(vault.address, fivehundred.toString());
         await USDC.connect(account4).approve(vault.address, fivehundred.toString());
         await USDC.connect(account3).approve(vault.address, fivehundred.toString());
-        await USDC.connect(account1).approve(volmexPerpPeriphery.address, fivehundred.toString());
-        await USDC.connect(account3).approve(volmexPerpPeriphery.address, fivehundred.toString());
-        await USDC.connect(account4).approve(volmexPerpPeriphery.address, fivehundred.toString());
+        await USDC.connect(account1).approve(PerpPeriphery.address, fivehundred.toString());
+        await USDC.connect(account3).approve(PerpPeriphery.address, fivehundred.toString());
+        await USDC.connect(account4).approve(PerpPeriphery.address, fivehundred.toString());
         await vaultController
           .connect(account3)
           .deposit(
-            volmexPerpPeriphery.address,
+            PerpPeriphery.address,
             USDC.address,
             account3.address,
             fivehundred.toString(),
@@ -1319,7 +1319,7 @@ describe("Liquidation test", function () {
         await vaultController
           .connect(account4)
           .deposit(
-            volmexPerpPeriphery.address,
+            PerpPeriphery.address,
             USDC.address,
             account4.address,
             fivehundred.toString(),
@@ -1327,7 +1327,7 @@ describe("Liquidation test", function () {
         await vaultController
           .connect(account1)
           .deposit(
-            volmexPerpPeriphery.address,
+            PerpPeriphery.address,
             USDC.address,
             account1.address,
             fivehundred.toString(),
@@ -1336,7 +1336,7 @@ describe("Liquidation test", function () {
           ORDER,
           87654321987654,
           account3.address,
-          Asset(volmexBaseToken.address, BigNumber.from("100").mul(one).toString()),
+          Asset(BaseToken.address, BigNumber.from("100").mul(one).toString()),
           Asset(virtualToken.address, BigNumber.from("10000").mul(one).toString()),
           1,
           0,
@@ -1348,7 +1348,7 @@ describe("Liquidation test", function () {
           87654321987654,
           account4.address,
           Asset(virtualToken.address, BigNumber.from("10000").mul(one).toString()),
-          Asset(volmexBaseToken.address, BigNumber.from("100").mul(one).toString()),
+          Asset(BaseToken.address, BigNumber.from("100").mul(one).toString()),
           1,
           0,
           false,
@@ -1382,7 +1382,7 @@ describe("Liquidation test", function () {
 
         const liquidatbalePositionSize = await accountBalance1.getLiquidatablePositionSize(
           account4.address,
-          volmexBaseToken.address,
+          BaseToken.address,
           accountValue.toString(),
         );
         expect(liquidatbalePositionSize.toString()).to.be.equal("0");
@@ -1404,7 +1404,7 @@ describe("Liquidation test", function () {
         // liquidating the position
         const liquidatbalePositionSize1 = await accountBalance1.getLiquidatablePositionSize(
           account4.address,
-          volmexBaseToken.address,
+          BaseToken.address,
           accountValueafter.toString(),
         );
         console.log(liquidatbalePositionSize1.toString(), " position size liquidatable after");
@@ -1412,7 +1412,7 @@ describe("Liquidation test", function () {
           .connect(account1)
           .liquidate(
             account4.address,
-            volmexBaseToken.address,
+            BaseToken.address,
             liquidatbalePositionSize1.toString(),
           );
         // liquidating again before before next liquidation
@@ -1425,11 +1425,11 @@ describe("Liquidation test", function () {
         await expect(
           positioning
             .connect(account1)
-            .liquidate(account4.address, volmexBaseToken.address, "20000000000000000000"),
+            .liquidate(account4.address, BaseToken.address, "20000000000000000000"),
         ).to.be.revertedWith("P_EAV");
       });
       it("should liquidate ideal amount to liquidate", async () => {
-        await positioning.setMinPositionSize("10000000000000000000", volmexBaseToken.address);
+        await positioning.setMinPositionSize("10000000000000000000", BaseToken.address);
         await positioning.whitelistLiquidator(account1.address, true);
         await USDC.mint(account2.address, fivehundred.toString());
 
@@ -1440,14 +1440,14 @@ describe("Liquidation test", function () {
         await USDC.connect(account1).approve(vault.address, fivehundred.toString());
         await USDC.connect(account4).approve(vault.address, fivehundred.toString());
         await USDC.connect(account3).approve(vault.address, fivehundred.toString());
-        await USDC.connect(account2).approve(volmexPerpPeriphery.address, fivehundred.toString());
-        await USDC.connect(account1).approve(volmexPerpPeriphery.address, fivehundred.toString());
-        await USDC.connect(account3).approve(volmexPerpPeriphery.address, fivehundred.toString());
-        await USDC.connect(account4).approve(volmexPerpPeriphery.address, fivehundred.toString());
+        await USDC.connect(account2).approve(PerpPeriphery.address, fivehundred.toString());
+        await USDC.connect(account1).approve(PerpPeriphery.address, fivehundred.toString());
+        await USDC.connect(account3).approve(PerpPeriphery.address, fivehundred.toString());
+        await USDC.connect(account4).approve(PerpPeriphery.address, fivehundred.toString());
         await vaultController
           .connect(account3)
           .deposit(
-            volmexPerpPeriphery.address,
+            PerpPeriphery.address,
             USDC.address,
             account3.address,
             fivehundred.toString(),
@@ -1455,7 +1455,7 @@ describe("Liquidation test", function () {
         await vaultController
           .connect(account4)
           .deposit(
-            volmexPerpPeriphery.address,
+            PerpPeriphery.address,
             USDC.address,
             account4.address,
             fivehundred.toString(),
@@ -1463,7 +1463,7 @@ describe("Liquidation test", function () {
         await vaultController
           .connect(account2)
           .deposit(
-            volmexPerpPeriphery.address,
+            PerpPeriphery.address,
             USDC.address,
             account2.address,
             fivehundred.toString(),
@@ -1471,7 +1471,7 @@ describe("Liquidation test", function () {
         await vaultController
           .connect(account1)
           .deposit(
-            volmexPerpPeriphery.address,
+            PerpPeriphery.address,
             USDC.address,
             account1.address,
             fivehundred.toString(),
@@ -1480,7 +1480,7 @@ describe("Liquidation test", function () {
           ORDER,
           87654321987654,
           account3.address,
-          Asset(volmexBaseToken.address, BigNumber.from("100").mul(one).toString()),
+          Asset(BaseToken.address, BigNumber.from("100").mul(one).toString()),
           Asset(virtualToken.address, BigNumber.from("10000").mul(one).toString()),
           1,
           0,
@@ -1492,7 +1492,7 @@ describe("Liquidation test", function () {
           87654321987654,
           account4.address,
           Asset(virtualToken.address, BigNumber.from("10000").mul(one).toString()),
-          Asset(volmexBaseToken.address, BigNumber.from("100").mul(one).toString()),
+          Asset(BaseToken.address, BigNumber.from("100").mul(one).toString()),
           1,
           0,
           false,
@@ -1526,7 +1526,7 @@ describe("Liquidation test", function () {
 
         const liquidatbalePositionSize = await accountBalance1.getLiquidatablePositionSize(
           account4.address,
-          volmexBaseToken.address,
+          BaseToken.address,
           accountValue.toString(),
         );
         expect(liquidatbalePositionSize.toString()).to.be.equal("0");
@@ -1543,7 +1543,7 @@ describe("Liquidation test", function () {
           ORDER,
           87654321987654,
           account1.address,
-          Asset(volmexBaseToken.address, BigNumber.from("500").mul(one).toString()),
+          Asset(BaseToken.address, BigNumber.from("500").mul(one).toString()),
           Asset(virtualToken.address, BigNumber.from("10000").mul(one).toString()),
           1,
           0,
@@ -1555,7 +1555,7 @@ describe("Liquidation test", function () {
           87654321987654,
           account2.address,
           Asset(virtualToken.address, BigNumber.from("10000").mul(one).toString()),
-          Asset(volmexBaseToken.address, BigNumber.from("500").mul(one).toString()),
+          Asset(BaseToken.address, BigNumber.from("500").mul(one).toString()),
           1,
           0,
           false,
@@ -1582,7 +1582,7 @@ describe("Liquidation test", function () {
         // liquidating the position
         const liquidatbalePositionSize1 = await accountBalance1.getLiquidatablePositionSize(
           account4.address,
-          volmexBaseToken.address,
+          BaseToken.address,
           accountValueafter.toString(),
         );
         console.log(liquidatbalePositionSize1.toString(), " position size liquidatable after");
@@ -1590,7 +1590,7 @@ describe("Liquidation test", function () {
           .connect(account1)
           .liquidate(
             account4.address,
-            volmexBaseToken.address,
+            BaseToken.address,
             liquidatbalePositionSize1.toString(),
           );
         const { events } = await liquidation.wait();
@@ -1623,13 +1623,13 @@ describe("Liquidation test", function () {
         await USDC.connect(account1).approve(vault.address, oneThousand.toString());
         await USDC.connect(account4).approve(vault.address, oneThousand.toString());
         await USDC.connect(account3).approve(vault.address, oneThousand.toString());
-        await USDC.connect(account1).approve(volmexPerpPeriphery.address, oneThousand.toString());
-        await USDC.connect(account3).approve(volmexPerpPeriphery.address, oneThousand.toString());
-        await USDC.connect(account4).approve(volmexPerpPeriphery.address, oneThousand.toString());
+        await USDC.connect(account1).approve(PerpPeriphery.address, oneThousand.toString());
+        await USDC.connect(account3).approve(PerpPeriphery.address, oneThousand.toString());
+        await USDC.connect(account4).approve(PerpPeriphery.address, oneThousand.toString());
         await vaultController
           .connect(account3)
           .deposit(
-            volmexPerpPeriphery.address,
+            PerpPeriphery.address,
             USDC.address,
             account3.address,
             oneThousand.toString(),
@@ -1637,7 +1637,7 @@ describe("Liquidation test", function () {
         await vaultController
           .connect(account4)
           .deposit(
-            volmexPerpPeriphery.address,
+            PerpPeriphery.address,
             USDC.address,
             account4.address,
             oneThousand.toString(),
@@ -1645,7 +1645,7 @@ describe("Liquidation test", function () {
         await vaultController
           .connect(account1)
           .deposit(
-            volmexPerpPeriphery.address,
+            PerpPeriphery.address,
             USDC.address,
             account1.address,
             oneThousand.toString(),
@@ -1654,7 +1654,7 @@ describe("Liquidation test", function () {
           ORDER,
           87654321987654,
           account3.address,
-          Asset(volmexBaseToken.address, BigNumber.from("33").mul(one).toString()),
+          Asset(BaseToken.address, BigNumber.from("33").mul(one).toString()),
           Asset(virtualToken.address, BigNumber.from("1980").mul(one).toString()),
           1,
           0,
@@ -1666,7 +1666,7 @@ describe("Liquidation test", function () {
           87654321987654,
           account4.address,
           Asset(virtualToken.address, BigNumber.from("1980").mul(one).toString()),
-          Asset(volmexBaseToken.address, BigNumber.from("33").mul(one).toString()),
+          Asset(BaseToken.address, BigNumber.from("33").mul(one).toString()),
           1,
           0,
           false,
@@ -1700,7 +1700,7 @@ describe("Liquidation test", function () {
 
         const liquidatbalePositionSize = await accountBalance1.getLiquidatablePositionSize(
           account4.address,
-          volmexBaseToken.address,
+          BaseToken.address,
           accountValue.toString(),
         );
         expect(liquidatbalePositionSize.toString()).to.be.equal("0");
@@ -1713,14 +1713,14 @@ describe("Liquidation test", function () {
         const accountValueafterPirceDrop = await vaultController.getAccountValue(account4.address);
         const liquidatbalePositionSize1 = await accountBalance1.getLiquidatablePositionSize(
           account4.address,
-          volmexBaseToken.address,
+          BaseToken.address,
           accountValueafterPirceDrop.toString(),
         );
         const liquidation1 = await positioning
           .connect(account1)
           .liquidate(
             account4.address,
-            volmexBaseToken.address,
+            BaseToken.address,
             liquidatbalePositionSize1.toString(),
           );
         const { events } = await liquidation1.wait();
@@ -1744,7 +1744,7 @@ describe("Liquidation test", function () {
         const accountValueafter1 = await vaultController.getAccountValue(account4.address);
         const liquidatbalePositionSize2 = await accountBalance1.getLiquidatablePositionSize(
           account4.address,
-          volmexBaseToken.address,
+          BaseToken.address,
           accountValueafter1.toString(),
         );
 
@@ -1752,7 +1752,7 @@ describe("Liquidation test", function () {
           .connect(account1)
           .liquidate(
             account4.address,
-            volmexBaseToken.address,
+            BaseToken.address,
             liquidatbalePositionSize2.toString(),
           );
         const tx = await liquidation2.wait();
@@ -1771,11 +1771,11 @@ describe("Liquidation test", function () {
         expect(liquidatedPositionSize1.toString()).to.be.equal("10000000000000000");
         const positionSizeafterLiquidation = await accountBalance1.getPositionSize(
           account4.address,
-          volmexBaseToken.address,
+          BaseToken.address,
         );
         const openNotionalAfterLiquidation = await accountBalance1.getOpenNotional(
           account4.address,
-          volmexBaseToken.address,
+          BaseToken.address,
         );
         expect(positionSizeafterLiquidation.toString()).to.be.equal("32980000000000000000");
         expect(openNotionalAfterLiquidation.toString()).to.be.equal("-1980580920000000001242");
@@ -1787,7 +1787,7 @@ describe("Liquidation test", function () {
         expect(
           await accountBalance1.isAccountLiquidatable(
             account4.address,
-            volmexBaseToken.address,
+            BaseToken.address,
             "10000000000000000",
             accountValueafter2.toString(),
             freeCollateral.toString(),
@@ -1795,7 +1795,7 @@ describe("Liquidation test", function () {
         ).to.be.equal(true);
       });
       it("should liquidate 0.8 of N_max_order", async () => {
-        await positioning.setMinPositionSize("10000000000000000000", volmexBaseToken.address);
+        await positioning.setMinPositionSize("10000000000000000000", BaseToken.address);
         await positioning.whitelistLiquidator(account1.address, true);
         await USDC.mint(account1.address, twoThousand.toString());
         await USDC.mint(account3.address, twoThousand.toString());
@@ -1805,14 +1805,14 @@ describe("Liquidation test", function () {
         await USDC.connect(account1).approve(vault.address, twoThousand.toString());
         await USDC.connect(account4).approve(vault.address, oneThousand.toString());
         await USDC.connect(account3).approve(vault.address, fivehundred.toString());
-        await USDC.connect(account1).approve(volmexPerpPeriphery.address, twoThousand.toString());
-        await USDC.connect(account3).approve(volmexPerpPeriphery.address, twoThousand.toString());
-        await USDC.connect(account4).approve(volmexPerpPeriphery.address, oneThousand.toString());
-        await USDC.connect(account2).approve(volmexPerpPeriphery.address, oneThousand.toString());
+        await USDC.connect(account1).approve(PerpPeriphery.address, twoThousand.toString());
+        await USDC.connect(account3).approve(PerpPeriphery.address, twoThousand.toString());
+        await USDC.connect(account4).approve(PerpPeriphery.address, oneThousand.toString());
+        await USDC.connect(account2).approve(PerpPeriphery.address, oneThousand.toString());
         await vaultController
           .connect(account3)
           .deposit(
-            volmexPerpPeriphery.address,
+            PerpPeriphery.address,
             USDC.address,
             account3.address,
             twoThousand.toString(),
@@ -1820,7 +1820,7 @@ describe("Liquidation test", function () {
         await vaultController
           .connect(account4)
           .deposit(
-            volmexPerpPeriphery.address,
+            PerpPeriphery.address,
             USDC.address,
             account4.address,
             oneThousand.toString(),
@@ -1828,7 +1828,7 @@ describe("Liquidation test", function () {
         await vaultController
           .connect(account2)
           .deposit(
-            volmexPerpPeriphery.address,
+            PerpPeriphery.address,
             USDC.address,
             account2.address,
             oneThousand.toString(),
@@ -1836,7 +1836,7 @@ describe("Liquidation test", function () {
         await vaultController
           .connect(account1)
           .deposit(
-            volmexPerpPeriphery.address,
+            PerpPeriphery.address,
             USDC.address,
             account1.address,
             twoThousand.toString(),
@@ -1845,7 +1845,7 @@ describe("Liquidation test", function () {
           ORDER,
           87654321987654,
           account3.address,
-          Asset(volmexBaseToken.address, BigNumber.from("70").mul(one).toString()),
+          Asset(BaseToken.address, BigNumber.from("70").mul(one).toString()),
           Asset(virtualToken.address, BigNumber.from("4000").mul(one).toString()),
           1,
           0,
@@ -1857,7 +1857,7 @@ describe("Liquidation test", function () {
           87654321987654,
           account4.address,
           Asset(virtualToken.address, BigNumber.from("4000").mul(one).toString()),
-          Asset(volmexBaseToken.address, BigNumber.from("70").mul(one).toString()),
+          Asset(BaseToken.address, BigNumber.from("70").mul(one).toString()),
           1,
           0,
           false,
@@ -1891,7 +1891,7 @@ describe("Liquidation test", function () {
 
         const liquidatbalePositionSize = await accountBalance1.getLiquidatablePositionSize(
           account4.address,
-          volmexBaseToken.address,
+          BaseToken.address,
           accountValue.toString(),
         );
         expect(liquidatbalePositionSize.toString()).to.be.equal("0");
@@ -1914,7 +1914,7 @@ describe("Liquidation test", function () {
           ORDER,
           87654321987654,
           account2.address,
-          Asset(volmexBaseToken.address, BigNumber.from("20").mul(one).toString()),
+          Asset(BaseToken.address, BigNumber.from("20").mul(one).toString()),
           Asset(virtualToken.address, BigNumber.from("1000").mul(one).toString()),
           1,
           0,
@@ -1926,7 +1926,7 @@ describe("Liquidation test", function () {
           87654321987654,
           account1.address,
           Asset(virtualToken.address, BigNumber.from("1000").mul(one).toString()),
-          Asset(volmexBaseToken.address, BigNumber.from("20").mul(one).toString()),
+          Asset(BaseToken.address, BigNumber.from("20").mul(one).toString()),
           1,
           0,
           false,
@@ -1950,7 +1950,7 @@ describe("Liquidation test", function () {
           await (await perpetualOracle.addIndexObservations([1], [25000000], [proofHash])).wait();
         }
         const n_maxOrderSize = await matchingEngine.getMaxOrderSizeOverTime(
-          volmexBaseToken.address,
+          BaseToken.address,
         );
         // 238097140000000000000;
         // 41142852000000000000;
@@ -1960,7 +1960,7 @@ describe("Liquidation test", function () {
         console.log(accountValueafter.toString(), " account value after");
         const liquidatbalePositionSize1 = await accountBalance1.getLiquidatablePositionSize(
           account4.address,
-          volmexBaseToken.address,
+          BaseToken.address,
           accountValueafter.toString(),
         );
         console.log(liquidatbalePositionSize1.toString(), " liquidatbale size");
@@ -1968,7 +1968,7 @@ describe("Liquidation test", function () {
           .connect(account1)
           .liquidate(
             account4.address,
-            volmexBaseToken.address,
+            BaseToken.address,
             liquidatbalePositionSize1.toString(),
           );
         const { events } = await liquidation.wait();
@@ -1988,7 +1988,7 @@ describe("Liquidation test", function () {
         expect(liquidatedPositionSize).to.be.lessThan(parseInt(liquidatbalePositionSize1));
       });
       it("should fail to liquidate for stale pracle price", async () => {
-        await positioning.setMinPositionSize("10000000000000000000", volmexBaseToken.address);
+        await positioning.setMinPositionSize("10000000000000000000", BaseToken.address);
         await positioning.whitelistLiquidator(account1.address, true);
         await USDC.mint(account1.address, fivehundred.toString());
         await USDC.mint(account3.address, fivehundred.toString());
@@ -1996,13 +1996,13 @@ describe("Liquidation test", function () {
         await USDC.connect(account1).approve(vault.address, fivehundred.toString());
         await USDC.connect(account4).approve(vault.address, fivehundred.toString());
         await USDC.connect(account3).approve(vault.address, fivehundred.toString());
-        await USDC.connect(account1).approve(volmexPerpPeriphery.address, fivehundred.toString());
-        await USDC.connect(account3).approve(volmexPerpPeriphery.address, fivehundred.toString());
-        await USDC.connect(account4).approve(volmexPerpPeriphery.address, fivehundred.toString());
+        await USDC.connect(account1).approve(PerpPeriphery.address, fivehundred.toString());
+        await USDC.connect(account3).approve(PerpPeriphery.address, fivehundred.toString());
+        await USDC.connect(account4).approve(PerpPeriphery.address, fivehundred.toString());
         await vaultController
           .connect(account3)
           .deposit(
-            volmexPerpPeriphery.address,
+            PerpPeriphery.address,
             USDC.address,
             account3.address,
             fivehundred.toString(),
@@ -2010,7 +2010,7 @@ describe("Liquidation test", function () {
         await vaultController
           .connect(account4)
           .deposit(
-            volmexPerpPeriphery.address,
+            PerpPeriphery.address,
             USDC.address,
             account4.address,
             fivehundred.toString(),
@@ -2018,7 +2018,7 @@ describe("Liquidation test", function () {
         await vaultController
           .connect(account1)
           .deposit(
-            volmexPerpPeriphery.address,
+            PerpPeriphery.address,
             USDC.address,
             account1.address,
             fivehundred.toString(),
@@ -2027,7 +2027,7 @@ describe("Liquidation test", function () {
           ORDER,
           87654321987654,
           account3.address,
-          Asset(volmexBaseToken.address, BigNumber.from("100").mul(one).toString()),
+          Asset(BaseToken.address, BigNumber.from("100").mul(one).toString()),
           Asset(virtualToken.address, BigNumber.from("10000").mul(one).toString()),
           1,
           0,
@@ -2039,7 +2039,7 @@ describe("Liquidation test", function () {
           87654321987654,
           account4.address,
           Asset(virtualToken.address, BigNumber.from("10000").mul(one).toString()),
-          Asset(volmexBaseToken.address, BigNumber.from("100").mul(one).toString()),
+          Asset(BaseToken.address, BigNumber.from("100").mul(one).toString()),
           1,
           0,
           false,
@@ -2073,7 +2073,7 @@ describe("Liquidation test", function () {
 
         const liquidatbalePositionSize = await accountBalance1.getLiquidatablePositionSize(
           account4.address,
-          volmexBaseToken.address,
+          BaseToken.address,
           accountValue.toString(),
         );
         expect(liquidatbalePositionSize.toString()).to.be.equal("0");
@@ -2090,7 +2090,7 @@ describe("Liquidation test", function () {
         await expect(
           positioning
             .connect(account1)
-            .liquidate(account4.address, volmexBaseToken.address, "20000000000000000000"),
+            .liquidate(account4.address, BaseToken.address, "20000000000000000000"),
         ).to.be.revertedWith("P_SIP");
       });
       it("should get liquidatable position of a trader", async () => {
@@ -2127,14 +2127,14 @@ describe("Liquidation test", function () {
 
         const liquidatablePosition = await positioning.getLiquidatablePosition(
           account1.address,
-          volmexBaseToken.address,
+          BaseToken.address,
         );
         expect(liquidatablePosition.toString()).to.equal("200000000000000000");
       });
 
       it("should fail to get liquidatable position of a trader if position size is 0", async () => {
         await expect(
-          positioning.getLiquidatablePosition(account1.address, volmexBaseToken.address),
+          positioning.getLiquidatablePosition(account1.address, BaseToken.address),
         ).to.be.revertedWith("P_PSZ");
       });
     });

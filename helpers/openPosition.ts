@@ -59,7 +59,7 @@ async function getSignature() {
   const account1 = new ethers.Wallet(`${process.env.PRIVATE_KEY}`, provider);
   const account2 = new ethers.Wallet(`${process.env.PRIVATE_KEY_1}`, provider);
   const account3 = new ethers.Wallet(`${process.env.PRIVATE_KEY_2}`, provider);
-  const Periphery = await ethers.getContractFactory("VolmexPerpPeriphery");
+  const Periphery = await ethers.getContractFactory("PerpPeriphery");
 
   const Positioning = await ethers.getContractFactory("Positioning");
   const positioning = Positioning.attach(positioningAddress);

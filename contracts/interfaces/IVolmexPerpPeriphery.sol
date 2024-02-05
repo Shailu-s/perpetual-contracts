@@ -6,7 +6,7 @@ import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 
 import "../libs/LibOrder.sol";
 
-interface IVolmexPerpPeriphery {
+interface IPerpPeriphery {
     event RelayerUpdated(address indexed newRelayerAddress);
     event VaultWhitelisted(address indexed vault, bool isWhitelist);
     event TraderWhitelisted(address indexed account, bool isWhitelist);

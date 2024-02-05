@@ -28,13 +28,13 @@ describe("Realised pnl tests", function () {
   let ChainLinkAggregator;
   let chainlinkAggregator1;
   let chainlinkAggregator2;
-  let VolmexBaseToken;
-  let volmexBaseToken;
-  let volmexBaseToken1;
-  let volmexBaseToken2;
-  let volmexBaseToken3;
-  let VolmexPerpPeriphery;
-  let volmexPerpPeriphery;
+  let BaseToken;
+  let BaseToken;
+  let BaseToken1;
+  let BaseToken2;
+  let BaseToken3;
+  let PerpPeriphery;
+  let PerpPeriphery;
   let PerpetualOracle;
   let perpetualOracle;
   let transferManagerTest;
@@ -69,7 +69,7 @@ describe("Realised pnl tests", function () {
   const capRatio = "400000000";
 
   this.beforeAll(async () => {
-    VolmexPerpPeriphery = await ethers.getContractFactory("VolmexPerpPeriphery");
+    PerpPeriphery = await ethers.getContractFactory("PerpPeriphery");
     PerpetualOracle = await ethers.getContractFactory("PerpetualOracle");
 
     // fundingRate = await smock.fake("FundingRate")
@@ -84,9 +84,9 @@ describe("Realised pnl tests", function () {
     VaultController = await ethers.getContractFactory("VaultController");
     MarketRegistry = await ethers.getContractFactory("MarketRegistry");
     AccountBalance = await ethers.getContractFactory("AccountBalance");
-    BaseToken = await ethers.getContractFactory("VolmexBaseToken");
+    BaseToken = await ethers.getContractFactory("BaseToken");
     TestERC20 = await ethers.getContractFactory("TestERC20");
-    VolmexBaseToken = await ethers.getContractFactory("VolmexBaseToken");
+    BaseToken = await ethers.getContractFactory("BaseToken");
     ChainLinkAggregator = await ethers.getContractFactory("MockV3Aggregator");
     FundingRate = await ethers.getContractFactory("FundingRate");
     [owner, account1, account2, account3, account4, relayer] = await ethers.getSigners();
@@ -95,10 +95,10 @@ describe("Realised pnl tests", function () {
   beforeEach(async () => {
     liquidator = encodeAddress(owner.address);
 
-    volmexBaseToken = await upgrades.deployProxy(
-      VolmexBaseToken,
+    BaseToken = await upgrades.deployProxy(
+      BaseToken,
       [
-        "VolmexBaseToken", // nameArg
+        "BaseToken", // nameArg
         "VBT", // symbolArg,
         account1.address, // priceFeedArg
         true, // isBase
@@ -107,11 +107,11 @@ describe("Realised pnl tests", function () {
         initializer: "initialize",
       },
     );
-    await volmexBaseToken.deployed();
-    volmexBaseToken1 = await upgrades.deployProxy(
-      VolmexBaseToken,
+    await BaseToken.deployed();
+    BaseToken1 = await upgrades.deployProxy(
+      BaseToken,
       [
-        "VolmexBaseToken", // nameArg
+        "BaseToken", // nameArg
         "VBT", // symbolArg,
         account1.address, // priceFeedArg
         true, // isBase
@@ -120,11 +120,11 @@ describe("Realised pnl tests", function () {
         initializer: "initialize",
       },
     );
-    await volmexBaseToken.deployed();
-    volmexBaseToken2 = await upgrades.deployProxy(
-      VolmexBaseToken,
+    await BaseToken.deployed();
+    BaseToken2 = await upgrades.deployProxy(
+      BaseToken,
       [
-        "VolmexBaseToken", // nameArg
+        "BaseToken", // nameArg
         "VBT", // symbolArg,
         owner.address, // priceFeedArg
         true, // isBase
@@ -133,11 +133,11 @@ describe("Realised pnl tests", function () {
         initializer: "initialize",
       },
     );
-    await volmexBaseToken2.deployed();
-    volmexBaseToken3 = await upgrades.deployProxy(
-      VolmexBaseToken,
+    await BaseToken2.deployed();
+    BaseToken3 = await upgrades.deployProxy(
+      BaseToken,
       [
-        "VolmexBaseToken", // nameArg
+        "BaseToken", // nameArg
         "VBT", // symbolArg,
         owner.address, // priceFeedArg
         true, // isBase
@@ -146,7 +146,7 @@ describe("Realised pnl tests", function () {
         initializer: "initialize",
       },
     );
-    await volmexBaseToken3.deployed();
+    await BaseToken3.deployed();
     chainlinkAggregator1 = await ChainLinkAggregator.deploy(8, 3075000000000);
     await chainlinkAggregator1.deployed();
     chainlinkAggregator2 = await ChainLinkAggregator.deploy(8, 180000000000);
@@ -155,10 +155,10 @@ describe("Realised pnl tests", function () {
       PerpetualOracle,
       [
         [
-          volmexBaseToken.address,
-          volmexBaseToken1.address,
-          volmexBaseToken2.address,
-          volmexBaseToken3.address,
+          BaseToken.address,
+          BaseToken1.address,
+          BaseToken2.address,
+          BaseToken3.address,
         ],
         [200000000, 200000000, 1800000000, 30650000000],
         [200000000, 200000000],
@@ -170,10 +170,10 @@ describe("Realised pnl tests", function () {
       { initializer: "__PerpetualOracle_init" },
     );
 
-    await volmexBaseToken.setPriceFeed(perpetualOracle.address);
-    await volmexBaseToken1.setPriceFeed(perpetualOracle.address);
+    await BaseToken.setPriceFeed(perpetualOracle.address);
+    await BaseToken1.setPriceFeed(perpetualOracle.address);
     baseToken = await upgrades.deployProxy(
-      VolmexBaseToken,
+      BaseToken,
       [
         "BaseToken", // nameArg
         "BTN", // symbolArg,
@@ -206,10 +206,10 @@ describe("Realised pnl tests", function () {
     accountBalance = await upgrades.deployProxy(AccountBalance, [
       positioningConfig.address,
       [
-        volmexBaseToken.address,
-        volmexBaseToken1.address,
-        volmexBaseToken2.address,
-        volmexBaseToken3.address,
+        BaseToken.address,
+        BaseToken1.address,
+        BaseToken2.address,
+        BaseToken3.address,
       ],
       [chainlinkTokenIndex1, chainlinkTokenIndex2],
       matchingEngine.address,
@@ -240,10 +240,10 @@ describe("Realised pnl tests", function () {
     accountBalance1 = await upgrades.deployProxy(AccountBalance, [
       positioningConfig.address,
       [
-        volmexBaseToken.address,
-        volmexBaseToken1.address,
-        volmexBaseToken2.address,
-        volmexBaseToken3.address,
+        BaseToken.address,
+        BaseToken1.address,
+        BaseToken2.address,
+        BaseToken3.address,
       ],
       [chainlinkTokenIndex1, chainlinkTokenIndex2],
       matchingEngine.address,
@@ -269,10 +269,10 @@ describe("Realised pnl tests", function () {
     marketRegistry = await upgrades.deployProxy(MarketRegistry, [
       virtualToken.address,
       [
-        volmexBaseToken.address,
-        volmexBaseToken1.address,
-        volmexBaseToken2.address,
-        volmexBaseToken3.address,
+        BaseToken.address,
+        BaseToken1.address,
+        BaseToken2.address,
+        BaseToken3.address,
       ],
       [0, 1, chainlinkTokenIndex1, chainlinkTokenIndex2],
     ]);
@@ -296,10 +296,10 @@ describe("Realised pnl tests", function () {
         fundingRate.address,
         marketRegistry.address,
         [
-          volmexBaseToken.address,
-          volmexBaseToken1.address,
-          volmexBaseToken2.address,
-          volmexBaseToken3.address,
+          BaseToken.address,
+          BaseToken1.address,
+          BaseToken2.address,
+          BaseToken3.address,
         ],
         [chainlinkTokenIndex1, chainlinkTokenIndex2],
         [owner.address, account2.address],
@@ -309,7 +309,7 @@ describe("Realised pnl tests", function () {
         initializer: "initialize",
       },
     );
-    await (await volmexBaseToken.setMintBurnRole(positioning.address)).wait();
+    await (await BaseToken.setMintBurnRole(positioning.address)).wait();
     await (await virtualToken.setMintBurnRole(positioning.address)).wait();
 
     // await marketRegistry.connect(owner).addBaseToken(baseToken.address)
@@ -338,29 +338,29 @@ describe("Realised pnl tests", function () {
     await positioningConfig.setAccountBalance(accountBalance1.address);
     await positioningConfig.setTwapInterval(28800);
 
-    perpViewFake = await smock.fake("VolmexPerpView");
-    volmexPerpPeriphery = await upgrades.deployProxy(VolmexPerpPeriphery, [
+    perpViewFake = await smock.fake("PerpView");
+    PerpPeriphery = await upgrades.deployProxy(PerpPeriphery, [
       perpViewFake.address,
       perpetualOracle.address,
       [vault.address, vault2.address],
       owner.address,
       relayer.address,
     ]);
-    await vaultController.setPeriphery(volmexPerpPeriphery.address);
+    await vaultController.setPeriphery(PerpPeriphery.address);
     deadline;
     await USDC.mint(account1.address, convert("100"));
     await USDC.mint(account2.address, convert("100"));
     await USDC.connect(account1).approve(vault.address, convert("100"));
     await USDC.connect(account2).approve(vault.address, convert("100"));
-    await USDC.connect(account1).approve(volmexPerpPeriphery.address, convert("100"));
-    await USDC.connect(account2).approve(volmexPerpPeriphery.address, convert("100"));
+    await USDC.connect(account1).approve(PerpPeriphery.address, convert("100"));
+    await USDC.connect(account2).approve(PerpPeriphery.address, convert("100"));
     await perpetualOracle.setIndexObservationAdder(owner.address);
     await vaultController
       .connect(account1)
-      .deposit(volmexPerpPeriphery.address, USDC.address, account1.address, convert("100"));
+      .deposit(PerpPeriphery.address, USDC.address, account1.address, convert("100"));
     await vaultController
       .connect(account2)
-      .deposit(volmexPerpPeriphery.address, USDC.address, account2.address, convert("100"));
+      .deposit(PerpPeriphery.address, USDC.address, account2.address, convert("100"));
     for (let i = 0; i < 10; i++) {
       await perpetualOracle.addIndexObservations([0], [200000000], [proofHash]);
       await perpetualOracle.addIndexObservations([1], [200000000], [proofHash]);
@@ -383,7 +383,7 @@ describe("Realised pnl tests", function () {
         deadline,
         account1.address,
         Asset(virtualToken.address, convert("200")),
-        Asset(volmexBaseToken.address, convert("1")),
+        Asset(BaseToken.address, convert("1")),
         25,
         0,
         false,
@@ -392,7 +392,7 @@ describe("Realised pnl tests", function () {
         ORDER,
         deadline,
         account2.address,
-        Asset(volmexBaseToken.address, convert("1")),
+        Asset(BaseToken.address, convert("1")),
         Asset(virtualToken.address, convert("200")),
         28,
         0,
@@ -439,7 +439,7 @@ describe("Realised pnl tests", function () {
         deadline,
         account2.address,
         Asset(virtualToken.address, convert("250")),
-        Asset(volmexBaseToken.address, convert("1")),
+        Asset(BaseToken.address, convert("1")),
         98,
         0,
         false,
@@ -448,7 +448,7 @@ describe("Realised pnl tests", function () {
         ORDER,
         deadline,
         account1.address,
-        Asset(volmexBaseToken.address, convert("1")),
+        Asset(BaseToken.address, convert("1")),
         Asset(virtualToken.address, convert("250")),
         90,
         0,
@@ -514,7 +514,7 @@ describe("Realised pnl tests", function () {
         deadline,
         account1.address,
         Asset(virtualToken.address, convert("200")),
-        Asset(volmexBaseToken.address, convert("1")),
+        Asset(BaseToken.address, convert("1")),
         25,
         0,
         false,
@@ -523,7 +523,7 @@ describe("Realised pnl tests", function () {
         ORDER,
         deadline,
         account2.address,
-        Asset(volmexBaseToken.address, convert("1")),
+        Asset(BaseToken.address, convert("1")),
         Asset(virtualToken.address, convert("200")),
         28,
         0,
@@ -570,7 +570,7 @@ describe("Realised pnl tests", function () {
         deadline,
         account2.address,
         Asset(virtualToken.address, convert("150")),
-        Asset(volmexBaseToken.address, convert("1")),
+        Asset(BaseToken.address, convert("1")),
         98,
         0,
         false,
@@ -579,7 +579,7 @@ describe("Realised pnl tests", function () {
         ORDER,
         deadline,
         account1.address,
-        Asset(volmexBaseToken.address, convert("1")),
+        Asset(BaseToken.address, convert("1")),
         Asset(virtualToken.address, convert("150")),
         90,
         0,

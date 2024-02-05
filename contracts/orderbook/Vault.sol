@@ -15,7 +15,7 @@ import { LibSafeCastUint } from "../libs/LibSafeCastUint.sol";
 import { IERC20Metadata } from "../interfaces/IERC20Metadata.sol";
 import { IPositioningConfig } from "../interfaces/IPositioningConfig.sol";
 import { IVault } from "../interfaces/IVault.sol";
-import { IVolmexPerpPeriphery } from "../interfaces/IVolmexPerpPeriphery.sol";
+import { IPerpPeriphery } from "../interfaces/IPerpPeriphery.sol";
 
 import { OwnerPausable } from "../helpers/OwnerPausable.sol";
 import { VaultStorageV1 } from "../storage/VaultStorage.sol";
@@ -79,7 +79,7 @@ contract Vault is IVault, ReentrancyGuardUpgradeable, OwnerPausable, VaultStorag
 
     /// @inheritdoc IVault
     function deposit(
-        IVolmexPerpPeriphery periphery,
+        IPerpPeriphery periphery,
         uint256 amount,
         address from
     ) external override whenNotPaused nonReentrant {
@@ -167,7 +167,7 @@ contract Vault is IVault, ReentrancyGuardUpgradeable, OwnerPausable, VaultStorag
     }
 
     function _deposit(
-        IVolmexPerpPeriphery periphery,
+        IPerpPeriphery periphery,
         uint256 amount,
         address from
     ) internal {

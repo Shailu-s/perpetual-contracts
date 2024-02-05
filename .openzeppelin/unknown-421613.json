@@ -1302,80 +1302,80 @@
             "offset": 0,
             "slot": "151",
             "type": "t_mapping(t_uint256,t_contract(IPositioning)6132)",
-            "contract": "VolmexPerpView",
-            "src": "contracts/view/VolmexPerpView.sol:16"
+            "contract": "PerpView",
+            "src": "contracts/view/PerpView.sol:16"
           },
           {
             "label": "vaultControllers",
             "offset": 0,
             "slot": "152",
             "type": "t_mapping(t_uint256,t_contract(IVaultController)6436)",
-            "contract": "VolmexPerpView",
-            "src": "contracts/view/VolmexPerpView.sol:18"
+            "contract": "PerpView",
+            "src": "contracts/view/PerpView.sol:18"
           },
           {
             "label": "baseTokens",
             "offset": 0,
             "slot": "153",
-            "type": "t_mapping(t_uint256,t_contract(IVolmexBaseToken)6505)",
-            "contract": "VolmexPerpView",
-            "src": "contracts/view/VolmexPerpView.sol:20"
+            "type": "t_mapping(t_uint256,t_contract(IBaseToken)6505)",
+            "contract": "PerpView",
+            "src": "contracts/view/PerpView.sol:20"
           },
           {
             "label": "quoteTokens",
             "offset": 0,
             "slot": "154",
-            "type": "t_mapping(t_uint256,t_contract(IVolmexQuoteToken)6842)",
-            "contract": "VolmexPerpView",
-            "src": "contracts/view/VolmexPerpView.sol:22"
+            "type": "t_mapping(t_uint256,t_contract(IQuoteToken)6842)",
+            "contract": "PerpView",
+            "src": "contracts/view/PerpView.sol:22"
           },
           {
             "label": "accounts",
             "offset": 0,
             "slot": "155",
             "type": "t_mapping(t_uint256,t_contract(IAccountBalance)5341)",
-            "contract": "VolmexPerpView",
-            "src": "contracts/view/VolmexPerpView.sol:24"
+            "contract": "PerpView",
+            "src": "contracts/view/PerpView.sol:24"
           },
           {
             "label": "marketRegistries",
             "offset": 0,
             "slot": "156",
             "type": "t_mapping(t_uint256,t_contract(IMarketRegistry)5811)",
-            "contract": "VolmexPerpView",
-            "src": "contracts/view/VolmexPerpView.sol:26"
+            "contract": "PerpView",
+            "src": "contracts/view/PerpView.sol:26"
           },
           {
             "label": "perpIndexCount",
             "offset": 0,
             "slot": "157",
             "type": "t_uint256",
-            "contract": "VolmexPerpView",
-            "src": "contracts/view/VolmexPerpView.sol:28"
+            "contract": "PerpView",
+            "src": "contracts/view/PerpView.sol:28"
           },
           {
             "label": "vaultIndexCount",
             "offset": 0,
             "slot": "158",
             "type": "t_uint256",
-            "contract": "VolmexPerpView",
-            "src": "contracts/view/VolmexPerpView.sol:30"
+            "contract": "PerpView",
+            "src": "contracts/view/PerpView.sol:30"
           },
           {
             "label": "baseTokenIndexCount",
             "offset": 0,
             "slot": "159",
             "type": "t_uint256",
-            "contract": "VolmexPerpView",
-            "src": "contracts/view/VolmexPerpView.sol:32"
+            "contract": "PerpView",
+            "src": "contracts/view/PerpView.sol:32"
           },
           {
             "label": "quoteTokenIndexCount",
             "offset": 0,
             "slot": "160",
             "type": "t_uint256",
-            "contract": "VolmexPerpView",
-            "src": "contracts/view/VolmexPerpView.sol:34"
+            "contract": "PerpView",
+            "src": "contracts/view/PerpView.sol:34"
           }
         ],
         "types": {
@@ -1415,12 +1415,12 @@
             "label": "contract IVaultController",
             "numberOfBytes": "20"
           },
-          "t_contract(IVolmexBaseToken)6505": {
-            "label": "contract IVolmexBaseToken",
+          "t_contract(IBaseToken)6505": {
+            "label": "contract IBaseToken",
             "numberOfBytes": "20"
           },
-          "t_contract(IVolmexQuoteToken)6842": {
-            "label": "contract IVolmexQuoteToken",
+          "t_contract(IQuoteToken)6842": {
+            "label": "contract IQuoteToken",
             "numberOfBytes": "20"
           },
           "t_mapping(t_address,t_bool)": {
@@ -1447,12 +1447,12 @@
             "label": "mapping(uint256 => contract IVaultController)",
             "numberOfBytes": "32"
           },
-          "t_mapping(t_uint256,t_contract(IVolmexBaseToken)6505)": {
-            "label": "mapping(uint256 => contract IVolmexBaseToken)",
+          "t_mapping(t_uint256,t_contract(IBaseToken)6505)": {
+            "label": "mapping(uint256 => contract IBaseToken)",
             "numberOfBytes": "32"
           },
-          "t_mapping(t_uint256,t_contract(IVolmexQuoteToken)6842)": {
-            "label": "mapping(uint256 => contract IVolmexQuoteToken)",
+          "t_mapping(t_uint256,t_contract(IQuoteToken)6842)": {
+            "label": "mapping(uint256 => contract IQuoteToken)",
             "numberOfBytes": "32"
           },
           "t_struct(RoleData)34_storage": {
@@ -4296,40 +4296,40 @@
             "offset": 0,
             "slot": "151",
             "type": "t_mapping(t_address,t_bool)",
-            "contract": "VolmexPerpPeriphery",
-            "src": "contracts/periphery/VolmexPerpPeriphery.sol:21"
+            "contract": "PerpPeriphery",
+            "src": "contracts/periphery/PerpPeriphery.sol:21"
           },
           {
             "label": "isTraderWhitelisted",
             "offset": 0,
             "slot": "152",
             "type": "t_mapping(t_address,t_bool)",
-            "contract": "VolmexPerpPeriphery",
-            "src": "contracts/periphery/VolmexPerpPeriphery.sol:24"
+            "contract": "PerpPeriphery",
+            "src": "contracts/periphery/PerpPeriphery.sol:24"
           },
           {
             "label": "isTraderWhitelistEnabled",
             "offset": 0,
             "slot": "153",
             "type": "t_bool",
-            "contract": "VolmexPerpPeriphery",
-            "src": "contracts/periphery/VolmexPerpPeriphery.sol:27"
+            "contract": "PerpPeriphery",
+            "src": "contracts/periphery/PerpPeriphery.sol:27"
           },
           {
             "label": "markPriceOracle",
             "offset": 1,
             "slot": "153",
             "type": "t_contract(IMarkPriceOracle)5742",
-            "contract": "VolmexPerpPeriphery",
-            "src": "contracts/periphery/VolmexPerpPeriphery.sol:30"
+            "contract": "PerpPeriphery",
+            "src": "contracts/periphery/PerpPeriphery.sol:30"
           },
           {
             "label": "perpView",
             "offset": 0,
             "slot": "154",
-            "type": "t_contract(IVolmexPerpView)6699",
-            "contract": "VolmexPerpPeriphery",
-            "src": "contracts/periphery/VolmexPerpPeriphery.sol:32"
+            "type": "t_contract(IPerpView)6699",
+            "contract": "PerpPeriphery",
+            "src": "contracts/periphery/PerpPeriphery.sol:32"
           }
         ],
         "types": {
@@ -4357,8 +4357,8 @@
             "label": "contract IMarkPriceOracle",
             "numberOfBytes": "20"
           },
-          "t_contract(IVolmexPerpView)6699": {
-            "label": "contract IVolmexPerpView",
+          "t_contract(IPerpView)6699": {
+            "label": "contract IPerpView",
             "numberOfBytes": "20"
           },
           "t_mapping(t_address,t_bool)": {
@@ -4504,7 +4504,7 @@
             "label": "perpViewRegistry",
             "offset": 0,
             "slot": "157",
-            "type": "t_contract(IVolmexPerpView)6699",
+            "type": "t_contract(IPerpView)6699",
             "contract": "PerpFactory",
             "src": "contracts/factories/PerpFactory.sol:45"
           },
@@ -4538,8 +4538,8 @@
             "label": "bytes32",
             "numberOfBytes": "32"
           },
-          "t_contract(IVolmexPerpView)6699": {
-            "label": "contract IVolmexPerpView",
+          "t_contract(IPerpView)6699": {
+            "label": "contract IPerpView",
             "numberOfBytes": "20"
           },
           "t_mapping(t_address,t_bool)": {
@@ -4797,7 +4797,7 @@
             "src": "contracts/relayer-staking/Staking.sol:17"
           },
           {
-            "label": "volmexSafe",
+            "label": "Safe",
             "offset": 0,
             "slot": "203",
             "type": "t_address",
@@ -5026,7 +5026,7 @@
             "src": "contracts/relayer-staking/Staking.sol:17"
           },
           {
-            "label": "volmexSafe",
+            "label": "Safe",
             "offset": 0,
             "slot": "203",
             "type": "t_address",
@@ -5255,7 +5255,7 @@
             "src": "contracts/relayer-staking/Staking.sol:17"
           },
           {
-            "label": "volmexSafe",
+            "label": "Safe",
             "offset": 0,
             "slot": "203",
             "type": "t_address",
@@ -5685,80 +5685,80 @@
             "offset": 0,
             "slot": "151",
             "type": "t_mapping(t_uint256,t_contract(IPositioning)5880)",
-            "contract": "VolmexPerpView",
-            "src": "contracts/view/VolmexPerpView.sol:16"
+            "contract": "PerpView",
+            "src": "contracts/view/PerpView.sol:16"
           },
           {
             "label": "vaultControllers",
             "offset": 0,
             "slot": "152",
             "type": "t_mapping(t_uint256,t_contract(IVaultController)6184)",
-            "contract": "VolmexPerpView",
-            "src": "contracts/view/VolmexPerpView.sol:18"
+            "contract": "PerpView",
+            "src": "contracts/view/PerpView.sol:18"
           },
           {
             "label": "baseTokens",
             "offset": 0,
             "slot": "153",
-            "type": "t_mapping(t_uint256,t_contract(IVolmexBaseToken)6253)",
-            "contract": "VolmexPerpView",
-            "src": "contracts/view/VolmexPerpView.sol:20"
+            "type": "t_mapping(t_uint256,t_contract(IBaseToken)6253)",
+            "contract": "PerpView",
+            "src": "contracts/view/PerpView.sol:20"
           },
           {
             "label": "quoteTokens",
             "offset": 0,
             "slot": "154",
-            "type": "t_mapping(t_uint256,t_contract(IVolmexQuoteToken)6590)",
-            "contract": "VolmexPerpView",
-            "src": "contracts/view/VolmexPerpView.sol:22"
+            "type": "t_mapping(t_uint256,t_contract(IQuoteToken)6590)",
+            "contract": "PerpView",
+            "src": "contracts/view/PerpView.sol:22"
           },
           {
             "label": "accounts",
             "offset": 0,
             "slot": "155",
             "type": "t_mapping(t_uint256,t_contract(IAccountBalance)5087)",
-            "contract": "VolmexPerpView",
-            "src": "contracts/view/VolmexPerpView.sol:24"
+            "contract": "PerpView",
+            "src": "contracts/view/PerpView.sol:24"
           },
           {
             "label": "marketRegistries",
             "offset": 0,
             "slot": "156",
             "type": "t_mapping(t_uint256,t_contract(IMarketRegistry)5559)",
-            "contract": "VolmexPerpView",
-            "src": "contracts/view/VolmexPerpView.sol:26"
+            "contract": "PerpView",
+            "src": "contracts/view/PerpView.sol:26"
           },
           {
             "label": "perpIndexCount",
             "offset": 0,
             "slot": "157",
             "type": "t_uint256",
-            "contract": "VolmexPerpView",
-            "src": "contracts/view/VolmexPerpView.sol:28"
+            "contract": "PerpView",
+            "src": "contracts/view/PerpView.sol:28"
           },
           {
             "label": "vaultIndexCount",
             "offset": 0,
             "slot": "158",
             "type": "t_uint256",
-            "contract": "VolmexPerpView",
-            "src": "contracts/view/VolmexPerpView.sol:30"
+            "contract": "PerpView",
+            "src": "contracts/view/PerpView.sol:30"
           },
           {
             "label": "baseTokenIndexCount",
             "offset": 0,
             "slot": "159",
             "type": "t_uint256",
-            "contract": "VolmexPerpView",
-            "src": "contracts/view/VolmexPerpView.sol:32"
+            "contract": "PerpView",
+            "src": "contracts/view/PerpView.sol:32"
           },
           {
             "label": "quoteTokenIndexCount",
             "offset": 0,
             "slot": "160",
             "type": "t_uint256",
-            "contract": "VolmexPerpView",
-            "src": "contracts/view/VolmexPerpView.sol:34"
+            "contract": "PerpView",
+            "src": "contracts/view/PerpView.sol:34"
           }
         ],
         "types": {
@@ -5798,12 +5798,12 @@
             "label": "contract IVaultController",
             "numberOfBytes": "20"
           },
-          "t_contract(IVolmexBaseToken)6253": {
-            "label": "contract IVolmexBaseToken",
+          "t_contract(IBaseToken)6253": {
+            "label": "contract IBaseToken",
             "numberOfBytes": "20"
           },
-          "t_contract(IVolmexQuoteToken)6590": {
-            "label": "contract IVolmexQuoteToken",
+          "t_contract(IQuoteToken)6590": {
+            "label": "contract IQuoteToken",
             "numberOfBytes": "20"
           },
           "t_mapping(t_address,t_bool)": {
@@ -5830,12 +5830,12 @@
             "label": "mapping(uint256 => contract IVaultController)",
             "numberOfBytes": "32"
           },
-          "t_mapping(t_uint256,t_contract(IVolmexBaseToken)6253)": {
-            "label": "mapping(uint256 => contract IVolmexBaseToken)",
+          "t_mapping(t_uint256,t_contract(IBaseToken)6253)": {
+            "label": "mapping(uint256 => contract IBaseToken)",
             "numberOfBytes": "32"
           },
-          "t_mapping(t_uint256,t_contract(IVolmexQuoteToken)6590)": {
-            "label": "mapping(uint256 => contract IVolmexQuoteToken)",
+          "t_mapping(t_uint256,t_contract(IQuoteToken)6590)": {
+            "label": "mapping(uint256 => contract IQuoteToken)",
             "numberOfBytes": "32"
           },
           "t_struct(RoleData)34_storage": {
@@ -8414,40 +8414,40 @@
             "offset": 0,
             "slot": "151",
             "type": "t_mapping(t_address,t_bool)",
-            "contract": "VolmexPerpPeriphery",
-            "src": "contracts/periphery/VolmexPerpPeriphery.sol:21"
+            "contract": "PerpPeriphery",
+            "src": "contracts/periphery/PerpPeriphery.sol:21"
           },
           {
             "label": "isTraderWhitelisted",
             "offset": 0,
             "slot": "152",
             "type": "t_mapping(t_address,t_bool)",
-            "contract": "VolmexPerpPeriphery",
-            "src": "contracts/periphery/VolmexPerpPeriphery.sol:24"
+            "contract": "PerpPeriphery",
+            "src": "contracts/periphery/PerpPeriphery.sol:24"
           },
           {
             "label": "isTraderWhitelistEnabled",
             "offset": 0,
             "slot": "153",
             "type": "t_bool",
-            "contract": "VolmexPerpPeriphery",
-            "src": "contracts/periphery/VolmexPerpPeriphery.sol:27"
+            "contract": "PerpPeriphery",
+            "src": "contracts/periphery/PerpPeriphery.sol:27"
           },
           {
             "label": "markPriceOracle",
             "offset": 1,
             "slot": "153",
             "type": "t_contract(IMarkPriceOracle)7661",
-            "contract": "VolmexPerpPeriphery",
-            "src": "contracts/periphery/VolmexPerpPeriphery.sol:30"
+            "contract": "PerpPeriphery",
+            "src": "contracts/periphery/PerpPeriphery.sol:30"
           },
           {
             "label": "perpView",
             "offset": 0,
             "slot": "154",
-            "type": "t_contract(IVolmexPerpView)8665",
-            "contract": "VolmexPerpPeriphery",
-            "src": "contracts/periphery/VolmexPerpPeriphery.sol:32"
+            "type": "t_contract(IPerpView)8665",
+            "contract": "PerpPeriphery",
+            "src": "contracts/periphery/PerpPeriphery.sol:32"
           }
         ],
         "types": {
@@ -8475,8 +8475,8 @@
             "label": "contract IMarkPriceOracle",
             "numberOfBytes": "20"
           },
-          "t_contract(IVolmexPerpView)8665": {
-            "label": "contract IVolmexPerpView",
+          "t_contract(IPerpView)8665": {
+            "label": "contract IPerpView",
             "numberOfBytes": "20"
           },
           "t_mapping(t_address,t_bool)": {
@@ -8622,7 +8622,7 @@
             "label": "perpViewRegistry",
             "offset": 0,
             "slot": "157",
-            "type": "t_contract(IVolmexPerpView)6447",
+            "type": "t_contract(IPerpView)6447",
             "contract": "PerpFactory",
             "src": "contracts/factories/PerpFactory.sol:45"
           },
@@ -8656,8 +8656,8 @@
             "label": "bytes32",
             "numberOfBytes": "32"
           },
-          "t_contract(IVolmexPerpView)6447": {
-            "label": "contract IVolmexPerpView",
+          "t_contract(IPerpView)6447": {
+            "label": "contract IPerpView",
             "numberOfBytes": "20"
           },
           "t_mapping(t_address,t_bool)": {
@@ -8756,40 +8756,40 @@
             "offset": 0,
             "slot": "151",
             "type": "t_mapping(t_address,t_bool)",
-            "contract": "VolmexPerpPeriphery",
-            "src": "contracts/periphery/VolmexPerpPeriphery.sol:21"
+            "contract": "PerpPeriphery",
+            "src": "contracts/periphery/PerpPeriphery.sol:21"
           },
           {
             "label": "isTraderWhitelisted",
             "offset": 0,
             "slot": "152",
             "type": "t_mapping(t_address,t_bool)",
-            "contract": "VolmexPerpPeriphery",
-            "src": "contracts/periphery/VolmexPerpPeriphery.sol:24"
+            "contract": "PerpPeriphery",
+            "src": "contracts/periphery/PerpPeriphery.sol:24"
           },
           {
             "label": "isTraderWhitelistEnabled",
             "offset": 0,
             "slot": "153",
             "type": "t_bool",
-            "contract": "VolmexPerpPeriphery",
-            "src": "contracts/periphery/VolmexPerpPeriphery.sol:27"
+            "contract": "PerpPeriphery",
+            "src": "contracts/periphery/PerpPeriphery.sol:27"
           },
           {
             "label": "markPriceOracle",
             "offset": 1,
             "slot": "153",
             "type": "t_contract(IMarkPriceOracle)2302",
-            "contract": "VolmexPerpPeriphery",
-            "src": "contracts/periphery/VolmexPerpPeriphery.sol:30"
+            "contract": "PerpPeriphery",
+            "src": "contracts/periphery/PerpPeriphery.sol:30"
           },
           {
             "label": "perpView",
             "offset": 0,
             "slot": "154",
-            "type": "t_contract(IVolmexPerpView)3030",
-            "contract": "VolmexPerpPeriphery",
-            "src": "contracts/periphery/VolmexPerpPeriphery.sol:32"
+            "type": "t_contract(IPerpView)3030",
+            "contract": "PerpPeriphery",
+            "src": "contracts/periphery/PerpPeriphery.sol:32"
           }
         ],
         "types": {
@@ -8817,8 +8817,8 @@
             "label": "contract IMarkPriceOracle",
             "numberOfBytes": "20"
           },
-          "t_contract(IVolmexPerpView)3030": {
-            "label": "contract IVolmexPerpView",
+          "t_contract(IPerpView)3030": {
+            "label": "contract IPerpView",
             "numberOfBytes": "20"
           },
           "t_mapping(t_address,t_bool)": {
@@ -10578,48 +10578,48 @@
             "offset": 0,
             "slot": "151",
             "type": "t_mapping(t_address,t_bool)",
-            "contract": "VolmexPerpPeriphery",
-            "src": "contracts/periphery/VolmexPerpPeriphery.sol:27"
+            "contract": "PerpPeriphery",
+            "src": "contracts/periphery/PerpPeriphery.sol:27"
           },
           {
             "label": "isTraderWhitelisted",
             "offset": 0,
             "slot": "152",
             "type": "t_mapping(t_address,t_bool)",
-            "contract": "VolmexPerpPeriphery",
-            "src": "contracts/periphery/VolmexPerpPeriphery.sol:30"
+            "contract": "PerpPeriphery",
+            "src": "contracts/periphery/PerpPeriphery.sol:30"
           },
           {
             "label": "isTraderWhitelistEnabled",
             "offset": 0,
             "slot": "153",
             "type": "t_bool",
-            "contract": "VolmexPerpPeriphery",
-            "src": "contracts/periphery/VolmexPerpPeriphery.sol:33"
+            "contract": "PerpPeriphery",
+            "src": "contracts/periphery/PerpPeriphery.sol:33"
           },
           {
             "label": "markPriceOracle",
             "offset": 1,
             "slot": "153",
             "type": "t_contract(IMarkPriceOracle)2882",
-            "contract": "VolmexPerpPeriphery",
-            "src": "contracts/periphery/VolmexPerpPeriphery.sol:36"
+            "contract": "PerpPeriphery",
+            "src": "contracts/periphery/PerpPeriphery.sol:36"
           },
           {
             "label": "indexPriceOracle",
             "offset": 0,
             "slot": "154",
             "type": "t_contract(IIndexPriceOracle)2745",
-            "contract": "VolmexPerpPeriphery",
-            "src": "contracts/periphery/VolmexPerpPeriphery.sol:38"
+            "contract": "PerpPeriphery",
+            "src": "contracts/periphery/PerpPeriphery.sol:38"
           },
           {
             "label": "perpView",
             "offset": 0,
             "slot": "155",
-            "type": "t_contract(IVolmexPerpView)3613",
-            "contract": "VolmexPerpPeriphery",
-            "src": "contracts/periphery/VolmexPerpPeriphery.sol:40"
+            "type": "t_contract(IPerpView)3613",
+            "contract": "PerpPeriphery",
+            "src": "contracts/periphery/PerpPeriphery.sol:40"
           }
         ],
         "types": {
@@ -10651,8 +10651,8 @@
             "label": "contract IMarkPriceOracle",
             "numberOfBytes": "20"
           },
-          "t_contract(IVolmexPerpView)3613": {
-            "label": "contract IVolmexPerpView",
+          "t_contract(IPerpView)3613": {
+            "label": "contract IPerpView",
             "numberOfBytes": "20"
           },
           "t_mapping(t_address,t_bool)": {
@@ -10798,7 +10798,7 @@
             "label": "perpViewRegistry",
             "offset": 0,
             "slot": "157",
-            "type": "t_contract(IVolmexPerpView)6272",
+            "type": "t_contract(IPerpView)6272",
             "contract": "PerpFactory",
             "src": "contracts/factories/PerpFactory.sol:45"
           },
@@ -10832,8 +10832,8 @@
             "label": "bytes32",
             "numberOfBytes": "32"
           },
-          "t_contract(IVolmexPerpView)6272": {
-            "label": "contract IVolmexPerpView",
+          "t_contract(IPerpView)6272": {
+            "label": "contract IPerpView",
             "numberOfBytes": "20"
           },
           "t_mapping(t_address,t_bool)": {
@@ -10932,48 +10932,48 @@
             "offset": 0,
             "slot": "151",
             "type": "t_mapping(t_address,t_bool)",
-            "contract": "VolmexPerpPeriphery",
-            "src": "contracts/periphery/VolmexPerpPeriphery.sol:27"
+            "contract": "PerpPeriphery",
+            "src": "contracts/periphery/PerpPeriphery.sol:27"
           },
           {
             "label": "isTraderWhitelisted",
             "offset": 0,
             "slot": "152",
             "type": "t_mapping(t_address,t_bool)",
-            "contract": "VolmexPerpPeriphery",
-            "src": "contracts/periphery/VolmexPerpPeriphery.sol:30"
+            "contract": "PerpPeriphery",
+            "src": "contracts/periphery/PerpPeriphery.sol:30"
           },
           {
             "label": "isTraderWhitelistEnabled",
             "offset": 0,
             "slot": "153",
             "type": "t_bool",
-            "contract": "VolmexPerpPeriphery",
-            "src": "contracts/periphery/VolmexPerpPeriphery.sol:33"
+            "contract": "PerpPeriphery",
+            "src": "contracts/periphery/PerpPeriphery.sol:33"
           },
           {
             "label": "markPriceOracle",
             "offset": 1,
             "slot": "153",
             "type": "t_contract(IMarkPriceOracle)2882",
-            "contract": "VolmexPerpPeriphery",
-            "src": "contracts/periphery/VolmexPerpPeriphery.sol:36"
+            "contract": "PerpPeriphery",
+            "src": "contracts/periphery/PerpPeriphery.sol:36"
           },
           {
             "label": "indexPriceOracle",
             "offset": 0,
             "slot": "154",
             "type": "t_contract(IIndexPriceOracle)2745",
-            "contract": "VolmexPerpPeriphery",
-            "src": "contracts/periphery/VolmexPerpPeriphery.sol:38"
+            "contract": "PerpPeriphery",
+            "src": "contracts/periphery/PerpPeriphery.sol:38"
           },
           {
             "label": "perpView",
             "offset": 0,
             "slot": "155",
-            "type": "t_contract(IVolmexPerpView)3613",
-            "contract": "VolmexPerpPeriphery",
-            "src": "contracts/periphery/VolmexPerpPeriphery.sol:40"
+            "type": "t_contract(IPerpView)3613",
+            "contract": "PerpPeriphery",
+            "src": "contracts/periphery/PerpPeriphery.sol:40"
           }
         ],
         "types": {
@@ -11005,8 +11005,8 @@
             "label": "contract IMarkPriceOracle",
             "numberOfBytes": "20"
           },
-          "t_contract(IVolmexPerpView)3613": {
-            "label": "contract IVolmexPerpView",
+          "t_contract(IPerpView)3613": {
+            "label": "contract IPerpView",
             "numberOfBytes": "20"
           },
           "t_mapping(t_address,t_bool)": {
@@ -13848,48 +13848,48 @@
             "offset": 0,
             "slot": "151",
             "type": "t_mapping(t_address,t_bool)",
-            "contract": "VolmexPerpPeriphery",
-            "src": "contracts/periphery/VolmexPerpPeriphery.sol:27"
+            "contract": "PerpPeriphery",
+            "src": "contracts/periphery/PerpPeriphery.sol:27"
           },
           {
             "label": "isTraderWhitelisted",
             "offset": 0,
             "slot": "152",
             "type": "t_mapping(t_address,t_bool)",
-            "contract": "VolmexPerpPeriphery",
-            "src": "contracts/periphery/VolmexPerpPeriphery.sol:30"
+            "contract": "PerpPeriphery",
+            "src": "contracts/periphery/PerpPeriphery.sol:30"
           },
           {
             "label": "isTraderWhitelistEnabled",
             "offset": 0,
             "slot": "153",
             "type": "t_bool",
-            "contract": "VolmexPerpPeriphery",
-            "src": "contracts/periphery/VolmexPerpPeriphery.sol:33"
+            "contract": "PerpPeriphery",
+            "src": "contracts/periphery/PerpPeriphery.sol:33"
           },
           {
             "label": "markPriceOracle",
             "offset": 1,
             "slot": "153",
             "type": "t_contract(IMarkPriceOracle)4523",
-            "contract": "VolmexPerpPeriphery",
-            "src": "contracts/periphery/VolmexPerpPeriphery.sol:36"
+            "contract": "PerpPeriphery",
+            "src": "contracts/periphery/PerpPeriphery.sol:36"
           },
           {
             "label": "indexPriceOracle",
             "offset": 0,
             "slot": "154",
             "type": "t_contract(IIndexPriceOracle)4384",
-            "contract": "VolmexPerpPeriphery",
-            "src": "contracts/periphery/VolmexPerpPeriphery.sol:38"
+            "contract": "PerpPeriphery",
+            "src": "contracts/periphery/PerpPeriphery.sol:38"
           },
           {
             "label": "perpView",
             "offset": 0,
             "slot": "155",
-            "type": "t_contract(IVolmexPerpView)5311",
-            "contract": "VolmexPerpPeriphery",
-            "src": "contracts/periphery/VolmexPerpPeriphery.sol:40"
+            "type": "t_contract(IPerpView)5311",
+            "contract": "PerpPeriphery",
+            "src": "contracts/periphery/PerpPeriphery.sol:40"
           }
         ],
         "types": {
@@ -13921,8 +13921,8 @@
             "label": "contract IMarkPriceOracle",
             "numberOfBytes": "20"
           },
-          "t_contract(IVolmexPerpView)5311": {
-            "label": "contract IVolmexPerpView",
+          "t_contract(IPerpView)5311": {
+            "label": "contract IPerpView",
             "numberOfBytes": "20"
           },
           "t_mapping(t_address,t_bool)": {
@@ -14068,7 +14068,7 @@
             "label": "perpViewRegistry",
             "offset": 0,
             "slot": "157",
-            "type": "t_contract(IVolmexPerpView)8911",
+            "type": "t_contract(IPerpView)8911",
             "contract": "PerpFactory",
             "src": "contracts/factories/PerpFactory.sol:45"
           },
@@ -14102,8 +14102,8 @@
             "label": "bytes32",
             "numberOfBytes": "32"
           },
-          "t_contract(IVolmexPerpView)8911": {
-            "label": "contract IVolmexPerpView",
+          "t_contract(IPerpView)8911": {
+            "label": "contract IPerpView",
             "numberOfBytes": "20"
           },
           "t_mapping(t_address,t_bool)": {
@@ -15628,48 +15628,48 @@
             "offset": 0,
             "slot": "151",
             "type": "t_mapping(t_address,t_bool)",
-            "contract": "VolmexPerpPeriphery",
-            "src": "contracts/periphery/VolmexPerpPeriphery.sol:27"
+            "contract": "PerpPeriphery",
+            "src": "contracts/periphery/PerpPeriphery.sol:27"
           },
           {
             "label": "isTraderWhitelisted",
             "offset": 0,
             "slot": "152",
             "type": "t_mapping(t_address,t_bool)",
-            "contract": "VolmexPerpPeriphery",
-            "src": "contracts/periphery/VolmexPerpPeriphery.sol:30"
+            "contract": "PerpPeriphery",
+            "src": "contracts/periphery/PerpPeriphery.sol:30"
           },
           {
             "label": "isTraderWhitelistEnabled",
             "offset": 0,
             "slot": "153",
             "type": "t_bool",
-            "contract": "VolmexPerpPeriphery",
-            "src": "contracts/periphery/VolmexPerpPeriphery.sol:33"
+            "contract": "PerpPeriphery",
+            "src": "contracts/periphery/PerpPeriphery.sol:33"
           },
           {
             "label": "markPriceOracle",
             "offset": 1,
             "slot": "153",
             "type": "t_contract(IMarkPriceOracle)7900",
-            "contract": "VolmexPerpPeriphery",
-            "src": "contracts/periphery/VolmexPerpPeriphery.sol:36"
+            "contract": "PerpPeriphery",
+            "src": "contracts/periphery/PerpPeriphery.sol:36"
           },
           {
             "label": "indexPriceOracle",
             "offset": 0,
             "slot": "154",
             "type": "t_contract(IIndexPriceOracle)7743",
-            "contract": "VolmexPerpPeriphery",
-            "src": "contracts/periphery/VolmexPerpPeriphery.sol:38"
+            "contract": "PerpPeriphery",
+            "src": "contracts/periphery/PerpPeriphery.sol:38"
           },
           {
             "label": "perpView",
             "offset": 0,
             "slot": "155",
-            "type": "t_contract(IVolmexPerpView)8910",
-            "contract": "VolmexPerpPeriphery",
-            "src": "contracts/periphery/VolmexPerpPeriphery.sol:40"
+            "type": "t_contract(IPerpView)8910",
+            "contract": "PerpPeriphery",
+            "src": "contracts/periphery/PerpPeriphery.sol:40"
           }
         ],
         "types": {
@@ -15701,8 +15701,8 @@
             "label": "contract IMarkPriceOracle",
             "numberOfBytes": "20"
           },
-          "t_contract(IVolmexPerpView)8910": {
-            "label": "contract IVolmexPerpView",
+          "t_contract(IPerpView)8910": {
+            "label": "contract IPerpView",
             "numberOfBytes": "20"
           },
           "t_mapping(t_address,t_bool)": {
@@ -15982,48 +15982,48 @@
             "offset": 0,
             "slot": "151",
             "type": "t_mapping(t_address,t_bool)",
-            "contract": "VolmexPerpPeriphery",
-            "src": "contracts/periphery/VolmexPerpPeriphery.sol:27"
+            "contract": "PerpPeriphery",
+            "src": "contracts/periphery/PerpPeriphery.sol:27"
           },
           {
             "label": "isTraderWhitelisted",
             "offset": 0,
             "slot": "152",
             "type": "t_mapping(t_address,t_bool)",
-            "contract": "VolmexPerpPeriphery",
-            "src": "contracts/periphery/VolmexPerpPeriphery.sol:30"
+            "contract": "PerpPeriphery",
+            "src": "contracts/periphery/PerpPeriphery.sol:30"
           },
           {
             "label": "isTraderWhitelistEnabled",
             "offset": 0,
             "slot": "153",
             "type": "t_bool",
-            "contract": "VolmexPerpPeriphery",
-            "src": "contracts/periphery/VolmexPerpPeriphery.sol:33"
+            "contract": "PerpPeriphery",
+            "src": "contracts/periphery/PerpPeriphery.sol:33"
           },
           {
             "label": "markPriceOracle",
             "offset": 1,
             "slot": "153",
             "type": "t_contract(IMarkPriceOracle)5266",
-            "contract": "VolmexPerpPeriphery",
-            "src": "contracts/periphery/VolmexPerpPeriphery.sol:36"
+            "contract": "PerpPeriphery",
+            "src": "contracts/periphery/PerpPeriphery.sol:36"
           },
           {
             "label": "indexPriceOracle",
             "offset": 0,
             "slot": "154",
             "type": "t_contract(IIndexPriceOracle)5135",
-            "contract": "VolmexPerpPeriphery",
-            "src": "contracts/periphery/VolmexPerpPeriphery.sol:38"
+            "contract": "PerpPeriphery",
+            "src": "contracts/periphery/PerpPeriphery.sol:38"
           },
           {
             "label": "perpView",
             "offset": 0,
             "slot": "155",
-            "type": "t_contract(IVolmexPerpView)6229",
-            "contract": "VolmexPerpPeriphery",
-            "src": "contracts/periphery/VolmexPerpPeriphery.sol:40"
+            "type": "t_contract(IPerpView)6229",
+            "contract": "PerpPeriphery",
+            "src": "contracts/periphery/PerpPeriphery.sol:40"
           }
         ],
         "types": {
@@ -16055,8 +16055,8 @@
             "label": "contract IMarkPriceOracle",
             "numberOfBytes": "20"
           },
-          "t_contract(IVolmexPerpView)6229": {
-            "label": "contract IVolmexPerpView",
+          "t_contract(IPerpView)6229": {
+            "label": "contract IPerpView",
             "numberOfBytes": "20"
           },
           "t_mapping(t_address,t_bool)": {
@@ -20631,40 +20631,40 @@
             "offset": 0,
             "slot": "151",
             "type": "t_mapping(t_address,t_bool)",
-            "contract": "VolmexPerpPeriphery",
-            "src": "contracts/periphery/VolmexPerpPeriphery.sol:26"
+            "contract": "PerpPeriphery",
+            "src": "contracts/periphery/PerpPeriphery.sol:26"
           },
           {
             "label": "isTraderWhitelisted",
             "offset": 0,
             "slot": "152",
             "type": "t_mapping(t_address,t_bool)",
-            "contract": "VolmexPerpPeriphery",
-            "src": "contracts/periphery/VolmexPerpPeriphery.sol:29"
+            "contract": "PerpPeriphery",
+            "src": "contracts/periphery/PerpPeriphery.sol:29"
           },
           {
             "label": "isTraderWhitelistEnabled",
             "offset": 0,
             "slot": "153",
             "type": "t_bool",
-            "contract": "VolmexPerpPeriphery",
-            "src": "contracts/periphery/VolmexPerpPeriphery.sol:32"
+            "contract": "PerpPeriphery",
+            "src": "contracts/periphery/PerpPeriphery.sol:32"
           },
           {
             "label": "perpetualOracle",
             "offset": 1,
             "slot": "153",
             "type": "t_contract(IPerpetualOracle)2922",
-            "contract": "VolmexPerpPeriphery",
-            "src": "contracts/periphery/VolmexPerpPeriphery.sol:35"
+            "contract": "PerpPeriphery",
+            "src": "contracts/periphery/PerpPeriphery.sol:35"
           },
           {
             "label": "perpView",
             "offset": 0,
             "slot": "154",
-            "type": "t_contract(IVolmexPerpView)3611",
-            "contract": "VolmexPerpPeriphery",
-            "src": "contracts/periphery/VolmexPerpPeriphery.sol:37"
+            "type": "t_contract(IPerpView)3611",
+            "contract": "PerpPeriphery",
+            "src": "contracts/periphery/PerpPeriphery.sol:37"
           }
         ],
         "types": {
@@ -20692,8 +20692,8 @@
             "label": "contract IPerpetualOracle",
             "numberOfBytes": "20"
           },
-          "t_contract(IVolmexPerpView)3611": {
-            "label": "contract IVolmexPerpView",
+          "t_contract(IPerpView)3611": {
+            "label": "contract IPerpView",
             "numberOfBytes": "20"
           },
           "t_mapping(t_address,t_bool)": {
@@ -20839,7 +20839,7 @@
             "label": "perpViewRegistry",
             "offset": 0,
             "slot": "157",
-            "type": "t_contract(IVolmexPerpView)8742",
+            "type": "t_contract(IPerpView)8742",
             "contract": "PerpFactory",
             "src": "contracts/factories/PerpFactory.sol:45"
           },
@@ -20873,8 +20873,8 @@
             "label": "bytes32",
             "numberOfBytes": "32"
           },
-          "t_contract(IVolmexPerpView)8742": {
-            "label": "contract IVolmexPerpView",
+          "t_contract(IPerpView)8742": {
+            "label": "contract IPerpView",
             "numberOfBytes": "20"
           },
           "t_mapping(t_address,t_bool)": {
@@ -22095,40 +22095,40 @@
             "offset": 0,
             "slot": "151",
             "type": "t_mapping(t_address,t_bool)",
-            "contract": "VolmexPerpPeriphery",
-            "src": "contracts/periphery/VolmexPerpPeriphery.sol:26"
+            "contract": "PerpPeriphery",
+            "src": "contracts/periphery/PerpPeriphery.sol:26"
           },
           {
             "label": "isTraderWhitelisted",
             "offset": 0,
             "slot": "152",
             "type": "t_mapping(t_address,t_bool)",
-            "contract": "VolmexPerpPeriphery",
-            "src": "contracts/periphery/VolmexPerpPeriphery.sol:29"
+            "contract": "PerpPeriphery",
+            "src": "contracts/periphery/PerpPeriphery.sol:29"
           },
           {
             "label": "isTraderWhitelistEnabled",
             "offset": 0,
             "slot": "153",
             "type": "t_bool",
-            "contract": "VolmexPerpPeriphery",
-            "src": "contracts/periphery/VolmexPerpPeriphery.sol:32"
+            "contract": "PerpPeriphery",
+            "src": "contracts/periphery/PerpPeriphery.sol:32"
           },
           {
             "label": "perpetualOracle",
             "offset": 1,
             "slot": "153",
             "type": "t_contract(IPerpetualOracle)5205",
-            "contract": "VolmexPerpPeriphery",
-            "src": "contracts/periphery/VolmexPerpPeriphery.sol:35"
+            "contract": "PerpPeriphery",
+            "src": "contracts/periphery/PerpPeriphery.sol:35"
           },
           {
             "label": "perpView",
             "offset": 0,
             "slot": "154",
-            "type": "t_contract(IVolmexPerpView)5903",
-            "contract": "VolmexPerpPeriphery",
-            "src": "contracts/periphery/VolmexPerpPeriphery.sol:37"
+            "type": "t_contract(IPerpView)5903",
+            "contract": "PerpPeriphery",
+            "src": "contracts/periphery/PerpPeriphery.sol:37"
           }
         ],
         "types": {
@@ -22156,8 +22156,8 @@
             "label": "contract IPerpetualOracle",
             "numberOfBytes": "20"
           },
-          "t_contract(IVolmexPerpView)5903": {
-            "label": "contract IVolmexPerpView",
+          "t_contract(IPerpView)5903": {
+            "label": "contract IPerpView",
             "numberOfBytes": "20"
           },
           "t_mapping(t_address,t_bool)": {
@@ -26328,7 +26328,7 @@
             "label": "perpViewRegistry",
             "offset": 0,
             "slot": "157",
-            "type": "t_contract(IVolmexPerpView)8555",
+            "type": "t_contract(IPerpView)8555",
             "contract": "PerpFactory",
             "src": "contracts/factories/PerpFactory.sol:45"
           },
@@ -26362,8 +26362,8 @@
             "label": "bytes32",
             "numberOfBytes": "32"
           },
-          "t_contract(IVolmexPerpView)8555": {
-            "label": "contract IVolmexPerpView",
+          "t_contract(IPerpView)8555": {
+            "label": "contract IPerpView",
             "numberOfBytes": "20"
           },
           "t_mapping(t_address,t_bool)": {
@@ -26950,7 +26950,7 @@
             "src": "contracts/storage/AccountBalanceStorage.sol:30"
           },
           {
-            "label": "sigmaVolmexIvs",
+            "label": "sigmaIvs",
             "offset": 0,
             "slot": "211",
             "type": "t_mapping(t_uint256,t_uint256)",
@@ -27587,7 +27587,7 @@
             "label": "perpViewRegistry",
             "offset": 0,
             "slot": "157",
-            "type": "t_contract(IVolmexPerpView)6334",
+            "type": "t_contract(IPerpView)6334",
             "contract": "PerpFactory",
             "src": "contracts/factories/PerpFactory.sol:45"
           },
@@ -27621,8 +27621,8 @@
             "label": "bytes32",
             "numberOfBytes": "32"
           },
-          "t_contract(IVolmexPerpView)6334": {
-            "label": "contract IVolmexPerpView",
+          "t_contract(IPerpView)6334": {
+            "label": "contract IPerpView",
             "numberOfBytes": "20"
           },
           "t_mapping(t_address,t_bool)": {
@@ -28039,7 +28039,7 @@
             "src": "contracts/storage/AccountBalanceStorage.sol:30"
           },
           {
-            "label": "sigmaVolmexIvs",
+            "label": "sigmaIvs",
             "offset": 0,
             "slot": "211",
             "type": "t_mapping(t_uint256,t_uint256)",
@@ -28717,7 +28717,7 @@
             "src": "contracts/storage/AccountBalanceStorage.sol:30"
           },
           {
-            "label": "sigmaVolmexIvs",
+            "label": "sigmaIvs",
             "offset": 0,
             "slot": "211",
             "type": "t_mapping(t_uint256,t_uint256)",
@@ -29391,7 +29391,7 @@
             "src": "contracts/storage/AccountBalanceStorage.sol:30"
           },
           {
-            "label": "sigmaVolmexIvs",
+            "label": "sigmaIvs",
             "offset": 0,
             "slot": "211",
             "type": "t_mapping(t_uint256,t_uint256)",
@@ -29676,7 +29676,7 @@
             "src": "contracts/storage/AccountBalanceStorage.sol:30"
           },
           {
-            "label": "sigmaVolmexIvs",
+            "label": "sigmaIvs",
             "offset": 0,
             "slot": "211",
             "type": "t_mapping(t_uint256,t_uint256)",
@@ -30739,7 +30739,7 @@
             "src": "contracts/storage/AccountBalanceStorage.sol:30"
           },
           {
-            "label": "sigmaVolmexIvs",
+            "label": "sigmaIvs",
             "offset": 0,
             "slot": "211",
             "type": "t_mapping(t_uint256,t_uint256)",
@@ -31024,7 +31024,7 @@
             "src": "contracts/storage/AccountBalanceStorage.sol:30"
           },
           {
-            "label": "sigmaVolmexIvs",
+            "label": "sigmaIvs",
             "offset": 0,
             "slot": "211",
             "type": "t_mapping(t_uint256,t_uint256)",
@@ -31309,7 +31309,7 @@
             "src": "contracts/storage/AccountBalanceStorage.sol:30"
           },
           {
-            "label": "sigmaVolmexIvs",
+            "label": "sigmaIvs",
             "offset": 0,
             "slot": "211",
             "type": "t_mapping(t_uint256,t_uint256)",
@@ -32550,80 +32550,80 @@
             "offset": 0,
             "slot": "151",
             "type": "t_mapping(t_uint256,t_contract(IPositioning)5074)",
-            "contract": "VolmexPerpView",
-            "src": "contracts/view/VolmexPerpView.sol:15"
+            "contract": "PerpView",
+            "src": "contracts/view/PerpView.sol:15"
           },
           {
             "label": "vaultControllers",
             "offset": 0,
             "slot": "152",
             "type": "t_mapping(t_uint256,t_contract(IVaultController)5395)",
-            "contract": "VolmexPerpView",
-            "src": "contracts/view/VolmexPerpView.sol:17"
+            "contract": "PerpView",
+            "src": "contracts/view/PerpView.sol:17"
           },
           {
             "label": "baseTokens",
             "offset": 0,
             "slot": "153",
-            "type": "t_mapping(t_uint256,t_contract(IVolmexBaseToken)5466)",
-            "contract": "VolmexPerpView",
-            "src": "contracts/view/VolmexPerpView.sol:19"
+            "type": "t_mapping(t_uint256,t_contract(IBaseToken)5466)",
+            "contract": "PerpView",
+            "src": "contracts/view/PerpView.sol:19"
           },
           {
             "label": "quoteTokens",
             "offset": 0,
             "slot": "154",
-            "type": "t_mapping(t_uint256,t_contract(IVolmexQuoteToken)5675)",
-            "contract": "VolmexPerpView",
-            "src": "contracts/view/VolmexPerpView.sol:21"
+            "type": "t_mapping(t_uint256,t_contract(IQuoteToken)5675)",
+            "contract": "PerpView",
+            "src": "contracts/view/PerpView.sol:21"
           },
           {
             "label": "accounts",
             "offset": 0,
             "slot": "155",
             "type": "t_mapping(t_uint256,t_contract(IAccountBalance)4328)",
-            "contract": "VolmexPerpView",
-            "src": "contracts/view/VolmexPerpView.sol:23"
+            "contract": "PerpView",
+            "src": "contracts/view/PerpView.sol:23"
           },
           {
             "label": "marketRegistries",
             "offset": 0,
             "slot": "156",
             "type": "t_mapping(t_uint256,t_contract(IMarketRegistry)4479)",
-            "contract": "VolmexPerpView",
-            "src": "contracts/view/VolmexPerpView.sol:25"
+            "contract": "PerpView",
+            "src": "contracts/view/PerpView.sol:25"
           },
           {
             "label": "perpIndexCount",
             "offset": 0,
             "slot": "157",
             "type": "t_uint256",
-            "contract": "VolmexPerpView",
-            "src": "contracts/view/VolmexPerpView.sol:27"
+            "contract": "PerpView",
+            "src": "contracts/view/PerpView.sol:27"
           },
           {
             "label": "vaultIndexCount",
             "offset": 0,
             "slot": "158",
             "type": "t_uint256",
-            "contract": "VolmexPerpView",
-            "src": "contracts/view/VolmexPerpView.sol:29"
+            "contract": "PerpView",
+            "src": "contracts/view/PerpView.sol:29"
           },
           {
             "label": "baseTokenIndexCount",
             "offset": 0,
             "slot": "159",
             "type": "t_uint256",
-            "contract": "VolmexPerpView",
-            "src": "contracts/view/VolmexPerpView.sol:31"
+            "contract": "PerpView",
+            "src": "contracts/view/PerpView.sol:31"
           },
           {
             "label": "quoteTokenIndexCount",
             "offset": 0,
             "slot": "160",
             "type": "t_uint256",
-            "contract": "VolmexPerpView",
-            "src": "contracts/view/VolmexPerpView.sol:33"
+            "contract": "PerpView",
+            "src": "contracts/view/PerpView.sol:33"
           }
         ],
         "types": {
@@ -32663,12 +32663,12 @@
             "label": "contract IVaultController",
             "numberOfBytes": "20"
           },
-          "t_contract(IVolmexBaseToken)5466": {
-            "label": "contract IVolmexBaseToken",
+          "t_contract(IBaseToken)5466": {
+            "label": "contract IBaseToken",
             "numberOfBytes": "20"
           },
-          "t_contract(IVolmexQuoteToken)5675": {
-            "label": "contract IVolmexQuoteToken",
+          "t_contract(IQuoteToken)5675": {
+            "label": "contract IQuoteToken",
             "numberOfBytes": "20"
           },
           "t_mapping(t_address,t_bool)": {
@@ -32695,12 +32695,12 @@
             "label": "mapping(uint256 => contract IVaultController)",
             "numberOfBytes": "32"
           },
-          "t_mapping(t_uint256,t_contract(IVolmexBaseToken)5466)": {
-            "label": "mapping(uint256 => contract IVolmexBaseToken)",
+          "t_mapping(t_uint256,t_contract(IBaseToken)5466)": {
+            "label": "mapping(uint256 => contract IBaseToken)",
             "numberOfBytes": "32"
           },
-          "t_mapping(t_uint256,t_contract(IVolmexQuoteToken)5675)": {
-            "label": "mapping(uint256 => contract IVolmexQuoteToken)",
+          "t_mapping(t_uint256,t_contract(IQuoteToken)5675)": {
+            "label": "mapping(uint256 => contract IQuoteToken)",
             "numberOfBytes": "32"
           },
           "t_struct(RoleData)80_storage": {
@@ -34140,7 +34140,7 @@
             "src": "contracts/storage/AccountBalanceStorage.sol:30"
           },
           {
-            "label": "sigmaVolmexIvs",
+            "label": "sigmaIvs",
             "offset": 0,
             "slot": "211",
             "type": "t_mapping(t_uint256,t_uint256)",
@@ -35385,40 +35385,40 @@
             "offset": 0,
             "slot": "151",
             "type": "t_mapping(t_address,t_bool)",
-            "contract": "VolmexPerpPeriphery",
-            "src": "contracts/periphery/VolmexPerpPeriphery.sol:26"
+            "contract": "PerpPeriphery",
+            "src": "contracts/periphery/PerpPeriphery.sol:26"
           },
           {
             "label": "isTraderWhitelisted",
             "offset": 0,
             "slot": "152",
             "type": "t_mapping(t_address,t_bool)",
-            "contract": "VolmexPerpPeriphery",
-            "src": "contracts/periphery/VolmexPerpPeriphery.sol:29"
+            "contract": "PerpPeriphery",
+            "src": "contracts/periphery/PerpPeriphery.sol:29"
           },
           {
             "label": "isTraderWhitelistEnabled",
             "offset": 0,
             "slot": "153",
             "type": "t_bool",
-            "contract": "VolmexPerpPeriphery",
-            "src": "contracts/periphery/VolmexPerpPeriphery.sol:32"
+            "contract": "PerpPeriphery",
+            "src": "contracts/periphery/PerpPeriphery.sol:32"
           },
           {
             "label": "perpetualOracle",
             "offset": 1,
             "slot": "153",
             "type": "t_contract(IPerpetualOracle)5246",
-            "contract": "VolmexPerpPeriphery",
-            "src": "contracts/periphery/VolmexPerpPeriphery.sol:35"
+            "contract": "PerpPeriphery",
+            "src": "contracts/periphery/PerpPeriphery.sol:35"
           },
           {
             "label": "perpView",
             "offset": 0,
             "slot": "154",
-            "type": "t_contract(IVolmexPerpView)5930",
-            "contract": "VolmexPerpPeriphery",
-            "src": "contracts/periphery/VolmexPerpPeriphery.sol:37"
+            "type": "t_contract(IPerpView)5930",
+            "contract": "PerpPeriphery",
+            "src": "contracts/periphery/PerpPeriphery.sol:37"
           }
         ],
         "types": {
@@ -35446,8 +35446,8 @@
             "label": "contract IPerpetualOracle",
             "numberOfBytes": "20"
           },
-          "t_contract(IVolmexPerpView)5930": {
-            "label": "contract IVolmexPerpView",
+          "t_contract(IPerpView)5930": {
+            "label": "contract IPerpView",
             "numberOfBytes": "20"
           },
           "t_mapping(t_address,t_bool)": {
@@ -36017,7 +36017,7 @@
             "src": "contracts/storage/AccountBalanceStorage.sol:30"
           },
           {
-            "label": "sigmaVolmexIvs",
+            "label": "sigmaIvs",
             "offset": 0,
             "slot": "211",
             "type": "t_mapping(t_uint256,t_uint256)",
@@ -37088,7 +37088,7 @@
             "src": "contracts/storage/AccountBalanceStorage.sol:30"
           },
           {
-            "label": "sigmaVolmexIvs",
+            "label": "sigmaIvs",
             "offset": 0,
             "slot": "211",
             "type": "t_mapping(t_uint256,t_uint256)",
@@ -38189,7 +38189,7 @@
             "src": "contracts/storage/AccountBalanceStorage.sol:31"
           },
           {
-            "label": "sigmaVolmexIvs",
+            "label": "sigmaIvs",
             "offset": 0,
             "slot": "211",
             "type": "t_mapping(t_uint256,t_uint256)",
@@ -39374,48 +39374,48 @@
             "offset": 0,
             "slot": "151",
             "type": "t_mapping(t_address,t_bool)",
-            "contract": "VolmexPerpPeriphery",
-            "src": "contracts/periphery/VolmexPerpPeriphery.sol:27"
+            "contract": "PerpPeriphery",
+            "src": "contracts/periphery/PerpPeriphery.sol:27"
           },
           {
             "label": "isTraderWhitelisted",
             "offset": 0,
             "slot": "152",
             "type": "t_mapping(t_address,t_bool)",
-            "contract": "VolmexPerpPeriphery",
-            "src": "contracts/periphery/VolmexPerpPeriphery.sol:30"
+            "contract": "PerpPeriphery",
+            "src": "contracts/periphery/PerpPeriphery.sol:30"
           },
           {
             "label": "isAccountBlacklisted",
             "offset": 0,
             "slot": "153",
             "type": "t_mapping(t_address,t_bool)",
-            "contract": "VolmexPerpPeriphery",
-            "src": "contracts/periphery/VolmexPerpPeriphery.sol:33"
+            "contract": "PerpPeriphery",
+            "src": "contracts/periphery/PerpPeriphery.sol:33"
           },
           {
             "label": "isTraderWhitelistEnabled",
             "offset": 0,
             "slot": "154",
             "type": "t_bool",
-            "contract": "VolmexPerpPeriphery",
-            "src": "contracts/periphery/VolmexPerpPeriphery.sol:36"
+            "contract": "PerpPeriphery",
+            "src": "contracts/periphery/PerpPeriphery.sol:36"
           },
           {
             "label": "perpetualOracle",
             "offset": 1,
             "slot": "154",
             "type": "t_contract(IPerpetualOracle)4161",
-            "contract": "VolmexPerpPeriphery",
-            "src": "contracts/periphery/VolmexPerpPeriphery.sol:39"
+            "contract": "PerpPeriphery",
+            "src": "contracts/periphery/PerpPeriphery.sol:39"
           },
           {
             "label": "perpView",
             "offset": 0,
             "slot": "155",
-            "type": "t_contract(IVolmexPerpView)5018",
-            "contract": "VolmexPerpPeriphery",
-            "src": "contracts/periphery/VolmexPerpPeriphery.sol:41"
+            "type": "t_contract(IPerpView)5018",
+            "contract": "PerpPeriphery",
+            "src": "contracts/periphery/PerpPeriphery.sol:41"
           }
         ],
         "types": {
@@ -39443,8 +39443,8 @@
             "label": "contract IPerpetualOracle",
             "numberOfBytes": "20"
           },
-          "t_contract(IVolmexPerpView)5018": {
-            "label": "contract IVolmexPerpView",
+          "t_contract(IPerpView)5018": {
+            "label": "contract IPerpView",
             "numberOfBytes": "20"
           },
           "t_mapping(t_address,t_bool)": {
@@ -41189,7 +41189,7 @@
             "src": "contracts/storage/AccountBalanceStorage.sol:31"
           },
           {
-            "label": "sigmaVolmexIvs",
+            "label": "sigmaIvs",
             "offset": 0,
             "slot": "211",
             "type": "t_mapping(t_uint256,t_uint256)",

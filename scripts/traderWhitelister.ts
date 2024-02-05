@@ -20,10 +20,10 @@ async function openPosition() {
     provider,
   );
 
-  const VolmexPerpPeriphery = await ethers.getContractFactory("VolmexPerpPeriphery");
+  const PerpPeriphery = await ethers.getContractFactory("PerpPeriphery");
   const VirtualToken = await ethers.getContractFactory("VirtualToken");
 
-  const perpPeriphery = await VolmexPerpPeriphery.attach(contracts.PERIPHERY);
+  const perpPeriphery = await PerpPeriphery.attach(contracts.PERIPHERY);
   const virtualToken = await VirtualToken.attach(contracts.USDC);
 
   const TRADER_WHITELISTER_ROLE = await perpPeriphery.TRADER_WHITELISTER();

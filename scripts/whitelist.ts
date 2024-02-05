@@ -14,10 +14,10 @@ async function main() {
   const provider = new ethers.providers.JsonRpcProvider(rpcUrl);
   const account0 = new ethers.Wallet(process.env.DEPLOYER_PRIVATE_KEY, provider); // deployer account
 
-  const VolmexPerpPeriphery = await ethers.getContractFactory("VolmexPerpPeriphery");
+  const PerpPeriphery = await ethers.getContractFactory("PerpPeriphery");
   const VirtualToken = await ethers.getContractFactory("VirtualToken");
 
-  const perpPeriphery = await VolmexPerpPeriphery.attach(contracts.PERIPHERY);
+  const perpPeriphery = await PerpPeriphery.attach(contracts.PERIPHERY);
   const virtualToken = await VirtualToken.attach(contracts.USDC);
 
   const res1 = await perpPeriphery.connect(account0).whitelistTrader(TRADER_TO_WHITELIST, true);

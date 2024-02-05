@@ -19,17 +19,17 @@ describe("Vault Controller tests for withdrawal", function () {
   let ChainLinkAggregator;
   let chainlinkAggregator1;
   let chainlinkAggregator2;
-  let VolmexBaseToken;
-  let volmexBaseToken;
-  let volmexBaseToken1;
-  let volmexBaseToken2;
-  let volmexBaseToken3;
+  let BaseToken;
+  let BaseToken;
+  let BaseToken1;
+  let BaseToken2;
+  let BaseToken3;
   let FundingRate;
   let fundingRate;
   let Positioning;
   let positioning;
-  let VolmexPerpPeriphery;
-  let volmexPerpPeriphery;
+  let PerpPeriphery;
+  let PerpPeriphery;
   let perpViewFake;
   let owner, alice, relayer;
   const proofHash = "0x6c00000000000000000000000000000000000000000000000000000000000000";
@@ -42,17 +42,17 @@ describe("Vault Controller tests for withdrawal", function () {
   this.beforeEach(async function () {
     [owner, alice, relayer] = await ethers.getSigners();
 
-    VolmexPerpPeriphery = await ethers.getContractFactory("VolmexPerpPeriphery");
+    PerpPeriphery = await ethers.getContractFactory("PerpPeriphery");
     PerpetualOracle = await ethers.getContractFactory("PerpetualOracle");
-    VolmexBaseToken = await ethers.getContractFactory("VolmexBaseToken");
-    perpViewFake = await smock.fake("VolmexPerpView");
+    BaseToken = await ethers.getContractFactory("BaseToken");
+    perpViewFake = await smock.fake("PerpView");
     FundingRate = await ethers.getContractFactory("FundingRate");
     ChainLinkAggregator = await ethers.getContractFactory("MockV3Aggregator");
 
-    volmexBaseToken = await upgrades.deployProxy(
-      VolmexBaseToken,
+    BaseToken = await upgrades.deployProxy(
+      BaseToken,
       [
-        "VolmexBaseToken", // nameArg
+        "BaseToken", // nameArg
         "VBT", // symbolArg,
         alice.address, // priceFeedArg
         true, // isBase
@@ -61,11 +61,11 @@ describe("Vault Controller tests for withdrawal", function () {
         initializer: "initialize",
       },
     );
-    await volmexBaseToken.deployed();
-    volmexBaseToken2 = await upgrades.deployProxy(
-      VolmexBaseToken,
+    await BaseToken.deployed();
+    BaseToken2 = await upgrades.deployProxy(
+      BaseToken,
       [
-        "VolmexBaseToken", // nameArg
+        "BaseToken", // nameArg
         "VBT", // symbolArg,
         owner.address, // priceFeedArg
         true, // isBase
@@ -74,11 +74,11 @@ describe("Vault Controller tests for withdrawal", function () {
         initializer: "initialize",
       },
     );
-    await volmexBaseToken2.deployed();
-    volmexBaseToken3 = await upgrades.deployProxy(
-      VolmexBaseToken,
+    await BaseToken2.deployed();
+    BaseToken3 = await upgrades.deployProxy(
+      BaseToken,
       [
-        "VolmexBaseToken", // nameArg
+        "BaseToken", // nameArg
         "VBT", // symbolArg,
         owner.address, // priceFeedArg
         true, // isBase
@@ -87,7 +87,7 @@ describe("Vault Controller tests for withdrawal", function () {
         initializer: "initialize",
       },
     );
-    await volmexBaseToken3.deployed();
+    await BaseToken3.deployed();
     chainlinkAggregator1 = await ChainLinkAggregator.deploy(8, 3075000000000);
     await chainlinkAggregator1.deployed();
     chainlinkAggregator2 = await ChainLinkAggregator.deploy(8, 180000000000);
@@ -96,10 +96,10 @@ describe("Vault Controller tests for withdrawal", function () {
       PerpetualOracle,
       [
         [
-          volmexBaseToken.address,
-          volmexBaseToken.address,
-          volmexBaseToken2.address,
-          volmexBaseToken3.address,
+          BaseToken.address,
+          BaseToken.address,
+          BaseToken2.address,
+          BaseToken3.address,
         ],
         [100000000, 100000000, 30000000000, 1800000000],
         [100000000, 100000000],
@@ -111,7 +111,7 @@ describe("Vault Controller tests for withdrawal", function () {
       { initializer: "__PerpetualOracle_init" },
     );
 
-    await volmexBaseToken.setPriceFeed(perpetualOracle.address);
+    await BaseToken.setPriceFeed(perpetualOracle.address);
 
     matchingEngineFake = await smock.fake("MatchingEngine");
 
@@ -134,10 +134,10 @@ describe("Vault Controller tests for withdrawal", function () {
     accountBalance = await upgrades.deployProxy(accountBalanceFactory, [
       positioningConfig.address,
       [
-        volmexBaseToken.address,
-        volmexBaseToken.address,
-        volmexBaseToken2.address,
-        volmexBaseToken3.address,
+        BaseToken.address,
+        BaseToken.address,
+        BaseToken2.address,
+        BaseToken3.address,
       ],
       [chainlinkTokenIndex1, chainlinkTokenIndex2],
       matchingEngineFake.address,
@@ -187,10 +187,10 @@ describe("Vault Controller tests for withdrawal", function () {
         fundingRate.address,
         perpetualOracle.address,
         [
-          volmexBaseToken.address,
-          volmexBaseToken.address,
-          volmexBaseToken2.address,
-          volmexBaseToken3.address,
+          BaseToken.address,
+          BaseToken.address,
+          BaseToken2.address,
+          BaseToken3.address,
         ],
         [chainlinkTokenIndex1, chainlinkTokenIndex2],
         [owner.address, alice.address],
@@ -216,14 +216,14 @@ describe("Vault Controller tests for withdrawal", function () {
 
     await DAI.connect(alice).approve(vaultController.address, DAIAmount);
 
-    volmexPerpPeriphery = await upgrades.deployProxy(VolmexPerpPeriphery, [
+    PerpPeriphery = await upgrades.deployProxy(PerpPeriphery, [
       perpViewFake.address,
       perpetualOracle.address,
       [vault.address, vault.address],
       owner.address,
       relayer.address,
     ]);
-    await vaultController.setPeriphery(volmexPerpPeriphery.address);
+    await vaultController.setPeriphery(PerpPeriphery.address);
   });
 
   it("Negative Test for withdrawal of token", async () => {
@@ -235,7 +235,7 @@ describe("Vault Controller tests for withdrawal", function () {
 
     const USDCVaultContract = await vaultFactory.attach(USDCVaultAddress);
     await USDC.connect(alice).approve(USDCVaultAddress, amount);
-    await USDC.connect(alice).approve(volmexPerpPeriphery.address, amount);
+    await USDC.connect(alice).approve(PerpPeriphery.address, amount);
 
     const Positioning = await ethers.getContractFactory("PositioningMock");
     const positioning = await upgrades.deployProxy(
@@ -249,10 +249,10 @@ describe("Vault Controller tests for withdrawal", function () {
         fundingRate.address,
         perpetualOracle.address,
         [
-          volmexBaseToken.address,
-          volmexBaseToken.address,
-          volmexBaseToken2.address,
-          volmexBaseToken3.address,
+          BaseToken.address,
+          BaseToken.address,
+          BaseToken2.address,
+          BaseToken3.address,
         ],
         [chainlinkTokenIndex1, chainlinkTokenIndex2],
         [owner.address, alice.address],
@@ -278,14 +278,14 @@ describe("Vault Controller tests for withdrawal", function () {
 
     const USDCVaultContract = await vaultFactory.attach(USDCVaultAddress);
     await USDC.connect(alice).approve(USDCVaultAddress, amount);
-    await USDC.connect(alice).approve(volmexPerpPeriphery.address, amount);
+    await USDC.connect(alice).approve(PerpPeriphery.address, amount);
     await USDCVaultContract.setPositioning(positioning.address);
 
     // check event has been sent
     await expect(
       vaultController
         .connect(alice)
-        .deposit(volmexPerpPeriphery.address, USDC.address, alice.address, amount),
+        .deposit(PerpPeriphery.address, USDC.address, alice.address, amount),
     ).to.emit(USDCVaultContract, "Deposited");
 
     // // check sender's balance
@@ -306,14 +306,14 @@ describe("Vault Controller tests for withdrawal", function () {
 
     const USDCVaultContract = await vaultFactory.attach(USDCVaultAddress);
     await USDC.connect(alice).approve(USDCVaultAddress, amount);
-    await USDC.connect(alice).approve(volmexPerpPeriphery.address, amount);
+    await USDC.connect(alice).approve(PerpPeriphery.address, amount);
     await USDCVaultContract.setPositioning(positioning.address);
 
     // check event has been sent
     await expect(
       vaultController
         .connect(alice)
-        .deposit(volmexPerpPeriphery.address, USDC.address, alice.address, amount),
+        .deposit(PerpPeriphery.address, USDC.address, alice.address, amount),
     ).to.emit(USDCVaultContract, "Deposited");
 
     // // check sender's balance
@@ -334,14 +334,14 @@ describe("Vault Controller tests for withdrawal", function () {
 
     const USDCVaultContract = await vaultFactory.attach(USDCVaultAddress);
     await USDC.connect(alice).approve(USDCVaultAddress, amount);
-    await USDC.connect(alice).approve(volmexPerpPeriphery.address, amount);
+    await USDC.connect(alice).approve(PerpPeriphery.address, amount);
     await USDCVaultContract.setPositioning(positioning.address);
 
     // check event has been sent
     await expect(
       vaultController
         .connect(alice)
-        .deposit(volmexPerpPeriphery.address, USDC.address, alice.address, amount),
+        .deposit(PerpPeriphery.address, USDC.address, alice.address, amount),
     ).to.emit(USDCVaultContract, "Deposited");
 
     // // check sender's balance
@@ -361,14 +361,14 @@ describe("Vault Controller tests for withdrawal", function () {
 
     const USDCVaultContract = await vaultFactory.attach(USDCVaultAddress);
     await USDC.connect(alice).approve(USDCVaultAddress, amount);
-    await USDC.connect(alice).approve(volmexPerpPeriphery.address, amount);
+    await USDC.connect(alice).approve(PerpPeriphery.address, amount);
     await USDCVaultContract.setPositioning(positioning.address);
 
     // check event has been sent
     await expect(
       vaultController
         .connect(alice)
-        .deposit(volmexPerpPeriphery.address, USDC.address, alice.address, amount),
+        .deposit(PerpPeriphery.address, USDC.address, alice.address, amount),
     ).to.emit(USDCVaultContract, "Deposited");
 
     // // check sender's balance

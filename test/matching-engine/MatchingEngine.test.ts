@@ -29,16 +29,16 @@ describe("MatchingEngine", function () {
   let vault;
   let VaultController;
   let vaultController;
-  let VolmexBaseToken;
-  let volmexBaseToken;
+  let BaseToken;
+  let BaseToken;
   let MarketRegistry;
   let marketRegistry;
-  let volmexPerpPeriphery;
-  let VolmexPerpPeriphery;
+  let PerpPeriphery;
+  let PerpPeriphery;
   let chainlinkBaseToken;
   let chainlinkBaseToken2;
   let ChainLinkAggregator;
-  let volmexBaseToken1;
+  let BaseToken1;
   let FundingRate;
   let fundingRate;
   let perpViewFake;
@@ -67,10 +67,10 @@ describe("MatchingEngine", function () {
   const TAKE_PROFIT_LIMIT_ORDER = "0xe0fc7f94";
 
   this.beforeAll(async () => {
-    VolmexPerpPeriphery = await ethers.getContractFactory("VolmexPerpPeriphery");
+    PerpPeriphery = await ethers.getContractFactory("PerpPeriphery");
     MarketRegistry = await ethers.getContractFactory("MarketRegistry");
     MatchingEngine = await ethers.getContractFactory("MatchingEngineTest");
-    VolmexBaseToken = await ethers.getContractFactory("VolmexBaseToken");
+    BaseToken = await ethers.getContractFactory("BaseToken");
     PerpetualOracle = await ethers.getContractFactory("PerpetualOracle");
     Positioning = await ethers.getContractFactory("PositioningTest");
     Vault = await ethers.getContractFactory("Vault");
@@ -90,10 +90,10 @@ describe("MatchingEngine", function () {
     const liquidator = encodeAddress(owner.address);
     erc20TransferProxy = await ERC20TransferProxyTest.deploy();
 
-    volmexBaseToken = await upgrades.deployProxy(
-      VolmexBaseToken,
+    BaseToken = await upgrades.deployProxy(
+      BaseToken,
       [
-        "VolmexBaseToken", // nameArg
+        "BaseToken", // nameArg
         "VBT", // symbolArg,
         account1.address, // priceFeedArg
         true, // isBase
@@ -102,11 +102,11 @@ describe("MatchingEngine", function () {
         initializer: "initialize",
       },
     );
-    await volmexBaseToken.deployed();
-    volmexBaseToken1 = await upgrades.deployProxy(
-      VolmexBaseToken,
+    await BaseToken.deployed();
+    BaseToken1 = await upgrades.deployProxy(
+      BaseToken,
       [
-        "VolmexBaseToken", // nameArg
+        "BaseToken", // nameArg
         "VBT", // symbolArg,
         account1.address, // priceFeedArg
         true, // isBase
@@ -115,11 +115,11 @@ describe("MatchingEngine", function () {
         initializer: "initialize",
       },
     );
-    await volmexBaseToken.deployed();
+    await BaseToken.deployed();
     chainlinkBaseToken = await upgrades.deployProxy(
-      VolmexBaseToken,
+      BaseToken,
       [
-        "VolmexBaseToken", // nameArg
+        "BaseToken", // nameArg
         "VBT", // symbolArg,
         owner.address, // priceFeedArg
         true, // isBase
@@ -129,9 +129,9 @@ describe("MatchingEngine", function () {
       },
     );
     chainlinkBaseToken2 = await upgrades.deployProxy(
-      VolmexBaseToken,
+      BaseToken,
       [
-        "VolmexBaseToken", // nameArg
+        "BaseToken", // nameArg
         "VBT", // symbolArg,
         owner.address, // priceFeedArg
         true, // isBase
@@ -141,7 +141,7 @@ describe("MatchingEngine", function () {
       },
     );
 
-    // await (await perpView.setBaseToken(volmexBaseToken.address)).wait();
+    // await (await perpView.setBaseToken(BaseToken.address)).wait();
 
     chainlinkAggregator1 = await ChainLinkAggregator.deploy(8, 3075000000000);
     await chainlinkAggregator1.deployed();
@@ -152,8 +152,8 @@ describe("MatchingEngine", function () {
       PerpetualOracle,
       [
         [
-          volmexBaseToken.address,
-          volmexBaseToken.address,
+          BaseToken.address,
+          BaseToken.address,
           chainlinkBaseToken.address,
           chainlinkBaseToken2.address,
         ],
@@ -167,8 +167,8 @@ describe("MatchingEngine", function () {
       { initializer: "__PerpetualOracle_init" },
     );
 
-    await volmexBaseToken.setPriceFeed(perpetualOracle.address);
-    await volmexBaseToken1.setPriceFeed(perpetualOracle.address);
+    await BaseToken.setPriceFeed(perpetualOracle.address);
+    await BaseToken1.setPriceFeed(perpetualOracle.address);
 
     positioningConfig = await upgrades.deployProxy(PositioningConfig, [perpetualOracle.address]);
     await positioningConfig.deployed();
@@ -183,8 +183,8 @@ describe("MatchingEngine", function () {
     accountBalance = await upgrades.deployProxy(AccountBalance, [
       positioningConfig.address,
       [
-        volmexBaseToken.address,
-        volmexBaseToken.address,
+        BaseToken.address,
+        BaseToken.address,
         chainlinkBaseToken.address,
         chainlinkBaseToken2.address,
       ],
@@ -220,8 +220,8 @@ describe("MatchingEngine", function () {
     marketRegistry = await upgrades.deployProxy(MarketRegistry, [
       virtualToken.address,
       [
-        volmexBaseToken.address,
-        volmexBaseToken1.address,
+        BaseToken.address,
+        BaseToken1.address,
         chainlinkBaseToken.address,
         chainlinkBaseToken2.address,
       ],
@@ -245,8 +245,8 @@ describe("MatchingEngine", function () {
         fundingRate.address,
         marketRegistry.address,
         [
-          volmexBaseToken.address,
-          volmexBaseToken.address,
+          BaseToken.address,
+          BaseToken.address,
           chainlinkBaseToken.address,
           chainlinkBaseToken2.address,
         ],
@@ -267,10 +267,10 @@ describe("MatchingEngine", function () {
     ]);
     await USDC.mint(account1.address, ten.toString());
     await USDC.mint(account2.address, ten.toString());
-    await (await volmexBaseToken.setMintBurnRole(positioning.address)).wait();
+    await (await BaseToken.setMintBurnRole(positioning.address)).wait();
     await (await virtualToken.connect(owner).setMintBurnRole(positioning.address)).wait();
-    perpViewFake = await smock.fake("VolmexPerpView");
-    volmexPerpPeriphery = await upgrades.deployProxy(VolmexPerpPeriphery, [
+    perpViewFake = await smock.fake("PerpView");
+    PerpPeriphery = await upgrades.deployProxy(PerpPeriphery, [
       perpViewFake.address,
       perpetualOracle.address,
       [vault.address, vault.address],
@@ -279,7 +279,7 @@ describe("MatchingEngine", function () {
     ]);
     await perpetualOracle.setIndexObservationAdder(owner.address);
     await marketRegistry.grantAddBaseTokenRole(owner.address);
-    await marketRegistry.connect(owner).addBaseToken(volmexBaseToken.address);
+    await marketRegistry.connect(owner).addBaseToken(BaseToken.address);
 
     await marketRegistry.connect(owner).setMakerFeeRatio(0.0004e6);
     await marketRegistry.connect(owner).setTakerFeeRatio(0.0009e6);
@@ -303,26 +303,26 @@ describe("MatchingEngine", function () {
     await positioningConfig.setPositioning(positioning.address);
     await positioningConfig.setAccountBalance(accountBalance.address);
     await positioningConfig.setTwapInterval(28800);
-    await vaultController.setPeriphery(volmexPerpPeriphery.address);
+    await vaultController.setPeriphery(PerpPeriphery.address);
     asset = Asset(virtualToken.address, "10");
 
     await USDC.connect(account1).approve(vault.address, ten.toString());
     await USDC.connect(account2).approve(vault.address, ten.toString());
-    await USDC.connect(account1).approve(volmexPerpPeriphery.address, ten.toString());
-    await USDC.connect(account2).approve(volmexPerpPeriphery.address, ten.toString());
+    await USDC.connect(account1).approve(PerpPeriphery.address, ten.toString());
+    await USDC.connect(account2).approve(PerpPeriphery.address, ten.toString());
 
-    // volmexPerpPeriphery.address, USDC.address, account1.address, amount
+    // PerpPeriphery.address, USDC.address, account1.address, amount
     await vaultController
       .connect(account1)
-      .deposit(volmexPerpPeriphery.address, USDC.address, account1.address, ten.toString());
+      .deposit(PerpPeriphery.address, USDC.address, account1.address, ten.toString());
     await vaultController
       .connect(account2)
-      .deposit(volmexPerpPeriphery.address, USDC.address, account2.address, ten.toString());
+      .deposit(PerpPeriphery.address, USDC.address, account2.address, ten.toString());
     const orderLeft2 = Order(
       ORDER,
       deadline,
       account1.address,
-      Asset(volmexBaseToken.address, two.toString()),
+      Asset(BaseToken.address, two.toString()),
       Asset(virtualToken.address, two.toString()),
       45,
       0,
@@ -334,7 +334,7 @@ describe("MatchingEngine", function () {
       deadline,
       account2.address,
       Asset(virtualToken.address, one.toString()),
-      Asset(volmexBaseToken.address, one.toString()),
+      Asset(BaseToken.address, one.toString()),
       67,
       0,
       false,
@@ -343,7 +343,7 @@ describe("MatchingEngine", function () {
       ORDER,
       deadline,
       account1.address,
-      Asset(volmexBaseToken.address, two.toString()),
+      Asset(BaseToken.address, two.toString()),
       Asset(virtualToken.address, two.toString()),
       1,
       0,
@@ -355,7 +355,7 @@ describe("MatchingEngine", function () {
       deadline,
       account2.address,
       Asset(virtualToken.address, one.toString()),
-      Asset(volmexBaseToken.address, one.toString()),
+      Asset(BaseToken.address, one.toString()),
       2,
       0,
       false,
@@ -521,7 +521,7 @@ describe("MatchingEngine", function () {
           deadline,
           account2.address,
           Asset(virtualToken.address, "20"),
-          Asset(volmexBaseToken.address, "20"),
+          Asset(BaseToken.address, "20"),
           1,
           0,
           false,
@@ -544,7 +544,7 @@ describe("MatchingEngine", function () {
           ORDER,
           deadline,
           account1.address,
-          Asset(volmexBaseToken.address, "20"),
+          Asset(BaseToken.address, "20"),
           Asset(virtualToken.address, "0"),
           1,
           0,
@@ -556,7 +556,7 @@ describe("MatchingEngine", function () {
           deadline,
           account2.address,
           Asset(virtualToken.address, "20"),
-          Asset(volmexBaseToken.address, "20"),
+          Asset(BaseToken.address, "20"),
           1,
           0,
           false,
@@ -576,7 +576,7 @@ describe("MatchingEngine", function () {
           deadline,
           account1.address,
           Asset(virtualToken.address, "100000000000000000000"), //100
-          Asset(volmexBaseToken.address, "1000000000000000000"), //1
+          Asset(BaseToken.address, "1000000000000000000"), //1
           1,
           0,
           false,
@@ -587,7 +587,7 @@ describe("MatchingEngine", function () {
           STOP_LOSS_LIMIT_ORDER,
           deadline,
           account2.address,
-          Asset(volmexBaseToken.address, "20000000000000000000"), //20
+          Asset(BaseToken.address, "20000000000000000000"), //20
           Asset(virtualToken.address, "10000000000000000000"), //10
           2,
           0,
@@ -616,7 +616,7 @@ describe("MatchingEngine", function () {
           ORDER,
           deadline,
           account1.address,
-          Asset(volmexBaseToken.address, "100000000000000000000"), //100
+          Asset(BaseToken.address, "100000000000000000000"), //100
           Asset(virtualToken.address, "10000000000000000000"), //10
           1,
           0,
@@ -629,7 +629,7 @@ describe("MatchingEngine", function () {
           deadline,
           account2.address,
           Asset(virtualToken.address, "10000000000000000000"), //10
-          Asset(volmexBaseToken.address, "20000000000000000000"), //20
+          Asset(BaseToken.address, "20000000000000000000"), //20
           2,
           0,
           false,
@@ -655,7 +655,7 @@ describe("MatchingEngine", function () {
           ORDER,
           deadline,
           account2.address,
-          Asset(volmexBaseToken.address, "10000000000000000000"), //10
+          Asset(BaseToken.address, "10000000000000000000"), //10
           Asset(virtualToken.address, "20000000000000000000"), //20
           2,
           0,
@@ -668,7 +668,7 @@ describe("MatchingEngine", function () {
           deadline,
           account1.address,
           Asset(virtualToken.address, "1000000000000000000000"), //1000
-          Asset(volmexBaseToken.address, "100000000000000000000"), //100
+          Asset(BaseToken.address, "100000000000000000000"), //100
           1,
           0,
           false,
@@ -694,7 +694,7 @@ describe("MatchingEngine", function () {
           ORDER,
           deadline,
           account2.address,
-          Asset(volmexBaseToken.address, "1000000000000000000000"), //1000
+          Asset(BaseToken.address, "1000000000000000000000"), //1000
           Asset(virtualToken.address, "100000000000000000000"), //100
           2,
           0,
@@ -705,7 +705,7 @@ describe("MatchingEngine", function () {
           ORDER,
           deadline,
           account2.address,
-          Asset(volmexBaseToken.address, "100000000000000000000"), //100
+          Asset(BaseToken.address, "100000000000000000000"), //100
           Asset(virtualToken.address, "20000000000000000000"), //20
           3,
           0,
@@ -718,7 +718,7 @@ describe("MatchingEngine", function () {
           deadline,
           account1.address,
           Asset(virtualToken.address, "20000000000000000000"), //20
-          Asset(volmexBaseToken.address, "100000000000000000000"), //100
+          Asset(BaseToken.address, "100000000000000000000"), //100
           1,
           0,
           false,
@@ -742,7 +742,7 @@ describe("MatchingEngine", function () {
           deadline,
           account1.address,
           Asset(virtualToken.address, "10000000000000000000"), //10
-          Asset(volmexBaseToken.address, "20000000000000000000"), //20
+          Asset(BaseToken.address, "20000000000000000000"), //20
           1,
           0,
           false,
@@ -752,7 +752,7 @@ describe("MatchingEngine", function () {
           ORDER,
           deadline,
           account2.address,
-          Asset(volmexBaseToken.address, "20000000000000000000"), //20
+          Asset(BaseToken.address, "20000000000000000000"), //20
           Asset(virtualToken.address, "10000000000000000000"), //10
           2,
           0,
@@ -773,7 +773,7 @@ describe("MatchingEngine", function () {
           ORDER,
           deadline,
           account1.address,
-          Asset(volmexBaseToken.address, "0"), //0
+          Asset(BaseToken.address, "0"), //0
           Asset(virtualToken.address, "100000000000000000000"), //1
           1,
           0,
@@ -785,7 +785,7 @@ describe("MatchingEngine", function () {
           deadline,
           account2.address,
           Asset(virtualToken.address, "20000000000000000000"), //20
-          Asset(volmexBaseToken.address, "10000000000000000000"), //10
+          Asset(BaseToken.address, "10000000000000000000"), //10
           2,
           0,
           false,
@@ -801,7 +801,7 @@ describe("MatchingEngine", function () {
           deadline,
           account1.address,
           Asset(virtualToken.address, "100000000000000000000"), //100
-          Asset(volmexBaseToken.address, "1"), //1
+          Asset(BaseToken.address, "1"), //1
           1,
           0,
           false,
@@ -811,7 +811,7 @@ describe("MatchingEngine", function () {
           STOP_LOSS_LIMIT_ORDER,
           deadline,
           account2.address,
-          Asset(volmexBaseToken.address, "20000000000000000000"), //20
+          Asset(BaseToken.address, "20000000000000000000"), //20
           Asset(virtualToken.address, "10000000000000000000"), //10
           2,
           0,
@@ -828,7 +828,7 @@ describe("MatchingEngine", function () {
           deadline,
           account1.address,
           Asset(virtualToken.address, "5000000000000000000000"), //5000
-          Asset(volmexBaseToken.address, "51000000000000000000"), //51
+          Asset(BaseToken.address, "51000000000000000000"), //51
           1,
           0,
           false,
@@ -838,7 +838,7 @@ describe("MatchingEngine", function () {
           STOP_LOSS_LIMIT_ORDER,
           deadline,
           account2.address,
-          Asset(volmexBaseToken.address, "50000000000000000000"), //50
+          Asset(BaseToken.address, "50000000000000000000"), //50
           Asset(virtualToken.address, "5000000000000000000000"), //5000
           2,
           0,
@@ -931,8 +931,8 @@ describe("MatchingEngine", function () {
           ORDER,
           deadline,
           account1.address,
-          Asset(volmexBaseToken.address, "20"),
-          Asset(volmexBaseToken.address, "20"),
+          Asset(BaseToken.address, "20"),
+          Asset(BaseToken.address, "20"),
           1,
           0,
           true,
@@ -943,7 +943,7 @@ describe("MatchingEngine", function () {
           deadline,
           account2.address,
           Asset(virtualToken.address, "20"),
-          Asset(volmexBaseToken.address, "20"),
+          Asset(BaseToken.address, "20"),
           1,
           0,
           false,
@@ -1019,7 +1019,7 @@ describe("MatchingEngine", function () {
           ORDER,
           deadline,
           account1.address,
-          Asset(volmexBaseToken.address, "10"),
+          Asset(BaseToken.address, "10"),
           Asset(virtualToken.address, "20"),
           1,
           0,
@@ -1031,7 +1031,7 @@ describe("MatchingEngine", function () {
           deadline,
           account2.address,
           Asset(virtualToken.address, "20"),
-          Asset(volmexBaseToken.address, "10"),
+          Asset(BaseToken.address, "10"),
           2,
           0,
           true,
@@ -1046,7 +1046,7 @@ describe("MatchingEngine", function () {
           ORDER,
           deadline,
           "0x0000000000000000000000000000000000000000",
-          Asset(volmexBaseToken.address, "40"),
+          Asset(BaseToken.address, "40"),
           Asset(virtualToken.address, "20"),
           1,
           0,
@@ -1058,7 +1058,7 @@ describe("MatchingEngine", function () {
           deadline,
           account2.address,
           Asset(virtualToken.address, "20"),
-          Asset(volmexBaseToken.address, "40"),
+          Asset(BaseToken.address, "40"),
           2,
           0,
           true,
@@ -1087,7 +1087,7 @@ describe("MatchingEngine", function () {
         ORDER,
         deadline,
         account2.address,
-        Asset(volmexBaseToken.address, "10000000000000000000"), //10
+        Asset(BaseToken.address, "10000000000000000000"), //10
         Asset(virtualToken.address, "700000000000000000000"), //700
         3,
         0,
@@ -1098,7 +1098,7 @@ describe("MatchingEngine", function () {
         ORDER,
         deadline,
         account2.address,
-        Asset(volmexBaseToken.address, "10000000000000000000"), //10
+        Asset(BaseToken.address, "10000000000000000000"), //10
         Asset(virtualToken.address, "700000000000000000000"), //700
         3,
         0,
@@ -1109,7 +1109,7 @@ describe("MatchingEngine", function () {
         ORDER,
         deadline,
         account2.address,
-        Asset(volmexBaseToken.address, "10000000000000000000"), //10
+        Asset(BaseToken.address, "10000000000000000000"), //10
         Asset(virtualToken.address, "700000000000000000000"), //700
         3,
         0,
@@ -1124,7 +1124,7 @@ describe("MatchingEngine", function () {
           deadline,
           account1.address,
           Asset(virtualToken.address, "710000000000000000000"), //710
-          Asset(volmexBaseToken.address, "10000000000000000000"), //10
+          Asset(BaseToken.address, "10000000000000000000"), //10
           2,
           0,
           false,
@@ -1147,7 +1147,7 @@ describe("MatchingEngine", function () {
           deadline,
           account1.address,
           Asset(virtualToken.address, "1300000000000000000000"), //1300
-          Asset(volmexBaseToken.address, "10000000000000000000"), //10
+          Asset(BaseToken.address, "10000000000000000000"), //10
           2,
           0,
           false,
@@ -1169,7 +1169,7 @@ describe("MatchingEngine", function () {
           deadline,
           account1.address,
           Asset(virtualToken.address, "690000000000000000000"), //690
-          Asset(volmexBaseToken.address, "10000000000000000000"), //10
+          Asset(BaseToken.address, "10000000000000000000"), //10
           2,
           0,
           false,
@@ -1186,7 +1186,7 @@ describe("MatchingEngine", function () {
           deadline,
           account1.address,
           Asset(virtualToken.address, "710000000000000000000"), //710
-          Asset(volmexBaseToken.address, "10000000000000000000"), //10
+          Asset(BaseToken.address, "10000000000000000000"), //10
           2,
           0,
           false,
@@ -1208,7 +1208,7 @@ describe("MatchingEngine", function () {
           deadline,
           account1.address,
           Asset(virtualToken.address, "710000000000000000000"), //710
-          Asset(volmexBaseToken.address, "10000000000000000000"), //10
+          Asset(BaseToken.address, "10000000000000000000"), //10
           2,
           0,
           false,
@@ -1233,7 +1233,7 @@ describe("MatchingEngine", function () {
           deadline,
           account1.address,
           Asset(virtualToken.address, "710000000000000000000"), //710
-          Asset(volmexBaseToken.address, "10000000000000000000"), //10
+          Asset(BaseToken.address, "10000000000000000000"), //10
           2,
           0,
           false,
@@ -1256,7 +1256,7 @@ describe("MatchingEngine", function () {
           deadline,
           account1.address,
           Asset(virtualToken.address, "1300000000000000000000"), //1300
-          Asset(volmexBaseToken.address, "10000000000000000000"), //10
+          Asset(BaseToken.address, "10000000000000000000"), //10
           2,
           0,
           false,
@@ -1279,7 +1279,7 @@ describe("MatchingEngine", function () {
           STOP_LOSS_LIMIT_ORDER,
           account1.address,
           Asset(virtualToken.address, "710000000000000000000"), //710
-          Asset(volmexBaseToken.address, "10000000000000000000"), //10
+          Asset(BaseToken.address, "10000000000000000000"), //10
           2,
           0,
           false,
@@ -1301,7 +1301,7 @@ describe("MatchingEngine", function () {
           STOP_LOSS_LIMIT_ORDER,
           account1.address,
           Asset(virtualToken.address, "710000000000000000000"), //710
-          Asset(volmexBaseToken.address, "10000000000000000000"), //10
+          Asset(BaseToken.address, "10000000000000000000"), //10
           2,
           0,
           false,
@@ -1326,7 +1326,7 @@ describe("MatchingEngine", function () {
           deadline,
           account1.address,
           Asset(virtualToken.address, "710000000000000000000"), //710
-          Asset(volmexBaseToken.address, "10000000000000000000"), //10
+          Asset(BaseToken.address, "10000000000000000000"), //10
           2,
           0,
           false,
@@ -1349,7 +1349,7 @@ describe("MatchingEngine", function () {
           deadline,
           account1.address,
           Asset(virtualToken.address, "1300000000000000000000"), //1300
-          Asset(volmexBaseToken.address, "10000000000000000000"), //10
+          Asset(BaseToken.address, "10000000000000000000"), //10
           2,
           0,
           false,
@@ -1372,7 +1372,7 @@ describe("MatchingEngine", function () {
           TAKE_PROFIT_LIMIT_ORDER,
           account1.address,
           Asset(virtualToken.address, "710000000000000000000"), //710
-          Asset(volmexBaseToken.address, "10000000000000000000"), //10
+          Asset(BaseToken.address, "10000000000000000000"), //10
           2,
           0,
           false,
@@ -1394,7 +1394,7 @@ describe("MatchingEngine", function () {
           TAKE_PROFIT_LIMIT_ORDER,
           account1.address,
           Asset(virtualToken.address, "710000000000000000000"), //710
-          Asset(volmexBaseToken.address, "10000000000000000000"), //10
+          Asset(BaseToken.address, "10000000000000000000"), //10
           2,
           0,
           false,
@@ -1466,7 +1466,7 @@ describe("MatchingEngine", function () {
             deadline,
             account1.address,
             Asset(virtualToken.address, two.toString()),
-            Asset(volmexBaseToken.address, one.toString()),
+            Asset(BaseToken.address, one.toString()),
             salt,
             0,
             true,
@@ -1479,7 +1479,7 @@ describe("MatchingEngine", function () {
             ORDER,
             deadline,
             account2.address,
-            Asset(volmexBaseToken.address, one.toString()),
+            Asset(BaseToken.address, one.toString()),
             Asset(virtualToken.address, one.toString()),
             salt,
             0,
@@ -1563,7 +1563,7 @@ describe("MatchingEngine", function () {
             deadline,
             account1.address,
             Asset(virtualToken.address, two.toString()),
-            Asset(volmexBaseToken.address, one.toString()),
+            Asset(BaseToken.address, one.toString()),
             salt,
             0,
             true,
@@ -1576,7 +1576,7 @@ describe("MatchingEngine", function () {
             ORDER,
             deadline,
             account2.address,
-            Asset(volmexBaseToken.address, one.toString()),
+            Asset(BaseToken.address, one.toString()),
             Asset(virtualToken.address, one.toString()),
             salt,
             0,
@@ -1603,7 +1603,7 @@ describe("MatchingEngine", function () {
           ORDER,
           deadline,
           account1.address,
-          Asset(volmexBaseToken.address, convert(20)),
+          Asset(BaseToken.address, convert(20)),
           Asset(virtualToken.address, convert(200)),
           ++salt,
           0,
@@ -1615,7 +1615,7 @@ describe("MatchingEngine", function () {
           deadline,
           account2.address,
           Asset(virtualToken.address, convert(110)),
-          Asset(volmexBaseToken.address, convert(10)),
+          Asset(BaseToken.address, convert(10)),
           ++salt,
           0,
           !isShort,
@@ -1630,7 +1630,7 @@ describe("MatchingEngine", function () {
           ORDER,
           deadline,
           account1.address,
-          Asset(volmexBaseToken.address, convert(10)),
+          Asset(BaseToken.address, convert(10)),
           Asset(virtualToken.address, convert(100)),
           ++salt,
           0,
@@ -1642,7 +1642,7 @@ describe("MatchingEngine", function () {
           deadline,
           account2.address,
           Asset(virtualToken.address, convert(110)),
-          Asset(volmexBaseToken.address, convert(10)),
+          Asset(BaseToken.address, convert(10)),
           ++salt,
           0,
           !isShort,
@@ -1657,7 +1657,7 @@ describe("MatchingEngine", function () {
           ORDER,
           deadline,
           account1.address,
-          Asset(volmexBaseToken.address, convert(10)),
+          Asset(BaseToken.address, convert(10)),
           Asset(virtualToken.address, convert(100)),
           ++salt,
           0,
@@ -1669,7 +1669,7 @@ describe("MatchingEngine", function () {
           deadline,
           account2.address,
           Asset(virtualToken.address, convert(220)),
-          Asset(volmexBaseToken.address, convert(20)),
+          Asset(BaseToken.address, convert(20)),
           ++salt,
           0,
           !isShort,
@@ -1687,7 +1687,7 @@ describe("MatchingEngine", function () {
           ORDER,
           deadline,
           account1.address,
-          Asset(volmexBaseToken.address, convert(20)),
+          Asset(BaseToken.address, convert(20)),
           Asset(virtualToken.address, convert(200)),
           ++salt,
           0,
@@ -1699,7 +1699,7 @@ describe("MatchingEngine", function () {
           deadline,
           account2.address,
           Asset(virtualToken.address, convert(100)),
-          Asset(volmexBaseToken.address, convert(10)),
+          Asset(BaseToken.address, convert(10)),
           ++salt,
           0,
           !isShort,
@@ -1714,7 +1714,7 @@ describe("MatchingEngine", function () {
           ORDER,
           deadline,
           account1.address,
-          Asset(volmexBaseToken.address, convert(10)),
+          Asset(BaseToken.address, convert(10)),
           Asset(virtualToken.address, convert(100)),
           ++salt,
           0,
@@ -1726,7 +1726,7 @@ describe("MatchingEngine", function () {
           deadline,
           account2.address,
           Asset(virtualToken.address, convert(100)),
-          Asset(volmexBaseToken.address, convert(10)),
+          Asset(BaseToken.address, convert(10)),
           ++salt,
           0,
           !isShort,
@@ -1741,7 +1741,7 @@ describe("MatchingEngine", function () {
           ORDER,
           deadline,
           account1.address,
-          Asset(volmexBaseToken.address, convert(10)),
+          Asset(BaseToken.address, convert(10)),
           Asset(virtualToken.address, convert(100)),
           ++salt,
           0,
@@ -1753,7 +1753,7 @@ describe("MatchingEngine", function () {
           deadline,
           account2.address,
           Asset(virtualToken.address, convert(200)),
-          Asset(volmexBaseToken.address, convert(20)),
+          Asset(BaseToken.address, convert(20)),
           ++salt,
           0,
           !isShort,
@@ -1771,7 +1771,7 @@ describe("MatchingEngine", function () {
           ORDER,
           deadline,
           account1.address,
-          Asset(volmexBaseToken.address, convert(20)),
+          Asset(BaseToken.address, convert(20)),
           Asset(virtualToken.address, convert(220)),
           ++salt,
           0,
@@ -1783,7 +1783,7 @@ describe("MatchingEngine", function () {
           deadline,
           account2.address,
           Asset(virtualToken.address, convert(100)),
-          Asset(volmexBaseToken.address, convert(10)),
+          Asset(BaseToken.address, convert(10)),
           ++salt,
           0,
           !isShort,
@@ -1798,7 +1798,7 @@ describe("MatchingEngine", function () {
           ORDER,
           deadline,
           account1.address,
-          Asset(volmexBaseToken.address, convert(10)),
+          Asset(BaseToken.address, convert(10)),
           Asset(virtualToken.address, convert(110)),
           ++salt,
           0,
@@ -1810,7 +1810,7 @@ describe("MatchingEngine", function () {
           deadline,
           account2.address,
           Asset(virtualToken.address, convert(100)),
-          Asset(volmexBaseToken.address, convert(10)),
+          Asset(BaseToken.address, convert(10)),
           ++salt,
           0,
           !isShort,
@@ -1825,7 +1825,7 @@ describe("MatchingEngine", function () {
           ORDER,
           deadline,
           account1.address,
-          Asset(volmexBaseToken.address, convert(10)),
+          Asset(BaseToken.address, convert(10)),
           Asset(virtualToken.address, convert(110)),
           ++salt,
           0,
@@ -1837,7 +1837,7 @@ describe("MatchingEngine", function () {
           deadline,
           account2.address,
           Asset(virtualToken.address, convert(200)),
-          Asset(volmexBaseToken.address, convert(20)),
+          Asset(BaseToken.address, convert(20)),
           ++salt,
           0,
           !isShort,
@@ -1864,7 +1864,7 @@ describe("MatchingEngine", function () {
           deadline,
           account1.address,
           Asset(virtualToken.address, convert(220)),
-          Asset(volmexBaseToken.address, convert(20)),
+          Asset(BaseToken.address, convert(20)),
           ++salt,
           0,
           !isShort,
@@ -1874,7 +1874,7 @@ describe("MatchingEngine", function () {
           ORDER,
           deadline,
           account2.address,
-          Asset(volmexBaseToken.address, convert(10)),
+          Asset(BaseToken.address, convert(10)),
           Asset(virtualToken.address, convert(100)),
           ++salt,
           0,
@@ -1891,7 +1891,7 @@ describe("MatchingEngine", function () {
           deadline,
           account1.address,
           Asset(virtualToken.address, convert(110)),
-          Asset(volmexBaseToken.address, convert(10)),
+          Asset(BaseToken.address, convert(10)),
           ++salt,
           0,
           !isShort,
@@ -1901,7 +1901,7 @@ describe("MatchingEngine", function () {
           ORDER,
           deadline,
           account2.address,
-          Asset(volmexBaseToken.address, convert(10)),
+          Asset(BaseToken.address, convert(10)),
           Asset(virtualToken.address, convert(100)),
           ++salt,
           0,
@@ -1918,7 +1918,7 @@ describe("MatchingEngine", function () {
           deadline,
           account1.address,
           Asset(virtualToken.address, convert(110)),
-          Asset(volmexBaseToken.address, convert(10)),
+          Asset(BaseToken.address, convert(10)),
           ++salt,
           0,
           !isShort,
@@ -1928,7 +1928,7 @@ describe("MatchingEngine", function () {
           ORDER,
           deadline,
           account2.address,
-          Asset(volmexBaseToken.address, convert(20)),
+          Asset(BaseToken.address, convert(20)),
           Asset(virtualToken.address, convert(200)),
           ++salt,
           0,
@@ -1948,7 +1948,7 @@ describe("MatchingEngine", function () {
           deadline,
           account1.address,
           Asset(virtualToken.address, convert(200)),
-          Asset(volmexBaseToken.address, convert(20)),
+          Asset(BaseToken.address, convert(20)),
           ++salt,
           0,
           !isShort,
@@ -1958,7 +1958,7 @@ describe("MatchingEngine", function () {
           ORDER,
           deadline,
           account2.address,
-          Asset(volmexBaseToken.address, convert(10)),
+          Asset(BaseToken.address, convert(10)),
           Asset(virtualToken.address, convert(110)),
           ++salt,
           0,
@@ -1975,7 +1975,7 @@ describe("MatchingEngine", function () {
           deadline,
           account1.address,
           Asset(virtualToken.address, convert(100)),
-          Asset(volmexBaseToken.address, convert(10)),
+          Asset(BaseToken.address, convert(10)),
           ++salt,
           0,
           !isShort,
@@ -1985,7 +1985,7 @@ describe("MatchingEngine", function () {
           ORDER,
           deadline,
           account2.address,
-          Asset(volmexBaseToken.address, convert(10)),
+          Asset(BaseToken.address, convert(10)),
           Asset(virtualToken.address, convert(110)),
           ++salt,
           0,
@@ -2002,7 +2002,7 @@ describe("MatchingEngine", function () {
           deadline,
           account1.address,
           Asset(virtualToken.address, convert(100)),
-          Asset(volmexBaseToken.address, convert(10)),
+          Asset(BaseToken.address, convert(10)),
           ++salt,
           0,
           !isShort,
@@ -2012,7 +2012,7 @@ describe("MatchingEngine", function () {
           ORDER,
           deadline,
           account2.address,
-          Asset(volmexBaseToken.address, convert(20)),
+          Asset(BaseToken.address, convert(20)),
           Asset(virtualToken.address, convert(220)),
           ++salt,
           0,
@@ -2034,7 +2034,7 @@ describe("MatchingEngine", function () {
           ORDER,
           deadline,
           account1.address,
-          Asset(volmexBaseToken.address, "100000000000000000000"), //100
+          Asset(BaseToken.address, "100000000000000000000"), //100
           Asset(virtualToken.address, "10000000000000000000"), //10
           1,
           0,
@@ -2047,7 +2047,7 @@ describe("MatchingEngine", function () {
           deadline,
           account2.address,
           Asset(virtualToken.address, "10000000000000000000"), //10
-          Asset(volmexBaseToken.address, "20000000000000000000"), //20
+          Asset(BaseToken.address, "20000000000000000000"), //20
           2,
           0,
           false,
@@ -2058,7 +2058,7 @@ describe("MatchingEngine", function () {
           deadline,
           account2.address,
           Asset(virtualToken.address, "10000000000000000000"), //10
-          Asset(volmexBaseToken.address, "15000000000000000000"), //15
+          Asset(BaseToken.address, "15000000000000000000"), //15
           2,
           0,
           false,
@@ -2070,7 +2070,7 @@ describe("MatchingEngine", function () {
           deadline,
           account2.address,
           Asset(virtualToken.address, "66000000000000000000"), //66
-          Asset(volmexBaseToken.address, "100000000000000000000"), //100
+          Asset(BaseToken.address, "100000000000000000000"), //100
           2,
           0,
           false,
@@ -2081,7 +2081,7 @@ describe("MatchingEngine", function () {
           STOP_LOSS_LIMIT_ORDER,
           deadline,
           account1.address,
-          Asset(volmexBaseToken.address, "35000000000000000000"), //35
+          Asset(BaseToken.address, "35000000000000000000"), //35
           Asset(virtualToken.address, "1000000000000000000"), //1
           3,
           0,
@@ -2135,7 +2135,7 @@ describe("MatchingEngine", function () {
         ORDER,
         deadline,
         account1.address,
-        Asset(volmexBaseToken.address, convert(20)),
+        Asset(BaseToken.address, convert(20)),
         Asset(virtualToken.address, convert(200)),
         ++salt,
         0,
@@ -2147,7 +2147,7 @@ describe("MatchingEngine", function () {
         deadline,
         account2.address,
         Asset(virtualToken.address, convert(110)),
-        Asset(volmexBaseToken.address, convert(10)),
+        Asset(BaseToken.address, convert(10)),
         ++salt,
         0,
         !isShort,
@@ -2163,7 +2163,7 @@ describe("MatchingEngine", function () {
         ORDER,
         deadline,
         account1.address,
-        Asset(volmexBaseToken.address, convert(10)),
+        Asset(BaseToken.address, convert(10)),
         Asset(virtualToken.address, convert(100)),
         ++salt,
         0,
@@ -2175,7 +2175,7 @@ describe("MatchingEngine", function () {
         deadline,
         account2.address,
         Asset(virtualToken.address, convert(220)),
-        Asset(volmexBaseToken.address, convert(20)),
+        Asset(BaseToken.address, convert(20)),
         ++salt,
         0,
         !isShort,
@@ -2192,7 +2192,7 @@ describe("MatchingEngine", function () {
         deadline,
         account1.address,
         Asset(virtualToken.address, convert(220)),
-        Asset(volmexBaseToken.address, convert(20)),
+        Asset(BaseToken.address, convert(20)),
         ++salt,
         0,
         !isShort,
@@ -2202,7 +2202,7 @@ describe("MatchingEngine", function () {
         ORDER,
         deadline,
         account2.address,
-        Asset(volmexBaseToken.address, convert(10)),
+        Asset(BaseToken.address, convert(10)),
         Asset(virtualToken.address, convert(100)),
         ++salt,
         0,
@@ -2220,7 +2220,7 @@ describe("MatchingEngine", function () {
         deadline,
         account1.address,
         Asset(virtualToken.address, convert(110)),
-        Asset(volmexBaseToken.address, convert(10)),
+        Asset(BaseToken.address, convert(10)),
         ++salt,
         0,
         !isShort,
@@ -2230,7 +2230,7 @@ describe("MatchingEngine", function () {
         ORDER,
         deadline,
         account2.address,
-        Asset(volmexBaseToken.address, convert(20)),
+        Asset(BaseToken.address, convert(20)),
         Asset(virtualToken.address, convert(200)),
         ++salt,
         0,
@@ -2249,7 +2249,7 @@ describe("MatchingEngine", function () {
         ORDER,
         deadline,
         account1.address,
-        Asset(volmexBaseToken.address, "10000000000000000000"), //10
+        Asset(BaseToken.address, "10000000000000000000"), //10
         Asset(virtualToken.address, "100000000000000000000"), //100
         1,
         0,
@@ -2262,7 +2262,7 @@ describe("MatchingEngine", function () {
         deadline,
         account2.address,
         Asset(virtualToken.address, "100000000000000000000"), //100
-        Asset(volmexBaseToken.address, "10000000000000000000"), //10
+        Asset(BaseToken.address, "10000000000000000000"), //10
         2,
         0,
         false,
@@ -2275,14 +2275,14 @@ describe("MatchingEngine", function () {
           ["10000000000000000000", "10000000000000000000"],
         );
       const maxOrderSizeBefore = await matchingEngine.getMaxOrderSizeOverTime(
-        volmexBaseToken.address,
+        BaseToken.address,
       );
       expect(maxOrderSizeBefore.toString()).to.be.equal("10000000000000000000");
       const orderLeft1 = Order(
         ORDER,
         deadline,
         account1.address,
-        Asset(volmexBaseToken.address, "35000000000000000000"), //10
+        Asset(BaseToken.address, "35000000000000000000"), //10
         Asset(virtualToken.address, "100000000000000000000"), //100
         3,
         0,
@@ -2295,7 +2295,7 @@ describe("MatchingEngine", function () {
         deadline,
         account2.address,
         Asset(virtualToken.address, "100000000000000000000"), //100
-        Asset(volmexBaseToken.address, "35000000000000000000"), //10
+        Asset(BaseToken.address, "35000000000000000000"), //10
         4,
         0,
         false,
@@ -2308,7 +2308,7 @@ describe("MatchingEngine", function () {
           ["35000000000000000000", "35000000000000000000"],
         );
       const maxOrderSizeAfter = await matchingEngine.getMaxOrderSizeOverTime(
-        volmexBaseToken.address,
+        BaseToken.address,
       );
       expect(maxOrderSizeAfter.toString()).to.be.equal("35000000000000000000");
     });
@@ -2317,7 +2317,7 @@ describe("MatchingEngine", function () {
         ORDER,
         deadline,
         account1.address,
-        Asset(volmexBaseToken.address, "10000000000000000000"), //10
+        Asset(BaseToken.address, "10000000000000000000"), //10
         Asset(virtualToken.address, "100000000000000000000"), //100
         1,
         0,
@@ -2330,7 +2330,7 @@ describe("MatchingEngine", function () {
         deadline,
         account2.address,
         Asset(virtualToken.address, "100000000000000000000"), //100
-        Asset(volmexBaseToken.address, "10000000000000000000"), //10
+        Asset(BaseToken.address, "10000000000000000000"), //10
         2,
         0,
         false,
@@ -2346,7 +2346,7 @@ describe("MatchingEngine", function () {
       // increase time by  3400 seconds < one hou
       await time.increase(3400);
       const maxOrderSizeBefore = await matchingEngine.getMaxOrderSizeOverTime(
-        volmexBaseToken.address,
+        BaseToken.address,
       );
       expect(maxOrderSizeBefore.toString()).to.be.equal("10000000000000000000");
       await time.increase(100);
@@ -2354,7 +2354,7 @@ describe("MatchingEngine", function () {
         ORDER,
         deadline,
         account1.address,
-        Asset(volmexBaseToken.address, "3000000000000000000"), //3
+        Asset(BaseToken.address, "3000000000000000000"), //3
         Asset(virtualToken.address, "100000000000000000000"), //100
         3,
         0,
@@ -2367,7 +2367,7 @@ describe("MatchingEngine", function () {
         deadline,
         account2.address,
         Asset(virtualToken.address, "100000000000000000000"), //100
-        Asset(volmexBaseToken.address, "3000000000000000000"), //3
+        Asset(BaseToken.address, "3000000000000000000"), //3
         4,
         0,
         false,
@@ -2383,7 +2383,7 @@ describe("MatchingEngine", function () {
         ORDER,
         deadline,
         account1.address,
-        Asset(volmexBaseToken.address, "60000000000000000000"), //6
+        Asset(BaseToken.address, "60000000000000000000"), //6
         Asset(virtualToken.address, "100000000000000000000"), //100
         6,
         0,
@@ -2396,7 +2396,7 @@ describe("MatchingEngine", function () {
         deadline,
         account2.address,
         Asset(virtualToken.address, "100000000000000000000"), //100
-        Asset(volmexBaseToken.address, "60000000000000000000"), //6
+        Asset(BaseToken.address, "60000000000000000000"), //6
         7,
         0,
         false,
@@ -2410,7 +2410,7 @@ describe("MatchingEngine", function () {
         );
 
       const maxOrderSizeAfter = await matchingEngine.getMaxOrderSizeOverTime(
-        volmexBaseToken.address,
+        BaseToken.address,
       );
       expect(maxOrderSizeAfter.toString()).to.be.equal("60000000000000000000");
     });
@@ -2421,7 +2421,7 @@ describe("MatchingEngine", function () {
         ORDER,
         deadline,
         account1.address,
-        Asset(volmexBaseToken.address, "10000000000000000000"), //10
+        Asset(BaseToken.address, "10000000000000000000"), //10
         Asset(virtualToken.address, "100000000000000000000"), //100
         1,
         0,
@@ -2434,7 +2434,7 @@ describe("MatchingEngine", function () {
         deadline,
         account2.address,
         Asset(virtualToken.address, "100000000000000000000"), //100
-        Asset(volmexBaseToken.address, "10000000000000000000"), //10
+        Asset(BaseToken.address, "10000000000000000000"), //10
         2,
         0,
         false,
@@ -2447,20 +2447,20 @@ describe("MatchingEngine", function () {
           ["10000000000000000000", "10000000000000000000"],
         );
       const maxOrderSizeBefore = await matchingEngine.getMaxOrderSizeOverTime(
-        volmexBaseToken.address,
+        BaseToken.address,
       );
       expect(maxOrderSizeBefore.toString()).to.be.equal("10000000000000000000");
       // increase time by one hour
       await time.increase(3600);
       const maxOrderSizeAfterOneHour = await matchingEngine.getMaxOrderSizeOverTime(
-        volmexBaseToken.address,
+        BaseToken.address,
       );
       // max order size should not change before 2 hours to zero
       expect(maxOrderSizeAfterOneHour.toString()).to.be.equal(maxOrderSizeBefore.toString());
       // increase time by one hour
       await time.increase(3600);
       const maxOrderSizeAfterTwoHour = await matchingEngine.getMaxOrderSizeOverTime(
-        volmexBaseToken.address,
+        BaseToken.address,
       );
       // max order size should not change before 2 hours to zero
       expect(maxOrderSizeAfterTwoHour.toString()).to.be.equal("0");
@@ -2468,7 +2468,7 @@ describe("MatchingEngine", function () {
         ORDER,
         deadline,
         account1.address,
-        Asset(volmexBaseToken.address, "3000000000000000000"), //3
+        Asset(BaseToken.address, "3000000000000000000"), //3
         Asset(virtualToken.address, "100000000000000000000"), //100
         3,
         0,
@@ -2480,7 +2480,7 @@ describe("MatchingEngine", function () {
         deadline,
         account2.address,
         Asset(virtualToken.address, "100000000000000000000"), //100
-        Asset(volmexBaseToken.address, "3000000000000000000"), //3
+        Asset(BaseToken.address, "3000000000000000000"), //3
         4,
         0,
         false,
@@ -2496,7 +2496,7 @@ describe("MatchingEngine", function () {
         ORDER,
         deadline,
         account1.address,
-        Asset(volmexBaseToken.address, "6000000000000000000"), //6
+        Asset(BaseToken.address, "6000000000000000000"), //6
         Asset(virtualToken.address, "100000000000000000000"), //100
         6,
         0,
@@ -2509,7 +2509,7 @@ describe("MatchingEngine", function () {
         deadline,
         account2.address,
         Asset(virtualToken.address, "100000000000000000000"), //100
-        Asset(volmexBaseToken.address, "6000000000000000000"), //6
+        Asset(BaseToken.address, "6000000000000000000"), //6
         7,
         0,
         false,
@@ -2523,7 +2523,7 @@ describe("MatchingEngine", function () {
         );
 
       const maxOrderSizeUpdatedAfterTwohours = await matchingEngine.getMaxOrderSizeOverTime(
-        volmexBaseToken.address,
+        BaseToken.address,
       );
       expect(maxOrderSizeUpdatedAfterTwohours.toString()).to.be.equal("6000000000000000000");
     });
@@ -2532,7 +2532,7 @@ describe("MatchingEngine", function () {
         ORDER,
         deadline,
         account1.address,
-        Asset(volmexBaseToken.address, "3000000000000000000"), //3
+        Asset(BaseToken.address, "3000000000000000000"), //3
         Asset(virtualToken.address, "100000000000000000000"), //100
         3,
         0,
@@ -2545,7 +2545,7 @@ describe("MatchingEngine", function () {
         deadline,
         account2.address,
         Asset(virtualToken.address, "100000000000000000000"), //100
-        Asset(volmexBaseToken.address, "3000000000000000000"), //3
+        Asset(BaseToken.address, "3000000000000000000"), //3
         4,
         0,
         false,
@@ -2557,13 +2557,13 @@ describe("MatchingEngine", function () {
           [3, 4],
           ["3000000000000000000", "3000000000000000000"],
         );
-      const previousValue = await matchingEngine.getMaxOrderSizeOverTime(volmexBaseToken.address);
+      const previousValue = await matchingEngine.getMaxOrderSizeOverTime(BaseToken.address);
       expect(previousValue.toString()).to.be.equal("3000000000000000000");
       const orderLeft2 = Order(
         ORDER,
         deadline,
         account1.address,
-        Asset(volmexBaseToken.address, "6000000000000000000"), //6
+        Asset(BaseToken.address, "6000000000000000000"), //6
         Asset(virtualToken.address, "100000000000000000000"), //100
         6,
         0,
@@ -2576,7 +2576,7 @@ describe("MatchingEngine", function () {
         deadline,
         account2.address,
         Asset(virtualToken.address, "100000000000000000000"), //100
-        Asset(volmexBaseToken.address, "6000000000000000000"), //6
+        Asset(BaseToken.address, "6000000000000000000"), //6
         7,
         0,
         false,
@@ -2590,7 +2590,7 @@ describe("MatchingEngine", function () {
         );
 
       const maxOrderSizeUpdatedAfterNewOrder = await matchingEngine.getMaxOrderSizeOverTime(
-        volmexBaseToken.address,
+        BaseToken.address,
       );
       expect(maxOrderSizeUpdatedAfterNewOrder.toString()).to.be.equal("6000000000000000000");
       // previous value is smaller
@@ -2601,7 +2601,7 @@ describe("MatchingEngine", function () {
         ORDER,
         deadline,
         account1.address,
-        Asset(volmexBaseToken.address, "10000000000000000000"), //10
+        Asset(BaseToken.address, "10000000000000000000"), //10
         Asset(virtualToken.address, "100000000000000000000"), //100
         1,
         0,
@@ -2614,7 +2614,7 @@ describe("MatchingEngine", function () {
         deadline,
         account2.address,
         Asset(virtualToken.address, "100000000000000000000"), //100
-        Asset(volmexBaseToken.address, "10000000000000000000"), //10
+        Asset(BaseToken.address, "10000000000000000000"), //10
         2,
         0,
         false,
@@ -2627,7 +2627,7 @@ describe("MatchingEngine", function () {
           ["10000000000000000000", "10000000000000000000"],
         );
       const maxOrderSizeBefore = await matchingEngine.getMaxOrderSizeOverTime(
-        volmexBaseToken.address,
+        BaseToken.address,
       );
       expect(maxOrderSizeBefore.toString()).to.be.equal("10000000000000000000");
       // increase time by  3400 seconds < one hou
@@ -2637,7 +2637,7 @@ describe("MatchingEngine", function () {
         ORDER,
         deadline,
         account1.address,
-        Asset(volmexBaseToken.address, "3000000000000000000"), //3
+        Asset(BaseToken.address, "3000000000000000000"), //3
         Asset(virtualToken.address, "100000000000000000000"), //100
         3,
         0,
@@ -2650,7 +2650,7 @@ describe("MatchingEngine", function () {
         deadline,
         account2.address,
         Asset(virtualToken.address, "100000000000000000000"), //100
-        Asset(volmexBaseToken.address, "3000000000000000000"), //3
+        Asset(BaseToken.address, "3000000000000000000"), //3
         4,
         0,
         false,
@@ -2664,7 +2664,7 @@ describe("MatchingEngine", function () {
         );
       // new fill on the begining of new hour 3000000000000000000
       const updatedMaxOrderSize = await matchingEngine.getMaxOrderSizeOverTime(
-        volmexBaseToken.address,
+        BaseToken.address,
       );
       expect(updatedMaxOrderSize.toString()).to.be.equal("3000000000000000000");
     });
@@ -2674,7 +2674,7 @@ describe("MatchingEngine", function () {
         ORDER,
         deadline,
         account1.address,
-        Asset(volmexBaseToken.address, "12000000000000000000"), //12
+        Asset(BaseToken.address, "12000000000000000000"), //12
         Asset(virtualToken.address, "100000000000000000000"), //100
         1,
         0,
@@ -2686,7 +2686,7 @@ describe("MatchingEngine", function () {
         deadline,
         account2.address,
         Asset(virtualToken.address, "100000000000000000000"), //100
-        Asset(volmexBaseToken.address, "12000000000000000000"), //12
+        Asset(BaseToken.address, "12000000000000000000"), //12
         2,
         0,
         false,
@@ -2699,7 +2699,7 @@ describe("MatchingEngine", function () {
           ["12000000000000000000", "12000000000000000000"],
         );
       const maxOrderSizeBefore = await matchingEngine.getMaxOrderSizeOverTime(
-        volmexBaseToken.address,
+        BaseToken.address,
       );
       expect(maxOrderSizeBefore.toString()).to.be.equal("12000000000000000000");
 
@@ -2709,7 +2709,7 @@ describe("MatchingEngine", function () {
         ORDER,
         deadline,
         account1.address,
-        Asset(volmexBaseToken.address, "20000000000000000000"), //3
+        Asset(BaseToken.address, "20000000000000000000"), //3
         Asset(virtualToken.address, "100000000000000000000"), //100
         3,
         0,
@@ -2722,7 +2722,7 @@ describe("MatchingEngine", function () {
         deadline,
         account2.address,
         Asset(virtualToken.address, "100000000000000000000"), //100
-        Asset(volmexBaseToken.address, "20000000000000000000"), //3
+        Asset(BaseToken.address, "20000000000000000000"), //3
         4,
         0,
         false,
@@ -2735,7 +2735,7 @@ describe("MatchingEngine", function () {
           ["20000000000000000000", "20000000000000000000"],
         );
       let maxOrderSizeUpdated = await matchingEngine.getMaxOrderSizeOverTime(
-        volmexBaseToken.address,
+        BaseToken.address,
       );
       expect(maxOrderSizeUpdated.toString()).to.be.equal("20000000000000000000");
       // since  new fill is greater than previous one
@@ -2746,7 +2746,7 @@ describe("MatchingEngine", function () {
         ORDER,
         deadline,
         account1.address,
-        Asset(volmexBaseToken.address, "30000000000000000000"), //3
+        Asset(BaseToken.address, "30000000000000000000"), //3
         Asset(virtualToken.address, "100000000000000000000"), //100
         6,
         0,
@@ -2758,7 +2758,7 @@ describe("MatchingEngine", function () {
         deadline,
         account2.address,
         Asset(virtualToken.address, "100000000000000000000"), //100
-        Asset(volmexBaseToken.address, "30000000000000000000"), //3
+        Asset(BaseToken.address, "30000000000000000000"), //3
         7,
         0,
         false,
@@ -2770,7 +2770,7 @@ describe("MatchingEngine", function () {
           [6, 7],
           ["30000000000000000000", "30000000000000000000"],
         );
-      maxOrderSizeUpdated = await matchingEngine.getMaxOrderSizeOverTime(volmexBaseToken.address);
+      maxOrderSizeUpdated = await matchingEngine.getMaxOrderSizeOverTime(BaseToken.address);
       expect(maxOrderSizeUpdated.toString()).to.be.equal("30000000000000000000");
       await time.increase(600);
       console.log((await time.latest()).toString(), "new hour start");
@@ -2779,7 +2779,7 @@ describe("MatchingEngine", function () {
         ORDER,
         deadline,
         account1.address,
-        Asset(volmexBaseToken.address, "4000000000000000000"), //3
+        Asset(BaseToken.address, "4000000000000000000"), //3
         Asset(virtualToken.address, "100000000000000000000"), //100
         6,
         0,
@@ -2791,7 +2791,7 @@ describe("MatchingEngine", function () {
         deadline,
         account2.address,
         Asset(virtualToken.address, "100000000000000000000"), //100
-        Asset(volmexBaseToken.address, "4000000000000000000"), //3
+        Asset(BaseToken.address, "4000000000000000000"), //3
         7,
         0,
         false,
@@ -2806,7 +2806,7 @@ describe("MatchingEngine", function () {
       await time.increase(600);
       console.log((await time.latest()).toString(), "10 minutes after new hour");
       // at 12:10 PM, getter is called, the order size it returns should be in 12:00PM to 12:10PM
-      maxOrderSizeUpdated = await matchingEngine.getMaxOrderSizeOverTime(volmexBaseToken.address);
+      maxOrderSizeUpdated = await matchingEngine.getMaxOrderSizeOverTime(BaseToken.address);
       expect(maxOrderSizeUpdated.toString()).to.be.equal("4000000000000000000");
     });
     it("Should fetch the max order size of that hour only", async () => {
@@ -2814,7 +2814,7 @@ describe("MatchingEngine", function () {
         ORDER,
         deadline,
         account1.address,
-        Asset(volmexBaseToken.address, "12000000000000000000"), //12
+        Asset(BaseToken.address, "12000000000000000000"), //12
         Asset(virtualToken.address, "100000000000000000000"), //100
         1,
         0,
@@ -2826,7 +2826,7 @@ describe("MatchingEngine", function () {
         deadline,
         account2.address,
         Asset(virtualToken.address, "100000000000000000000"), //100
-        Asset(volmexBaseToken.address, "12000000000000000000"), //12
+        Asset(BaseToken.address, "12000000000000000000"), //12
         2,
         0,
         false,
@@ -2839,7 +2839,7 @@ describe("MatchingEngine", function () {
           ["12000000000000000000", "12000000000000000000"],
         );
       const maxOrderSizeBefore = await matchingEngine.getMaxOrderSizeOverTime(
-        volmexBaseToken.address,
+        BaseToken.address,
       );
       expect(maxOrderSizeBefore.toString()).to.be.equal("12000000000000000000");
 
@@ -2847,7 +2847,7 @@ describe("MatchingEngine", function () {
         ORDER,
         deadline,
         account1.address,
-        Asset(volmexBaseToken.address, "20000000000000000000"), //20
+        Asset(BaseToken.address, "20000000000000000000"), //20
         Asset(virtualToken.address, "100000000000000000000"), //100
         3,
         0,
@@ -2859,7 +2859,7 @@ describe("MatchingEngine", function () {
         deadline,
         account2.address,
         Asset(virtualToken.address, "100000000000000000000"), //100
-        Asset(volmexBaseToken.address, "20000000000000000000"), //20
+        Asset(BaseToken.address, "20000000000000000000"), //20
         4,
         0,
         false,
@@ -2872,7 +2872,7 @@ describe("MatchingEngine", function () {
           ["20000000000000000000", "20000000000000000000"],
         );
       const maxOrderSizeUpdatedPreviousHour = await matchingEngine.getMaxOrderSizeOverTime(
-        volmexBaseToken.address,
+        BaseToken.address,
       );
       expect(maxOrderSizeUpdatedPreviousHour.toString()).to.be.equal("20000000000000000000");
       await time.increase(3600);
@@ -2881,7 +2881,7 @@ describe("MatchingEngine", function () {
         ORDER,
         deadline,
         account1.address,
-        Asset(volmexBaseToken.address, "30000000000000000000"), //3
+        Asset(BaseToken.address, "30000000000000000000"), //3
         Asset(virtualToken.address, "100000000000000000000"), //100
         9,
         0,
@@ -2893,7 +2893,7 @@ describe("MatchingEngine", function () {
         deadline,
         account2.address,
         Asset(virtualToken.address, "100000000000000000000"), //100
-        Asset(volmexBaseToken.address, "30000000000000000000"), //3
+        Asset(BaseToken.address, "30000000000000000000"), //3
         10,
         0,
         false,
@@ -2906,7 +2906,7 @@ describe("MatchingEngine", function () {
           ["30000000000000000000", "30000000000000000000"],
         );
       const maxOrderSizeUpdatedCurrentHour = await matchingEngine.getMaxOrderSizeOverTime(
-        volmexBaseToken.address,
+        BaseToken.address,
       );
 
       expect(maxOrderSizeUpdatedCurrentHour.toString()).to.be.equal("30000000000000000000");

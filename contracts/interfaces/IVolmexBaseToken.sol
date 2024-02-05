@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL - 1.1
 pragma solidity =0.8.18;
 
-interface IVolmexBaseToken {
+interface IBaseToken {
     event PriceFeedChanged(address indexed priceFeed);
 
     function initialize(string memory nameArg, string memory symbolArg, address priceFeedArg, bool isBase) external;

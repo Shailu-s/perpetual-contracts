@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL - 1.1
 pragma solidity =0.8.18;
 
-import { IVolmexPerpPeriphery } from "./IVolmexPerpPeriphery.sol";
+import { IPerpPeriphery } from "./IPerpPeriphery.sol";
 
 interface IVault {
     /// @notice Emitted when trader deposit collateral into vault
@@ -32,7 +32,7 @@ interface IVault {
     /// @notice Deposit collateral into vault
     /// @param amount The amount of the token to deposit
     /// @param from The address of the trader
-    function deposit(IVolmexPerpPeriphery periphery, uint256 amount, address from) external;
+    function deposit(IPerpPeriphery periphery, uint256 amount, address from) external;
     /// @notice Withdraw collateral from vault
     /// @param amount The amount of the token to withdraw
     /// @param to The address of the trader

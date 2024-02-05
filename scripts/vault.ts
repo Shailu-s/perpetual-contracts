@@ -4,8 +4,8 @@ const vault = async () => {
   const TestERC20 = await ethers.getContractFactory("TestERC20");
   const Vault = await ethers.getContractFactory("Vault");
   const VaultController = await ethers.getContractFactory("VaultController");
-  const VolmexPerpView = await ethers.getContractFactory("VolmexPerpView");
-  const VolmexPerpPeriphery = await ethers.getContractFactory("VolmexPerpPeriphery");
+  const PerpView = await ethers.getContractFactory("PerpView");
+  const PerpPeriphery = await ethers.getContractFactory("PerpPeriphery");
 
   console.log("Deploying collateral token ...");
   const collateral = await upgrades.deployProxy(TestERC20, ["Dai Stablecoin", "DAI", 18], {
@@ -21,8 +21,8 @@ const vault = async () => {
     `${process.env.VAULT_CONTROLLER}`
   ]);
   await vault.deployed();
-  const perpView = VolmexPerpView.attach(`${process.env.PERP_VIEW}`);
-  const periphery = VolmexPerpPeriphery.attach(`${process.env.PERIPHERY}`);
+  const perpView = PerpView.attach(`${process.env.PERP_VIEW}`);
+  const periphery = PerpPeriphery.attach(`${process.env.PERIPHERY}`);
   await (await perpView.incrementVaultIndex()).wait();
   console.log("Whitelist vault ...");
   await (await periphery.whitelistVault(vault.address, true)).wait();

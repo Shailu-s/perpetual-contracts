@@ -10,9 +10,9 @@ import "../../interfaces/IERC20Modified.sol";
 
 /**
  * @title Protocol Contract
- * @author volmex.finance [security@volmexlabs.com]
+ * @author .finance [security@labs.com]
  */
-contract VolmexProtocol is Initializable, OwnableUpgradeable, ReentrancyGuardUpgradeable {
+contract Protocol is Initializable, OwnableUpgradeable, ReentrancyGuardUpgradeable {
     event ToggleActivated(bool isActive);
     event UpdatedVolatilityToken(address indexed positionToken, bool isVolatilityIndexToken);
     event UpdatedFees(uint256 issuanceFees, uint256 redeemFees);
@@ -70,7 +70,7 @@ contract VolmexProtocol is Initializable, OwnableUpgradeable, ReentrancyGuardUpg
      * @notice Used to check contract is active
      */
     modifier onlyActive() {
-        require(active, "Volmex: Protocol not active");
+        require(active, ": Protocol not active");
         _;
     }
 
@@ -78,7 +78,7 @@ contract VolmexProtocol is Initializable, OwnableUpgradeable, ReentrancyGuardUpg
      * @notice Used to check contract is not settled
      */
     modifier onlyNotSettled() {
-        require(!isSettled, "Volmex: Protocol settled");
+        require(!isSettled, ": Protocol settled");
         _;
     }
 
@@ -86,7 +86,7 @@ contract VolmexProtocol is Initializable, OwnableUpgradeable, ReentrancyGuardUpg
      * @notice Used to check contract is settled
      */
     modifier onlySettled() {
-        require(isSettled, "Volmex: Protocol not settled");
+        require(isSettled, ": Protocol not settled");
         _;
     }
 
@@ -113,7 +113,7 @@ contract VolmexProtocol is Initializable, OwnableUpgradeable, ReentrancyGuardUpg
         __Ownable_init();
         __ReentrancyGuard_init();
 
-        require(_minimumCollateralQty > 0, "Volmex: Minimum collateral quantity should be greater than 0");
+        require(_minimumCollateralQty > 0, ": Minimum collateral quantity should be greater than 0");
 
         active = true;
         minimumCollateralQty = _minimumCollateralQty;
@@ -136,7 +136,7 @@ contract VolmexProtocol is Initializable, OwnableUpgradeable, ReentrancyGuardUpg
      * @param _newMinimumCollQty Provides the new minimum collateral quantity
      */
     function updateMinimumCollQty(uint256 _newMinimumCollQty) external virtual onlyOwner {
-        require(_newMinimumCollQty > 0, "Volmex: Minimum collateral quantity should be greater than 0");
+        require(_newMinimumCollQty > 0, ": Minimum collateral quantity should be greater than 0");
         minimumCollateralQty = _newMinimumCollQty;
         emit UpdatedMinimumCollateral(_newMinimumCollQty);
     }
@@ -170,7 +170,7 @@ contract VolmexProtocol is Initializable, OwnableUpgradeable, ReentrancyGuardUpg
         onlyNotSettled
         returns (uint256 qtyToBeMinted, uint256 fee)
     {
-        require(_collateralQty >= minimumCollateralQty, "Volmex: CollateralQty > minimum qty required");
+        require(_collateralQty >= minimumCollateralQty, ": CollateralQty > minimum qty required");
 
         // Mechanism to calculate the collateral qty using the increase in balance
         // of protocol contract to counter USDT's fee mechanism, which can be enabled in future
@@ -258,7 +258,7 @@ contract VolmexProtocol is Initializable, OwnableUpgradeable, ReentrancyGuardUpg
     function settle(uint256 _settlementPrice) external virtual onlyOwner onlyNotSettled {
         require(
             _settlementPrice <= volatilityCapRatio,
-            "Volmex: _settlementPrice should be less than equal to volatilityCapRatio"
+            ": _settlementPrice should be less than equal to volatilityCapRatio"
         );
         settlementPrice = _settlementPrice;
         isSettled = true;
@@ -273,7 +273,7 @@ contract VolmexProtocol is Initializable, OwnableUpgradeable, ReentrancyGuardUpg
         address _toWhom,
         uint256 _howMuch
     ) external virtual nonReentrant onlyOwner {
-        require(_token != address(collateral), "Volmex: Collateral token not allowed");
+        require(_token != address(collateral), ": Collateral token not allowed");
         IERC20Modified(_token).transfer(_toWhom, _howMuch);
     }
 
@@ -286,7 +286,7 @@ contract VolmexProtocol is Initializable, OwnableUpgradeable, ReentrancyGuardUpg
     function updateFees(uint256 _issuanceFees, uint256 _redeemFees) external virtual onlyOwner {
         require(
             _issuanceFees <= MAX_FEE && _redeemFees <= MAX_FEE,
-            "Volmex: issue/redeem fees should be less than MAX_FEE"
+            ": issue/redeem fees should be less than MAX_FEE"
         );
 
         issuanceFees = _issuanceFees;
@@ -308,7 +308,7 @@ contract VolmexProtocol is Initializable, OwnableUpgradeable, ReentrancyGuardUpg
     }
 
     /**
-     * @notice Pause/unpause volmex position token.
+     * @notice Pause/unpause  position token.
      *
      * @param _isPause Boolean value to pause or unpause the position token { true = pause, false = unpause }
      */

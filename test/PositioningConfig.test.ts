@@ -6,8 +6,8 @@ describe("PositioningConfig", function () {
   let positioningConfig;
   let PerpetualOracle;
   let perpetualOracle;
-  let VolmexBaseToken;
-  let volmexBaseToken;
+  let BaseToken;
+  let BaseToken;
   let chainlinkBaseToken;
   let chainlinkBaseToken2;
   let ChainLinkAggregator;
@@ -23,17 +23,17 @@ describe("PositioningConfig", function () {
   this.beforeAll(async () => {
     PositioningConfig = await ethers.getContractFactory("PositioningConfig");
     PerpetualOracle = await ethers.getContractFactory("PerpetualOracle");
-    VolmexBaseToken = await ethers.getContractFactory("VolmexBaseToken");
+    BaseToken = await ethers.getContractFactory("BaseToken");
     ChainLinkAggregator = await ethers.getContractFactory("MockV3Aggregator");
 
     [owner, account1] = await ethers.getSigners();
   });
 
   this.beforeEach(async () => {
-    volmexBaseToken = await upgrades.deployProxy(
-      VolmexBaseToken,
+    BaseToken = await upgrades.deployProxy(
+      BaseToken,
       [
-        "VolmexBaseToken", // nameArg
+        "BaseToken", // nameArg
         "VBT", // symbolArg,
         account1.address, // priceFeedArg
         true, // isBase
@@ -42,11 +42,11 @@ describe("PositioningConfig", function () {
         initializer: "initialize",
       },
     );
-    await volmexBaseToken.deployed();
+    await BaseToken.deployed();
     chainlinkBaseToken = await upgrades.deployProxy(
-      VolmexBaseToken,
+      BaseToken,
       [
-        "VolmexBaseToken", // nameArg
+        "BaseToken", // nameArg
         "VBT", // symbolArg,
         owner.address, // priceFeedArg
         true, // isBase
@@ -56,9 +56,9 @@ describe("PositioningConfig", function () {
       },
     );
     chainlinkBaseToken2 = await upgrades.deployProxy(
-      VolmexBaseToken,
+      BaseToken,
       [
-        "VolmexBaseToken", // nameArg
+        "BaseToken", // nameArg
         "VBT", // symbolArg,
         owner.address, // priceFeedArg
         true, // isBase
@@ -67,7 +67,7 @@ describe("PositioningConfig", function () {
         initializer: "initialize",
       },
     );
-    await volmexBaseToken.deployed();
+    await BaseToken.deployed();
 
     chainlinkAggregator1 = await ChainLinkAggregator.deploy(8, 3075000000000);
     await chainlinkAggregator1.deployed();
@@ -78,8 +78,8 @@ describe("PositioningConfig", function () {
       PerpetualOracle,
       [
         [
-          volmexBaseToken.address,
-          volmexBaseToken.address,
+          BaseToken.address,
+          BaseToken.address,
           chainlinkBaseToken.address,
           chainlinkBaseToken2.address,
         ],

@@ -3,10 +3,10 @@ pragma solidity =0.8.18;
 
 import { BaseTokenStorageV1 } from "../storage/BaseTokenStorage.sol";
 import { IPerpetualOracle } from "../interfaces/IPerpetualOracle.sol";
-import { IVolmexBaseToken } from "../interfaces/IVolmexBaseToken.sol";
+import { IBaseToken } from "../interfaces/IBaseToken.sol";
 import { VirtualToken } from "./VirtualToken.sol";
 
-contract VolmexBaseToken is IVolmexBaseToken, VirtualToken, BaseTokenStorageV1 {
+contract BaseToken is IBaseToken, VirtualToken, BaseTokenStorageV1 {
     function initialize(
         string memory nameArg,
         string memory symbolArg,
@@ -29,7 +29,7 @@ contract VolmexBaseToken is IVolmexBaseToken, VirtualToken, BaseTokenStorageV1 {
         answer = IPerpetualOracle(_priceFeed).getIndexPriceForLiquidation(index, smInterval);
     }
 
-    /// @inheritdoc IVolmexBaseToken
+    /// @inheritdoc IBaseToken
     function getPriceFeed() external view override returns (address) {
         return _priceFeed;
     }

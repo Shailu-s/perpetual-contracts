@@ -8,10 +8,10 @@ describe.only("Global", function () {
   let owner;
   let account1, account2;
   let MatchingEngine;
-  let VolmexBaseToken;
+  let BaseToken;
   let USDC;
   let virtualToken;
-  let VolmexQuoteToken;
+  let QuoteToken;
   let PerpetualOracle;
   let perpetualOracle;
   let VaultController;
@@ -20,11 +20,11 @@ describe.only("Global", function () {
   let Positioning;
   let Vault;
   let MarketRegistry;
-  let VolmexPerpPeriphery;
-  let VolmexPerpView;
+  let PerpPeriphery;
+  let PerpView;
   let TestERC20;
-  let volmexBaseToken;
-  let volmexQuoteToken;
+  let BaseToken;
+  let QuoteToken;
   let positioningConfig;
   let accountBalance1;
   let vaultController;
@@ -62,8 +62,8 @@ describe.only("Global", function () {
     liquidator = encodeAddress(owner.address);
 
     MatchingEngine = await ethers.getContractFactory("MatchingEngine");
-    VolmexBaseToken = await ethers.getContractFactory("VolmexBaseToken");
-    VolmexQuoteToken = await ethers.getContractFactory("VolmexQuoteToken");
+    BaseToken = await ethers.getContractFactory("BaseToken");
+    QuoteToken = await ethers.getContractFactory("QuoteToken");
     PerpetualOracle = await ethers.getContractFactory("PerpetualOracle");
     VaultController = await ethers.getContractFactory("VaultController");
     PositioningConfig = await ethers.getContractFactory("PositioningConfig");
@@ -72,22 +72,22 @@ describe.only("Global", function () {
     ChainLinkAggregator = await ethers.getContractFactory("MockV3Aggregator");
     Vault = await ethers.getContractFactory("Vault");
     MarketRegistry = await ethers.getContractFactory("MarketRegistry");
-    VolmexPerpPeriphery = await ethers.getContractFactory("VolmexPerpPeriphery");
-    VolmexPerpView = await ethers.getContractFactory("VolmexPerpView");
+    PerpPeriphery = await ethers.getContractFactory("PerpPeriphery");
+    PerpView = await ethers.getContractFactory("PerpView");
     TestERC20 = await ethers.getContractFactory("TestERC20");
     VirtualToken = await ethers.getContractFactory("VirtualTokenTest");
     FundingRate = await ethers.getContractFactory("FundingRate");
   });
 
   this.beforeEach(async () => {
-    perpView = await upgrades.deployProxy(VolmexPerpView, [owner.address]);
+    perpView = await upgrades.deployProxy(PerpView, [owner.address]);
     await perpView.deployed();
     await (await perpView.grantViewStatesRole(owner.address)).wait();
 
-    volmexBaseToken = await upgrades.deployProxy(
-      VolmexBaseToken,
+    BaseToken = await upgrades.deployProxy(
+      BaseToken,
       [
-        "VolmexBaseToken", // nameArg
+        "BaseToken", // nameArg
         "VBT", // symbolArg,
         owner.address, // priceFeedArg
         true, // isBase
@@ -97,9 +97,9 @@ describe.only("Global", function () {
       },
     );
     chainlinkBaseToken = await upgrades.deployProxy(
-      VolmexBaseToken,
+      BaseToken,
       [
-        "VolmexBaseToken", // nameArg
+        "BaseToken", // nameArg
         "VBT", // symbolArg,
         owner.address, // priceFeedArg
         true, // isBase
@@ -109,9 +109,9 @@ describe.only("Global", function () {
       },
     );
     chainlinkBaseToken2 = await upgrades.deployProxy(
-      VolmexBaseToken,
+      BaseToken,
       [
-        "VolmexBaseToken", // nameArg
+        "BaseToken", // nameArg
         "VBT", // symbolArg,
         owner.address, // priceFeedArg
         true, // isBase
@@ -120,8 +120,8 @@ describe.only("Global", function () {
         initializer: "initialize",
       },
     );
-    await volmexBaseToken.deployed();
-    await (await perpView.setBaseToken(volmexBaseToken.address)).wait();
+    await BaseToken.deployed();
+    await (await perpView.setBaseToken(BaseToken.address)).wait();
 
     chainlinkAggregator1 = await ChainLinkAggregator.deploy(8, 3075000000000);
     await chainlinkAggregator1.deployed();
@@ -131,8 +131,8 @@ describe.only("Global", function () {
       PerpetualOracle,
       [
         [
-          volmexBaseToken.address,
-          volmexBaseToken.address,
+          BaseToken.address,
+          BaseToken.address,
           chainlinkBaseToken.address,
           chainlinkBaseToken2.address,
         ],
@@ -145,11 +145,11 @@ describe.only("Global", function () {
       ],
       { initializer: "__PerpetualOracle_init" },
     );
-    await volmexBaseToken.setPriceFeed(perpetualOracle.address);
-    volmexQuoteToken = await upgrades.deployProxy(
-      VolmexQuoteToken,
+    await BaseToken.setPriceFeed(perpetualOracle.address);
+    QuoteToken = await upgrades.deployProxy(
+      QuoteToken,
       [
-        "VolmexBaseToken", // nameArg
+        "BaseToken", // nameArg
         "VBT", // symbolArg,
         false, // isBase
       ],
@@ -157,8 +157,8 @@ describe.only("Global", function () {
         initializer: "initialize",
       },
     );
-    await volmexQuoteToken.deployed();
-    await (await perpView.setQuoteToken(volmexQuoteToken.address)).wait();
+    await QuoteToken.deployed();
+    await (await perpView.setQuoteToken(QuoteToken.address)).wait();
 
     positioningConfig = await upgrades.deployProxy(PositioningConfig, [perpetualOracle.address]);
 
@@ -179,8 +179,8 @@ describe.only("Global", function () {
     accountBalance1 = await upgrades.deployProxy(AccountBalance, [
       positioningConfig.address,
       [
-        volmexBaseToken.address,
-        volmexBaseToken.address,
+        BaseToken.address,
+        BaseToken.address,
         chainlinkBaseToken.address,
         chainlinkBaseToken2.address,
       ],
@@ -209,10 +209,10 @@ describe.only("Global", function () {
     (await accountBalance1.grantSettleRealizedPnlRole(vault.address)).wait();
     (await accountBalance1.grantSettleRealizedPnlRole(vaultController.address)).wait();
     marketRegistry = await upgrades.deployProxy(MarketRegistry, [
-      volmexQuoteToken.address,
+      QuoteToken.address,
       [
-        volmexBaseToken.address,
-        volmexBaseToken.address,
+        BaseToken.address,
+        BaseToken.address,
         chainlinkBaseToken.address,
         chainlinkBaseToken2.address,
       ],
@@ -236,8 +236,8 @@ describe.only("Global", function () {
         fundingRate.address,
         marketRegistry.address,
         [
-          volmexBaseToken.address,
-          volmexBaseToken.address,
+          BaseToken.address,
+          BaseToken.address,
           chainlinkBaseToken.address,
           chainlinkBaseToken2.address,
         ],
@@ -253,8 +253,8 @@ describe.only("Global", function () {
 
     await (await perpView.setPositioning(positioning.address)).wait();
     await (await perpView.incrementPerpIndex()).wait();
-    await (await volmexBaseToken.setMintBurnRole(positioning.address)).wait();
-    await (await volmexQuoteToken.setMintBurnRole(positioning.address)).wait();
+    await (await BaseToken.setMintBurnRole(positioning.address)).wait();
+    await (await QuoteToken.setMintBurnRole(positioning.address)).wait();
 
     await (await positioning.setMarketRegistry(marketRegistry.address)).wait();
     await (await positioning.setDefaultFeeReceiver(owner.address)).wait();
@@ -276,7 +276,7 @@ describe.only("Global", function () {
       .connect(owner)
       .setSettlementTokenBalanceCap("1000000000000000000000000000000000000000");
 
-    periphery = await upgrades.deployProxy(VolmexPerpPeriphery, [
+    periphery = await upgrades.deployProxy(PerpPeriphery, [
       perpView.address,
       perpetualOracle.address,
       [vault.address, vault.address],
@@ -302,8 +302,8 @@ describe.only("Global", function () {
       ORDER,
       deadline,
       account1.address,
-      Asset(volmexQuoteToken.address, "10000000000000000000"),
-      Asset(volmexBaseToken.address, "10000000000000000000"),
+      Asset(QuoteToken.address, "10000000000000000000"),
+      Asset(BaseToken.address, "10000000000000000000"),
       5,
       0,
       false,
@@ -313,8 +313,8 @@ describe.only("Global", function () {
       ORDER,
       deadline,
       account2.address,
-      Asset(volmexBaseToken.address, "10000000000000000000"),
-      Asset(volmexQuoteToken.address, "10000000000000000000"),
+      Asset(BaseToken.address, "10000000000000000000"),
+      Asset(QuoteToken.address, "10000000000000000000"),
       6,
       0,
       true,
@@ -371,8 +371,8 @@ describe.only("Global", function () {
       ORDER,
       deadline,
       account1.address,
-      Asset(volmexBaseToken.address, "10000000000000000000"),
-      Asset(volmexQuoteToken.address, "10000000000000000000"),
+      Asset(BaseToken.address, "10000000000000000000"),
+      Asset(QuoteToken.address, "10000000000000000000"),
       1,
       0,
       true,
@@ -382,8 +382,8 @@ describe.only("Global", function () {
       ORDER,
       deadline,
       account2.address,
-      Asset(volmexQuoteToken.address, "10000000000000000000"),
-      Asset(volmexBaseToken.address, "10000000000000000000"),
+      Asset(QuoteToken.address, "10000000000000000000"),
+      Asset(BaseToken.address, "10000000000000000000"),
       2,
       0,
       false,
@@ -430,8 +430,8 @@ describe.only("Global", function () {
       ORDER,
       deadline,
       account1.address,
-      Asset(volmexBaseToken.address, "10000000000000000000"),
-      Asset(volmexQuoteToken.address, "10000000000000000000"),
+      Asset(BaseToken.address, "10000000000000000000"),
+      Asset(QuoteToken.address, "10000000000000000000"),
       3,
       0,
       true,
@@ -441,8 +441,8 @@ describe.only("Global", function () {
       ORDER,
       deadline,
       account2.address,
-      Asset(volmexQuoteToken.address, "10000000000000000000"),
-      Asset(volmexBaseToken.address, "10000000000000000000"),
+      Asset(QuoteToken.address, "10000000000000000000"),
+      Asset(BaseToken.address, "10000000000000000000"),
       4,
       0,
       false,
@@ -487,7 +487,7 @@ describe.only("Global", function () {
   });
 
   it("should match orders and open position2", async () => {
-    const index = await perpetualOracle.indexByBaseToken(volmexBaseToken.address);
+    const index = await perpetualOracle.indexByBaseToken(BaseToken.address);
 
     await matchingEngine.grantMatchOrders(positioning.address);
 
@@ -505,8 +505,8 @@ describe.only("Global", function () {
       ORDER,
       deadline,
       account1.address,
-      Asset(volmexQuoteToken.address, "5000000000000000000"),
-      Asset(volmexBaseToken.address, "20000000000000000000"),
+      Asset(QuoteToken.address, "5000000000000000000"),
+      Asset(BaseToken.address, "20000000000000000000"),
       1,
       0,
       false,
@@ -516,8 +516,8 @@ describe.only("Global", function () {
       ORDER,
       deadline,
       account2.address,
-      Asset(volmexBaseToken.address, "30000000000000000000"),
-      Asset(volmexQuoteToken.address, "1000000000000000000"),
+      Asset(BaseToken.address, "30000000000000000000"),
+      Asset(QuoteToken.address, "1000000000000000000"),
       1,
       0,
       true,
@@ -576,8 +576,8 @@ describe.only("Global", function () {
       ORDER,
       deadline,
       account1.address,
-      Asset(volmexBaseToken.address, "20000000000000000000"),
-      Asset(volmexQuoteToken.address, "300000000000000000000"),
+      Asset(BaseToken.address, "20000000000000000000"),
+      Asset(QuoteToken.address, "300000000000000000000"),
       1,
       0,
       true,
@@ -587,8 +587,8 @@ describe.only("Global", function () {
       ORDER,
       deadline,
       account2.address,
-      Asset(volmexQuoteToken.address, "200000000000000000000"),
-      Asset(volmexBaseToken.address, "10000000000000000000"),
+      Asset(QuoteToken.address, "200000000000000000000"),
+      Asset(BaseToken.address, "10000000000000000000"),
       2,
       0,
       false,
@@ -639,8 +639,8 @@ describe.only("Global", function () {
       ORDER,
       deadline,
       account1.address,
-      Asset(volmexBaseToken.address, "20000000000000000000"),
-      Asset(volmexQuoteToken.address, "10000000000000000000"),
+      Asset(BaseToken.address, "20000000000000000000"),
+      Asset(QuoteToken.address, "10000000000000000000"),
       1,
       0,
       true,
@@ -650,8 +650,8 @@ describe.only("Global", function () {
       ORDER,
       deadline,
       account2.address,
-      Asset(volmexQuoteToken.address, "20000000000000000000"),
-      Asset(volmexBaseToken.address, "30000000000000000000"),
+      Asset(QuoteToken.address, "20000000000000000000"),
+      Asset(BaseToken.address, "30000000000000000000"),
       2,
       0,
       false,
@@ -719,8 +719,8 @@ describe.only("Global", function () {
       ORDER,
       deadline,
       account1.address,
-      Asset(volmexQuoteToken.address, "10000000000000000000"),
-      Asset(volmexBaseToken.address, "10000000000000000000"),
+      Asset(QuoteToken.address, "10000000000000000000"),
+      Asset(BaseToken.address, "10000000000000000000"),
       5,
       0,
       false,
@@ -730,8 +730,8 @@ describe.only("Global", function () {
       ORDER,
       deadline,
       account2.address,
-      Asset(volmexBaseToken.address, "10000000000000000000"),
-      Asset(volmexQuoteToken.address, "10000000000000000000"),
+      Asset(BaseToken.address, "10000000000000000000"),
+      Asset(QuoteToken.address, "10000000000000000000"),
       6,
       0,
       true,
@@ -782,8 +782,8 @@ describe.only("Global", function () {
       ORDER,
       deadline,
       account1.address,
-      Asset(volmexBaseToken.address, "20000000000000000000"),
-      Asset(volmexQuoteToken.address, "20000000000000000000"),
+      Asset(BaseToken.address, "20000000000000000000"),
+      Asset(QuoteToken.address, "20000000000000000000"),
       1,
       0,
       true,
@@ -793,8 +793,8 @@ describe.only("Global", function () {
       ORDER,
       deadline,
       account2.address,
-      Asset(volmexQuoteToken.address, "20000000000000000000"),
-      Asset(volmexBaseToken.address, "20000000000000000000"),
+      Asset(QuoteToken.address, "20000000000000000000"),
+      Asset(BaseToken.address, "20000000000000000000"),
       2,
       0,
       false,
@@ -866,8 +866,8 @@ describe.only("Global", function () {
       ORDER,
       deadline,
       account1.address,
-      Asset(volmexQuoteToken.address, "20000000000000000000"),
-      Asset(volmexBaseToken.address, "20000000000000000000"),
+      Asset(QuoteToken.address, "20000000000000000000"),
+      Asset(BaseToken.address, "20000000000000000000"),
       5,
       0,
       false,
@@ -877,8 +877,8 @@ describe.only("Global", function () {
       ORDER,
       deadline,
       account2.address,
-      Asset(volmexBaseToken.address, "20000000000000000000"),
-      Asset(volmexQuoteToken.address, "20000000000000000000"),
+      Asset(BaseToken.address, "20000000000000000000"),
+      Asset(QuoteToken.address, "20000000000000000000"),
       6,
       0,
       true,
@@ -929,8 +929,8 @@ describe.only("Global", function () {
       ORDER,
       deadline,
       account1.address,
-      Asset(volmexBaseToken.address, "10000000000000000000"),
-      Asset(volmexQuoteToken.address, "10000000000000000000"),
+      Asset(BaseToken.address, "10000000000000000000"),
+      Asset(QuoteToken.address, "10000000000000000000"),
       1,
       0,
       true,
@@ -940,8 +940,8 @@ describe.only("Global", function () {
       ORDER,
       deadline,
       account2.address,
-      Asset(volmexQuoteToken.address, "10000000000000000000"),
-      Asset(volmexBaseToken.address, "10000000000000000000"),
+      Asset(QuoteToken.address, "10000000000000000000"),
+      Asset(BaseToken.address, "10000000000000000000"),
       2,
       0,
       false,
@@ -1012,8 +1012,8 @@ describe.only("Global", function () {
       ORDER,
       deadline,
       account1.address,
-      Asset(volmexQuoteToken.address, "20000000000000000000"),
-      Asset(volmexBaseToken.address, "20000000000000000000"),
+      Asset(QuoteToken.address, "20000000000000000000"),
+      Asset(BaseToken.address, "20000000000000000000"),
       5,
       0,
       false,
@@ -1023,8 +1023,8 @@ describe.only("Global", function () {
       ORDER,
       deadline,
       account2.address,
-      Asset(volmexBaseToken.address, "20000000000000000000"),
-      Asset(volmexQuoteToken.address, "20000000000000000000"),
+      Asset(BaseToken.address, "20000000000000000000"),
+      Asset(QuoteToken.address, "20000000000000000000"),
       6,
       0,
       true,
@@ -1075,8 +1075,8 @@ describe.only("Global", function () {
       ORDER,
       deadline,
       account1.address,
-      Asset(volmexBaseToken.address, "10000000000000000000"),
-      Asset(volmexQuoteToken.address, "10000000000000000000"),
+      Asset(BaseToken.address, "10000000000000000000"),
+      Asset(QuoteToken.address, "10000000000000000000"),
       1,
       0,
       true,
@@ -1086,8 +1086,8 @@ describe.only("Global", function () {
       ORDER,
       deadline,
       account2.address,
-      Asset(volmexQuoteToken.address, "10000000000000000000"),
-      Asset(volmexBaseToken.address, "10000000000000000000"),
+      Asset(QuoteToken.address, "10000000000000000000"),
+      Asset(BaseToken.address, "10000000000000000000"),
       2,
       0,
       false,
@@ -1157,8 +1157,8 @@ describe.only("Global", function () {
       ORDER,
       deadline,
       account1.address,
-      Asset(volmexQuoteToken.address, "20000000000000000000"),
-      Asset(volmexBaseToken.address, "20000000000000000000"),
+      Asset(QuoteToken.address, "20000000000000000000"),
+      Asset(BaseToken.address, "20000000000000000000"),
       5,
       0,
       false,
@@ -1168,8 +1168,8 @@ describe.only("Global", function () {
       ORDER,
       deadline,
       account2.address,
-      Asset(volmexBaseToken.address, "20000000000000000000"),
-      Asset(volmexQuoteToken.address, "20000000000000000000"),
+      Asset(BaseToken.address, "20000000000000000000"),
+      Asset(QuoteToken.address, "20000000000000000000"),
       6,
       0,
       true,
@@ -1220,8 +1220,8 @@ describe.only("Global", function () {
       ORDER,
       deadline,
       account1.address,
-      Asset(volmexBaseToken.address, "20000000000000000000"),
-      Asset(volmexQuoteToken.address, "20000000000000000000"),
+      Asset(BaseToken.address, "20000000000000000000"),
+      Asset(QuoteToken.address, "20000000000000000000"),
       1,
       0,
       true,
@@ -1231,8 +1231,8 @@ describe.only("Global", function () {
       ORDER,
       deadline,
       account2.address,
-      Asset(volmexQuoteToken.address, "20000000000000000000"),
-      Asset(volmexBaseToken.address, "20000000000000000000"),
+      Asset(QuoteToken.address, "20000000000000000000"),
+      Asset(BaseToken.address, "20000000000000000000"),
       2,
       0,
       false,
@@ -1302,8 +1302,8 @@ describe.only("Global", function () {
       ORDER,
       deadline,
       account1.address,
-      Asset(volmexQuoteToken.address, "20000000000000000000"),
-      Asset(volmexBaseToken.address, "20000000000000000000"),
+      Asset(QuoteToken.address, "20000000000000000000"),
+      Asset(BaseToken.address, "20000000000000000000"),
       5,
       0,
       false,
@@ -1313,8 +1313,8 @@ describe.only("Global", function () {
       ORDER,
       deadline,
       account2.address,
-      Asset(volmexBaseToken.address, "20000000000000000000"),
-      Asset(volmexQuoteToken.address, "20000000000000000000"),
+      Asset(BaseToken.address, "20000000000000000000"),
+      Asset(QuoteToken.address, "20000000000000000000"),
       6,
       0,
       true,
@@ -1365,8 +1365,8 @@ describe.only("Global", function () {
       ORDER,
       deadline,
       account1.address,
-      Asset(volmexQuoteToken.address, "10000000000000000000"),
-      Asset(volmexBaseToken.address, "10000000000000000000"),
+      Asset(QuoteToken.address, "10000000000000000000"),
+      Asset(BaseToken.address, "10000000000000000000"),
       1,
       0,
       false,
@@ -1376,8 +1376,8 @@ describe.only("Global", function () {
       ORDER,
       deadline,
       account2.address,
-      Asset(volmexBaseToken.address, "10000000000000000000"),
-      Asset(volmexQuoteToken.address, "10000000000000000000"),
+      Asset(BaseToken.address, "10000000000000000000"),
+      Asset(QuoteToken.address, "10000000000000000000"),
       2,
       0,
       true,
@@ -1411,8 +1411,8 @@ describe.only("Global", function () {
       ORDER,
       deadline,
       account1.address,
-      Asset(volmexBaseToken.address, "20000000000000000000"),
-      Asset(volmexQuoteToken.address, "20000000000000000000"),
+      Asset(BaseToken.address, "20000000000000000000"),
+      Asset(QuoteToken.address, "20000000000000000000"),
       5,
       0,
       true,
@@ -1422,8 +1422,8 @@ describe.only("Global", function () {
       ORDER,
       deadline,
       account2.address,
-      Asset(volmexQuoteToken.address, "20000000000000000000"),
-      Asset(volmexBaseToken.address, "20000000000000000000"),
+      Asset(QuoteToken.address, "20000000000000000000"),
+      Asset(BaseToken.address, "20000000000000000000"),
       6,
       0,
       false,
@@ -1474,8 +1474,8 @@ describe.only("Global", function () {
       ORDER,
       deadline,
       account1.address,
-      Asset(volmexBaseToken.address, "10000000000000000000"),
-      Asset(volmexQuoteToken.address, "10000000000000000000"),
+      Asset(BaseToken.address, "10000000000000000000"),
+      Asset(QuoteToken.address, "10000000000000000000"),
       1,
       0,
       true,
@@ -1485,8 +1485,8 @@ describe.only("Global", function () {
       ORDER,
       deadline,
       account2.address,
-      Asset(volmexQuoteToken.address, "10000000000000000000"),
-      Asset(volmexBaseToken.address, "10000000000000000000"),
+      Asset(QuoteToken.address, "10000000000000000000"),
+      Asset(BaseToken.address, "10000000000000000000"),
       2,
       0,
       false,

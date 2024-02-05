@@ -17,8 +17,8 @@ describe("Vault Controller Mock tests for account value", function () {
   let matchingEngineFake;
   let Positioning;
   let positioning;
-  let VolmexPerpPeriphery;
-  let volmexPerpPeriphery;
+  let PerpPeriphery;
+  let PerpPeriphery;
   let FundingRate;
   let fundingRate;
   let prepViewFake;
@@ -31,10 +31,10 @@ describe("Vault Controller Mock tests for account value", function () {
   beforeEach(async function () {
     [owner, alice, relayer] = await ethers.getSigners();
     PerpetualOracle = await ethers.getContractFactory("PerpetualOracle");
-    VolmexPerpPeriphery = await ethers.getContractFactory("VolmexPerpPeriphery");
+    PerpPeriphery = await ethers.getContractFactory("PerpPeriphery");
     FundingRate = await ethers.getContractFactory("FundingRate");
     matchingEngineFake = await smock.fake("MatchingEngine");
-    prepViewFake = await smock.fake("VolmexPerpView");
+    prepViewFake = await smock.fake("PerpView");
 
     const tokenFactory = await ethers.getContractFactory("TestERC20");
     const USDC1 = await tokenFactory.deploy();
@@ -126,14 +126,14 @@ describe("Vault Controller Mock tests for account value", function () {
     await DAI.connect(alice).approve(vaultController.address, DAIAmount);
     await USDC.mint(owner.address, DAIAmount);
 
-    volmexPerpPeriphery = await upgrades.deployProxy(VolmexPerpPeriphery, [
+    PerpPeriphery = await upgrades.deployProxy(PerpPeriphery, [
       prepViewFake.address,
       perpetualOracle.address,
       [vault.address, vault.address],
       owner.address,
       relayer.address,
     ]);
-    await vaultController.setPeriphery(volmexPerpPeriphery.address);
+    await vaultController.setPeriphery(PerpPeriphery.address);
   });
 
   it("Positive Test for single token getAccountValue", async () => {
@@ -147,13 +147,13 @@ describe("Vault Controller Mock tests for account value", function () {
 
     const USDCVaultContract = await vaultFactory.attach(USDCVaultAddress);
     await USDC.connect(alice).approve(USDCVaultAddress, amount);
-    await USDC.connect(alice).approve(volmexPerpPeriphery.address, amount);
+    await USDC.connect(alice).approve(PerpPeriphery.address, amount);
 
     // check event has been sent
     await expect(
       vaultController
         .connect(alice)
-        .deposit(volmexPerpPeriphery.address, USDC.address, alice.address, amount),
+        .deposit(PerpPeriphery.address, USDC.address, alice.address, amount),
     )
       .to.emit(USDCVaultContract, "Deposited")
       .withArgs(USDC.address, alice.address, amount);

@@ -10,7 +10,7 @@ import { LibPerpMath } from "../libs/LibPerpMath.sol";
 import { LibFullMath } from "../libs/LibFullMath.sol";
 
 import { IPositioningConfig } from "../interfaces/IPositioningConfig.sol";
-import { IVolmexBaseToken } from "../interfaces/IVolmexBaseToken.sol";
+import { IBaseToken } from "../interfaces/IBaseToken.sol";
 import { IAccountBalance } from "../interfaces/IAccountBalance.sol";
 import { IMatchingEngine } from "../interfaces/IMatchingEngine.sol";
 import { IVirtualToken } from "../interfaces/IVirtualToken.sol";
@@ -31,7 +31,7 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
 
     function initialize(
         address positioningConfigArg,
-        address[4] calldata volmexBaseTokenArgs,
+        address[4] calldata BaseTokenArgs,
         uint256[2] calldata chainlinkBaseTokenIndexArgs,
         IMatchingEngine matchingEngineArg,
         address adminArg
@@ -45,14 +45,14 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
         _smInterval = 28800;
         _smIntervalLiquidation = 3600;
         for (uint256 index; index < 2; index++) {
-            _underlyingPriceIndexes[volmexBaseTokenArgs[index]] = index;
-            _underlyingPriceIndexes[volmexBaseTokenArgs[index+2]] = chainlinkBaseTokenIndexArgs[index];
+            _underlyingPriceIndexes[BaseTokenArgs[index]] = index;
+            _underlyingPriceIndexes[BaseTokenArgs[index+2]] = chainlinkBaseTokenIndexArgs[index];
         }
         matchingEngine = matchingEngineArg;
-        sigmaVolmexIvs[0] = 12600; // 0.0126
-        sigmaVolmexIvs[1] = 13300; // 0.0133
-        sigmaVolmexIvs[chainlinkBaseTokenIndexArgs[0]] = 9600; // 0.0096
-        sigmaVolmexIvs[chainlinkBaseTokenIndexArgs[1]] = 7400; // 0.0074
+        sigmaIvs[0] = 12600; // 0.0126
+        sigmaIvs[1] = 13300; // 0.0133
+        sigmaIvs[chainlinkBaseTokenIndexArgs[0]] = 9600; // 0.0096
+        sigmaIvs[chainlinkBaseTokenIndexArgs[1]] = 7400; // 0.0074
         minTimeBound = 600; // 10 minutes
         _grantRole(SM_INTERVAL_ROLE, positioningConfigArg);
         _grantRole(ACCOUNT_BALANCE_ADMIN, _msgSender());
@@ -80,17 +80,17 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
     }
     
     
-    function updateSigmaVolmexIvs(uint256[] memory _indexes, uint256[] memory _sigmaVivs) external  {
+    function updateSigmaIvs(uint256[] memory _indexes, uint256[] memory _sigmaVivs) external  {
         _requireSigmaIvRole();
         for (uint256 index; index < _indexes.length; ++index ) {
             setSigmaViv(_indexes[index], _sigmaVivs[index]);
         }
     }
 
-    function setUnderlyingPriceIndex(address volmexBaseToken, uint256 underlyingIndex) public {
+    function setUnderlyingPriceIndex(address BaseToken, uint256 underlyingIndex) public {
         _requireAddUnderlyingIndexRole();
-        _underlyingPriceIndexes[volmexBaseToken] = underlyingIndex;
-        emit UnderlyingPriceIndexSet(underlyingIndex, volmexBaseToken);
+        _underlyingPriceIndexes[BaseToken] = underlyingIndex;
+        emit UnderlyingPriceIndexSet(underlyingIndex, BaseToken);
     }
 
     function setSmInterval(uint256 smInterval) external virtual {
@@ -106,7 +106,7 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
     function setSigmaViv(uint256 _baseTokenIndex, uint256 _sigmaViv) public {
         _requireSigmaIvRole();
         require(_sigmaViv > 0, "AccountBalance: Not zero");
-        sigmaVolmexIvs[_baseTokenIndex] = _sigmaViv;
+        sigmaIvs[_baseTokenIndex] = _sigmaViv;
     }
 
     function setMinTimeBound(uint256 minTimeBoundArg) external virtual {
@@ -374,8 +374,8 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
 
         uint256 totalPositionNotional = getTotalAbsPositionValue(trader);
         uint256 nLiquidate = getNLiquidate(idealAmountToLiquidate.abs(), minOrderSize, maxOrderSize);
-        uint256 sigmaVolmexIv = (sigmaVolmexIvs[_underlyingPriceIndexes[baseToken]]);
-        uint256 maxTimeBound = (((freeCollateralByRatio.abs() * _SIGMA_IV_BASE * 1e18) / (6 * sigmaVolmexIv * totalPositionNotional))**2) / 1e36;
+        uint256 sigmaIv = (sigmaIvs[_underlyingPriceIndexes[baseToken]]);
+        uint256 maxTimeBound = (((freeCollateralByRatio.abs() * _SIGMA_IV_BASE * 1e18) / (6 * sigmaIv * totalPositionNotional))**2) / 1e36;
         timeToWait = maxTimeBound > minTimeBound ? (nLiquidate * maxTimeBound) / idealAmountToLiquidate.abs() : 0;
     }
 
@@ -457,7 +457,7 @@ contract AccountBalance is IAccountBalance, BlockContext, PositioningCallee, Acc
 
     function _getIndexPrice(address baseToken, uint256 twInterval) internal view returns (uint256) {
         uint256 baseTokenIndex = _underlyingPriceIndexes[baseToken];
-        return IVolmexBaseToken(baseToken).getIndexPrice(baseTokenIndex, twInterval);
+        return IBaseToken(baseToken).getIndexPrice(baseTokenIndex, twInterval);
     }
 
     /// @return netQuoteBalance = quote.balance

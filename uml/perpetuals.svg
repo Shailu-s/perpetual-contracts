@@ -24,7 +24,7 @@
 <text text-anchor="start" x="10762.83" y="-880.1" font-family="Times,serif" font-size="14.00"> &#160;&#160;positioningImplementation: address</text>
 <text text-anchor="start" x="10762.83" y="-863.3" font-family="Times,serif" font-size="14.00"> &#160;&#160;vaultImplementation: address</text>
 <text text-anchor="start" x="10762.83" y="-846.5" font-family="Times,serif" font-size="14.00"> &#160;&#160;accountBalanceImplementation: address</text>
-<text text-anchor="start" x="10762.83" y="-829.7" font-family="Times,serif" font-size="14.00"> &#160;&#160;perpViewRegistry: IVolmexPerpView</text>
+<text text-anchor="start" x="10762.83" y="-829.7" font-family="Times,serif" font-size="14.00"> &#160;&#160;perpViewRegistry: IPerpView</text>
 <text text-anchor="start" x="10762.83" y="-812.9" font-family="Times,serif" font-size="14.00"> &#160;&#160;marketRegistryImplementation: address</text>
 <polyline fill="none" stroke="black" points="10754.83,-804.7 12697.74,-804.7 "/>
 <text text-anchor="start" x="10762.83" y="-788.1" font-family="Times,serif" font-size="14.00">Private:</text>
@@ -34,9 +34,9 @@
 <text text-anchor="start" x="10762.83" y="-720.9" font-family="Times,serif" font-size="14.00"> &#160;&#160;&#160;_cloneMarketRegistry(_perpIndex: uint256, _quoteToken: address): (marketRegistry: IMarketRegistry)</text>
 <text text-anchor="start" x="10762.83" y="-704.1" font-family="Times,serif" font-size="14.00"> &#160;&#160;&#160;_requireClonesDeployer()</text>
 <text text-anchor="start" x="10762.83" y="-687.3" font-family="Times,serif" font-size="14.00">External:</text>
-<text text-anchor="start" x="10762.83" y="-670.5" font-family="Times,serif" font-size="14.00"> &#160;&#160;&#160;initialize(_baseTokenImplementation: address, _quoteTokenImplementation: address, _vaultControllerImplementation: address, _vaultImplementation: address, _positioningImplementation: address, _accountBalanceImplementation: address, _perpViewRegistry: IVolmexPerpView, _marketRegistryImplementation: address) &lt;&lt;initializer&gt;&gt;</text>
-<text text-anchor="start" x="10762.83" y="-653.7" font-family="Times,serif" font-size="14.00"> &#160;&#160;&#160;cloneBaseToken(_name: string, _symbol: string, _priceFeed: address): (volmexBaseToken: IVolmexBaseToken)</text>
-<text text-anchor="start" x="10762.83" y="-636.9" font-family="Times,serif" font-size="14.00"> &#160;&#160;&#160;cloneQuoteToken(_name: string, _symbol: string): (volmexQuoteToken: IVolmexQuoteToken)</text>
+<text text-anchor="start" x="10762.83" y="-670.5" font-family="Times,serif" font-size="14.00"> &#160;&#160;&#160;initialize(_baseTokenImplementation: address, _quoteTokenImplementation: address, _vaultControllerImplementation: address, _vaultImplementation: address, _positioningImplementation: address, _accountBalanceImplementation: address, _perpViewRegistry: IPerpView, _marketRegistryImplementation: address) &lt;&lt;initializer&gt;&gt;</text>
+<text text-anchor="start" x="10762.83" y="-653.7" font-family="Times,serif" font-size="14.00"> &#160;&#160;&#160;cloneBaseToken(_name: string, _symbol: string, _priceFeed: address): (BaseToken: IBaseToken)</text>
+<text text-anchor="start" x="10762.83" y="-636.9" font-family="Times,serif" font-size="14.00"> &#160;&#160;&#160;cloneQuoteToken(_name: string, _symbol: string): (QuoteToken: IQuoteToken)</text>
 <text text-anchor="start" x="10762.83" y="-620.1" font-family="Times,serif" font-size="14.00"> &#160;&#160;&#160;cloneVault(_token: address, _isEthVault: bool, _positioningConfig: address, _accountBalance: address, _vaultImplementation: address, _vaultControllerIndex: uint256): (vault: IVault)</text>
 <text text-anchor="start" x="10762.83" y="-603.3" font-family="Times,serif" font-size="14.00"> &#160;&#160;&#160;clonePerpEcosystem(_positioningConfig: address, _matchingEngine: address, _markPriceOracle: address, _indexPriceOracle: address, _quoteToken: address, _underlyingPriceIndex: uint64, _liquidators: address[2]): (perpEcosystem: address[4])</text>
 </g>
@@ -173,7 +173,7 @@
 <polyline fill="none" stroke="black" points="7880.15,-2367.5 8706.42,-2367.5 "/>
 <text text-anchor="start" x="7888.15" y="-2350.9" font-family="Times,serif" font-size="14.00">External:</text>
 <text text-anchor="start" x="7888.15" y="-2334.1" font-family="Times,serif" font-size="14.00"> &#160;&#160;&#160;&#160;initialize(PositioningConfigArg: address, accountBalanceArg: address, tokenArg: address, vaultControllerArg: address, isEthVaultArg: bool)</text>
-<text text-anchor="start" x="7888.15" y="-2317.3" font-family="Times,serif" font-size="14.00"> &#160;&#160;&#160;&#160;deposit(periphery: IVolmexPerpPeriphery, amount: uint256, from: address)</text>
+<text text-anchor="start" x="7888.15" y="-2317.3" font-family="Times,serif" font-size="14.00"> &#160;&#160;&#160;&#160;deposit(periphery: IPerpPeriphery, amount: uint256, from: address)</text>
 <text text-anchor="start" x="7888.15" y="-2300.5" font-family="Times,serif" font-size="14.00"> &#160;&#160;&#160;&#160;withdraw(amount: uint256, to: address)</text>
 <text text-anchor="start" x="7888.15" y="-2283.7" font-family="Times,serif" font-size="14.00"> &#160;&#160;&#160;&#160;transferFundToVault(token: address, amount: uint256)</text>
 <text text-anchor="start" x="7888.15" y="-2266.9" font-family="Times,serif" font-size="14.00"> &#160;&#160;&#160;&#160;repayDebtToOwner(token: address, amount: uint256)</text>
@@ -211,7 +211,7 @@
 <polyline fill="none" stroke="black" points="9682.1,-2266.7 10226.48,-2266.7 "/>
 <text text-anchor="start" x="9690.1" y="-2250.1" font-family="Times,serif" font-size="14.00">External:</text>
 <text text-anchor="start" x="9690.1" y="-2233.3" font-family="Times,serif" font-size="14.00"> &#160;&#160;&#160;&#160;initialize(positioningConfig: address, accountBalanceArg: address)</text>
-<text text-anchor="start" x="9690.1" y="-2216.5" font-family="Times,serif" font-size="14.00"> &#160;&#160;&#160;&#160;deposit(periphery: IVolmexPerpPeriphery, token: address, from: address, amount: uint256)</text>
+<text text-anchor="start" x="9690.1" y="-2216.5" font-family="Times,serif" font-size="14.00"> &#160;&#160;&#160;&#160;deposit(periphery: IPerpPeriphery, token: address, from: address, amount: uint256)</text>
 <text text-anchor="start" x="9690.1" y="-2199.7" font-family="Times,serif" font-size="14.00"> &#160;&#160;&#160;&#160;withdraw(token: address, to: address, amount: uint256)</text>
 <text text-anchor="start" x="9690.1" y="-2182.9" font-family="Times,serif" font-size="14.00"> &#160;&#160;&#160;&#160;registerVault(_vault: address, _token: address)</text>
 <text text-anchor="start" x="9690.1" y="-2166.1" font-family="Times,serif" font-size="14.00"> &#160;&#160;&#160;&#160;getAccountValue(trader: address): int256</text>
@@ -232,8 +232,8 @@
 <title>32</title>
 <polygon fill="#f2f2f2" stroke="black" points="13282.48,-2107.5 13282.48,-2291.5 13784.1,-2291.5 13784.1,-2107.5 13282.48,-2107.5"/>
 <text text-anchor="middle" x="13533.29" y="-2274.9" font-family="Times,serif" font-size="14.00">&lt;&lt;Interface&gt;&gt;</text>
-<text text-anchor="middle" x="13533.29" y="-2258.1" font-family="Times,serif" font-size="14.00">IVolmexBaseToken</text>
-<text text-anchor="middle" x="13533.29" y="-2241.3" font-family="Times,serif" font-size="14.00">contracts/interfaces/IVolmexBaseToken.sol</text>
+<text text-anchor="middle" x="13533.29" y="-2258.1" font-family="Times,serif" font-size="14.00">IBaseToken</text>
+<text text-anchor="middle" x="13533.29" y="-2241.3" font-family="Times,serif" font-size="14.00">contracts/interfaces/IBaseToken.sol</text>
 <polyline fill="none" stroke="black" points="13282.48,-2233.1 13784.1,-2233.1 "/>
 <text text-anchor="start" x="13290.48" y="-2216.5" font-family="Times,serif" font-size="14.00">External:</text>
 <text text-anchor="start" x="13290.48" y="-2199.7" font-family="Times,serif" font-size="14.00"> &#160;&#160;&#160;&#160;initialize(nameArg: string, symbolArg: string, priceFeedArg: address, isBase: bool)</text>
@@ -254,8 +254,8 @@
 <title>36</title>
 <polygon fill="#f2f2f2" stroke="black" points="12085.16,-1412.1 12085.16,-1797.7 12425.42,-1797.7 12425.42,-1412.1 12085.16,-1412.1"/>
 <text text-anchor="middle" x="12255.29" y="-1781.1" font-family="Times,serif" font-size="14.00">&lt;&lt;Interface&gt;&gt;</text>
-<text text-anchor="middle" x="12255.29" y="-1764.3" font-family="Times,serif" font-size="14.00">IVolmexPerpView</text>
-<text text-anchor="middle" x="12255.29" y="-1747.5" font-family="Times,serif" font-size="14.00">contracts/interfaces/IVolmexPerpView.sol</text>
+<text text-anchor="middle" x="12255.29" y="-1764.3" font-family="Times,serif" font-size="14.00">IPerpView</text>
+<text text-anchor="middle" x="12255.29" y="-1747.5" font-family="Times,serif" font-size="14.00">contracts/interfaces/IPerpView.sol</text>
 <polyline fill="none" stroke="black" points="12085.16,-1739.3 12425.42,-1739.3 "/>
 <text text-anchor="start" x="12093.16" y="-1722.7" font-family="Times,serif" font-size="14.00">External:</text>
 <text text-anchor="start" x="12093.16" y="-1705.9" font-family="Times,serif" font-size="14.00"> &#160;&#160;&#160;&#160;perpIndexCount(): uint256</text>
@@ -264,12 +264,12 @@
 <text text-anchor="start" x="12093.16" y="-1655.5" font-family="Times,serif" font-size="14.00"> &#160;&#160;&#160;&#160;quoteTokenIndexCount(): uint256</text>
 <text text-anchor="start" x="12093.16" y="-1638.7" font-family="Times,serif" font-size="14.00"> &#160;&#160;&#160;&#160;positionings(_index: uint256): IPositioning</text>
 <text text-anchor="start" x="12093.16" y="-1621.9" font-family="Times,serif" font-size="14.00"> &#160;&#160;&#160;&#160;vaultControllers(_index: uint256): IVaultController</text>
-<text text-anchor="start" x="12093.16" y="-1605.1" font-family="Times,serif" font-size="14.00"> &#160;&#160;&#160;&#160;baseTokens(_index: uint256): IVolmexBaseToken</text>
-<text text-anchor="start" x="12093.16" y="-1588.3" font-family="Times,serif" font-size="14.00"> &#160;&#160;&#160;&#160;quoteTokens(_index: uint256): IVolmexQuoteToken</text>
+<text text-anchor="start" x="12093.16" y="-1605.1" font-family="Times,serif" font-size="14.00"> &#160;&#160;&#160;&#160;baseTokens(_index: uint256): IBaseToken</text>
+<text text-anchor="start" x="12093.16" y="-1588.3" font-family="Times,serif" font-size="14.00"> &#160;&#160;&#160;&#160;quoteTokens(_index: uint256): IQuoteToken</text>
 <text text-anchor="start" x="12093.16" y="-1571.5" font-family="Times,serif" font-size="14.00"> &#160;&#160;&#160;&#160;accounts(_index: uint256): IAccountBalance</text>
 <text text-anchor="start" x="12093.16" y="-1554.7" font-family="Times,serif" font-size="14.00"> &#160;&#160;&#160;&#160;marketRegistries(_index: uint256): IMarketRegistry</text>
-<text text-anchor="start" x="12093.16" y="-1537.9" font-family="Times,serif" font-size="14.00"> &#160;&#160;&#160;&#160;setBaseToken(_baseToken: IVolmexBaseToken)</text>
-<text text-anchor="start" x="12093.16" y="-1521.1" font-family="Times,serif" font-size="14.00"> &#160;&#160;&#160;&#160;setQuoteToken(_quoteToken: IVolmexQuoteToken)</text>
+<text text-anchor="start" x="12093.16" y="-1537.9" font-family="Times,serif" font-size="14.00"> &#160;&#160;&#160;&#160;setBaseToken(_baseToken: IBaseToken)</text>
+<text text-anchor="start" x="12093.16" y="-1521.1" font-family="Times,serif" font-size="14.00"> &#160;&#160;&#160;&#160;setQuoteToken(_quoteToken: IQuoteToken)</text>
 <text text-anchor="start" x="12093.16" y="-1504.3" font-family="Times,serif" font-size="14.00"> &#160;&#160;&#160;&#160;setPositioning(_positioning: IPositioning)</text>
 <text text-anchor="start" x="12093.16" y="-1487.5" font-family="Times,serif" font-size="14.00"> &#160;&#160;&#160;&#160;setVaultController(_vaultController: IVaultController)</text>
 <text text-anchor="start" x="12093.16" y="-1470.7" font-family="Times,serif" font-size="14.00"> &#160;&#160;&#160;&#160;setAccount(_account: IAccountBalance)</text>
@@ -288,8 +288,8 @@
 <title>38</title>
 <polygon fill="#f2f2f2" stroke="black" points="14150.26,-2149.5 14150.26,-2249.5 14540.32,-2249.5 14540.32,-2149.5 14150.26,-2149.5"/>
 <text text-anchor="middle" x="14345.29" y="-2232.9" font-family="Times,serif" font-size="14.00">&lt;&lt;Interface&gt;&gt;</text>
-<text text-anchor="middle" x="14345.29" y="-2216.1" font-family="Times,serif" font-size="14.00">IVolmexQuoteToken</text>
-<text text-anchor="middle" x="14345.29" y="-2199.3" font-family="Times,serif" font-size="14.00">contracts/interfaces/IVolmexQuoteToken.sol</text>
+<text text-anchor="middle" x="14345.29" y="-2216.1" font-family="Times,serif" font-size="14.00">IQuoteToken</text>
+<text text-anchor="middle" x="14345.29" y="-2199.3" font-family="Times,serif" font-size="14.00">contracts/interfaces/IQuoteToken.sol</text>
 <polyline fill="none" stroke="black" points="14150.26,-2191.1 14540.32,-2191.1 "/>
 <text text-anchor="start" x="14158.26" y="-2174.5" font-family="Times,serif" font-size="14.00">External:</text>
 <text text-anchor="start" x="14158.26" y="-2157.7" font-family="Times,serif" font-size="14.00"> &#160;&#160;&#160;&#160;initialize(nameArg: string, symbolArg: string, isBaseArg: bool)</text>
@@ -413,7 +413,7 @@
 <text text-anchor="start" x="17433.57" y="-2140.9" font-family="Times,serif" font-size="14.00"> &#160;&#160;&#160;&#160;updateIndexBySymbol(_tokenSymbol: string, _index: uint256)</text>
 <text text-anchor="start" x="17433.57" y="-2124.1" font-family="Times,serif" font-size="14.00"> &#160;&#160;&#160;&#160;updateBaseVolatilityIndex(_leverageVolatilityIndex: uint256, _newBaseVolatilityIndex: uint256)</text>
 <text text-anchor="start" x="17433.57" y="-2107.3" font-family="Times,serif" font-size="14.00"> &#160;&#160;&#160;&#160;updateBatchVolatilityTokenPrice(_volatilityIndexes: uint256[], _volatilityTokenPrices: uint256[], _proofHashes: bytes32[])</text>
-<text text-anchor="start" x="17433.57" y="-2090.5" font-family="Times,serif" font-size="14.00"> &#160;&#160;&#160;&#160;addVolatilityIndex(_volatilityTokenPrice: uint256, _protocol: IVolmexProtocol, _volatilityTokenSymbol: string, _leverage: uint256, _baseVolatilityIndex: uint256, _proofHash: bytes32)</text>
+<text text-anchor="start" x="17433.57" y="-2090.5" font-family="Times,serif" font-size="14.00"> &#160;&#160;&#160;&#160;addVolatilityIndex(_volatilityTokenPrice: uint256, _protocol: IProtocol, _volatilityTokenSymbol: string, _leverage: uint256, _baseVolatilityIndex: uint256, _proofHash: bytes32)</text>
 <text text-anchor="start" x="17433.57" y="-2073.7" font-family="Times,serif" font-size="14.00">Public:</text>
 <text text-anchor="start" x="17433.57" y="-2056.9" font-family="Times,serif" font-size="14.00"> &#160;&#160;&#160;&lt;&lt;event&gt;&gt; SymbolIndexUpdated(_index: uint256)</text>
 <text text-anchor="start" x="17433.57" y="-2040.1" font-family="Times,serif" font-size="14.00"> &#160;&#160;&#160;&lt;&lt;event&gt;&gt; BaseVolatilityIndexUpdated(baseVolatilityIndex: uint256)</text>
@@ -786,8 +786,8 @@
 <title>37</title>
 <polygon fill="#f2f2f2" stroke="black" points="18203.21,-2618.1 18203.21,-3087.7 18769.37,-3087.7 18769.37,-2618.1 18203.21,-2618.1"/>
 <text text-anchor="middle" x="18486.29" y="-3071.1" font-family="Times,serif" font-size="14.00">&lt;&lt;Interface&gt;&gt;</text>
-<text text-anchor="middle" x="18486.29" y="-3054.3" font-family="Times,serif" font-size="14.00">IVolmexProtocol</text>
-<text text-anchor="middle" x="18486.29" y="-3037.5" font-family="Times,serif" font-size="14.00">contracts/interfaces/IVolmexProtocol.sol</text>
+<text text-anchor="middle" x="18486.29" y="-3054.3" font-family="Times,serif" font-size="14.00">IProtocol</text>
+<text text-anchor="middle" x="18486.29" y="-3037.5" font-family="Times,serif" font-size="14.00">contracts/interfaces/IProtocol.sol</text>
 <polyline fill="none" stroke="black" points="18203.21,-3029.3 18769.37,-3029.3 "/>
 <text text-anchor="start" x="18211.21" y="-3012.7" font-family="Times,serif" font-size="14.00">External:</text>
 <text text-anchor="start" x="18211.21" y="-2995.9" font-family="Times,serif" font-size="14.00"> &#160;&#160;&#160;&#160;minimumCollateralQty(): uint256</text>
@@ -1138,8 +1138,8 @@
 <title>35</title>
 <polygon fill="#f2f2f2" stroke="black" points="9210.63,-2752.5 9210.63,-2953.3 10097.94,-2953.3 10097.94,-2752.5 9210.63,-2752.5"/>
 <text text-anchor="middle" x="9654.29" y="-2936.7" font-family="Times,serif" font-size="14.00">&lt;&lt;Interface&gt;&gt;</text>
-<text text-anchor="middle" x="9654.29" y="-2919.9" font-family="Times,serif" font-size="14.00">IVolmexPerpPeriphery</text>
-<text text-anchor="middle" x="9654.29" y="-2903.1" font-family="Times,serif" font-size="14.00">contracts/interfaces/IVolmexPerpPeriphery.sol</text>
+<text text-anchor="middle" x="9654.29" y="-2919.9" font-family="Times,serif" font-size="14.00">IPerpPeriphery</text>
+<text text-anchor="middle" x="9654.29" y="-2903.1" font-family="Times,serif" font-size="14.00">contracts/interfaces/IPerpPeriphery.sol</text>
 <polyline fill="none" stroke="black" points="9210.63,-2894.9 10097.94,-2894.9 "/>
 <text text-anchor="start" x="9218.63" y="-2878.3" font-family="Times,serif" font-size="14.00">External:</text>
 <text text-anchor="start" x="9218.63" y="-2861.5" font-family="Times,serif" font-size="14.00"> &#160;&#160;&#160;&#160;depositToVault(_index: uint64, _token: address, _amount: uint256)</text>
@@ -1168,7 +1168,7 @@
 <polygon fill="#f2f2f2" stroke="black" points="8690.42,-708.3 8690.42,-909.1 8978.16,-909.1 8978.16,-708.3 8690.42,-708.3"/>
 <text text-anchor="middle" x="8834.29" y="-892.5" font-family="Times,serif" font-size="14.00">&lt;&lt;Struct&gt;&gt;</text>
 <text text-anchor="middle" x="8834.29" y="-875.7" font-family="Times,serif" font-size="14.00">LimitOrder</text>
-<text text-anchor="middle" x="8834.29" y="-858.9" font-family="Times,serif" font-size="14.00">contracts/interfaces/IVolmexPerpLimitOrder.sol</text>
+<text text-anchor="middle" x="8834.29" y="-858.9" font-family="Times,serif" font-size="14.00">contracts/interfaces/IPerpLimitOrder.sol</text>
 <polyline fill="none" stroke="black" points="8690.42,-850.7 8978.16,-850.7 "/>
 <text text-anchor="start" x="8698.42" y="-834.1" font-family="Times,serif" font-size="14.00">orderType: bytes4</text>
 <text text-anchor="start" x="8698.42" y="-817.3" font-family="Times,serif" font-size="14.00">trader: address</text>
@@ -1184,8 +1184,8 @@
 <title>33</title>
 <polygon fill="#f2f2f2" stroke="black" points="9796.05,-1546.5 9796.05,-1663.3 10556.53,-1663.3 10556.53,-1546.5 9796.05,-1546.5"/>
 <text text-anchor="middle" x="10176.29" y="-1646.7" font-family="Times,serif" font-size="14.00">&lt;&lt;Interface&gt;&gt;</text>
-<text text-anchor="middle" x="10176.29" y="-1629.9" font-family="Times,serif" font-size="14.00">IVolmexPerpLimitOrder</text>
-<text text-anchor="middle" x="10176.29" y="-1613.1" font-family="Times,serif" font-size="14.00">contracts/interfaces/IVolmexPerpLimitOrder.sol</text>
+<text text-anchor="middle" x="10176.29" y="-1629.9" font-family="Times,serif" font-size="14.00">IPerpLimitOrder</text>
+<text text-anchor="middle" x="10176.29" y="-1613.1" font-family="Times,serif" font-size="14.00">contracts/interfaces/IPerpLimitOrder.sol</text>
 <polyline fill="none" stroke="black" points="9796.05,-1604.9 10556.53,-1604.9 "/>
 <text text-anchor="start" x="9804.05" y="-1588.3" font-family="Times,serif" font-size="14.00">External:</text>
 <text text-anchor="start" x="9804.05" y="-1571.5" font-family="Times,serif" font-size="14.00"> &#160;&#160;&#160;&#160;initialize(_markPriceOracle: IMarkPriceOracle, _positioning: IPositioning, _accountBalance: IAccountBalance, _admin: address)</text>
@@ -1878,7 +1878,7 @@
 <text text-anchor="start" x="18221.32" y="-1861.1" font-family="Times,serif" font-size="14.00">Private:</text>
 <text text-anchor="start" x="18221.32" y="-1844.3" font-family="Times,serif" font-size="14.00"> &#160;&#160;_VOLATILITY_PRICE_PRECISION: uint256</text>
 <text text-anchor="start" x="18221.32" y="-1827.5" font-family="Times,serif" font-size="14.00"> &#160;&#160;_MAX_ALLOWED_TWAP_DATAPOINTS: uint256</text>
-<text text-anchor="start" x="18221.32" y="-1810.7" font-family="Times,serif" font-size="14.00"> &#160;&#160;_IVOLMEX_ORACLE_ID: bytes4</text>
+<text text-anchor="start" x="18221.32" y="-1810.7" font-family="Times,serif" font-size="14.00"> &#160;&#160;_I_ORACLE_ID: bytes4</text>
 <text text-anchor="start" x="18221.32" y="-1793.9" font-family="Times,serif" font-size="14.00"> &#160;&#160;_volatilityTokenPriceByIndex: mapping(uint256=&gt;uint256)</text>
 <text text-anchor="start" x="18221.32" y="-1777.1" font-family="Times,serif" font-size="14.00">Public:</text>
 <text text-anchor="start" x="18221.32" y="-1760.3" font-family="Times,serif" font-size="14.00"> &#160;&#160;INDEX_PRICE_ORACLE_ADMIN: bytes32</text>
@@ -1899,7 +1899,7 @@
 <text text-anchor="start" x="18221.32" y="-1517.1" font-family="Times,serif" font-size="14.00"> &#160;&#160;&#160;initialize(_owner: address) &lt;&lt;initializer&gt;&gt;</text>
 <text text-anchor="start" x="18221.32" y="-1500.3" font-family="Times,serif" font-size="14.00"> &#160;&#160;&#160;updateIndexBySymbol(_tokenSymbol: string, _index: uint256)</text>
 <text text-anchor="start" x="18221.32" y="-1483.5" font-family="Times,serif" font-size="14.00"> &#160;&#160;&#160;updateBaseVolatilityIndex(_leverageVolatilityIndex: uint256, _newBaseVolatilityIndex: uint256)</text>
-<text text-anchor="start" x="18221.32" y="-1466.7" font-family="Times,serif" font-size="14.00"> &#160;&#160;&#160;addVolatilityIndex(_volatilityTokenPrice: uint256, _protocol: IVolmexProtocol, _volatilityTokenSymbol: string, _leverage: uint256, _baseVolatilityIndex: uint256, _proofHash: bytes32)</text>
+<text text-anchor="start" x="18221.32" y="-1466.7" font-family="Times,serif" font-size="14.00"> &#160;&#160;&#160;addVolatilityIndex(_volatilityTokenPrice: uint256, _protocol: IProtocol, _volatilityTokenSymbol: string, _leverage: uint256, _baseVolatilityIndex: uint256, _proofHash: bytes32)</text>
 <text text-anchor="start" x="18221.32" y="-1449.9" font-family="Times,serif" font-size="14.00"> &#160;&#160;&#160;updateBatchVolatilityTokenPrice(_volatilityIndexes: uint256[], _volatilityTokenPrices: uint256[], _proofHashes: bytes32[])</text>
 <text text-anchor="start" x="18221.32" y="-1433.1" font-family="Times,serif" font-size="14.00"> &#160;&#160;&#160;addIndexDataPoint(_index: uint256, _value: uint256)</text>
 <text text-anchor="start" x="18221.32" y="-1416.3" font-family="Times,serif" font-size="14.00"> &#160;&#160;&#160;updateTwapMaxDatapoints(_value: uint256)</text>
@@ -2337,13 +2337,13 @@
 <text text-anchor="middle" x="6382.29" y="-1806.3" font-family="Times,serif" font-size="14.00">contracts/orderbook/Vault.sol</text>
 <polyline fill="none" stroke="black" points="5926.93,-1798.1 6837.64,-1798.1 "/>
 <text text-anchor="start" x="5934.93" y="-1781.5" font-family="Times,serif" font-size="14.00">Internal:</text>
-<text text-anchor="start" x="5934.93" y="-1764.7" font-family="Times,serif" font-size="14.00"> &#160;&#160;&#160;_deposit(periphery: IVolmexPerpPeriphery, amount: uint256, from: address)</text>
+<text text-anchor="start" x="5934.93" y="-1764.7" font-family="Times,serif" font-size="14.00"> &#160;&#160;&#160;_deposit(periphery: IPerpPeriphery, amount: uint256, from: address)</text>
 <text text-anchor="start" x="5934.93" y="-1747.9" font-family="Times,serif" font-size="14.00"> &#160;&#160;&#160;_msgSender(): address</text>
 <text text-anchor="start" x="5934.93" y="-1731.1" font-family="Times,serif" font-size="14.00"> &#160;&#160;&#160;_requireOnlyVaultController()</text>
 <text text-anchor="start" x="5934.93" y="-1714.3" font-family="Times,serif" font-size="14.00"> &#160;&#160;&#160;_msgData(): bytes</text>
 <text text-anchor="start" x="5934.93" y="-1697.5" font-family="Times,serif" font-size="14.00"> &#160;&#160;&#160;_requireVaultAdmin()</text>
 <text text-anchor="start" x="5934.93" y="-1680.7" font-family="Times,serif" font-size="14.00">External:</text>
-<text text-anchor="start" x="5934.93" y="-1663.9" font-family="Times,serif" font-size="14.00"> &#160;&#160;&#160;&lt;&lt;payable&gt;&gt; deposit(periphery: IVolmexPerpPeriphery, amount: uint256, from: address) &lt;&lt;whenNotPaused, nonReentrant&gt;&gt;</text>
+<text text-anchor="start" x="5934.93" y="-1663.9" font-family="Times,serif" font-size="14.00"> &#160;&#160;&#160;&lt;&lt;payable&gt;&gt; deposit(periphery: IPerpPeriphery, amount: uint256, from: address) &lt;&lt;whenNotPaused, nonReentrant&gt;&gt;</text>
 <text text-anchor="start" x="5934.93" y="-1647.1" font-family="Times,serif" font-size="14.00"> &#160;&#160;&#160;initialize(positioningConfigArg: address, accountBalanceArg: address, tokenArg: address, vaultControllerArg: address, isEthVaultArg: bool) &lt;&lt;initializer&gt;&gt;</text>
 <text text-anchor="start" x="5934.93" y="-1630.3" font-family="Times,serif" font-size="14.00"> &#160;&#160;&#160;setPositioning(positioningArg: address) &lt;&lt;onlyOwner&gt;&gt;</text>
 <text text-anchor="start" x="5934.93" y="-1613.5" font-family="Times,serif" font-size="14.00"> &#160;&#160;&#160;setVaultController(vaultControllerArg: address)</text>
@@ -2457,7 +2457,7 @@
 <text text-anchor="start" x="7887.3" y="-1647.1" font-family="Times,serif" font-size="14.00"> &#160;&#160;&#160;_msgSender(): address</text>
 <text text-anchor="start" x="7887.3" y="-1630.3" font-family="Times,serif" font-size="14.00"> &#160;&#160;&#160;_requireOnlyVaultControllerAdmin()</text>
 <text text-anchor="start" x="7887.3" y="-1613.5" font-family="Times,serif" font-size="14.00">External:</text>
-<text text-anchor="start" x="7887.3" y="-1596.7" font-family="Times,serif" font-size="14.00"> &#160;&#160;&#160;&lt;&lt;payable&gt;&gt; deposit(periphery: IVolmexPerpPeriphery, token: address, from: address, amount: uint256) &lt;&lt;whenNotPaused, nonReentrant&gt;&gt;</text>
+<text text-anchor="start" x="7887.3" y="-1596.7" font-family="Times,serif" font-size="14.00"> &#160;&#160;&#160;&lt;&lt;payable&gt;&gt; deposit(periphery: IPerpPeriphery, token: address, from: address, amount: uint256) &lt;&lt;whenNotPaused, nonReentrant&gt;&gt;</text>
 <text text-anchor="start" x="7887.3" y="-1579.9" font-family="Times,serif" font-size="14.00"> &#160;&#160;&#160;initialize(positioningConfig: address, accountBalanceArg: address) &lt;&lt;initializer&gt;&gt;</text>
 <text text-anchor="start" x="7887.3" y="-1563.1" font-family="Times,serif" font-size="14.00"> &#160;&#160;&#160;registerVault(_vault: address, _token: address)</text>
 <text text-anchor="start" x="7887.3" y="-1546.3" font-family="Times,serif" font-size="14.00"> &#160;&#160;&#160;withdraw(token: address, to: address, amount: uint256) &lt;&lt;whenNotPaused, nonReentrant&gt;&gt;</text>
@@ -2557,27 +2557,27 @@
 <g id="node76" class="node">
 <title>75</title>
 <polygon fill="#f2f2f2" stroke="black" points="9082.1,-561.5 9082.1,-1055.9 10264.48,-1055.9 10264.48,-561.5 9082.1,-561.5"/>
-<text text-anchor="middle" x="9673.29" y="-1039.3" font-family="Times,serif" font-size="14.00">VolmexPerpPeriphery</text>
-<text text-anchor="middle" x="9673.29" y="-1022.5" font-family="Times,serif" font-size="14.00">contracts/periphery/VolmexPerpPeriphery.sol</text>
+<text text-anchor="middle" x="9673.29" y="-1039.3" font-family="Times,serif" font-size="14.00">PerpPeriphery</text>
+<text text-anchor="middle" x="9673.29" y="-1022.5" font-family="Times,serif" font-size="14.00">contracts/periphery/PerpPeriphery.sol</text>
 <polyline fill="none" stroke="black" points="9082.1,-1014.3 10264.48,-1014.3 "/>
 <text text-anchor="start" x="9090.1" y="-997.7" font-family="Times,serif" font-size="14.00">Private:</text>
 <text text-anchor="start" x="9090.1" y="-980.9" font-family="Times,serif" font-size="14.00"> &#160;&#160;_isVaultWhitelist: mapping(address=&gt;bool)</text>
 <text text-anchor="start" x="9090.1" y="-964.1" font-family="Times,serif" font-size="14.00">Public:</text>
-<text text-anchor="start" x="9090.1" y="-947.3" font-family="Times,serif" font-size="14.00"> &#160;&#160;VOLMEX_PERP_PERIPHERY: bytes32</text>
+<text text-anchor="start" x="9090.1" y="-947.3" font-family="Times,serif" font-size="14.00"> &#160;&#160;_PERP_PERIPHERY: bytes32</text>
 <text text-anchor="start" x="9090.1" y="-930.5" font-family="Times,serif" font-size="14.00"> &#160;&#160;RELAYER_MULTISIG: bytes32</text>
 <text text-anchor="start" x="9090.1" y="-913.7" font-family="Times,serif" font-size="14.00"> &#160;&#160;markPriceOracle: IMarkPriceOracle</text>
-<text text-anchor="start" x="9090.1" y="-896.9" font-family="Times,serif" font-size="14.00"> &#160;&#160;perpView: IVolmexPerpView</text>
+<text text-anchor="start" x="9090.1" y="-896.9" font-family="Times,serif" font-size="14.00"> &#160;&#160;perpView: IPerpView</text>
 <polyline fill="none" stroke="black" points="9082.1,-888.7 10264.48,-888.7 "/>
 <text text-anchor="start" x="9090.1" y="-872.1" font-family="Times,serif" font-size="14.00">Private:</text>
 <text text-anchor="start" x="9090.1" y="-855.3" font-family="Times,serif" font-size="14.00"> &#160;&#160;&#160;_verifyTriggerPrice(_limitOrder: LibOrder.Order, _positioning: IPositioning): bool</text>
 <text text-anchor="start" x="9090.1" y="-838.5" font-family="Times,serif" font-size="14.00"> &#160;&#160;&#160;_getBaseTokenPrice(_order: LibOrder.Order, _twInterval: uint256): (price: uint256)</text>
 <text text-anchor="start" x="9090.1" y="-821.7" font-family="Times,serif" font-size="14.00">Internal:</text>
 <text text-anchor="start" x="9090.1" y="-804.9" font-family="Times,serif" font-size="14.00"> &#160;&#160;&#160;_fillLimitOrder(_leftLimitOrder: LibOrder.Order, _signatureLeftLimitOrder: bytes, _rightLimitOrder: LibOrder.Order, _signatureRightLimitOrder: bytes, liquidator: bytes, _index: uint256)</text>
-<text text-anchor="start" x="9090.1" y="-788.1" font-family="Times,serif" font-size="14.00"> &#160;&#160;&#160;_requireVolmexPerpPeripheryAdmin()</text>
-<text text-anchor="start" x="9090.1" y="-771.3" font-family="Times,serif" font-size="14.00"> &#160;&#160;&#160;_requireVolmexPerpPeripheryRelayer()</text>
+<text text-anchor="start" x="9090.1" y="-788.1" font-family="Times,serif" font-size="14.00"> &#160;&#160;&#160;_requirePerpPeripheryAdmin()</text>
+<text text-anchor="start" x="9090.1" y="-771.3" font-family="Times,serif" font-size="14.00"> &#160;&#160;&#160;_requirePerpPeripheryRelayer()</text>
 <text text-anchor="start" x="9090.1" y="-754.5" font-family="Times,serif" font-size="14.00">External:</text>
 <text text-anchor="start" x="9090.1" y="-737.7" font-family="Times,serif" font-size="14.00"> &#160;&#160;&#160;&lt;&lt;payable&gt;&gt; depositToVault(_index: uint64, _token: address, _amount: uint256)</text>
-<text text-anchor="start" x="9090.1" y="-720.9" font-family="Times,serif" font-size="14.00"> &#160;&#160;&#160;initialize(_perpView: IVolmexPerpView, _markPriceOracle: IMarkPriceOracle, _vaults: address[2], _owner: address, _relayer: address) &lt;&lt;initializer&gt;&gt;</text>
+<text text-anchor="start" x="9090.1" y="-720.9" font-family="Times,serif" font-size="14.00"> &#160;&#160;&#160;initialize(_perpView: IPerpView, _markPriceOracle: IMarkPriceOracle, _vaults: address[2], _owner: address, _relayer: address) &lt;&lt;initializer&gt;&gt;</text>
 <text text-anchor="start" x="9090.1" y="-704.1" font-family="Times,serif" font-size="14.00"> &#160;&#160;&#160;setMarkPriceOracle(_markPriceOracle: IMarkPriceOracle)</text>
 <text text-anchor="start" x="9090.1" y="-687.3" font-family="Times,serif" font-size="14.00"> &#160;&#160;&#160;setRelayer(_relayer: address)</text>
 <text text-anchor="start" x="9090.1" y="-670.5" font-family="Times,serif" font-size="14.00"> &#160;&#160;&#160;whitelistVault(_vault: address, _isWhitelist: bool)</text>
@@ -2919,14 +2919,14 @@
 <g id="node97" class="node">
 <title>102</title>
 <polygon fill="#f2f2f2" stroke="black" points="20410.74,-0.5 20410.74,-326.9 20807.84,-326.9 20807.84,-0.5 20410.74,-0.5"/>
-<text text-anchor="middle" x="20609.29" y="-310.3" font-family="Times,serif" font-size="14.00">VolmexPositionToken</text>
-<text text-anchor="middle" x="20609.29" y="-293.5" font-family="Times,serif" font-size="14.00">contracts/tests/protocol/VolmexPositionToken.sol</text>
+<text text-anchor="middle" x="20609.29" y="-310.3" font-family="Times,serif" font-size="14.00">PositionToken</text>
+<text text-anchor="middle" x="20609.29" y="-293.5" font-family="Times,serif" font-size="14.00">contracts/tests/protocol/PositionToken.sol</text>
 <polyline fill="none" stroke="black" points="20410.74,-285.3 20807.84,-285.3 "/>
 <text text-anchor="start" x="20418.74" y="-268.7" font-family="Times,serif" font-size="14.00">Private:</text>
 <text text-anchor="start" x="20418.74" y="-251.9" font-family="Times,serif" font-size="14.00"> &#160;&#160;_vivName: string</text>
 <text text-anchor="start" x="20418.74" y="-235.1" font-family="Times,serif" font-size="14.00"> &#160;&#160;_vivSymbol: string</text>
 <text text-anchor="start" x="20418.74" y="-218.3" font-family="Times,serif" font-size="14.00">Public:</text>
-<text text-anchor="start" x="20418.74" y="-201.5" font-family="Times,serif" font-size="14.00"> &#160;&#160;VOLMEX_PROTOCOL_ROLE: bytes32</text>
+<text text-anchor="start" x="20418.74" y="-201.5" font-family="Times,serif" font-size="14.00"> &#160;&#160;_PROTOCOL_ROLE: bytes32</text>
 <polyline fill="none" stroke="black" points="20410.74,-193.3 20807.84,-193.3 "/>
 <text text-anchor="start" x="20418.74" y="-176.7" font-family="Times,serif" font-size="14.00">External:</text>
 <text text-anchor="start" x="20418.74" y="-159.9" font-family="Times,serif" font-size="14.00"> &#160;&#160;&#160;initialize(_name: string, _symbol: string) &lt;&lt;initializer&gt;&gt;</text>
@@ -2944,8 +2944,8 @@
 <g id="node98" class="node">
 <title>103</title>
 <polygon fill="#f2f2f2" stroke="black" points="18787.04,-2479.7 18787.04,-3226.1 20027.54,-3226.1 20027.54,-2479.7 18787.04,-2479.7"/>
-<text text-anchor="middle" x="19407.29" y="-3209.5" font-family="Times,serif" font-size="14.00">VolmexProtocol</text>
-<text text-anchor="middle" x="19407.29" y="-3192.7" font-family="Times,serif" font-size="14.00">contracts/tests/protocol/VolmexProtocol.sol</text>
+<text text-anchor="middle" x="19407.29" y="-3209.5" font-family="Times,serif" font-size="14.00">Protocol</text>
+<text text-anchor="middle" x="19407.29" y="-3192.7" font-family="Times,serif" font-size="14.00">contracts/tests/protocol/Protocol.sol</text>
 <polyline fill="none" stroke="black" points="18787.04,-3184.5 20027.54,-3184.5 "/>
 <text text-anchor="start" x="18795.04" y="-3167.9" font-family="Times,serif" font-size="14.00">Public:</text>
 <text text-anchor="start" x="18795.04" y="-3151.1" font-family="Times,serif" font-size="14.00"> &#160;&#160;minimumCollateralQty: uint256</text>
@@ -3042,8 +3042,8 @@
 <g id="node101" class="node">
 <title>97</title>
 <polygon fill="#f2f2f2" stroke="black" points="15529.03,-767.1 15529.03,-850.3 15777.54,-850.3 15777.54,-767.1 15529.03,-767.1"/>
-<text text-anchor="middle" x="15653.29" y="-833.7" font-family="Times,serif" font-size="14.00">VolmexBaseToken</text>
-<text text-anchor="middle" x="15653.29" y="-816.9" font-family="Times,serif" font-size="14.00">contracts/tokens/VolmexBaseToken.sol</text>
+<text text-anchor="middle" x="15653.29" y="-833.7" font-family="Times,serif" font-size="14.00">BaseToken</text>
+<text text-anchor="middle" x="15653.29" y="-816.9" font-family="Times,serif" font-size="14.00">contracts/tokens/BaseToken.sol</text>
 <polyline fill="none" stroke="black" points="15529.03,-808.7 15777.54,-808.7 "/>
 <text text-anchor="start" x="15537.03" y="-792.1" font-family="Times,serif" font-size="14.00">External:</text>
 <text text-anchor="start" x="15537.03" y="-775.3" font-family="Times,serif" font-size="14.00"> &#160;&#160;&#160;getIndexPrice(index: uint256): uint256</text>
@@ -3064,8 +3064,8 @@
 <g id="node102" class="node">
 <title>98</title>
 <polygon fill="#f2f2f2" stroke="black" points="16384.65,-1563.3 16384.65,-1646.5 16859.93,-1646.5 16859.93,-1563.3 16384.65,-1563.3"/>
-<text text-anchor="middle" x="16622.29" y="-1629.9" font-family="Times,serif" font-size="14.00">VolmexQuoteToken</text>
-<text text-anchor="middle" x="16622.29" y="-1613.1" font-family="Times,serif" font-size="14.00">contracts/tokens/VolmexQuoteToken.sol</text>
+<text text-anchor="middle" x="16622.29" y="-1629.9" font-family="Times,serif" font-size="14.00">QuoteToken</text>
+<text text-anchor="middle" x="16622.29" y="-1613.1" font-family="Times,serif" font-size="14.00">contracts/tokens/QuoteToken.sol</text>
 <polyline fill="none" stroke="black" points="16384.65,-1604.9 16859.93,-1604.9 "/>
 <text text-anchor="start" x="16392.65" y="-1588.3" font-family="Times,serif" font-size="14.00">External:</text>
 <text text-anchor="start" x="16392.65" y="-1571.5" font-family="Times,serif" font-size="14.00"> &#160;&#160;&#160;initialize(nameArg: string, symbolArg: string, isBaseArg: bool) &lt;&lt;initializer&gt;&gt;</text>
@@ -3135,16 +3135,16 @@
 <g id="node105" class="node">
 <title>100</title>
 <polygon fill="#f2f2f2" stroke="black" points="12715.87,-553.1 12715.87,-1064.3 13058.71,-1064.3 13058.71,-553.1 12715.87,-553.1"/>
-<text text-anchor="middle" x="12887.29" y="-1047.7" font-family="Times,serif" font-size="14.00">VolmexPerpView</text>
-<text text-anchor="middle" x="12887.29" y="-1030.9" font-family="Times,serif" font-size="14.00">contracts/view/VolmexPerpView.sol</text>
+<text text-anchor="middle" x="12887.29" y="-1047.7" font-family="Times,serif" font-size="14.00">PerpView</text>
+<text text-anchor="middle" x="12887.29" y="-1030.9" font-family="Times,serif" font-size="14.00">contracts/view/PerpView.sol</text>
 <polyline fill="none" stroke="black" points="12715.87,-1022.7 13058.71,-1022.7 "/>
 <text text-anchor="start" x="12723.87" y="-1006.1" font-family="Times,serif" font-size="14.00">Public:</text>
-<text text-anchor="start" x="12723.87" y="-989.3" font-family="Times,serif" font-size="14.00"> &#160;&#160;VOLMEX_PERP_VIEW: bytes32</text>
+<text text-anchor="start" x="12723.87" y="-989.3" font-family="Times,serif" font-size="14.00"> &#160;&#160;_PERP_VIEW: bytes32</text>
 <text text-anchor="start" x="12723.87" y="-972.5" font-family="Times,serif" font-size="14.00"> &#160;&#160;PERP_VIEW_STATES: bytes32</text>
 <text text-anchor="start" x="12723.87" y="-955.7" font-family="Times,serif" font-size="14.00"> &#160;&#160;positionings: mapping(uint256=&gt;IPositioning)</text>
 <text text-anchor="start" x="12723.87" y="-938.9" font-family="Times,serif" font-size="14.00"> &#160;&#160;vaultControllers: mapping(uint256=&gt;IVaultController)</text>
-<text text-anchor="start" x="12723.87" y="-922.1" font-family="Times,serif" font-size="14.00"> &#160;&#160;baseTokens: mapping(uint256=&gt;IVolmexBaseToken)</text>
-<text text-anchor="start" x="12723.87" y="-905.3" font-family="Times,serif" font-size="14.00"> &#160;&#160;quoteTokens: mapping(uint256=&gt;IVolmexQuoteToken)</text>
+<text text-anchor="start" x="12723.87" y="-922.1" font-family="Times,serif" font-size="14.00"> &#160;&#160;baseTokens: mapping(uint256=&gt;IBaseToken)</text>
+<text text-anchor="start" x="12723.87" y="-905.3" font-family="Times,serif" font-size="14.00"> &#160;&#160;quoteTokens: mapping(uint256=&gt;IQuoteToken)</text>
 <text text-anchor="start" x="12723.87" y="-888.5" font-family="Times,serif" font-size="14.00"> &#160;&#160;accounts: mapping(uint256=&gt;IAccountBalance)</text>
 <text text-anchor="start" x="12723.87" y="-871.7" font-family="Times,serif" font-size="14.00"> &#160;&#160;marketRegistries: mapping(uint256=&gt;IMarketRegistry)</text>
 <text text-anchor="start" x="12723.87" y="-854.9" font-family="Times,serif" font-size="14.00"> &#160;&#160;perpIndexCount: uint256</text>
@@ -3153,13 +3153,13 @@
 <text text-anchor="start" x="12723.87" y="-804.5" font-family="Times,serif" font-size="14.00"> &#160;&#160;quoteTokenIndexCount: uint256</text>
 <polyline fill="none" stroke="black" points="12715.87,-796.3 13058.71,-796.3 "/>
 <text text-anchor="start" x="12723.87" y="-779.7" font-family="Times,serif" font-size="14.00">Internal:</text>
-<text text-anchor="start" x="12723.87" y="-762.9" font-family="Times,serif" font-size="14.00"> &#160;&#160;&#160;_requireVolmexPerpViewAdmin()</text>
-<text text-anchor="start" x="12723.87" y="-746.1" font-family="Times,serif" font-size="14.00"> &#160;&#160;&#160;_requireVolmexPerpViewCaller()</text>
+<text text-anchor="start" x="12723.87" y="-762.9" font-family="Times,serif" font-size="14.00"> &#160;&#160;&#160;_requirePerpViewAdmin()</text>
+<text text-anchor="start" x="12723.87" y="-746.1" font-family="Times,serif" font-size="14.00"> &#160;&#160;&#160;_requirePerpViewCaller()</text>
 <text text-anchor="start" x="12723.87" y="-729.3" font-family="Times,serif" font-size="14.00">External:</text>
 <text text-anchor="start" x="12723.87" y="-712.5" font-family="Times,serif" font-size="14.00"> &#160;&#160;&#160;initialize(_viewRole: address) &lt;&lt;initializer&gt;&gt;</text>
 <text text-anchor="start" x="12723.87" y="-695.7" font-family="Times,serif" font-size="14.00"> &#160;&#160;&#160;grantViewStatesRole(_viewStateRole: address)</text>
-<text text-anchor="start" x="12723.87" y="-678.9" font-family="Times,serif" font-size="14.00"> &#160;&#160;&#160;setBaseToken(_baseToken: IVolmexBaseToken)</text>
-<text text-anchor="start" x="12723.87" y="-662.1" font-family="Times,serif" font-size="14.00"> &#160;&#160;&#160;setQuoteToken(_quoteToken: IVolmexQuoteToken)</text>
+<text text-anchor="start" x="12723.87" y="-678.9" font-family="Times,serif" font-size="14.00"> &#160;&#160;&#160;setBaseToken(_baseToken: IBaseToken)</text>
+<text text-anchor="start" x="12723.87" y="-662.1" font-family="Times,serif" font-size="14.00"> &#160;&#160;&#160;setQuoteToken(_quoteToken: IQuoteToken)</text>
 <text text-anchor="start" x="12723.87" y="-645.3" font-family="Times,serif" font-size="14.00"> &#160;&#160;&#160;setPositioning(_positioning: IPositioning)</text>
 <text text-anchor="start" x="12723.87" y="-628.5" font-family="Times,serif" font-size="14.00"> &#160;&#160;&#160;setVaultController(_vaultController: IVaultController)</text>
 <text text-anchor="start" x="12723.87" y="-611.7" font-family="Times,serif" font-size="14.00"> &#160;&#160;&#160;setAccount(_account: IAccountBalance)</text>

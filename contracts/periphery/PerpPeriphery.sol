@@ -4,18 +4,18 @@ pragma solidity =0.8.18;
 import { AccessControlUpgradeable } from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 import { SafeERC20Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 
-import { IVolmexPerpPeriphery, IERC20Upgradeable, IVirtualToken } from "../interfaces/IVolmexPerpPeriphery.sol";
+import { IPerpPeriphery, IERC20Upgradeable, IVirtualToken } from "../interfaces/IPerpPeriphery.sol";
 import { IPerpetualOracle } from "../interfaces/IPerpetualOracle.sol";
 import { IVaultController } from "../interfaces/IVaultController.sol";
-import { IVolmexPerpView } from "../interfaces/IVolmexPerpView.sol";
+import { IPerpView } from "../interfaces/IPerpView.sol";
 import { IPositioning } from "../interfaces/IPositioning.sol";
 
 import { LibOrder } from "../libs/LibOrder.sol";
-contract VolmexPerpPeriphery is AccessControlUpgradeable, IVolmexPerpPeriphery {
+contract PerpPeriphery is AccessControlUpgradeable, IPerpPeriphery {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
     // perp periphery role
-    bytes32 public constant VOLMEX_PERP_PERIPHERY = keccak256("VOLMEX_PERP_PERIPHERY");
+    bytes32 public constant _PERP_PERIPHERY = keccak256("_PERP_PERIPHERY");
     // role of relayer to execute open position
     bytes32 public constant RELAYER_MULTISIG = keccak256("RELAYER_MULTISIG");
     // role for whitelisting traders
@@ -37,8 +37,8 @@ contract VolmexPerpPeriphery is AccessControlUpgradeable, IVolmexPerpPeriphery {
 
     // Used to fetch market and index prices
     IPerpetualOracle public perpetualOracle;
-    // Stores the address of VolmexPerpView contract
-    IVolmexPerpView public perpView;
+    // Stores the address of PerpView contract
+    IPerpView public perpView;
 
     /**
      * @notice Initializes the contract
@@ -49,10 +49,10 @@ contract VolmexPerpPeriphery is AccessControlUpgradeable, IVolmexPerpPeriphery {
      * @param _owner Address of the admin EOA
      * @param _relayer Address of relayer to execute open position
      */
-    function initialize(IVolmexPerpView _perpView, IPerpetualOracle _perpetualOracle, address[2] memory _vaults, address _owner, address _relayer) external initializer {
-        require(_owner != address(0), "VolmexPerpPeriphery: Admin can't be address(0)");
-        require(_relayer != address(0), "VolmexPerpPeriphery: Relayer can't be address(0)");
-        require(address(_perpView) != address(0), "VolmexPerpPeriphery: zero address");
+    function initialize(IPerpView _perpView, IPerpetualOracle _perpetualOracle, address[2] memory _vaults, address _owner, address _relayer) external initializer {
+        require(_owner != address(0), "PerpPeriphery: Admin can't be address(0)");
+        require(_relayer != address(0), "PerpPeriphery: Relayer can't be address(0)");
+        require(address(_perpView) != address(0), "PerpPeriphery: zero address");
         perpetualOracle = _perpetualOracle;
         perpView = _perpView;
 
@@ -60,7 +60,7 @@ contract VolmexPerpPeriphery is AccessControlUpgradeable, IVolmexPerpPeriphery {
             _isVaultWhitelist[_vaults[i]] = true;
         }
         isTraderWhitelistEnabled = true;
-        _grantRole(VOLMEX_PERP_PERIPHERY, _owner);
+        _grantRole(_PERP_PERIPHERY, _owner);
         _grantRole(TRADER_WHITELISTER, _owner);
         _setRoleAdmin(TRADER_WHITELISTER, TRADER_WHITELISTER);
         _grantRole(ACCOUNT_BLACKLISTER, _owner);
@@ -70,24 +70,24 @@ contract VolmexPerpPeriphery is AccessControlUpgradeable, IVolmexPerpPeriphery {
     }
 
     function setPerpetualOracle(IPerpetualOracle _perpetualOracle) external {
-        _requireVolmexPerpPeripheryAdmin();
+        _requirePerpPeripheryAdmin();
         perpetualOracle = _perpetualOracle;
     }
 
     function setRelayer(address _relayer) external {
-        _requireVolmexPerpPeripheryAdmin();
-        require(_relayer != address(0), "VolmexPerpPeriphery: Not relayer");
+        _requirePerpPeripheryAdmin();
+        require(_relayer != address(0), "PerpPeriphery: Not relayer");
         _grantRole(RELAYER_MULTISIG, _relayer);
         emit RelayerUpdated(_relayer);
     }
 
     function toggleTraderWhitelistEnabled() external {
-        _requireVolmexPerpPeripheryAdmin();
+        _requirePerpPeripheryAdmin();
         isTraderWhitelistEnabled = !isTraderWhitelistEnabled;
     }
 
     function whitelistVault(address _vault, bool _isWhitelist) external {
-        _requireVolmexPerpPeripheryAdmin();
+        _requirePerpPeripheryAdmin();
         _isVaultWhitelist[_vault] = _isWhitelist;
         emit VaultWhitelisted(_vault, _isWhitelist);
     }
@@ -110,7 +110,7 @@ contract VolmexPerpPeriphery is AccessControlUpgradeable, IVolmexPerpPeriphery {
     function depositToVault(uint256 _index, address _token, uint256 _amount) external {
         _requireAccountNotBlacklisted(_msgSender());
         IVaultController vaultController = perpView.vaultControllers(_index);
-        vaultController.deposit(IVolmexPerpPeriphery(address(this)), _token, _msgSender(), _amount);
+        vaultController.deposit(IPerpPeriphery(address(this)), _token, _msgSender(), _amount);
     }
 
     function withdrawFromVault(uint256 _index, address _token, address _to, uint256 _amount) external {
@@ -127,7 +127,7 @@ contract VolmexPerpPeriphery is AccessControlUpgradeable, IVolmexPerpPeriphery {
         bytes memory _signatureTaker,
         bytes memory liquidator
     ) external {
-        _requireVolmexPerpPeripheryRelayer();
+        _requirePerpPeripheryRelayer();
         _requireAccountNotBlacklisted(_makerOrder.trader);
         _requireAccountNotBlacklisted(_takerOrder.trader);
         if (isTraderWhitelistEnabled) {
@@ -146,7 +146,7 @@ contract VolmexPerpPeriphery is AccessControlUpgradeable, IVolmexPerpPeriphery {
         bytes memory liquidator
     ) external {
         require(_makerOrders.length == _takerOrders.length, "Periphery: mismatch orders");
-        _requireVolmexPerpPeripheryRelayer();
+        _requirePerpPeripheryRelayer();
 
         uint256 ordersLength = _makerOrders.length;
         bool _isTraderWhitelistEnabled = isTraderWhitelistEnabled;
@@ -206,12 +206,12 @@ contract VolmexPerpPeriphery is AccessControlUpgradeable, IVolmexPerpPeriphery {
         positioning.openPosition(_makerOrder, _signatureMaker, _takerOrder, _signatureTaker, liquidator);
     }
 
-    function _requireVolmexPerpPeripheryAdmin() internal view {
-        require(hasRole(VOLMEX_PERP_PERIPHERY, _msgSender()), "Periphery: Not admin");
+    function _requirePerpPeripheryAdmin() internal view {
+        require(hasRole(_PERP_PERIPHERY, _msgSender()), "Periphery: Not admin");
     }
 
-    function _requireVolmexPerpPeripheryRelayer() internal view {
-        require(hasRole(RELAYER_MULTISIG, _msgSender()), "VolmexPerpPeriphery: Not relayer");
+    function _requirePerpPeripheryRelayer() internal view {
+        require(hasRole(RELAYER_MULTISIG, _msgSender()), "PerpPeriphery: Not relayer");
     }
 
     function _requireWhitelistedTrader(address trader) internal view {
@@ -223,16 +223,16 @@ contract VolmexPerpPeriphery is AccessControlUpgradeable, IVolmexPerpPeriphery {
     }
 
     function _requireTraderWhitelister() internal view {
-        require(hasRole(TRADER_WHITELISTER, _msgSender()), "VolmexPerpPeriphery: Not whitelister");
+        require(hasRole(TRADER_WHITELISTER, _msgSender()), "PerpPeriphery: Not whitelister");
     }
 
     function _requireAccountBlacklisterRole() internal view {
-        require(hasRole(ACCOUNT_BLACKLISTER, _msgSender()), "VolmexPerpPeriphery: Not blacklister");
+        require(hasRole(ACCOUNT_BLACKLISTER, _msgSender()), "PerpPeriphery: Not blacklister");
     }
 
-    // Note for V2: Change the logic to round id, if Volmex Oracle implements price by round id functionality
+    // Note for V2: Change the logic to round id, if  Oracle implements price by round id functionality
     function _verifyTriggerPrice(LibOrder.Order memory _limitOrder) private view returns (bool result) {
-        // Note for V2: Add check for round id, when Volmex Oracle updates functionality
+        // Note for V2: Add check for round id, when  Oracle updates functionality
         uint256 triggeredPrice = _getBaseTokenPrice(_limitOrder);
 
         if (_checkLimitOrderType(_limitOrder.orderType, true)) {

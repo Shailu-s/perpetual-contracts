@@ -29,7 +29,7 @@ abstract contract AccountBalanceStorageV1 {
     // Index price oracle underlying index
     mapping(address => uint256) _underlyingPriceIndexes;
     mapping(address => uint256) public nextLiquidationTime;
-    mapping(uint256 => uint256) public sigmaVolmexIvs;
+    mapping(uint256 => uint256) public sigmaIvs;
     IMatchingEngine public matchingEngine;
     uint256 public minTimeBound;
 }

@@ -47,7 +47,7 @@ contract DevilTestERC20 is ERC20PresetMinterPauserUpgradeable {
         address recipient,
         uint256 amount
     ) public virtual override returns (bool success) {
-        IVolmexPerpPeriphery periphery = IVolmexPerpPeriphery(msg.sender);
+        IPerpPeriphery periphery = IPerpPeriphery(msg.sender);
         IVault(recipient).deposit(periphery, amount, sender);
         if (_transferFeeRatio != 0) {
             uint256 fee = (amount * _transferFeeRatio) / 100;

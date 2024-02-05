@@ -8,13 +8,13 @@ import "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC20Pausable
 
 /**
  * @title Token Contract
- * @author volmex.finance [security@volmexlabs.com]
+ * @author .finance [security@labs.com]
  */
-contract VolmexPositionToken is Initializable, AccessControlUpgradeable, ERC20PausableUpgradeable {
+contract PositionToken is Initializable, AccessControlUpgradeable, ERC20PausableUpgradeable {
     event UpdatedTokenMetadata(string name, string symbol);
 
-    // Position token role, calculated as keccak256("VOLMEX_PROTOCOL_ROLE")
-    bytes32 public constant VOLMEX_PROTOCOL_ROLE = 0x33ba6006595f7ad5c59211bde33456cab351f47602fc04f644c8690bc73c4e16;
+    // Position token role, calculated as keccak256("_PROTOCOL_ROLE")
+    bytes32 public constant _PROTOCOL_ROLE = 0x33ba6006595f7ad5c59211bde33456cab351f47602fc04f644c8690bc73c4e16;
 
     // Openzepplin's ERC20 name and symbol variables are private
     // To add functionality to update the token metadata, we added another variables
@@ -25,7 +25,7 @@ contract VolmexPositionToken is Initializable, AccessControlUpgradeable, ERC20Pa
     string private _vivSymbol;
 
     /**
-     * @dev Grants `DEFAULT_ADMIN_ROLE` and `VOLMEX_PROTOCOL_ROLE` to the
+     * @dev Grants `DEFAULT_ADMIN_ROLE` and `_PROTOCOL_ROLE` to the
      * account that deploys the contract.
      *
      * See {ERC20-constructor}.
@@ -38,7 +38,7 @@ contract VolmexPositionToken is Initializable, AccessControlUpgradeable, ERC20Pa
         _vivSymbol = _symbol;
 
         _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
-        _setupRole(VOLMEX_PROTOCOL_ROLE, msg.sender);
+        _setupRole(_PROTOCOL_ROLE, msg.sender);
     }
 
     /**
@@ -48,7 +48,7 @@ contract VolmexPositionToken is Initializable, AccessControlUpgradeable, ERC20Pa
      * @param _symbol New string symbol of the VIV token
      */
     function updateTokenMetadata(string memory _name, string memory _symbol) external virtual {
-        require(hasRole(DEFAULT_ADMIN_ROLE, msg.sender), "VolmexPositionToken: not admin");
+        require(hasRole(DEFAULT_ADMIN_ROLE, msg.sender), "PositionToken: not admin");
         _vivName = _name;
         _vivSymbol = _symbol;
         emit UpdatedTokenMetadata(_name, _symbol);
@@ -61,12 +61,12 @@ contract VolmexPositionToken is Initializable, AccessControlUpgradeable, ERC20Pa
      *
      * Requirements:
      *
-     * - the caller must have the `VOLMEX_PROTOCOL_ROLE`.
+     * - the caller must have the `_PROTOCOL_ROLE`.
      */
     function mint(address _to, uint256 _amount) public virtual {
         require(
-            hasRole(VOLMEX_PROTOCOL_ROLE, msg.sender),
-            "VolmexPositionToken: must have volmex protocol role to mint"
+            hasRole(_PROTOCOL_ROLE, msg.sender),
+            "PositionToken: must have  protocol role to mint"
         );
         _mint(_to, _amount);
     }
@@ -78,8 +78,8 @@ contract VolmexPositionToken is Initializable, AccessControlUpgradeable, ERC20Pa
      */
     function burn(address _from, uint256 _amount) public virtual {
         require(
-            hasRole(VOLMEX_PROTOCOL_ROLE, msg.sender),
-            "VolmexPositionToken: must have volmex protocol role to burn"
+            hasRole(_PROTOCOL_ROLE, msg.sender),
+            "PositionToken: must have  protocol role to burn"
         );
         _burn(_from, _amount);
     }
@@ -91,12 +91,12 @@ contract VolmexPositionToken is Initializable, AccessControlUpgradeable, ERC20Pa
      *
      * Requirements:
      *
-     * - the caller must have the `VOLMEX_PROTOCOL_ROLE`.
+     * - the caller must have the `_PROTOCOL_ROLE`.
      */
     function pause() public virtual {
         require(
-            hasRole(VOLMEX_PROTOCOL_ROLE, msg.sender),
-            "VolmexPositionToken: must have volmex protocol role to pause"
+            hasRole(_PROTOCOL_ROLE, msg.sender),
+            "PositionToken: must have  protocol role to pause"
         );
         _pause();
     }
@@ -108,12 +108,12 @@ contract VolmexPositionToken is Initializable, AccessControlUpgradeable, ERC20Pa
      *
      * Requirements:
      *
-     * - the caller must have the `VOLMEX_PROTOCOL_ROLE`.
+     * - the caller must have the `_PROTOCOL_ROLE`.
      */
     function unpause() public virtual {
         require(
-            hasRole(VOLMEX_PROTOCOL_ROLE, msg.sender),
-            "VolmexPositionToken: must have volmex protocol role to unpause"
+            hasRole(_PROTOCOL_ROLE, msg.sender),
+            "PositionToken: must have  protocol role to unpause"
         );
         _unpause();
     }

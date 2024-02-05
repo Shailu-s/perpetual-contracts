@@ -57,7 +57,7 @@ const deposit = async () => {
   const bob = new ethers.Wallet(`${process.env.PRIVATE_KEY_2}`, provider);
   console.log("Account 1 address: ", alice.address);
   console.log("Account 2 address: ", bob.address);
-  const periphery = await ethers.getContractAt("VolmexPerpPeriphery", peripheryAddress);
+  const periphery = await ethers.getContractAt("PerpPeriphery", peripheryAddress);
   const collateral = await ethers.getContractAt("TestERC20", usdcAddress);
   const aliceBalance = await collateral.balanceOf(alice.address);
   const bobBalance = await collateral.balanceOf(bob.address);

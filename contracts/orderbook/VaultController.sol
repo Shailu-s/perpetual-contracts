@@ -10,7 +10,7 @@ import { LibSettlementTokenMath } from "../libs/LibSettlementTokenMath.sol";
 import { LibSafeCastUint } from "../libs/LibSafeCastUint.sol";
 import { LibPerpMath } from "../libs/LibPerpMath.sol";
 
-import { IVolmexPerpPeriphery } from "../interfaces/IVolmexPerpPeriphery.sol";
+import { IPerpPeriphery } from "../interfaces/IPerpPeriphery.sol";
 import { IPositioningConfig } from "../interfaces/IPositioningConfig.sol";
 import { IVaultController } from "../interfaces/IVaultController.sol";
 import { IAccountBalance } from "../interfaces/IAccountBalance.sol";
@@ -48,7 +48,7 @@ contract VaultController is ReentrancyGuardUpgradeable, OwnerPausable, VaultCont
     }
 
     function deposit(
-        IVolmexPerpPeriphery periphery,
+        IPerpPeriphery periphery,
         address token,
         address from,
         uint256 amount

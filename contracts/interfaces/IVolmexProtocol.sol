@@ -4,7 +4,7 @@ pragma solidity =0.8.18;
 
 import "./IERC20Modified.sol";
 
-interface IVolmexProtocol {
+interface IProtocol {
     //getter methods
     function minimumCollateralQty() external view returns (uint256);
     function active() external view returns (bool);

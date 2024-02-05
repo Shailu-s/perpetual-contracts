@@ -12,7 +12,7 @@ import { LibPerpMath } from "../libs/LibPerpMath.sol";
 import { LibFill } from "../libs/LibFill.sol";
 
 import { IPositioningConfig } from "../interfaces/IPositioningConfig.sol";
-import { IVolmexBaseToken } from "../interfaces/IVolmexBaseToken.sol";
+import { IBaseToken } from "../interfaces/IBaseToken.sol";
 import { IPerpetualOracle } from "../interfaces/IPerpetualOracle.sol";
 import { IVaultController } from "../interfaces/IVaultController.sol";
 import { IAccountBalance } from "../interfaces/IAccountBalance.sol";
@@ -42,7 +42,7 @@ contract Positioning is PositioningStorageV1, IPositioning, ReentrancyGuardUpgra
         IPerpetualOracle perpetualOracleArg,
         IFundingRate fundingRateArg,
         address marketRegistryArg,
-        address[4] calldata volmexBaseTokenArgs, //NOTE: index 2 and 3 is of chainlink base token
+        address[4] calldata BaseTokenArgs, //NOTE: index 2 and 3 is of chainlink base token
         uint256[2] calldata chainlinkBaseTokenIndexArgs,
         address[2] calldata liquidators,
         uint256[2] calldata _minPositionSizeByBaseToken
@@ -72,10 +72,10 @@ contract Positioning is PositioningStorageV1, IPositioning, ReentrancyGuardUpgra
         _smIntervalLiquidation = 3600;
         indexPriceAllowedInterval = 1800;
         for (uint256 index = 0; index < 2; index++) {
-            _underlyingPriceIndexes[volmexBaseTokenArgs[index]] = index;
-            _underlyingPriceIndexes[volmexBaseTokenArgs[index + 2]] = chainlinkBaseTokenIndexArgs[index];
+            _underlyingPriceIndexes[BaseTokenArgs[index]] = index;
+            _underlyingPriceIndexes[BaseTokenArgs[index + 2]] = chainlinkBaseTokenIndexArgs[index];
             isLiquidatorWhitelisted[liquidators[index]] = true;
-            minPositionSizeByBaseToken[volmexBaseTokenArgs[index]] = _minPositionSizeByBaseToken[index];
+            minPositionSizeByBaseToken[BaseTokenArgs[index]] = _minPositionSizeByBaseToken[index];
         }
 
         isLiquidatorWhitelistEnabled = true;
@@ -89,9 +89,9 @@ contract Positioning is PositioningStorageV1, IPositioning, ReentrancyGuardUpgra
         _grantRole(ADD_UNDERLYING_INDEX, account);
     }
 
-    function setUnderlyingPriceIndex(address volmexBaseToken, uint256 underlyingIndex) external {
+    function setUnderlyingPriceIndex(address BaseToken, uint256 underlyingIndex) external {
         _requireAddUnderlyingIndexRole();
-        _underlyingPriceIndexes[volmexBaseToken] = underlyingIndex;
+        _underlyingPriceIndexes[BaseToken] = underlyingIndex;
     }
 
     function setMarketRegistry(address marketRegistryArg) external {
@@ -604,7 +604,7 @@ contract Positioning is PositioningStorageV1, IPositioning, ReentrancyGuardUpgra
             positionSizeToBeLiquidated = maxLiquidatablePositionSize;
         }
 
-        uint256 indexPrice = IVolmexBaseToken(baseToken).getIndexPrice(_underlyingPriceIndexes[baseToken], _smIntervalLiquidation);
+        uint256 indexPrice = IBaseToken(baseToken).getIndexPrice(_underlyingPriceIndexes[baseToken], _smIntervalLiquidation);
         require(indexPrice != 0, "P_0IP"); // zero index price
         uint256 maxOrderSize = IMatchingEngine(_matchingEngine).getMaxOrderSizeOverTime(baseToken);
         uint256 actualLiquidatableSize = IAccountBalance(accountBalance).getNLiquidate(positionSizeToBeLiquidated.abs(), minPositionSizeByBaseToken[baseToken], maxOrderSize);

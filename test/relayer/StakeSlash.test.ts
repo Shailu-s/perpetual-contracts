@@ -6,7 +6,7 @@ const { expectRevert } = require("@openzeppelin/test-helpers");
 const BN = ethers.BigNumber;
 
 describe("Stake & Slash", function () {
-  let volmexSafe: Signer;
+  let Safe: Signer;
   let owner: Signer;
   let alice: Signer;
   let bob: Signer;
@@ -21,14 +21,14 @@ describe("Stake & Slash", function () {
     insuranceFund;
 
   this.beforeAll(async () => {
-    [owner, alice, bob, chris, volmexSafe] = await ethers.getSigners();
+    [owner, alice, bob, chris, Safe] = await ethers.getSigners();
     StakeToken = await ethers.getContractFactory("TestERC20");
     Slashing = await ethers.getContractFactory("Slashing");
     Multisig = await ethers.getContractFactory("Safe");
     InsuranceFund = await ethers.getContractFactory("InsuranceFund");
   });
   this.beforeEach(async () => {
-    stakeToken = await upgrades.deployProxy(StakeToken, ["Volmex Staked", "VSTKN", 6], {
+    stakeToken = await upgrades.deployProxy(StakeToken, [" Staked", "VSTKN", 6], {
       initializer: "__TestERC20_init",
     });
     await stakeToken.deployed();
@@ -41,8 +41,8 @@ describe("Stake & Slash", function () {
       [
         stakeToken.address,
         relayerSafe.address,
-        await volmexSafe.getAddress(),
-        await volmexSafe.getAddress(),
+        await Safe.getAddress(),
+        await Safe.getAddress(),
         432000, // 5 days
         insuranceFund.address,
       ],
@@ -60,7 +60,7 @@ describe("Stake & Slash", function () {
 
   it("Should set slashing receiver ", async () => {
     const aliceAddress = await alice.getAddress();
-    await slashing.connect(volmexSafe).setSlashingReceiver(aliceAddress);
+    await slashing.connect(Safe).setSlashingReceiver(aliceAddress);
     expect(await slashing.slashingReceiver()).to.be.equal(aliceAddress);
   });
   describe("Staking", function () {
@@ -71,7 +71,7 @@ describe("Stake & Slash", function () {
     });
 
     it("Should stake", async () => {
-      await (await slashing.connect(volmexSafe).toggleStaking()).wait();
+      await (await slashing.connect(Safe).toggleStaking()).wait();
       await (await relayerSafe.setOwner(aliceAddress)).wait();
       await (
         await stakeToken
@@ -89,7 +89,7 @@ describe("Stake & Slash", function () {
       const Slashing = await ethers.getContractFactory("Slashing");
       const Multisig = await ethers.getContractFactory("Safe");
       const InsuranceFund = await ethers.getContractFactory("InsuranceFund");
-      const stakeToken = await upgrades.deployProxy(StakeToken, ["Volmex Staked", "VSTKN", 6], {
+      const stakeToken = await upgrades.deployProxy(StakeToken, [" Staked", "VSTKN", 6], {
         initializer: "__TestERC20_init",
       });
       const relayerSafe = await Multisig.deploy();
@@ -101,8 +101,8 @@ describe("Stake & Slash", function () {
         [
           stakeToken.address,
           relayerSafe.address,
-          await volmexSafe.getAddress(),
-          await volmexSafe.getAddress(),
+          await Safe.getAddress(),
+          await Safe.getAddress(),
           432000, // 5 days
           insuranceFund.address,
         ],
@@ -111,7 +111,7 @@ describe("Stake & Slash", function () {
         },
       );
       await slashing.deployed();
-      await (await slashing.connect(volmexSafe).toggleStaking()).wait();
+      await (await slashing.connect(Safe).toggleStaking()).wait();
       await (await relayerSafe.setOwner(aliceAddress)).wait();
       await (
         await stakeToken
@@ -125,7 +125,7 @@ describe("Stake & Slash", function () {
     });
 
     it("Should not stake, not relayer", async () => {
-      await (await slashing.connect(volmexSafe).toggleStaking()).wait();
+      await (await slashing.connect(Safe).toggleStaking()).wait();
       await (
         await stakeToken
           .connect(alice)
@@ -149,7 +149,7 @@ describe("Stake & Slash", function () {
     });
 
     it("Should not stake, min required amount not fulfill", async () => {
-      await (await slashing.connect(volmexSafe).toggleStaking()).wait();
+      await (await slashing.connect(Safe).toggleStaking()).wait();
       await (await relayerSafe.setOwner(aliceAddress)).wait();
       await (
         await stakeToken
@@ -165,7 +165,7 @@ describe("Stake & Slash", function () {
   describe("Unstake", function () {
     let aliceAddress: string;
     this.beforeEach(async () => {
-      await (await slashing.connect(volmexSafe).toggleStaking()).wait();
+      await (await slashing.connect(Safe).toggleStaking()).wait();
       aliceAddress = await alice.getAddress();
       await (await stakeToken.transfer(aliceAddress, ethers.utils.parseUnits("20000", 6))).wait();
       await (await relayerSafe.setOwner(aliceAddress)).wait();
@@ -188,13 +188,13 @@ describe("Stake & Slash", function () {
       expect(staker.inactiveBalance).equal(ethers.utils.parseUnits("1000", 6));
     });
     it("should not unstake", async () => {
-      const [owner, alice, bob, chris, volmexSafe] = await ethers.getSigners();
+      const [owner, alice, bob, chris, Safe] = await ethers.getSigners();
       const ownerAddress = await owner.getAddress();
       const StakeToken = await ethers.getContractFactory("UnStakeERC20");
       const Slashing = await ethers.getContractFactory("Slashing");
       const Multisig = await ethers.getContractFactory("Safe");
       const InsuranceFund = await ethers.getContractFactory("InsuranceFund");
-      const stakeToken = await upgrades.deployProxy(StakeToken, ["Volmex Staked", "VSTKN", 6], {
+      const stakeToken = await upgrades.deployProxy(StakeToken, [" Staked", "VSTKN", 6], {
         initializer: "__TestERC20_init",
       });
       await stakeToken.mint(ownerAddress, "10000000000000000");
@@ -207,8 +207,8 @@ describe("Stake & Slash", function () {
         [
           stakeToken.address,
           relayerSafe.address,
-          await volmexSafe.getAddress(),
-          await volmexSafe.getAddress(),
+          await Safe.getAddress(),
+          await Safe.getAddress(),
           432000, // 5 days
           insuranceFund.address,
         ],
@@ -217,7 +217,7 @@ describe("Stake & Slash", function () {
         },
       );
       await slashing.deployed();
-      await (await slashing.connect(volmexSafe).toggleStaking()).wait();
+      await (await slashing.connect(Safe).toggleStaking()).wait();
       await (await relayerSafe.setOwner(ownerAddress)).wait();
       await (
         await stakeToken
@@ -256,7 +256,7 @@ describe("Stake & Slash", function () {
     });
 
     it("Should be slashed", async () => {
-      await (await slashing.connect(volmexSafe).toggleStaking()).wait();
+      await (await slashing.connect(Safe).toggleStaking()).wait();
       await (await relayerSafe.setOwner(aliceAddress)).wait();
       await (
         await stakeToken
@@ -267,7 +267,7 @@ describe("Stake & Slash", function () {
         await slashing.connect(alice).stake(aliceAddress, ethers.utils.parseUnits("10000", 6))
       ).wait();
       const beforeSlash = await slashing.staker(aliceAddress);
-      await (await slashing.connect(volmexSafe).slash(aliceAddress)).wait();
+      await (await slashing.connect(Safe).slash(aliceAddress)).wait();
       const afterSlash = await slashing.staker(aliceAddress);
       expect(beforeSlash.activeBalance.sub(afterSlash.activeBalance)).equal(
         ethers.utils.parseUnits("2500", 6),
@@ -276,13 +276,13 @@ describe("Stake & Slash", function () {
       expect(insuranceBalance).equal(ethers.utils.parseUnits("2500", 6));
     });
     it("Should not be slashed when re entered", async () => {
-      [owner, alice, bob, chris, volmexSafe] = await ethers.getSigners();
+      [owner, alice, bob, chris, Safe] = await ethers.getSigners();
       const ownerAddress = await owner.getAddress();
       const StakeToken = await ethers.getContractFactory("StakeERC20");
       const Slashing = await ethers.getContractFactory("Slashing");
       const Multisig = await ethers.getContractFactory("Safe");
       const InsuranceFund = await ethers.getContractFactory("InsuranceFund");
-      const stakeToken = await upgrades.deployProxy(StakeToken, ["Volmex Staked", "VSTKN", 6], {
+      const stakeToken = await upgrades.deployProxy(StakeToken, [" Staked", "VSTKN", 6], {
         initializer: "__TestERC20_init",
       });
       const relayerSafe = await Multisig.deploy();
@@ -294,8 +294,8 @@ describe("Stake & Slash", function () {
         [
           stakeToken.address,
           relayerSafe.address,
-          await volmexSafe.getAddress(),
-          await volmexSafe.getAddress(),
+          await Safe.getAddress(),
+          await Safe.getAddress(),
           432000, // 5 days
           insuranceFund.address,
         ],
@@ -304,7 +304,7 @@ describe("Stake & Slash", function () {
         },
       );
       await slashing.deployed();
-      await (await slashing.connect(volmexSafe).toggleStaking()).wait();
+      await (await slashing.connect(Safe).toggleStaking()).wait();
       await (await relayerSafe.setOwner(ownerAddress)).wait();
       await (
         await stakeToken
@@ -314,13 +314,13 @@ describe("Stake & Slash", function () {
       await (
         await slashing.connect(owner).stake(ownerAddress, ethers.utils.parseUnits("10000", 6))
       ).wait();
-      await expect(slashing.connect(volmexSafe).slash(ownerAddress)).to.be.revertedWith(
+      await expect(slashing.connect(Safe).slash(ownerAddress)).to.be.revertedWith(
         "ReentrancyGuard: reentrant call",
       );
     });
 
     it("Should be slashed from both balances", async () => {
-      await (await slashing.connect(volmexSafe).toggleStaking()).wait();
+      await (await slashing.connect(Safe).toggleStaking()).wait();
       await (await relayerSafe.setOwner(aliceAddress)).wait();
       await (
         await stakeToken
@@ -332,7 +332,7 @@ describe("Stake & Slash", function () {
       ).wait();
       await (await slashing.connect(alice).cooldown(ethers.utils.parseUnits("1000", 6))).wait();
       const beforeSlash = await slashing.staker(aliceAddress);
-      await (await slashing.connect(volmexSafe).slash(aliceAddress)).wait();
+      await (await slashing.connect(Safe).slash(aliceAddress)).wait();
       const afterSlash = await slashing.staker(aliceAddress);
       expect(afterSlash.inactiveBalance).equal(0);
       expect(afterSlash.activeBalance).equal(
@@ -344,7 +344,7 @@ describe("Stake & Slash", function () {
       expect(insuranceBalance).equal(ethers.utils.parseUnits("2500", 6));
     });
     it("Should be slashed from both balances for greater inactive balance", async () => {
-      await (await slashing.connect(volmexSafe).toggleStaking()).wait();
+      await (await slashing.connect(Safe).toggleStaking()).wait();
       await (await relayerSafe.setOwner(aliceAddress)).wait();
       await (
         await stakeToken
@@ -356,7 +356,7 @@ describe("Stake & Slash", function () {
       ).wait();
       await (await slashing.connect(alice).cooldown(ethers.utils.parseUnits("10000", 6))).wait();
       const beforeSlash = await slashing.staker(aliceAddress);
-      await (await slashing.connect(volmexSafe).slash(aliceAddress)).wait();
+      await (await slashing.connect(Safe).slash(aliceAddress)).wait();
       const afterSlash = await slashing.staker(aliceAddress);
 
       const insuranceBalance = await stakeToken.balanceOf(insuranceFund.address);
@@ -366,7 +366,7 @@ describe("Stake & Slash", function () {
       await (
         await stakeToken.transfer(aliceAddress, ethers.utils.parseUnits("100000000", 6))
       ).wait();
-      await (await slashing.connect(volmexSafe).toggleStaking()).wait();
+      await (await slashing.connect(Safe).toggleStaking()).wait();
       await (await relayerSafe.setOwner(aliceAddress)).wait();
       await (
         await stakeToken
@@ -377,7 +377,7 @@ describe("Stake & Slash", function () {
         await slashing.connect(alice).stake(aliceAddress, ethers.utils.parseUnits("100000000", 6))
       ).wait();
       const beforeSlash = await slashing.staker(aliceAddress);
-      await (await slashing.connect(volmexSafe).slash(aliceAddress)).wait();
+      await (await slashing.connect(Safe).slash(aliceAddress)).wait();
       const afterSlash = await slashing.staker(aliceAddress);
 
       const insuranceBalance = await stakeToken.balanceOf(insuranceFund.address);
@@ -389,7 +389,7 @@ describe("Stake & Slash", function () {
     it("Should provide staker role", async () => {
       const stakerRole = "0xb9e206fa2af7ee1331b72ce58b6d938ac810ce9b5cdb65d35ab723fd67badf9e";
       await (
-        await slashing.connect(volmexSafe).grantRole(stakerRole, await bob.getAddress())
+        await slashing.connect(Safe).grantRole(stakerRole, await bob.getAddress())
       ).wait();
       await (await slashing.connect(bob).toggleStaking()).wait();
     });
@@ -397,7 +397,7 @@ describe("Stake & Slash", function () {
     it("Should provide staker role", async () => {
       const slasherRole = "0x12b42e8a160f6064dc959c6f251e3af0750ad213dbecf573b4710d67d6c28e39";
       await (
-        await slashing.connect(volmexSafe).grantRole(slasherRole, await chris.getAddress())
+        await slashing.connect(Safe).grantRole(slasherRole, await chris.getAddress())
       ).wait();
       await (await slashing.connect(chris).updateSlashPenalty(2500)).wait();
     });
@@ -405,13 +405,13 @@ describe("Stake & Slash", function () {
 
   describe("Setters", () => {
     it("Should update min stake required amount", async () => {
-      await (await slashing.connect(volmexSafe).updateMinStakeRequired("50000000000")).wait();
+      await (await slashing.connect(Safe).updateMinStakeRequired("50000000000")).wait();
       expect((await slashing.minStakeRequired()).toString()).equal("50000000000");
     });
 
     it("Should update relayer multisig address", async () => {
       await (
-        await slashing.connect(volmexSafe).updateRelayerMultisig(await chris.getAddress())
+        await slashing.connect(Safe).updateRelayerMultisig(await chris.getAddress())
       ).wait();
       expect(await slashing.relayerMultisig()).equal(await chris.getAddress());
     });
@@ -429,8 +429,8 @@ describe("Stake & Slash", function () {
     });
     it("should slash 0 amount when slash penalty and inactive balance is zero", async () => {
       let aliceAddress = await alice.getAddress();
-      await slashing.connect(volmexSafe).updateSlashPenalty(0);
-      await (await slashing.connect(volmexSafe).toggleStaking()).wait();
+      await slashing.connect(Safe).updateSlashPenalty(0);
+      await (await slashing.connect(Safe).toggleStaking()).wait();
       await (await relayerSafe.setOwner(aliceAddress)).wait();
       await (
         await stakeToken
@@ -441,7 +441,7 @@ describe("Stake & Slash", function () {
         await slashing.connect(alice).stake(aliceAddress, ethers.utils.parseUnits("10000", 6))
       ).wait();
       const beforeSlash = await slashing.staker(aliceAddress);
-      await (await slashing.connect(volmexSafe).slash(aliceAddress)).wait();
+      await (await slashing.connect(Safe).slash(aliceAddress)).wait();
       const afterSlash = await slashing.staker(aliceAddress);
       expect(afterSlash.inactiveBalance).equal(0);
       const insuranceBalance = await stakeToken.balanceOf(insuranceFund.address);
@@ -453,8 +453,8 @@ describe("Stake & Slash", function () {
         slashing.Slashing_init(
           stakeToken.address,
           relayerSafe.address,
-          await volmexSafe.getAddress(),
-          await volmexSafe.getAddress(),
+          await Safe.getAddress(),
+          await Safe.getAddress(),
           432000, // 5 days
           insuranceFund.address,
         ),

@@ -13,7 +13,7 @@ async function checks() {
   const provider = new ethers.providers.JsonRpcProvider(rpcUrl);
   const account0 = new ethers.Wallet(process.env.DEPLOYER_PRIVATE_KEY, provider); // deployer account
 
-  const VolmexPerpPeriphery = await ethers.getContractFactory("VolmexPerpPeriphery");
+  const PerpPeriphery = await ethers.getContractFactory("PerpPeriphery");
   // fundingRate = await smock.fake("FundingRate")
   const MatchingEngine = await ethers.getContractFactory("MatchingEngineTest");
   const VirtualToken = await ethers.getContractFactory("VirtualToken");
@@ -27,7 +27,7 @@ async function checks() {
   const virtualToken = await VirtualToken.attach(contracts.USDC);
   const positioningConfig = await PositioningConfig.attach(contracts.POSITIONING_CONFIG);
   const vault = await Vault.attach(contracts.VAULT);
-  const volmexPerpPeriphery = await VolmexPerpPeriphery.attach(contracts.PERIPHERY);
+  const PerpPeriphery = await PerpPeriphery.attach(contracts.PERIPHERY);
   const vaultController = await VaultController.attach(contracts.VAULT_CONTROLLER);
 
   const order = {

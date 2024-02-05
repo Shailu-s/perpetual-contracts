@@ -419,21 +419,21 @@ When setPartialCloseRatio method is passed with a value less than 0.
 
     Do not have VAULT_CONTROLLER_ADMIN role.
 
-## Volmex Periphery contract
+##  Periphery contract
 
-> **VolmexPerpPeriphery: Admin can't be address(0)**
+> **PerpPeriphery: Admin can't be address(0)**
 
     When owner address is zero when periphery contract is initialized.
 
-> **VolmexPerpPeriphery: Relayer can't be address(0)**
+> **PerpPeriphery: Relayer can't be address(0)**
 
      When relayer address is zero when periphery contract is initialized.
 
-> **VolmexPerpPeriphery: zero address**
+> **PerpPeriphery: zero address**
 
      When perp view address is zero when periphery contract is initialized.
 
-> **VolmexPerpPeriphery: Not relayer**
+> **PerpPeriphery: Not relayer**
 
     When relayer address passed as zero while setting up relayer.
 
@@ -455,9 +455,9 @@ When setPartialCloseRatio method is passed with a value less than 0.
 
 > **Periphery: Not admin**
 
-    When msg.sender do not have VOLMEX_PERP_PERIPHERY role.
+    When msg.sender do not have _PERP_PERIPHERY role.
 
-> **VolmexPerpPeriphery: Not relayer**
+> **PerpPeriphery: Not relayer**
 
     When msg.sender do not have RELAYER_MULTISIG role.
 
@@ -465,7 +465,7 @@ When setPartialCloseRatio method is passed with a value less than 0.
 
     When trader is not white listed.
 
-> **VolmexPerpPeriphery: Not whitelister**
+> **PerpPeriphery: Not whitelister**
 
     Do not have TRADER_WHITELISTER role.
 

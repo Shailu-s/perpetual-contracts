@@ -38,14 +38,14 @@ const slashing = async () => {
     };
   }
   const relayerSafe = process.env.RELAYER_MULTISIG;
-  const volmexSafe = process.env.VOLMEX_MULTISIG || (await owner.getAddress());
+  const Safe = process.env._MULTISIG || (await owner.getAddress());
   const slashing = await upgrades.deployProxy(
     Slashing,
     [
       usdcAddress,
       relayerSafe,
-      volmexSafe,
-      volmexSafe,
+      Safe,
+      Safe,
       300, // 5 days, should be
       insuraceAddress,
     ],

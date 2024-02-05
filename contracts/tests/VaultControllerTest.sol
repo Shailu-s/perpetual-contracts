@@ -2,7 +2,7 @@
 
 pragma solidity =0.8.18;
 import "../interfaces/IVault.sol";
-import "../interfaces/IVolmexPerpPeriphery.sol";
+import "../interfaces/IPerpPeriphery.sol";
 
 contract VaultControllerTest {
     function withdraw(
@@ -14,7 +14,7 @@ contract VaultControllerTest {
     }
 
     function deposit(
-        IVolmexPerpPeriphery periphery,
+        IPerpPeriphery periphery,
         address trader,
         uint256 amount,
         IVault vault

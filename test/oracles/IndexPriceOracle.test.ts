@@ -20,13 +20,13 @@ describe("PerpetualOracle - Index Price Oracle", function () {
   let AccountBalance;
   let PerpetualOracle;
   let perpetualOracle;
-  let VolmexBaseToken;
-  let volmexBaseToken;
-  let VolmexQuoteToken;
-  let volmexQuoteToken;
-  let VolmexPerpPeriphery;
-  let volmexPerpPeriphery;
-  let VolmexPerpView;
+  let BaseToken;
+  let BaseToken;
+  let QuoteToken;
+  let QuoteToken;
+  let PerpPeriphery;
+  let PerpPeriphery;
+  let PerpView;
   let perpView;
   let ChainLinkAggregator;
   let chainlinkAggregator1;
@@ -52,7 +52,7 @@ describe("PerpetualOracle - Index Price Oracle", function () {
   const proofHash = "0x6c00000000000000000000000000000000000000000000000000000000000000";
 
   this.beforeAll(async () => {
-    VolmexPerpPeriphery = await ethers.getContractFactory("VolmexPerpPeriphery");
+    PerpPeriphery = await ethers.getContractFactory("PerpPeriphery");
     PerpetualOracle = await ethers.getContractFactory("PerpetualOracle");
     MatchingEngine = await ethers.getContractFactory("MatchingEngine");
     VirtualToken = await ethers.getContractFactory("VirtualTokenTest");
@@ -63,9 +63,9 @@ describe("PerpetualOracle - Index Price Oracle", function () {
     MarketRegistry = await ethers.getContractFactory("MarketRegistry");
     AccountBalance = await ethers.getContractFactory("AccountBalance");
     TestERC20 = await ethers.getContractFactory("TestERC20");
-    VolmexBaseToken = await ethers.getContractFactory("VolmexBaseToken");
-    VolmexQuoteToken = await ethers.getContractFactory("VolmexQuoteToken");
-    VolmexPerpView = await ethers.getContractFactory("VolmexPerpView");
+    BaseToken = await ethers.getContractFactory("BaseToken");
+    QuoteToken = await ethers.getContractFactory("QuoteToken");
+    PerpView = await ethers.getContractFactory("PerpView");
     ChainLinkAggregator = await ethers.getContractFactory("MockV3Aggregator");
     FundingRate = await ethers.getContractFactory("FundingRate");
 
@@ -74,14 +74,14 @@ describe("PerpetualOracle - Index Price Oracle", function () {
   });
 
   this.beforeEach(async () => {
-    perpView = await upgrades.deployProxy(VolmexPerpView, [owner.address]);
+    perpView = await upgrades.deployProxy(PerpView, [owner.address]);
     await perpView.deployed();
     await (await perpView.grantViewStatesRole(owner.address)).wait();
 
-    volmexBaseToken = await upgrades.deployProxy(
-      VolmexBaseToken,
+    BaseToken = await upgrades.deployProxy(
+      BaseToken,
       [
-        "VolmexBaseToken", // nameArg
+        "BaseToken", // nameArg
         "VBT", // symbolArg,
         owner.address, // priceFeedArg
         true, // isBase
@@ -91,9 +91,9 @@ describe("PerpetualOracle - Index Price Oracle", function () {
       },
     );
     chainlinkBaseToken = await upgrades.deployProxy(
-      VolmexBaseToken,
+      BaseToken,
       [
-        "VolmexBaseToken", // nameArg
+        "BaseToken", // nameArg
         "VBT", // symbolArg,
         owner.address, // priceFeedArg
         true, // isBase
@@ -103,9 +103,9 @@ describe("PerpetualOracle - Index Price Oracle", function () {
       },
     );
     chainlinkBaseToken2 = await upgrades.deployProxy(
-      VolmexBaseToken,
+      BaseToken,
       [
-        "VolmexBaseToken", // nameArg
+        "BaseToken", // nameArg
         "VBT", // symbolArg,
         owner.address, // priceFeedArg
         true, // isBase
@@ -114,8 +114,8 @@ describe("PerpetualOracle - Index Price Oracle", function () {
         initializer: "initialize",
       },
     );
-    await volmexBaseToken.deployed();
-    await (await perpView.setBaseToken(volmexBaseToken.address)).wait();
+    await BaseToken.deployed();
+    await (await perpView.setBaseToken(BaseToken.address)).wait();
 
     chainlinkAggregator1 = await ChainLinkAggregator.deploy(8, 3075000000000);
     await chainlinkAggregator1.deployed();
@@ -125,8 +125,8 @@ describe("PerpetualOracle - Index Price Oracle", function () {
       PerpetualOracle,
       [
         [
-          volmexBaseToken.address,
-          volmexBaseToken.address,
+          BaseToken.address,
+          BaseToken.address,
           chainlinkBaseToken.address,
           chainlinkBaseToken2.address,
         ],
@@ -139,11 +139,11 @@ describe("PerpetualOracle - Index Price Oracle", function () {
       ],
       { initializer: "__PerpetualOracle_init" },
     );
-    await volmexBaseToken.setPriceFeed(perpetualOracle.address);
-    volmexQuoteToken = await upgrades.deployProxy(
-      VolmexQuoteToken,
+    await BaseToken.setPriceFeed(perpetualOracle.address);
+    QuoteToken = await upgrades.deployProxy(
+      QuoteToken,
       [
-        "VolmexBaseToken", // nameArg
+        "BaseToken", // nameArg
         "VBT", // symbolArg,
         false, // isBase
       ],
@@ -151,8 +151,8 @@ describe("PerpetualOracle - Index Price Oracle", function () {
         initializer: "initialize",
       },
     );
-    await volmexQuoteToken.deployed();
-    await (await perpView.setQuoteToken(volmexQuoteToken.address)).wait();
+    await QuoteToken.deployed();
+    await (await perpView.setQuoteToken(QuoteToken.address)).wait();
 
     positioningConfig = await upgrades.deployProxy(PositioningConfig, [perpetualOracle.address]);
 
@@ -173,8 +173,8 @@ describe("PerpetualOracle - Index Price Oracle", function () {
     accountBalance1 = await upgrades.deployProxy(AccountBalance, [
       positioningConfig.address,
       [
-        volmexBaseToken.address,
-        volmexBaseToken.address,
+        BaseToken.address,
+        BaseToken.address,
         chainlinkBaseToken.address,
         chainlinkBaseToken2.address,
       ],
@@ -208,10 +208,10 @@ describe("PerpetualOracle - Index Price Oracle", function () {
     (await accountBalance1.grantSettleRealizedPnlRole(vault.address)).wait();
     (await accountBalance1.grantSettleRealizedPnlRole(vaultController.address)).wait();
     marketRegistry = await upgrades.deployProxy(MarketRegistry, [
-      volmexQuoteToken.address,
+      QuoteToken.address,
       [
-        volmexBaseToken.address,
-        volmexBaseToken.address,
+        BaseToken.address,
+        BaseToken.address,
         chainlinkBaseToken.address,
         chainlinkBaseToken2.address,
       ],
@@ -236,8 +236,8 @@ describe("PerpetualOracle - Index Price Oracle", function () {
         fundingRate.address,
         marketRegistry.address,
         [
-          volmexBaseToken.address,
-          volmexBaseToken.address,
+          BaseToken.address,
+          BaseToken.address,
           chainlinkBaseToken.address,
           chainlinkBaseToken2.address,
         ],
@@ -254,8 +254,8 @@ describe("PerpetualOracle - Index Price Oracle", function () {
     await (await perpView.setPositioning(positioning.address)).wait();
 
     await (await perpView.incrementPerpIndex()).wait();
-    await (await volmexBaseToken.setMintBurnRole(positioning.address)).wait();
-    await (await volmexQuoteToken.setMintBurnRole(positioning.address)).wait();
+    await (await BaseToken.setMintBurnRole(positioning.address)).wait();
+    await (await QuoteToken.setMintBurnRole(positioning.address)).wait();
     await marketRegistry.grantAddBaseTokenRole(owner.address);
     await marketRegistry.connect(owner).setMakerFeeRatio(0.0004e6);
     await marketRegistry.connect(owner).setTakerFeeRatio(0.0009e6);
@@ -284,15 +284,15 @@ describe("PerpetualOracle - Index Price Oracle", function () {
     await perpetualOracle.setMarketRegistry(marketRegistry.address);
     await positioningConfig.setTwapInterval(28800);
     await perpetualOracle.grantCacheChainlinkPriceRole(owner.address);
-    volmexPerpPeriphery = await upgrades.deployProxy(VolmexPerpPeriphery, [
+    PerpPeriphery = await upgrades.deployProxy(PerpPeriphery, [
       perpView.address,
       perpetualOracle.address,
       [vault.address, vault.address],
       owner.address,
       owner.address, // replace with replayer address
     ]);
-    await volmexPerpPeriphery.deployed();
-    await vaultController.setPeriphery(volmexPerpPeriphery.address);
+    await PerpPeriphery.deployed();
+    await vaultController.setPeriphery(PerpPeriphery.address);
     await perpetualOracle.setIndexObservationAdder(owner.address);
     await perpetualOracle.setMarkObservationAdder(owner.address);
   });
@@ -345,7 +345,7 @@ describe("PerpetualOracle - Index Price Oracle", function () {
   });
 
   describe("Deployment", function () {
-    it("Should deploy volmex oracle", async () => {
+    it("Should deploy  oracle", async () => {
       const receipt = await perpetualOracle.deployed();
       expect(receipt.confirmations).not.equal(0);
     });
@@ -354,8 +354,8 @@ describe("PerpetualOracle - Index Price Oracle", function () {
       await expectRevert(
         perpetualOracle.__PerpetualOracle_init(
           [
-            volmexBaseToken.address,
-            volmexBaseToken.address,
+            BaseToken.address,
+            BaseToken.address,
             chainlinkBaseToken.address,
             chainlinkBaseToken2.address,
           ],
@@ -703,9 +703,9 @@ describe("PerpetualOracle - Index Price Oracle", function () {
       const newTokenIndex =
         "57896044618658097711785492504343953926634992332820282019728792003956564819980";
       const chainlinkBaseToken5 = await upgrades.deployProxy(
-        VolmexBaseToken,
+        BaseToken,
         [
-          "VolmexBaseToken", // nameArg
+          "BaseToken", // nameArg
           "VBT", // symbolArg,
           owner.address, // priceFeedArg
           true, // isBase
@@ -724,7 +724,7 @@ describe("PerpetualOracle - Index Price Oracle", function () {
       expect(baseTokenByIndex1).to.be.equal(chainlinkBaseToken5.address);
       const aggregatorByIndex1 = await perpetualOracle.chainlinkAggregatorByIndex(newTokenIndex);
       expect(aggregatorByIndex1).to.be.equal(chainlinkAggregator1.address);
-      const sigmaViv1 = await accountBalance1.sigmaVolmexIvs(
+      const sigmaViv1 = await accountBalance1.sigmaIvs(
         "57896044618658097711785492504343953926634992332820282019728792003956564819980",
       );
       expect(sigmaViv1.toString()).to.be.equal("5100000");
@@ -734,7 +734,7 @@ describe("PerpetualOracle - Index Price Oracle", function () {
         chainlinkBaseToken5.address,
         "8100000",
       );
-      const sigmaViv2 = await accountBalance1.sigmaVolmexIvs(
+      const sigmaViv2 = await accountBalance1.sigmaIvs(
         "57896044618658097711785492504343953926634992332820282019728792003956564819980",
       );
       expect(sigmaViv2.toString()).to.be.equal("8100000");
@@ -743,9 +743,9 @@ describe("PerpetualOracle - Index Price Oracle", function () {
       const newTokenIndex =
         "57896044618658097711785492504343953926634992332820282019728792003956564819980";
       const chainlinkBaseToken5 = await upgrades.deployProxy(
-        VolmexBaseToken,
+        BaseToken,
         [
-          "VolmexBaseToken", // nameArg
+          "BaseToken", // nameArg
           "VBT", // symbolArg,
           owner.address, // priceFeedArg
           true, // isBase
@@ -764,7 +764,7 @@ describe("PerpetualOracle - Index Price Oracle", function () {
       expect(baseTokenByIndex1).to.be.equal(chainlinkBaseToken5.address);
       const aggregatorByIndex1 = await perpetualOracle.chainlinkAggregatorByIndex(newTokenIndex);
       expect(aggregatorByIndex1).to.be.equal(chainlinkAggregator1.address);
-      const sigmaViv = await accountBalance1.sigmaVolmexIvs(
+      const sigmaViv = await accountBalance1.sigmaIvs(
         "57896044618658097711785492504343953926634992332820282019728792003956564819980",
       );
       expect(sigmaViv.toString()).to.be.equal("5100000");
@@ -774,7 +774,7 @@ describe("PerpetualOracle - Index Price Oracle", function () {
         perpetualOracle.addChainlinkBaseToken(
           "57896044618658097711785492504343953926634992332820282019728792003956564819967",
           chainlinkAggregator1.address,
-          volmexBaseToken.address,
+          BaseToken.address,
           "4710000",
         ),
       ).to.be.revertedWith("PerpOracle: invalid chainlink base token index");

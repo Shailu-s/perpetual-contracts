@@ -14,8 +14,8 @@ const positioning = async () => {
     "57896044618658097711785492504343953926634992332820282019728792003956564819970";
 
   const MatchingEngine = await ethers.getContractFactory("MatchingEngine");
-  const VolmexBaseToken = await ethers.getContractFactory("VolmexBaseToken");
-  const VolmexQuoteToken = await ethers.getContractFactory("VolmexQuoteToken");
+  const BaseToken = await ethers.getContractFactory("BaseToken");
+  const QuoteToken = await ethers.getContractFactory("QuoteToken");
   const PerpetualOracle = await ethers.getContractFactory("PerpetualOracle");
   const VaultController = await ethers.getContractFactory("VaultController");
   const PositioningConfig = await ethers.getContractFactory("PositioningConfig");
@@ -23,24 +23,24 @@ const positioning = async () => {
   const Positioning = await ethers.getContractFactory("Positioning");
   const Vault = await ethers.getContractFactory("Vault");
   const MarketRegistry = await ethers.getContractFactory("MarketRegistry");
-  const VolmexPerpPeriphery = await ethers.getContractFactory("VolmexPerpPeriphery");
+  const PerpPeriphery = await ethers.getContractFactory("PerpPeriphery");
   const TestERC20 = await ethers.getContractFactory("TetherToken");
-  const VolmexPerpView = await ethers.getContractFactory("VolmexPerpView");
+  const PerpView = await ethers.getContractFactory("PerpView");
   const FundingRate = await ethers.getContractFactory("FundingRate");
   const networkDetail = await ethers.provider.getNetwork();
   const isArbitrum = arbitrumChainId.includes(networkDetail.chainId);
 
   console.log("Deploying PerView ...");
-  const perpView = await upgrades.deployProxy(VolmexPerpView, [owner.address]);
+  const perpView = await upgrades.deployProxy(PerpView, [owner.address]);
   await perpView.deployed();
   await (await perpView.grantViewStatesRole(owner.address)).wait();
   console.log(perpView.address);
 
   console.log("Deploying Base Token ...");
-  const volmexBaseToken1 = await upgrades.deployProxy(
-    VolmexBaseToken,
+  const BaseToken1 = await upgrades.deployProxy(
+    BaseToken,
     [
-      "ETH Volmex IV Token", // nameArg
+      "ETH  IV Token", // nameArg
       "EVIV", // symbolArg,
       owner.address, // zero address on init
       true, // isBase
@@ -49,14 +49,14 @@ const positioning = async () => {
       initializer: "initialize",
     },
   );
-  await volmexBaseToken1.deployed();
-  console.log(volmexBaseToken1.address);
-  await (await perpView.setBaseToken(volmexBaseToken1.address)).wait();
+  await BaseToken1.deployed();
+  console.log(BaseToken1.address);
+  await (await perpView.setBaseToken(BaseToken1.address)).wait();
 
-  const volmexBaseToken2 = await upgrades.deployProxy(
-    VolmexBaseToken,
+  const BaseToken2 = await upgrades.deployProxy(
+    BaseToken,
     [
-      "Bitcoin Volmex IV Token", // nameArg
+      "Bitcoin  IV Token", // nameArg
       "BVIV", // symbolArg,
       owner.address, // priceFeedArg
       true, // isBase
@@ -65,12 +65,12 @@ const positioning = async () => {
       initializer: "initialize",
     },
   );
-  await volmexBaseToken2.deployed();
-  console.log(volmexBaseToken2.address);
-  await (await perpView.setBaseToken(volmexBaseToken2.address)).wait();
+  await BaseToken2.deployed();
+  console.log(BaseToken2.address);
+  await (await perpView.setBaseToken(BaseToken2.address)).wait();
 
-  const volmexBaseToken3 = await upgrades.deployProxy(
-    VolmexBaseToken,
+  const BaseToken3 = await upgrades.deployProxy(
+    BaseToken,
     [
       "Ethereum USD", // nameArg
       "ETHUSD", // symbolArg,
@@ -81,12 +81,12 @@ const positioning = async () => {
       initializer: "initialize",
     },
   );
-  await volmexBaseToken3.deployed();
+  await BaseToken3.deployed();
 
-  console.log(volmexBaseToken3.address);
-  await (await perpView.setBaseToken(volmexBaseToken3.address)).wait();
-  const volmexBaseToken4 = await upgrades.deployProxy(
-    VolmexBaseToken,
+  console.log(BaseToken3.address);
+  await (await perpView.setBaseToken(BaseToken3.address)).wait();
+  const BaseToken4 = await upgrades.deployProxy(
+    BaseToken,
     [
       "Bitcoin USD", // nameArg
       "BTCUSD", // symbolArg,
@@ -97,10 +97,10 @@ const positioning = async () => {
       initializer: "initialize",
     },
   );
-  await volmexBaseToken3.deployed();
+  await BaseToken3.deployed();
 
-  console.log(volmexBaseToken4.address);
-  await (await perpView.setBaseToken(volmexBaseToken4.address)).wait();
+  console.log(BaseToken4.address);
+  await (await perpView.setBaseToken(BaseToken4.address)).wait();
 
   console.log("Deploying Perpetuals oracle ...");
 
@@ -108,10 +108,10 @@ const positioning = async () => {
     PerpetualOracle,
     [
       [
-        volmexBaseToken1.address,
-        volmexBaseToken2.address,
-        volmexBaseToken3.address,
-        volmexBaseToken4.address,
+        BaseToken1.address,
+        BaseToken2.address,
+        BaseToken3.address,
+        BaseToken4.address,
       ],
       [71000000, 52000000, 30750000000, 1862000000],
       [52000000, 50000000],
@@ -125,10 +125,10 @@ const positioning = async () => {
 
   await perpetualOracle.deployed();
   console.log(perpetualOracle.address);
-  await (await volmexBaseToken1.setPriceFeed(perpetualOracle.address)).wait();
-  await (await volmexBaseToken2.setPriceFeed(perpetualOracle.address)).wait();
-  await (await volmexBaseToken3.setPriceFeed(perpetualOracle.address)).wait();
-  await (await volmexBaseToken4.setPriceFeed(perpetualOracle.address)).wait();
+  await (await BaseToken1.setPriceFeed(perpetualOracle.address)).wait();
+  await (await BaseToken2.setPriceFeed(perpetualOracle.address)).wait();
+  await (await BaseToken3.setPriceFeed(perpetualOracle.address)).wait();
+  await (await BaseToken4.setPriceFeed(perpetualOracle.address)).wait();
   if (process.env.INDEX_OBSERVATION_ADDER) {
     await (
       await perpetualOracle.setIndexObservationAdder(process.env.INDEX_OBSERVATION_ADDER)
@@ -137,8 +137,8 @@ const positioning = async () => {
   }
 
   console.log("Deploying Quote Token ...");
-  const volmexQuoteToken = await upgrades.deployProxy(
-    VolmexQuoteToken,
+  const QuoteToken = await upgrades.deployProxy(
+    QuoteToken,
     [
       `${isArbitrum ? "Tether Token" : "USD Coin"}`, // nameArg
       `"USD${isArbitrum ? "T" : "C"}"`, // symbolArg,
@@ -148,16 +148,16 @@ const positioning = async () => {
       initializer: "initialize",
     },
   );
-  await volmexQuoteToken.deployed();
-  console.log(volmexQuoteToken.address);
-  await (await perpView.setQuoteToken(volmexQuoteToken.address)).wait();
+  await QuoteToken.deployed();
+  console.log(QuoteToken.address);
+  await (await perpView.setQuoteToken(QuoteToken.address)).wait();
 
   console.log("Deploying USDT ...");
   let usdtAddress = process.env.USDT;
   if (!process.env.USDT) {
     const usdt = await TestERC20.deploy(
       "1000000000000000000",
-      `USD${isArbitrum ? "T" : "C"} Volmex Testnet`,
+      `USD${isArbitrum ? "T" : "C"}  Testnet`,
       `USD${isArbitrum ? "T" : "C"}`,
       6,
     );
@@ -189,14 +189,14 @@ const positioning = async () => {
   const accountBalance = await upgrades.deployProxy(AccountBalance, [
     positioningConfig.address,
     [
-      volmexBaseToken1.address,
-      volmexBaseToken2.address,
-      volmexBaseToken3.address,
-      volmexBaseToken4.address,
+      BaseToken1.address,
+      BaseToken2.address,
+      BaseToken3.address,
+      BaseToken4.address,
     ],
     [chainlinkTokenIndex1, chainlinkTokenIndex2],
     matchingEngine.address,
-    process.env.VOLMEX_MULTISIG ? process.env.VOLMEX_MULTISIG : owner.address,
+    process.env._MULTISIG ? process.env._MULTISIG : owner.address,
   ]);
   await accountBalance.deployed();
   console.log(accountBalance.address);
@@ -229,12 +229,12 @@ const positioning = async () => {
   await (await perpView.incrementVaultIndex()).wait();
   console.log("Deploying MarketRegistry ...");
   const marketRegistry = await upgrades.deployProxy(MarketRegistry, [
-    volmexQuoteToken.address,
+    QuoteToken.address,
     [
-      volmexBaseToken1.address,
-      volmexBaseToken2.address,
-      volmexBaseToken3.address,
-      volmexBaseToken4.address,
+      BaseToken1.address,
+      BaseToken2.address,
+      BaseToken3.address,
+      BaseToken4.address,
     ],
     [0, 1, chainlinkTokenIndex1, chainlinkTokenIndex2],
   ]);
@@ -265,10 +265,10 @@ const positioning = async () => {
       fundingRate.address,
       marketRegistry.address,
       [
-        volmexBaseToken1.address,
-        volmexBaseToken2.address,
-        volmexBaseToken3.address,
-        volmexBaseToken4.address,
+        BaseToken1.address,
+        BaseToken2.address,
+        BaseToken3.address,
+        BaseToken4.address,
       ],
       [chainlinkTokenIndex1, chainlinkTokenIndex2],
       [owner.address, `${process.env.LIQUIDATOR}`],
@@ -298,11 +298,11 @@ const positioning = async () => {
   console.log("grant cache chain link price role");
   await (await perpetualOracle.grantCacheChainlinkPriceRole(positioning.address)).wait();
   console.log("Set minter-burner ...");
-  await (await volmexBaseToken1.setMintBurnRole(positioning.address)).wait();
-  await (await volmexBaseToken2.setMintBurnRole(positioning.address)).wait();
-  await (await volmexBaseToken3.setMintBurnRole(positioning.address)).wait();
-  await (await volmexBaseToken4.setMintBurnRole(positioning.address)).wait();
-  await (await volmexQuoteToken.setMintBurnRole(positioning.address)).wait();
+  await (await BaseToken1.setMintBurnRole(positioning.address)).wait();
+  await (await BaseToken2.setMintBurnRole(positioning.address)).wait();
+  await (await BaseToken3.setMintBurnRole(positioning.address)).wait();
+  await (await BaseToken4.setMintBurnRole(positioning.address)).wait();
+  await (await QuoteToken.setMintBurnRole(positioning.address)).wait();
   await console.log("Set fee receiver ...");
   await (await positioning.setDefaultFeeReceiver(owner.address)).wait();
   console.log("Set positioning ...");
@@ -315,11 +315,11 @@ const positioning = async () => {
   console.log("Set taker fee ...");
   await marketRegistry.setTakerFeeRatio("900");
   console.log(" set min position size ...");
-  await positioning.setMinPositionSize("1000000000000000", volmexBaseToken3.address);
-  await positioning.setMinPositionSize("3000000000000000", volmexBaseToken4.address);
+  await positioning.setMinPositionSize("1000000000000000", BaseToken3.address);
+  await positioning.setMinPositionSize("3000000000000000", BaseToken4.address);
 
   console.log("Deploying Periphery contract ...");
-  const periphery = await upgrades.deployProxy(VolmexPerpPeriphery, [
+  const periphery = await upgrades.deployProxy(PerpPeriphery, [
     perpView.address,
     perpetualOracle.address,
     [vault.address, vault.address],
@@ -334,10 +334,10 @@ const positioning = async () => {
 
   const addresses = {
     AccountBalance: accountBalance.address,
-    BaseToken1: volmexBaseToken1.address,
-    BaseToken2: volmexBaseToken2.address,
-    BaseToken3: volmexBaseToken3.address,
-    BaseToken4: volmexBaseToken4.address,
+    BaseToken1: BaseToken1.address,
+    BaseToken2: BaseToken2.address,
+    BaseToken3: BaseToken3.address,
+    BaseToken4: BaseToken4.address,
     PerpetualOracles: perpetualOracle.address,
     FundingRate: fundingRate.address,
     MarketRegistry: marketRegistry.address,
@@ -346,7 +346,7 @@ const positioning = async () => {
     PerpView: perpView.address,
     Positioning: positioning.address,
     PositioningConfig: positioningConfig.address,
-    QuoteToken: volmexQuoteToken.address,
+    QuoteToken: QuoteToken.address,
     Vault: vault.address,
     VaultController: vaultController.address,
     USDT: usdtAddress,
@@ -370,21 +370,21 @@ const positioning = async () => {
   }
   try {
     await run("verify:verify", {
-      address: await proxyAdmin.getProxyImplementation(volmexBaseToken1.address),
+      address: await proxyAdmin.getProxyImplementation(BaseToken1.address),
     });
   } catch (error) {
     console.log("ERROR - verify - base token 1 !");
   }
   try {
     await run("verify:verify", {
-      address: await proxyAdmin.getProxyImplementation(volmexBaseToken2.address),
+      address: await proxyAdmin.getProxyImplementation(BaseToken2.address),
     });
   } catch (error) {
     console.log("ERROR - verify - base token 2 !");
   }
   try {
     await run("verify:verify", {
-      address: await proxyAdmin.getProxyImplementation(volmexQuoteToken.address),
+      address: await proxyAdmin.getProxyImplementation(QuoteToken.address),
     });
   } catch (error) {
     console.log("ERROR - verify - quote token!");

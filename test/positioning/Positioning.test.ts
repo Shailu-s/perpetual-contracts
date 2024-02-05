@@ -27,16 +27,16 @@ describe("Positioning", function () {
   let accountBalance;
   let PerpetualOracle;
   let perpetualOracle;
-  let VolmexBaseToken;
+  let BaseToken;
   let ChainLinkAggregator;
   let chainlinkAggregator1;
   let chainlinkAggregator2;
-  let volmexBaseToken;
-  let volmexBaseToken1;
-  let volmexBaseToken2;
-  let volmexBaseToken3;
-  let VolmexPerpPeriphery;
-  let volmexPerpPeriphery;
+  let BaseToken;
+  let BaseToken1;
+  let BaseToken2;
+  let BaseToken3;
+  let PerpPeriphery;
+  let PerpPeriphery;
   let FundingRate;
   let fundingRate;
   let transferManagerTest;
@@ -69,7 +69,7 @@ describe("Positioning", function () {
   const chainlinkTokenIndex2 =
     "57896044618658097711785492504343953926634992332820282019728792003956564819970";
   this.beforeAll(async () => {
-    VolmexPerpPeriphery = await ethers.getContractFactory("VolmexPerpPeriphery");
+    PerpPeriphery = await ethers.getContractFactory("PerpPeriphery");
     PerpetualOracle = await ethers.getContractFactory("PerpetualOracle");
     // fundingRate = await smock.fake("FundingRate")
     MatchingEngine = await ethers.getContractFactory("MatchingEngineTest");
@@ -83,9 +83,9 @@ describe("Positioning", function () {
     VaultController = await ethers.getContractFactory("VaultController");
     MarketRegistry = await ethers.getContractFactory("MarketRegistry");
     AccountBalance = await ethers.getContractFactory("AccountBalance");
-    BaseToken = await ethers.getContractFactory("VolmexBaseToken");
+    BaseToken = await ethers.getContractFactory("BaseToken");
     TestERC20 = await ethers.getContractFactory("TestERC20");
-    VolmexBaseToken = await ethers.getContractFactory("VolmexBaseToken");
+    BaseToken = await ethers.getContractFactory("BaseToken");
     FundingRate = await ethers.getContractFactory("FundingRate");
     ChainLinkAggregator = await ethers.getContractFactory("MockV3Aggregator");
 
@@ -95,10 +95,10 @@ describe("Positioning", function () {
   beforeEach(async () => {
     liquidator = encodeAddress(owner.address);
 
-    volmexBaseToken = await upgrades.deployProxy(
-      VolmexBaseToken,
+    BaseToken = await upgrades.deployProxy(
+      BaseToken,
       [
-        "VolmexBaseToken", // nameArg
+        "BaseToken", // nameArg
         "VBT", // symbolArg,
         account1.address, // priceFeedArg
         true, // isBase
@@ -107,10 +107,10 @@ describe("Positioning", function () {
         initializer: "initialize",
       },
     );
-    volmexBaseToken1 = await upgrades.deployProxy(
-      VolmexBaseToken,
+    BaseToken1 = await upgrades.deployProxy(
+      BaseToken,
       [
-        "VolmexBaseToken", // nameArg
+        "BaseToken", // nameArg
         "VBT", // symbolArg,
         account1.address, // priceFeedArg
         true, // isBase
@@ -119,11 +119,11 @@ describe("Positioning", function () {
         initializer: "initialize",
       },
     );
-    await volmexBaseToken.deployed();
-    volmexBaseToken2 = await upgrades.deployProxy(
-      VolmexBaseToken,
+    await BaseToken.deployed();
+    BaseToken2 = await upgrades.deployProxy(
+      BaseToken,
       [
-        "VolmexBaseToken", // nameArg
+        "BaseToken", // nameArg
         "VBT", // symbolArg,
         owner.address, // priceFeedArg
         true, // isBase
@@ -132,11 +132,11 @@ describe("Positioning", function () {
         initializer: "initialize",
       },
     );
-    await volmexBaseToken2.deployed();
-    volmexBaseToken3 = await upgrades.deployProxy(
-      VolmexBaseToken,
+    await BaseToken2.deployed();
+    BaseToken3 = await upgrades.deployProxy(
+      BaseToken,
       [
-        "VolmexBaseToken", // nameArg
+        "BaseToken", // nameArg
         "VBT", // symbolArg,
         owner.address, // priceFeedArg
         true, // isBase
@@ -145,7 +145,7 @@ describe("Positioning", function () {
         initializer: "initialize",
       },
     );
-    await volmexBaseToken3.deployed();
+    await BaseToken3.deployed();
     chainlinkAggregator1 = await ChainLinkAggregator.deploy(8, 3075000000000);
     await chainlinkAggregator1.deployed();
     chainlinkAggregator2 = await ChainLinkAggregator.deploy(8, 180000000000);
@@ -154,10 +154,10 @@ describe("Positioning", function () {
       PerpetualOracle,
       [
         [
-          volmexBaseToken.address,
-          volmexBaseToken1.address,
-          volmexBaseToken2.address,
-          volmexBaseToken3.address,
+          BaseToken.address,
+          BaseToken1.address,
+          BaseToken2.address,
+          BaseToken3.address,
         ],
         [200000000, 200000000, 30750000000, 1862000000],
         [200060000, 200060000],
@@ -169,10 +169,10 @@ describe("Positioning", function () {
       { initializer: "__PerpetualOracle_init" },
     );
 
-    await volmexBaseToken.setPriceFeed(perpetualOracle.address);
-    await volmexBaseToken1.setPriceFeed(perpetualOracle.address);
+    await BaseToken.setPriceFeed(perpetualOracle.address);
+    await BaseToken1.setPriceFeed(perpetualOracle.address);
     baseToken = await upgrades.deployProxy(
-      VolmexBaseToken,
+      BaseToken,
       [
         "BaseToken", // nameArg
         "BTN", // symbolArg,
@@ -205,10 +205,10 @@ describe("Positioning", function () {
     accountBalance = await upgrades.deployProxy(AccountBalance, [
       positioningConfig.address,
       [
-        volmexBaseToken.address,
-        volmexBaseToken1.address,
-        volmexBaseToken2.address,
-        volmexBaseToken3.address,
+        BaseToken.address,
+        BaseToken1.address,
+        BaseToken2.address,
+        BaseToken3.address,
       ],
       [chainlinkTokenIndex1, chainlinkTokenIndex2],
       matchingEngine.address,
@@ -239,10 +239,10 @@ describe("Positioning", function () {
     accountBalance1 = await upgrades.deployProxy(AccountBalance, [
       positioningConfig.address,
       [
-        volmexBaseToken.address,
-        volmexBaseToken1.address,
-        volmexBaseToken2.address,
-        volmexBaseToken3.address,
+        BaseToken.address,
+        BaseToken1.address,
+        BaseToken2.address,
+        BaseToken3.address,
       ],
       [chainlinkTokenIndex1, chainlinkTokenIndex2],
       matchingEngine.address,
@@ -255,10 +255,10 @@ describe("Positioning", function () {
     marketRegistry = await upgrades.deployProxy(MarketRegistry, [
       virtualToken.address,
       [
-        volmexBaseToken.address,
-        volmexBaseToken1.address,
-        volmexBaseToken2.address,
-        volmexBaseToken3.address,
+        BaseToken.address,
+        BaseToken1.address,
+        BaseToken2.address,
+        BaseToken3.address,
       ],
       [0, 1, chainlinkTokenIndex1, chainlinkTokenIndex2],
     ]);
@@ -296,10 +296,10 @@ describe("Positioning", function () {
         fundingRate.address,
         marketRegistry.address,
         [
-          volmexBaseToken.address,
-          volmexBaseToken1.address,
-          volmexBaseToken2.address,
-          volmexBaseToken3.address,
+          BaseToken.address,
+          BaseToken1.address,
+          BaseToken2.address,
+          BaseToken3.address,
         ],
         [chainlinkTokenIndex1, chainlinkTokenIndex2],
         [owner.address, account2.address],
@@ -309,7 +309,7 @@ describe("Positioning", function () {
         initializer: "initialize",
       },
     );
-    await (await volmexBaseToken.setMintBurnRole(positioning.address)).wait();
+    await (await BaseToken.setMintBurnRole(positioning.address)).wait();
     await (await virtualToken.setMintBurnRole(positioning.address)).wait();
 
     // await marketRegistry.connect(owner).addBaseToken(virtualToken.address)
@@ -339,7 +339,7 @@ describe("Positioning", function () {
       deadline,
       account1.address,
       Asset(virtualToken.address, convert("2400")),
-      Asset(volmexBaseToken.address, convert("24")),
+      Asset(BaseToken.address, convert("24")),
       1,
       0,
       false,
@@ -349,7 +349,7 @@ describe("Positioning", function () {
       ORDER,
       deadline,
       account2.address,
-      Asset(volmexBaseToken.address, convert("24")),
+      Asset(BaseToken.address, convert("24")),
       Asset(virtualToken.address, convert("2400")),
       2,
       0,
@@ -363,15 +363,15 @@ describe("Positioning", function () {
     // for (let i = 0; i < 9; i++) {
     //   await matchingEngine.addObservation(10000000, 0);
     // }
-    perpViewFake = await smock.fake("VolmexPerpView");
-    volmexPerpPeriphery = await upgrades.deployProxy(VolmexPerpPeriphery, [
+    perpViewFake = await smock.fake("PerpView");
+    PerpPeriphery = await upgrades.deployProxy(PerpPeriphery, [
       perpViewFake.address,
       perpetualOracle.address,
       [vault.address, vault2.address],
       owner.address,
       relayer.address,
     ]);
-    await vaultController.setPeriphery(volmexPerpPeriphery.address);
+    await vaultController.setPeriphery(PerpPeriphery.address);
     deadline;
   });
 
@@ -400,10 +400,10 @@ describe("Positioning", function () {
               fundingRate.address,
               marketRegistry.address,
               [
-                volmexBaseToken.address,
-                volmexBaseToken1.address,
-                volmexBaseToken2.address,
-                volmexBaseToken3.address,
+                BaseToken.address,
+                BaseToken1.address,
+                BaseToken2.address,
+                BaseToken3.address,
               ],
               [chainlinkTokenIndex1, chainlinkTokenIndex2],
               [owner.address, account2.address],
@@ -430,10 +430,10 @@ describe("Positioning", function () {
               fundingRate.address,
               account1.address,
               [
-                volmexBaseToken.address,
-                volmexBaseToken1.address,
-                volmexBaseToken2.address,
-                volmexBaseToken3.address,
+                BaseToken.address,
+                BaseToken1.address,
+                BaseToken2.address,
+                BaseToken3.address,
               ],
               [chainlinkTokenIndex1, chainlinkTokenIndex2],
               [owner.address, account2.address],
@@ -450,10 +450,10 @@ describe("Positioning", function () {
           accountBalance.initialize(
             positioningConfig.address,
             [
-              volmexBaseToken.address,
-              volmexBaseToken1.address,
-              volmexBaseToken2.address,
-              volmexBaseToken3.address,
+              BaseToken.address,
+              BaseToken1.address,
+              BaseToken2.address,
+              BaseToken3.address,
             ],
             [chainlinkTokenIndex1, chainlinkTokenIndex2],
             matchingEngine.address,
@@ -467,10 +467,10 @@ describe("Positioning", function () {
           upgrades.deployProxy(AccountBalance, [
             account1.address,
             [
-              volmexBaseToken.address,
-              volmexBaseToken1.address,
-              volmexBaseToken2.address,
-              volmexBaseToken3.address,
+              BaseToken.address,
+              BaseToken1.address,
+              BaseToken2.address,
+              BaseToken3.address,
             ],
             [chainlinkTokenIndex1, chainlinkTokenIndex2],
             matchingEngine.address,
@@ -490,10 +490,10 @@ describe("Positioning", function () {
             fundingRate.address,
             marketRegistry.address,
             [
-              volmexBaseToken.address,
-              volmexBaseToken1.address,
-              volmexBaseToken2.address,
-              volmexBaseToken3.address,
+              BaseToken.address,
+              BaseToken1.address,
+              BaseToken2.address,
+              BaseToken3.address,
             ],
             [chainlinkTokenIndex1, chainlinkTokenIndex2],
             [owner.address, account2.address],
@@ -516,10 +516,10 @@ describe("Positioning", function () {
               fundingRate.address,
               marketRegistry.address,
               [
-                volmexBaseToken.address,
-                volmexBaseToken1.address,
-                volmexBaseToken2.address,
-                volmexBaseToken3.address,
+                BaseToken.address,
+                BaseToken1.address,
+                BaseToken2.address,
+                BaseToken3.address,
               ],
               [chainlinkTokenIndex1, chainlinkTokenIndex2],
               [owner.address, account2.address],
@@ -547,10 +547,10 @@ describe("Positioning", function () {
               fundingRate.address,
               marketRegistry.address,
               [
-                volmexBaseToken.address,
-                volmexBaseToken1.address,
-                volmexBaseToken2.address,
-                volmexBaseToken3.address,
+                BaseToken.address,
+                BaseToken1.address,
+                BaseToken2.address,
+                BaseToken3.address,
               ],
               [chainlinkTokenIndex1, chainlinkTokenIndex2],
               [owner.address, account2.address],
@@ -578,10 +578,10 @@ describe("Positioning", function () {
               fundingRate.address,
               marketRegistry.address,
               [
-                volmexBaseToken.address,
-                volmexBaseToken1.address,
-                volmexBaseToken2.address,
-                volmexBaseToken3.address,
+                BaseToken.address,
+                BaseToken1.address,
+                BaseToken2.address,
+                BaseToken3.address,
               ],
               [chainlinkTokenIndex1, chainlinkTokenIndex2],
               [owner.address, account2.address],
@@ -614,7 +614,7 @@ describe("Positioning", function () {
     it("should set index price oracle ", async () => {
       await accountBalance.grantAddUnderlyingIndexRole(owner.address);
       expect(
-        await accountBalance.connect(owner).setUnderlyingPriceIndex(volmexBaseToken.address, 0),
+        await accountBalance.connect(owner).setUnderlyingPriceIndex(BaseToken.address, 0),
       )
         .to.emit(accountBalance, "UnderlyingPriceIndexSet")
         .withArgs(1);
@@ -635,7 +635,7 @@ describe("Positioning", function () {
     it("should fail to update underlying index", async () => {
       await expect(
         positioning.setUnderlyingPriceIndex(
-          volmexBaseToken2.address,
+          BaseToken2.address,
           "57896044618658097711785492504343953926634992332820282019728792003956564819971",
         ),
       ).to.be.revertedWith("Positioning: Not add underlying index role");
@@ -655,7 +655,7 @@ describe("Positioning", function () {
         "57896044618658097711785492504343953926634992332820282019728792003956564819971",
         "7400",
       );
-      const sigmaViv = await accountBalance.sigmaVolmexIvs(
+      const sigmaViv = await accountBalance.sigmaIvs(
         "57896044618658097711785492504343953926634992332820282019728792003956564819971",
       );
       expect(sigmaViv.toString()).to.be.equal("7400");
@@ -673,7 +673,7 @@ describe("Positioning", function () {
     });
     it("should fail to set index price oracle ", async () => {
       await expect(
-        accountBalance.connect(account1).setUnderlyingPriceIndex(volmexBaseToken.address, 0),
+        accountBalance.connect(account1).setUnderlyingPriceIndex(BaseToken.address, 0),
       ).to.be.revertedWith("'AccountBalance: Not add underlying index role");
     });
   });
@@ -738,15 +738,15 @@ describe("Positioning", function () {
 
         await USDC.connect(account1).approve(vault.address, convert("10000"));
         await USDC.connect(account2).approve(vault.address, convert("10000"));
-        await USDC.connect(account1).approve(volmexPerpPeriphery.address, convert("10000"));
-        await USDC.connect(account2).approve(volmexPerpPeriphery.address, convert("10000"));
+        await USDC.connect(account1).approve(PerpPeriphery.address, convert("10000"));
+        await USDC.connect(account2).approve(PerpPeriphery.address, convert("10000"));
 
         await vaultController
           .connect(account1)
-          .deposit(volmexPerpPeriphery.address, USDC.address, account1.address, convert("10000"));
+          .deposit(PerpPeriphery.address, USDC.address, account1.address, convert("10000"));
         await vaultController
           .connect(account2)
-          .deposit(volmexPerpPeriphery.address, USDC.address, account2.address, convert("10000"));
+          .deposit(PerpPeriphery.address, USDC.address, account2.address, convert("10000"));
 
         let signatureLeft = await getSignature(orderLeft, account1.address);
         let signatureRight = await getSignature(orderRight, account2.address);
@@ -778,15 +778,15 @@ describe("Positioning", function () {
 
         await USDC.connect(account1).approve(vault.address, convert("10000"));
         await USDC.connect(account2).approve(vault.address, convert("10000"));
-        await USDC.connect(account1).approve(volmexPerpPeriphery.address, convert("10000"));
-        await USDC.connect(account2).approve(volmexPerpPeriphery.address, convert("10000"));
+        await USDC.connect(account1).approve(PerpPeriphery.address, convert("10000"));
+        await USDC.connect(account2).approve(PerpPeriphery.address, convert("10000"));
 
         await vaultController
           .connect(account1)
-          .deposit(volmexPerpPeriphery.address, USDC.address, account1.address, convert("10000"));
+          .deposit(PerpPeriphery.address, USDC.address, account1.address, convert("10000"));
         await vaultController
           .connect(account2)
-          .deposit(volmexPerpPeriphery.address, USDC.address, account2.address, convert("10000"));
+          .deposit(PerpPeriphery.address, USDC.address, account2.address, convert("10000"));
 
         let signatureLeft = await getSignature(orderLeft, account1.address);
         let signatureRight = await getSignature(orderRight, account2.address);
@@ -809,15 +809,15 @@ describe("Positioning", function () {
 
         await USDC.connect(account1).approve(vault.address, convert("10000"));
         await USDC.connect(account2).approve(vault.address, convert("10000"));
-        await USDC.connect(account1).approve(volmexPerpPeriphery.address, convert("10000"));
-        await USDC.connect(account2).approve(volmexPerpPeriphery.address, convert("10000"));
+        await USDC.connect(account1).approve(PerpPeriphery.address, convert("10000"));
+        await USDC.connect(account2).approve(PerpPeriphery.address, convert("10000"));
 
         await vaultController
           .connect(account1)
-          .deposit(volmexPerpPeriphery.address, USDC.address, account1.address, convert("10000"));
+          .deposit(PerpPeriphery.address, USDC.address, account1.address, convert("10000"));
         await vaultController
           .connect(account2)
-          .deposit(volmexPerpPeriphery.address, USDC.address, account2.address, convert("10000"));
+          .deposit(PerpPeriphery.address, USDC.address, account2.address, convert("10000"));
 
         let signatureLeft = await getSignature(orderLeft, account1.address);
         let signatureRight = await getSignature(orderRight, account2.address);
@@ -841,7 +841,7 @@ describe("Positioning", function () {
           deadline,
           ZERO_ADDR,
           Asset(virtualToken.address, convert("2000")),
-          Asset(volmexBaseToken.address, convert("20")),
+          Asset(BaseToken.address, convert("20")),
           2,
           0,
           false,
@@ -854,7 +854,7 @@ describe("Positioning", function () {
           deadline,
           account1.address,
           Asset(virtualToken.address, convert("2000")),
-          Asset(volmexBaseToken.address, convert("20")),
+          Asset(BaseToken.address, convert("20")),
           0,
           0,
           false,
@@ -867,7 +867,7 @@ describe("Positioning", function () {
           deadline,
           ZERO_ADDR,
           Asset(virtualToken.address, convert("200")),
-          Asset(volmexBaseToken.address, convert("1")),
+          Asset(BaseToken.address, convert("1")),
           2,
           0,
           false,
@@ -885,21 +885,21 @@ describe("Positioning", function () {
 
         await USDC.connect(account1).approve(vault.address, convert("1000"));
         await USDC.connect(account2).approve(vault.address, convert("1000"));
-        await USDC.connect(account1).approve(volmexPerpPeriphery.address, convert("1000"));
-        await USDC.connect(account2).approve(volmexPerpPeriphery.address, convert("1000"));
+        await USDC.connect(account1).approve(PerpPeriphery.address, convert("1000"));
+        await USDC.connect(account2).approve(PerpPeriphery.address, convert("1000"));
         await vaultController
           .connect(account1)
-          .deposit(volmexPerpPeriphery.address, USDC.address, account1.address, convert("1000"));
+          .deposit(PerpPeriphery.address, USDC.address, account1.address, convert("1000"));
         await vaultController
           .connect(account2)
-          .deposit(volmexPerpPeriphery.address, USDC.address, account2.address, convert("1000"));
+          .deposit(PerpPeriphery.address, USDC.address, account2.address, convert("1000"));
 
         const orderLeftLeverage = Order(
           ORDER,
           deadline,
           account1.address,
           Asset(virtualToken.address, convert("4000")),
-          Asset(volmexBaseToken.address, convert("40")),
+          Asset(BaseToken.address, convert("40")),
           1,
           0,
           false,
@@ -909,7 +909,7 @@ describe("Positioning", function () {
           ORDER,
           deadline,
           account2.address,
-          Asset(volmexBaseToken.address, convert("40")),
+          Asset(BaseToken.address, convert("40")),
           Asset(virtualToken.address, convert("4000")),
           1,
           0,
@@ -952,13 +952,13 @@ describe("Positioning", function () {
         // get 0 position size for base token 2
         const positionSize2 = await accountBalance1.getTotalPositionValue(
           account2.address,
-          volmexBaseToken1.address,
+          BaseToken1.address,
           3600,
         );
 
         const pnltoBerealized = await positioning.getPnlToBeRealized({
           trader: account1.address,
-          baseToken: volmexBaseToken.address,
+          baseToken: BaseToken.address,
           base: "10000",
           quote: "10000000",
         });
@@ -976,17 +976,17 @@ describe("Positioning", function () {
         await USDC.connect(account1).approve(vault.address, convert("1000000000000"));
         await USDC.connect(account2).approve(vault.address, convert("1000000000000"));
         await USDC.connect(account1).approve(
-          volmexPerpPeriphery.address,
+          PerpPeriphery.address,
           convert("1000000000000"),
         );
         await USDC.connect(account2).approve(
-          volmexPerpPeriphery.address,
+          PerpPeriphery.address,
           convert("1000000000000"),
         );
         await vaultController
           .connect(account1)
           .deposit(
-            volmexPerpPeriphery.address,
+            PerpPeriphery.address,
             USDC.address,
             account1.address,
             convert("1000000000"),
@@ -994,7 +994,7 @@ describe("Positioning", function () {
         await vaultController
           .connect(account2)
           .deposit(
-            volmexPerpPeriphery.address,
+            PerpPeriphery.address,
             USDC.address,
             account2.address,
             convert("1000000000"),
@@ -1004,7 +1004,7 @@ describe("Positioning", function () {
           ORDER,
           deadline,
           account1.address,
-          Asset(volmexBaseToken.address, convert("20")),
+          Asset(BaseToken.address, convert("20")),
           Asset(virtualToken.address, convert("100")),
           1,
           0,
@@ -1016,7 +1016,7 @@ describe("Positioning", function () {
           deadline,
           account2.address,
           Asset(virtualToken.address, convert("100")),
-          Asset(volmexBaseToken.address, convert("20")),
+          Asset(BaseToken.address, convert("20")),
           1,
           0,
           false,
@@ -1055,17 +1055,17 @@ describe("Positioning", function () {
         await USDC.connect(account1).approve(vault.address, convert("100000000000000"));
         await USDC.connect(account2).approve(vault.address, convert("100000000000000"));
         await USDC.connect(account1).approve(
-          volmexPerpPeriphery.address,
+          PerpPeriphery.address,
           convert("100000000000000"),
         );
         await USDC.connect(account2).approve(
-          volmexPerpPeriphery.address,
+          PerpPeriphery.address,
           convert("100000000000000"),
         );
         await vaultController
           .connect(account1)
           .deposit(
-            volmexPerpPeriphery.address,
+            PerpPeriphery.address,
             USDC.address,
             account1.address,
             convert("100000000000000"),
@@ -1073,7 +1073,7 @@ describe("Positioning", function () {
         await vaultController
           .connect(account2)
           .deposit(
-            volmexPerpPeriphery.address,
+            PerpPeriphery.address,
             USDC.address,
             account2.address,
             convert("100000000000000"),
@@ -1083,7 +1083,7 @@ describe("Positioning", function () {
           ORDER,
           deadline,
           account2.address,
-          Asset(volmexBaseToken.address, convert("10")),
+          Asset(BaseToken.address, convert("10")),
           Asset(virtualToken.address, convert("100")),
           3,
           0,
@@ -1095,7 +1095,7 @@ describe("Positioning", function () {
           deadline,
           account1.address,
           Asset(virtualToken.address, convert("100")),
-          Asset(volmexBaseToken.address, convert("10")),
+          Asset(BaseToken.address, convert("10")),
           4,
           0,
           false,
@@ -1128,10 +1128,10 @@ describe("Positioning", function () {
         await expect(positionSize3.toString()).to.be.equal(convert("-10"));
         await expect(positionSize2.toString()).to.be.equal(convert("10"));
         const pendingFunding1 = parseInt(
-          await fundingRate.getPendingFundingPayment(account1.address, volmexBaseToken.address, 0),
+          await fundingRate.getPendingFundingPayment(account1.address, BaseToken.address, 0),
         );
         const pendingFunding2 = parseInt(
-          await fundingRate.getPendingFundingPayment(account2.address, volmexBaseToken.address, 0),
+          await fundingRate.getPendingFundingPayment(account2.address, BaseToken.address, 0),
         );
         expect(Math.abs(pendingFunding1 / parseInt(positionSize3))).to.be.lessThan(maxFundingRate);
         expect(Math.abs(pendingFunding2 / parseInt(positionSize2))).to.be.lessThan(maxFundingRate);
@@ -1144,17 +1144,17 @@ describe("Positioning", function () {
         await USDC.connect(account1).approve(vault.address, convert("1000000000000"));
         await USDC.connect(account2).approve(vault.address, convert("1000000000000"));
         await USDC.connect(account1).approve(
-          volmexPerpPeriphery.address,
+          PerpPeriphery.address,
           convert("1000000000000"),
         );
         await USDC.connect(account2).approve(
-          volmexPerpPeriphery.address,
+          PerpPeriphery.address,
           convert("1000000000000"),
         );
         await vaultController
           .connect(account1)
           .deposit(
-            volmexPerpPeriphery.address,
+            PerpPeriphery.address,
             USDC.address,
             account1.address,
             convert("1000000000000"),
@@ -1162,7 +1162,7 @@ describe("Positioning", function () {
         await vaultController
           .connect(account2)
           .deposit(
-            volmexPerpPeriphery.address,
+            PerpPeriphery.address,
             USDC.address,
             account2.address,
             convert("1000000000000"),
@@ -1172,7 +1172,7 @@ describe("Positioning", function () {
           ORDER,
           deadline,
           account1.address,
-          Asset(volmexBaseToken.address, convert("20")),
+          Asset(BaseToken.address, convert("20")),
           Asset(virtualToken.address, convert("100")),
           1,
           0,
@@ -1184,7 +1184,7 @@ describe("Positioning", function () {
           deadline,
           account2.address,
           Asset(virtualToken.address, convert("100")),
-          Asset(volmexBaseToken.address, convert("20")),
+          Asset(BaseToken.address, convert("20")),
           1,
           0,
           false,
@@ -1222,17 +1222,17 @@ describe("Positioning", function () {
         await USDC.connect(account1).approve(vault.address, convert("1000000000000000"));
         await USDC.connect(account2).approve(vault.address, convert("1000000000000000"));
         await USDC.connect(account1).approve(
-          volmexPerpPeriphery.address,
+          PerpPeriphery.address,
           convert("1000000000000000"),
         );
         await USDC.connect(account2).approve(
-          volmexPerpPeriphery.address,
+          PerpPeriphery.address,
           convert("1000000000000000"),
         );
         await vaultController
           .connect(account1)
           .deposit(
-            volmexPerpPeriphery.address,
+            PerpPeriphery.address,
             USDC.address,
             account1.address,
             convert("1000000000000000"),
@@ -1240,7 +1240,7 @@ describe("Positioning", function () {
         await vaultController
           .connect(account2)
           .deposit(
-            volmexPerpPeriphery.address,
+            PerpPeriphery.address,
             USDC.address,
             account2.address,
             convert("1000000000000000"),
@@ -1249,7 +1249,7 @@ describe("Positioning", function () {
           ORDER,
           deadline,
           account1.address,
-          Asset(volmexBaseToken.address, convert("20")),
+          Asset(BaseToken.address, convert("20")),
           Asset(virtualToken.address, convert("20")),
           3,
           0,
@@ -1261,7 +1261,7 @@ describe("Positioning", function () {
           deadline,
           account2.address,
           Asset(virtualToken.address, convert("20")),
-          Asset(volmexBaseToken.address, convert("20")),
+          Asset(BaseToken.address, convert("20")),
           4,
           0,
           false,
@@ -1294,10 +1294,10 @@ describe("Positioning", function () {
         await expect(positionSize3.toString()).to.be.equal(convert("-40"));
         await expect(positionSize2.toString()).to.be.equal(convert("40"));
         const pendingFunding1 = parseInt(
-          await fundingRate.getPendingFundingPayment(account1.address, volmexBaseToken.address, 0),
+          await fundingRate.getPendingFundingPayment(account1.address, BaseToken.address, 0),
         );
         const pendingFunding2 = parseInt(
-          await fundingRate.getPendingFundingPayment(account2.address, volmexBaseToken.address, 0),
+          await fundingRate.getPendingFundingPayment(account2.address, BaseToken.address, 0),
         );
         await matchingEngine.addObservation(0, 10500000);
         await matchingEngine.addObservation(0, 10500000);
@@ -1315,17 +1315,17 @@ describe("Positioning", function () {
         await USDC.connect(account1).approve(vault.address, convert("1000000000000000"));
         await USDC.connect(account2).approve(vault.address, convert("1000000000000000"));
         await USDC.connect(account1).approve(
-          volmexPerpPeriphery.address,
+          PerpPeriphery.address,
           convert("1000000000000000"),
         );
         await USDC.connect(account2).approve(
-          volmexPerpPeriphery.address,
+          PerpPeriphery.address,
           convert("1000000000000000"),
         );
         await vaultController
           .connect(account1)
           .deposit(
-            volmexPerpPeriphery.address,
+            PerpPeriphery.address,
             USDC.address,
             account1.address,
             convert("1000000000000000"),
@@ -1333,7 +1333,7 @@ describe("Positioning", function () {
         await vaultController
           .connect(account2)
           .deposit(
-            volmexPerpPeriphery.address,
+            PerpPeriphery.address,
             USDC.address,
             account2.address,
             convert("1000000000000000"),
@@ -1343,7 +1343,7 @@ describe("Positioning", function () {
           ORDER,
           deadline,
           account1.address,
-          Asset(volmexBaseToken.address, convert("10")),
+          Asset(BaseToken.address, convert("10")),
           Asset(virtualToken.address, convert("100")),
           1,
           0,
@@ -1355,7 +1355,7 @@ describe("Positioning", function () {
           deadline,
           account2.address,
           Asset(virtualToken.address, convert("100")),
-          Asset(volmexBaseToken.address, convert("10")),
+          Asset(BaseToken.address, convert("10")),
           1,
           0,
           false,
@@ -1392,7 +1392,7 @@ describe("Positioning", function () {
           ORDER,
           deadline,
           account1.address,
-          Asset(volmexBaseToken.address, convert("10")),
+          Asset(BaseToken.address, convert("10")),
           Asset(virtualToken.address, convert("100")),
           3,
           0,
@@ -1404,7 +1404,7 @@ describe("Positioning", function () {
           deadline,
           account2.address,
           Asset(virtualToken.address, convert("100")),
-          Asset(volmexBaseToken.address, convert("10")),
+          Asset(BaseToken.address, convert("10")),
           4,
           0,
           false,
@@ -1417,17 +1417,17 @@ describe("Positioning", function () {
         await USDC.connect(account1).approve(vault.address, convert("1000000000000000"));
         await USDC.connect(account2).approve(vault.address, convert("1000000000000000"));
         await USDC.connect(account1).approve(
-          volmexPerpPeriphery.address,
+          PerpPeriphery.address,
           convert("1000000000000000"),
         );
         await USDC.connect(account2).approve(
-          volmexPerpPeriphery.address,
+          PerpPeriphery.address,
           convert("1000000000000000"),
         );
         await vaultController
           .connect(account1)
           .deposit(
-            volmexPerpPeriphery.address,
+            PerpPeriphery.address,
             USDC.address,
             account1.address,
             convert("1000000000000000"),
@@ -1435,7 +1435,7 @@ describe("Positioning", function () {
         await vaultController
           .connect(account2)
           .deposit(
-            volmexPerpPeriphery.address,
+            PerpPeriphery.address,
             USDC.address,
             account2.address,
             convert("1000000000000000"),
@@ -1475,21 +1475,21 @@ describe("Positioning", function () {
 
         await USDC.connect(account1).approve(vault.address, convert("1000"));
         await USDC.connect(account2).approve(vault.address, convert("1000"));
-        await USDC.connect(account1).approve(volmexPerpPeriphery.address, convert("1000"));
-        await USDC.connect(account2).approve(volmexPerpPeriphery.address, convert("1000"));
+        await USDC.connect(account1).approve(PerpPeriphery.address, convert("1000"));
+        await USDC.connect(account2).approve(PerpPeriphery.address, convert("1000"));
         await vaultController
           .connect(account1)
-          .deposit(volmexPerpPeriphery.address, USDC.address, account1.address, convert("1000"));
+          .deposit(PerpPeriphery.address, USDC.address, account1.address, convert("1000"));
         await vaultController
           .connect(account2)
-          .deposit(volmexPerpPeriphery.address, USDC.address, account2.address, convert("1000"));
+          .deposit(PerpPeriphery.address, USDC.address, account2.address, convert("1000"));
 
         const orderLeftLeverage = Order(
           ORDER,
           deadline,
           account1.address,
           Asset(virtualToken.address, convert("4900")),
-          Asset(volmexBaseToken.address, convert("49")),
+          Asset(BaseToken.address, convert("49")),
           0,
           0,
           false,
@@ -1499,7 +1499,7 @@ describe("Positioning", function () {
           ORDER,
           deadline,
           account2.address,
-          Asset(volmexBaseToken.address, convert("49")),
+          Asset(BaseToken.address, convert("49")),
           Asset(virtualToken.address, convert("4900")),
           1,
           0,
@@ -1549,12 +1549,12 @@ describe("Positioning", function () {
 
         await USDC.connect(account1).approve(vault.address, convert("1000000000"));
         await USDC.connect(account2).approve(vault.address, convert("1000000000"));
-        await USDC.connect(account1).approve(volmexPerpPeriphery.address, convert("1000000000"));
-        await USDC.connect(account2).approve(volmexPerpPeriphery.address, convert("1000000000"));
+        await USDC.connect(account1).approve(PerpPeriphery.address, convert("1000000000"));
+        await USDC.connect(account2).approve(PerpPeriphery.address, convert("1000000000"));
         await vaultController
           .connect(account1)
           .deposit(
-            volmexPerpPeriphery.address,
+            PerpPeriphery.address,
             USDC.address,
             account1.address,
             convert("1000000000"),
@@ -1562,7 +1562,7 @@ describe("Positioning", function () {
         await vaultController
           .connect(account2)
           .deposit(
-            volmexPerpPeriphery.address,
+            PerpPeriphery.address,
             USDC.address,
             account2.address,
             convert("1000000000"),
@@ -1572,7 +1572,7 @@ describe("Positioning", function () {
           ORDER,
           deadline,
           account1.address,
-          Asset(volmexBaseToken.address, BigNumber.from("24").mul(one).toString()),
+          Asset(BaseToken.address, BigNumber.from("24").mul(one).toString()),
           Asset(virtualToken.address, BigNumber.from("240").mul(one).toString()),
           1,
           0,
@@ -1584,7 +1584,7 @@ describe("Positioning", function () {
           deadline,
           account2.address,
           Asset(virtualToken.address, BigNumber.from("240").mul(one).toString()),
-          Asset(volmexBaseToken.address, BigNumber.from("24").mul(one).toString()),
+          Asset(BaseToken.address, BigNumber.from("24").mul(one).toString()),
           1,
           0,
           false,
@@ -1598,17 +1598,17 @@ describe("Positioning", function () {
         await USDC.connect(account1).approve(vault.address, convert("100000000000000"));
         await USDC.connect(account2).approve(vault.address, convert("100000000000000"));
         await USDC.connect(account1).approve(
-          volmexPerpPeriphery.address,
+          PerpPeriphery.address,
           convert("100000000000000"),
         );
         await USDC.connect(account2).approve(
-          volmexPerpPeriphery.address,
+          PerpPeriphery.address,
           convert("100000000000000"),
         );
         await vaultController
           .connect(account1)
           .deposit(
-            volmexPerpPeriphery.address,
+            PerpPeriphery.address,
             USDC.address,
             account1.address,
             convert("100000000000000"),
@@ -1616,7 +1616,7 @@ describe("Positioning", function () {
         await vaultController
           .connect(account2)
           .deposit(
-            volmexPerpPeriphery.address,
+            PerpPeriphery.address,
             USDC.address,
             account2.address,
             convert("100000000000000"),
@@ -1665,12 +1665,12 @@ describe("Positioning", function () {
 
         await USDC.connect(account1).approve(vault.address, convert("1000000000"));
         await USDC.connect(account2).approve(vault.address, convert("1000000000"));
-        await USDC.connect(account1).approve(volmexPerpPeriphery.address, convert("1000000000"));
-        await USDC.connect(account2).approve(volmexPerpPeriphery.address, convert("1000000000"));
+        await USDC.connect(account1).approve(PerpPeriphery.address, convert("1000000000"));
+        await USDC.connect(account2).approve(PerpPeriphery.address, convert("1000000000"));
         await vaultController
           .connect(account1)
           .deposit(
-            volmexPerpPeriphery.address,
+            PerpPeriphery.address,
             USDC.address,
             account1.address,
             convert("1000000000"),
@@ -1678,7 +1678,7 @@ describe("Positioning", function () {
         await vaultController
           .connect(account2)
           .deposit(
-            volmexPerpPeriphery.address,
+            PerpPeriphery.address,
             USDC.address,
             account2.address,
             convert("1000000000"),
@@ -1690,7 +1690,7 @@ describe("Positioning", function () {
           ORDER,
           deadline,
           account1.address,
-          Asset(volmexBaseToken.address, "10000000000000000000"),
+          Asset(BaseToken.address, "10000000000000000000"),
           Asset(virtualToken.address, "1900000000000000000000"),
           1,
           0,
@@ -1702,7 +1702,7 @@ describe("Positioning", function () {
           deadline,
           account2.address,
           Asset(virtualToken.address, "1900000000000000000000"),
-          Asset(volmexBaseToken.address, "10000000000000000000"),
+          Asset(BaseToken.address, "10000000000000000000"),
           1,
           0,
           false,
@@ -1719,7 +1719,7 @@ describe("Positioning", function () {
           ORDER,
           deadline,
           account2.address,
-          Asset(volmexBaseToken.address, "10000000000000000000"),
+          Asset(BaseToken.address, "10000000000000000000"),
           Asset(virtualToken.address, "1900000000000000000000"),
           78,
           0,
@@ -1731,7 +1731,7 @@ describe("Positioning", function () {
           deadline,
           account1.address,
           Asset(virtualToken.address, "1999000000000000000000"),
-          Asset(volmexBaseToken.address, "10000000000000000000"),
+          Asset(BaseToken.address, "10000000000000000000"),
           89,
           199000000,
           false,
@@ -1758,20 +1758,20 @@ describe("Positioning", function () {
 
         await USDC.connect(account1).approve(vault.address, convert("1000000000"));
         await USDC.connect(account2).approve(vault.address, convert("1000000000"));
-        await USDC.connect(account1).approve(volmexPerpPeriphery.address, convert("1000000000"));
-        await USDC.connect(account2).approve(volmexPerpPeriphery.address, convert("1000000000"));
+        await USDC.connect(account1).approve(PerpPeriphery.address, convert("1000000000"));
+        await USDC.connect(account2).approve(PerpPeriphery.address, convert("1000000000"));
         await vaultController
           .connect(account1)
-          .deposit(volmexPerpPeriphery.address, USDC.address, account1.address, convert("1000"));
+          .deposit(PerpPeriphery.address, USDC.address, account1.address, convert("1000"));
         await vaultController
           .connect(account2)
-          .deposit(volmexPerpPeriphery.address, USDC.address, account2.address, convert("1000"));
+          .deposit(PerpPeriphery.address, USDC.address, account2.address, convert("1000"));
 
         const orderLeft1 = Order(
           ORDER,
           deadline,
           account1.address,
-          Asset(volmexBaseToken.address, BigNumber.from("24").mul(one).toString()),
+          Asset(BaseToken.address, BigNumber.from("24").mul(one).toString()),
           Asset(virtualToken.address, BigNumber.from("240").mul(one).toString()),
           1,
           0,
@@ -1783,7 +1783,7 @@ describe("Positioning", function () {
           deadline,
           account2.address,
           Asset(virtualToken.address, BigNumber.from("240").mul(one).toString()),
-          Asset(volmexBaseToken.address, BigNumber.from("24").mul(one).toString()),
+          Asset(BaseToken.address, BigNumber.from("24").mul(one).toString()),
           1,
           0,
           false,
@@ -1842,17 +1842,17 @@ describe("Positioning", function () {
         await USDC.connect(account1).approve(vault.address, convert("100000000000000"));
         await USDC.connect(account2).approve(vault.address, convert("100000000000000"));
         await USDC.connect(account1).approve(
-          volmexPerpPeriphery.address,
+          PerpPeriphery.address,
           convert("100000000000000"),
         );
         await USDC.connect(account2).approve(
-          volmexPerpPeriphery.address,
+          PerpPeriphery.address,
           convert("100000000000000"),
         );
         await vaultController
           .connect(account1)
           .deposit(
-            volmexPerpPeriphery.address,
+            PerpPeriphery.address,
             USDC.address,
             account1.address,
             convert("100000000000000"),
@@ -1860,7 +1860,7 @@ describe("Positioning", function () {
         await vaultController
           .connect(account2)
           .deposit(
-            volmexPerpPeriphery.address,
+            PerpPeriphery.address,
             USDC.address,
             account2.address,
             convert("100000000000000"),
@@ -1871,7 +1871,7 @@ describe("Positioning", function () {
           deadline,
           account1.address,
           Asset(virtualToken.address, convert("200")),
-          Asset(volmexBaseToken.address, convert("20")),
+          Asset(BaseToken.address, convert("20")),
           1,
           0,
           false,
@@ -1881,7 +1881,7 @@ describe("Positioning", function () {
           ORDER,
           deadline,
           account2.address,
-          Asset(volmexBaseToken.address, convert("20")),
+          Asset(BaseToken.address, convert("20")),
           Asset(virtualToken.address, convert("200")),
           2,
           0,
@@ -1903,17 +1903,17 @@ describe("Positioning", function () {
         await USDC.connect(account1).approve(vault.address, convert("100000000000000"));
         await USDC.connect(account2).approve(vault.address, convert("100000000000000"));
         await USDC.connect(account1).approve(
-          volmexPerpPeriphery.address,
+          PerpPeriphery.address,
           convert("100000000000000"),
         );
         await USDC.connect(account2).approve(
-          volmexPerpPeriphery.address,
+          PerpPeriphery.address,
           convert("100000000000000"),
         );
         await vaultController
           .connect(account1)
           .deposit(
-            volmexPerpPeriphery.address,
+            PerpPeriphery.address,
             USDC.address,
             account1.address,
             convert("100000000000000"),
@@ -1921,7 +1921,7 @@ describe("Positioning", function () {
         await vaultController
           .connect(account2)
           .deposit(
-            volmexPerpPeriphery.address,
+            PerpPeriphery.address,
             USDC.address,
             account2.address,
             convert("100000000000000"),
@@ -1943,7 +1943,7 @@ describe("Positioning", function () {
           deadline,
           account2.address,
           Asset(virtualToken.address, convert("200")),
-          Asset(volmexBaseToken.address, convert("20")),
+          Asset(BaseToken.address, convert("20")),
           2,
           0,
           false,
@@ -1953,7 +1953,7 @@ describe("Positioning", function () {
           ORDER,
           deadline,
           account1.address,
-          Asset(volmexBaseToken.address, convert("20")),
+          Asset(BaseToken.address, convert("20")),
           Asset(virtualToken.address, convert("200")),
           3,
           0,
@@ -1993,17 +1993,17 @@ describe("Positioning", function () {
         await USDC.connect(account1).approve(vault.address, convert("100000000000000"));
         await USDC.connect(account2).approve(vault.address, convert("100000000000000"));
         await USDC.connect(account1).approve(
-          volmexPerpPeriphery.address,
+          PerpPeriphery.address,
           convert("100000000000000"),
         );
         await USDC.connect(account2).approve(
-          volmexPerpPeriphery.address,
+          PerpPeriphery.address,
           convert("100000000000000"),
         );
         await vaultController
           .connect(account1)
           .deposit(
-            volmexPerpPeriphery.address,
+            PerpPeriphery.address,
             USDC.address,
             account1.address,
             convert("100000000000000"),
@@ -2011,7 +2011,7 @@ describe("Positioning", function () {
         await vaultController
           .connect(account2)
           .deposit(
-            volmexPerpPeriphery.address,
+            PerpPeriphery.address,
             USDC.address,
             account2.address,
             convert("100000000000000"),
@@ -2022,7 +2022,7 @@ describe("Positioning", function () {
           deadline,
           account1.address,
           Asset(virtualToken.address, convert("100")),
-          Asset(volmexBaseToken.address, convert("20")),
+          Asset(BaseToken.address, convert("20")),
           1,
           0,
           false,
@@ -2032,7 +2032,7 @@ describe("Positioning", function () {
           ORDER,
           deadline,
           account2.address,
-          Asset(volmexBaseToken.address, convert("20")),
+          Asset(BaseToken.address, convert("20")),
           Asset(virtualToken.address, convert("90")),
           2,
           0,
@@ -2054,7 +2054,7 @@ describe("Positioning", function () {
           deadline,
           account2.address,
           Asset(virtualToken.address, convert("90")),
-          Asset(volmexBaseToken.address, convert("20")),
+          Asset(BaseToken.address, convert("20")),
           8,
           0,
           false,
@@ -2064,7 +2064,7 @@ describe("Positioning", function () {
           ORDER,
           deadline,
           account1.address,
-          Asset(volmexBaseToken.address, convert("40")),
+          Asset(BaseToken.address, convert("40")),
           Asset(virtualToken.address, convert("70")),
           9,
           0,
@@ -2081,7 +2081,7 @@ describe("Positioning", function () {
         ).to.emit(positioning, "PositionChanged");
         const positionSizeAfter = await accountBalance1.getPositionSize(
           account2.address,
-          volmexBaseToken.address,
+          BaseToken.address,
         );
 
         expect(positionSizeAfter.toString()).to.be.equal("0");
@@ -2095,17 +2095,17 @@ describe("Positioning", function () {
         await USDC.connect(account1).approve(vault.address, convert("100000000000000"));
         await USDC.connect(account2).approve(vault.address, convert("100000000000000"));
         await USDC.connect(account1).approve(
-          volmexPerpPeriphery.address,
+          PerpPeriphery.address,
           convert("100000000000000"),
         );
         await USDC.connect(account2).approve(
-          volmexPerpPeriphery.address,
+          PerpPeriphery.address,
           convert("100000000000000"),
         );
         await vaultController
           .connect(account1)
           .deposit(
-            volmexPerpPeriphery.address,
+            PerpPeriphery.address,
             USDC.address,
             account1.address,
             convert("100000000000000"),
@@ -2113,7 +2113,7 @@ describe("Positioning", function () {
         await vaultController
           .connect(account2)
           .deposit(
-            volmexPerpPeriphery.address,
+            PerpPeriphery.address,
             USDC.address,
             account2.address,
             convert("100000000000000"),
@@ -2124,7 +2124,7 @@ describe("Positioning", function () {
           deadline,
           account1.address,
           Asset(virtualToken.address, convert("100")),
-          Asset(volmexBaseToken.address, convert("20")),
+          Asset(BaseToken.address, convert("20")),
           1,
           0,
           false,
@@ -2134,7 +2134,7 @@ describe("Positioning", function () {
           ORDER,
           deadline,
           account2.address,
-          Asset(volmexBaseToken.address, convert("20")),
+          Asset(BaseToken.address, convert("20")),
           Asset(virtualToken.address, convert("50")),
           2,
           0,
@@ -2156,7 +2156,7 @@ describe("Positioning", function () {
           deadline,
           account2.address,
           Asset(virtualToken.address, convert("200")),
-          Asset(volmexBaseToken.address, convert("40")),
+          Asset(BaseToken.address, convert("40")),
           8,
           0,
           false,
@@ -2166,7 +2166,7 @@ describe("Positioning", function () {
           ORDER,
           deadline,
           account1.address,
-          Asset(volmexBaseToken.address, convert("20")),
+          Asset(BaseToken.address, convert("20")),
           Asset(virtualToken.address, convert("90")),
           9,
           0,
@@ -2183,7 +2183,7 @@ describe("Positioning", function () {
         ).to.emit(positioning, "PositionChanged");
         const positionSizeAfter = await accountBalance1.getPositionSize(
           account1.address,
-          volmexBaseToken.address,
+          BaseToken.address,
         );
 
         expect(positionSizeAfter.toString()).to.be.equal("0");
@@ -2200,21 +2200,21 @@ describe("Positioning", function () {
         await USDC.connect(account3).approve(vault.address, convert("100000000000000"));
 
         await USDC.connect(account1).approve(
-          volmexPerpPeriphery.address,
+          PerpPeriphery.address,
           convert("100000000000000"),
         );
         await USDC.connect(account2).approve(
-          volmexPerpPeriphery.address,
+          PerpPeriphery.address,
           convert("100000000000000"),
         );
         await USDC.connect(account3).approve(
-          volmexPerpPeriphery.address,
+          PerpPeriphery.address,
           convert("100000000000000"),
         );
         await vaultController
           .connect(account1)
           .deposit(
-            volmexPerpPeriphery.address,
+            PerpPeriphery.address,
             USDC.address,
             account1.address,
             convert("100000000000000"),
@@ -2222,7 +2222,7 @@ describe("Positioning", function () {
         await vaultController
           .connect(account3)
           .deposit(
-            volmexPerpPeriphery.address,
+            PerpPeriphery.address,
             USDC.address,
             account3.address,
             convert("100000000000000"),
@@ -2230,7 +2230,7 @@ describe("Positioning", function () {
         await vaultController
           .connect(account2)
           .deposit(
-            volmexPerpPeriphery.address,
+            PerpPeriphery.address,
             USDC.address,
             account2.address,
             convert("100000000000000"),
@@ -2241,7 +2241,7 @@ describe("Positioning", function () {
           deadline,
           account1.address,
           Asset(virtualToken.address, convert("100")),
-          Asset(volmexBaseToken.address, convert("20")),
+          Asset(BaseToken.address, convert("20")),
           1,
           0,
           false,
@@ -2251,7 +2251,7 @@ describe("Positioning", function () {
           ORDER,
           deadline,
           account2.address,
-          Asset(volmexBaseToken.address, convert("20")),
+          Asset(BaseToken.address, convert("20")),
           Asset(virtualToken.address, convert("50")),
           2,
           0,
@@ -2273,7 +2273,7 @@ describe("Positioning", function () {
           deadline,
           account2.address,
           Asset(virtualToken.address, convert("200")),
-          Asset(volmexBaseToken.address, convert("20")),
+          Asset(BaseToken.address, convert("20")),
           8,
           0,
           false,
@@ -2283,7 +2283,7 @@ describe("Positioning", function () {
           ORDER,
           deadline,
           account1.address,
-          Asset(volmexBaseToken.address, convert("20")),
+          Asset(BaseToken.address, convert("20")),
           Asset(virtualToken.address, convert("200")),
           9,
           0,
@@ -2301,14 +2301,14 @@ describe("Positioning", function () {
 
         const positionSizeAfter = await accountBalance1.getPositionSize(
           account1.address,
-          volmexBaseToken.address,
+          BaseToken.address,
         );
         expect(positionSizeAfter.toString()).to.be.equal("0");
         const orderRight2 = Order(
           ORDER,
           deadline,
           account3.address,
-          Asset(volmexBaseToken.address, convert("4")),
+          Asset(BaseToken.address, convert("4")),
           Asset(virtualToken.address, convert("400")),
           9,
           0,
@@ -2334,7 +2334,7 @@ describe("Positioning", function () {
         expect(
           await accountBalance.getLiquidatablePositionSize(
             account1.address,
-            volmexBaseToken.address,
+            BaseToken.address,
             0,
           ),
         ).to.equal(0);
@@ -2353,21 +2353,21 @@ describe("Positioning", function () {
         await USDC.connect(account3).approve(vault.address, convert("100000000000000"));
 
         await USDC.connect(account1).approve(
-          volmexPerpPeriphery.address,
+          PerpPeriphery.address,
           convert("100000000000000"),
         );
         await USDC.connect(account2).approve(
-          volmexPerpPeriphery.address,
+          PerpPeriphery.address,
           convert("100000000000000"),
         );
         await USDC.connect(account3).approve(
-          volmexPerpPeriphery.address,
+          PerpPeriphery.address,
           convert("100000000000000"),
         );
         await vaultController
           .connect(account1)
           .deposit(
-            volmexPerpPeriphery.address,
+            PerpPeriphery.address,
             USDC.address,
             account1.address,
             convert("100000000000000"),
@@ -2375,7 +2375,7 @@ describe("Positioning", function () {
         await vaultController
           .connect(account3)
           .deposit(
-            volmexPerpPeriphery.address,
+            PerpPeriphery.address,
             USDC.address,
             account3.address,
             convert("100000000000000"),
@@ -2383,7 +2383,7 @@ describe("Positioning", function () {
         await vaultController
           .connect(account2)
           .deposit(
-            volmexPerpPeriphery.address,
+            PerpPeriphery.address,
             USDC.address,
             account2.address,
             convert("100000000000000"),
@@ -2394,7 +2394,7 @@ describe("Positioning", function () {
           deadline,
           account1.address,
           Asset(virtualToken.address, convert("100")),
-          Asset(volmexBaseToken.address, convert("2")),
+          Asset(BaseToken.address, convert("2")),
           1,
           0,
           false,
@@ -2404,7 +2404,7 @@ describe("Positioning", function () {
           ORDER,
           deadline,
           account2.address,
-          Asset(volmexBaseToken.address, convert("2")),
+          Asset(BaseToken.address, convert("2")),
           Asset(virtualToken.address, convert("50")),
           2,
           0,
@@ -2470,10 +2470,10 @@ describe("Positioning", function () {
         marketRegistry = await upgrades.deployProxy(MarketRegistry, [
           virtualToken.address,
           [
-            volmexBaseToken.address,
-            volmexBaseToken1.address,
-            volmexBaseToken2.address,
-            volmexBaseToken3.address,
+            BaseToken.address,
+            BaseToken1.address,
+            BaseToken2.address,
+            BaseToken3.address,
           ],
         ]);
 
@@ -2488,10 +2488,10 @@ describe("Positioning", function () {
             fundingRate.address,
             marketRegistry.address,
             [
-              volmexBaseToken.address,
-              volmexBaseToken1.address,
-              volmexBaseToken2.address,
-              volmexBaseToken3.address,
+              BaseToken.address,
+              BaseToken1.address,
+              BaseToken2.address,
+              BaseToken3.address,
             ],
             [chainlinkTokenIndex1, chainlinkTokenIndex2],
             [owner.address, account2.address],
@@ -2501,7 +2501,7 @@ describe("Positioning", function () {
             initializer: "initialize",
           },
         );
-        await (await volmexBaseToken.setMintBurnRole(positioning.address)).wait();
+        await (await BaseToken.setMintBurnRole(positioning.address)).wait();
         await (await virtualToken.setMintBurnRole(positioning.address)).wait();
 
         // await marketRegistry.connect(owner).addBaseToken(baseToken.address)
@@ -2528,7 +2528,7 @@ describe("Positioning", function () {
           deadline,
           account1.address,
           Asset(virtualToken.address, convert("2000")),
-          Asset(volmexBaseToken.address, convert("20")),
+          Asset(BaseToken.address, convert("20")),
           2,
           0,
           false,
@@ -2538,7 +2538,7 @@ describe("Positioning", function () {
           ORDER,
           deadline,
           account2.address,
-          Asset(volmexBaseToken.address, convert("20")),
+          Asset(BaseToken.address, convert("20")),
           Asset(virtualToken.address, convert("2000")),
           1,
           0,
@@ -2570,15 +2570,15 @@ describe("Positioning", function () {
 
         await USDC.connect(account1).approve(vault.address, ten.toString());
         await USDC.connect(account2).approve(vault.address, ten.toString());
-        await USDC.connect(account1).approve(volmexPerpPeriphery.address, ten.toString());
-        await USDC.connect(account2).approve(volmexPerpPeriphery.address, ten.toString());
+        await USDC.connect(account1).approve(PerpPeriphery.address, ten.toString());
+        await USDC.connect(account2).approve(PerpPeriphery.address, ten.toString());
 
         await vaultController
           .connect(account1)
-          .deposit(volmexPerpPeriphery.address, USDC.address, account1.address, ten.toString());
+          .deposit(PerpPeriphery.address, USDC.address, account1.address, ten.toString());
         await vaultController
           .connect(account2)
-          .deposit(volmexPerpPeriphery.address, USDC.address, account2.address, ten.toString());
+          .deposit(PerpPeriphery.address, USDC.address, account2.address, ten.toString());
 
         let signatureLeft = await getSignature(orderLeft, account1.address);
         let signatureRight = await getSignature(orderRight, account2.address);
@@ -2600,10 +2600,10 @@ describe("Positioning", function () {
         ).to.be.revertedWith("AccountBalance: Not role settle PNL");
       });
       it("should fail to register base token", async () => {
-        const volmexBaseToken1 = await upgrades.deployProxy(
-          VolmexBaseToken,
+        const BaseToken1 = await upgrades.deployProxy(
+          BaseToken,
           [
-            "VolmexBaseToken", // nameArg
+            "BaseToken", // nameArg
             "VBT", // symbolArg,
             account1.address, // priceFeedArg
             true, // isBase
@@ -2612,8 +2612,8 @@ describe("Positioning", function () {
             initializer: "initialize",
           },
         );
-        await volmexBaseToken1.deployed();
-        await marketRegistry.addBaseToken(volmexBaseToken1.address, 1);
+        await BaseToken1.deployed();
+        await marketRegistry.addBaseToken(BaseToken1.address, 1);
         await positioningConfig.setMaxMarketsPerAccount(1);
         await matchingEngine.grantMatchOrders(positioning.address);
 
@@ -2622,15 +2622,15 @@ describe("Positioning", function () {
 
         await USDC.connect(account1).approve(vault.address, ten.toString());
         await USDC.connect(account2).approve(vault.address, ten.toString());
-        await USDC.connect(account1).approve(volmexPerpPeriphery.address, ten.toString());
-        await USDC.connect(account2).approve(volmexPerpPeriphery.address, ten.toString());
+        await USDC.connect(account1).approve(PerpPeriphery.address, ten.toString());
+        await USDC.connect(account2).approve(PerpPeriphery.address, ten.toString());
 
         await vaultController
           .connect(account1)
-          .deposit(volmexPerpPeriphery.address, USDC.address, account1.address, ten.toString());
+          .deposit(PerpPeriphery.address, USDC.address, account1.address, ten.toString());
         await vaultController
           .connect(account2)
-          .deposit(volmexPerpPeriphery.address, USDC.address, account2.address, ten.toString());
+          .deposit(PerpPeriphery.address, USDC.address, account2.address, ten.toString());
         let signatureLeft = await getSignature(orderLeft, account1.address);
         let signatureRight = await getSignature(orderRight, account2.address);
         await expect(
@@ -2643,7 +2643,7 @@ describe("Positioning", function () {
           deadline,
           account1.address,
           Asset(virtualToken.address, convert("20")),
-          Asset(volmexBaseToken1.address, convert("20")),
+          Asset(BaseToken1.address, convert("20")),
           1,
           0,
           false,
@@ -2653,7 +2653,7 @@ describe("Positioning", function () {
           ORDER,
           deadline,
           account2.address,
-          Asset(volmexBaseToken1.address, convert("20")),
+          Asset(BaseToken1.address, convert("20")),
           Asset(virtualToken.address, convert("20")),
           2,
           0,
@@ -2707,21 +2707,21 @@ describe("Positioning", function () {
 
         await USDC.connect(account1).approve(vault.address, convert("1000"));
         await USDC.connect(account2).approve(vault.address, convert("1000"));
-        await USDC.connect(account1).approve(volmexPerpPeriphery.address, convert("1000"));
-        await USDC.connect(account2).approve(volmexPerpPeriphery.address, convert("1000"));
+        await USDC.connect(account1).approve(PerpPeriphery.address, convert("1000"));
+        await USDC.connect(account2).approve(PerpPeriphery.address, convert("1000"));
         await vaultController
           .connect(account1)
-          .deposit(volmexPerpPeriphery.address, USDC.address, account1.address, convert("1000"));
+          .deposit(PerpPeriphery.address, USDC.address, account1.address, convert("1000"));
         await vaultController
           .connect(account2)
-          .deposit(volmexPerpPeriphery.address, USDC.address, account2.address, convert("1000"));
+          .deposit(PerpPeriphery.address, USDC.address, account2.address, convert("1000"));
 
         const orderLeftLeverage = Order(
           ORDER,
           deadline,
           account1.address,
           Asset(virtualToken.address, convert("4000")),
-          Asset(volmexBaseToken.address, convert("40")),
+          Asset(BaseToken.address, convert("40")),
           1,
           0,
           false,
@@ -2731,7 +2731,7 @@ describe("Positioning", function () {
           ORDER,
           deadline,
           account2.address,
-          Asset(volmexBaseToken.address, convert("40")),
+          Asset(BaseToken.address, convert("40")),
           Asset(virtualToken.address, convert("4000")),
           1,
           0,
@@ -2831,7 +2831,7 @@ describe("Positioning", function () {
           deadline,
           account1.address,
           Asset(virtualToken.address, convert("0")),
-          Asset(volmexBaseToken.address, convert("0")),
+          Asset(BaseToken.address, convert("0")),
           1,
           0,
           false,
@@ -2841,7 +2841,7 @@ describe("Positioning", function () {
           ORDER,
           deadline,
           account2.address,
-          Asset(volmexBaseToken.address, convert("0")),
+          Asset(BaseToken.address, convert("0")),
           Asset(virtualToken.address, convert("0")),
           2,
           0,
@@ -2875,8 +2875,8 @@ describe("Positioning", function () {
 
         await USDC.connect(account1).approve(vault.address, convert("1000"));
         await USDC.connect(account2).approve(vault.address, convert("1000"));
-        await USDC.connect(account1).approve(volmexPerpPeriphery.address, convert("1000"));
-        await USDC.connect(account2).approve(volmexPerpPeriphery.address, convert("1000"));
+        await USDC.connect(account1).approve(PerpPeriphery.address, convert("1000"));
+        await USDC.connect(account2).approve(PerpPeriphery.address, convert("1000"));
 
         await expect(
           positioning.openPosition(
@@ -2897,21 +2897,21 @@ describe("Positioning", function () {
 
         await USDC.connect(account1).approve(vault.address, convert("1000"));
         await USDC.connect(account2).approve(vault.address, convert("1000"));
-        await USDC.connect(account1).approve(volmexPerpPeriphery.address, convert("1000"));
-        await USDC.connect(account2).approve(volmexPerpPeriphery.address, convert("1000"));
+        await USDC.connect(account1).approve(PerpPeriphery.address, convert("1000"));
+        await USDC.connect(account2).approve(PerpPeriphery.address, convert("1000"));
         await vaultController
           .connect(account1)
-          .deposit(volmexPerpPeriphery.address, USDC.address, account1.address, convert("1000"));
+          .deposit(PerpPeriphery.address, USDC.address, account1.address, convert("1000"));
         await vaultController
           .connect(account2)
-          .deposit(volmexPerpPeriphery.address, USDC.address, account2.address, convert("1000"));
+          .deposit(PerpPeriphery.address, USDC.address, account2.address, convert("1000"));
 
         const orderLeftLeverage = Order(
           ORDER,
           deadline,
           account1.address,
           Asset(virtualToken.address, convert("6000")),
-          Asset(volmexBaseToken.address, convert("60")),
+          Asset(BaseToken.address, convert("60")),
           0,
           0,
           false,
@@ -2921,7 +2921,7 @@ describe("Positioning", function () {
           ORDER,
           deadline,
           account2.address,
-          Asset(volmexBaseToken.address, convert("60")),
+          Asset(BaseToken.address, convert("60")),
           Asset(virtualToken.address, convert("6000")),
           1,
           0,
@@ -2954,15 +2954,15 @@ describe("Positioning", function () {
 
         await USDC.connect(account1).approve(vault.address, convert("1000"));
         await USDC.connect(account2).approve(vault.address, convert("1000"));
-        await USDC.connect(account1).approve(volmexPerpPeriphery.address, convert("1000"));
-        await USDC.connect(account2).approve(volmexPerpPeriphery.address, convert("1000"));
+        await USDC.connect(account1).approve(PerpPeriphery.address, convert("1000"));
+        await USDC.connect(account2).approve(PerpPeriphery.address, convert("1000"));
 
         await vaultController
           .connect(account1)
-          .deposit(volmexPerpPeriphery.address, USDC.address, account1.address, convert("1000"));
+          .deposit(PerpPeriphery.address, USDC.address, account1.address, convert("1000"));
         await vaultController
           .connect(account2)
-          .deposit(volmexPerpPeriphery.address, USDC.address, account2.address, convert("1000"));
+          .deposit(PerpPeriphery.address, USDC.address, account2.address, convert("1000"));
 
         let signatureLeft = await getSignature(orderLeft, owner.address);
         let signatureRight = await getSignature(orderRight, account2.address);
@@ -2982,21 +2982,21 @@ describe("Positioning", function () {
 
         await USDC.connect(account1).approve(vault.address, convert("1000"));
         await USDC.connect(account2).approve(vault.address, convert("1000"));
-        await USDC.connect(account1).approve(volmexPerpPeriphery.address, convert("1000"));
-        await USDC.connect(account2).approve(volmexPerpPeriphery.address, convert("1000"));
+        await USDC.connect(account1).approve(PerpPeriphery.address, convert("1000"));
+        await USDC.connect(account2).approve(PerpPeriphery.address, convert("1000"));
 
         await vaultController
           .connect(account1)
-          .deposit(volmexPerpPeriphery.address, USDC.address, account1.address, convert("1000"));
+          .deposit(PerpPeriphery.address, USDC.address, account1.address, convert("1000"));
         await vaultController
           .connect(account2)
-          .deposit(volmexPerpPeriphery.address, USDC.address, account2.address, convert("1000"));
+          .deposit(PerpPeriphery.address, USDC.address, account2.address, convert("1000"));
 
         const orderLeft = Order(
           ORDER,
           deadline,
           account1.address,
-          Asset(volmexBaseToken.address, "20000000000000000000"),
+          Asset(BaseToken.address, "20000000000000000000"),
           Asset(virtualToken.address, "20000000000000000000"),
           1,
           0,
@@ -3008,7 +3008,7 @@ describe("Positioning", function () {
           deadline,
           account2.address,
           Asset(virtualToken.address, "20000000000000000000"),
-          Asset(volmexBaseToken.address, "20000000000000000000"),
+          Asset(BaseToken.address, "20000000000000000000"),
           1,
           0,
           false,
@@ -3035,7 +3035,7 @@ describe("Positioning", function () {
           ORDER,
           deadline,
           account1.address,
-          Asset(volmexBaseToken.address, "20000000000000000000"),
+          Asset(BaseToken.address, "20000000000000000000"),
           Asset(virtualToken.address, "20000000000000000000"),
           1,
           0,
@@ -3047,7 +3047,7 @@ describe("Positioning", function () {
           deadline,
           account1.address,
           Asset(virtualToken.address, "20000000000000000000"),
-          Asset(volmexBaseToken.address, "20000000000000000000"),
+          Asset(BaseToken.address, "20000000000000000000"),
           1,
           0,
           false,
@@ -3072,23 +3072,23 @@ describe("Positioning", function () {
         await matchingEngine.grantMatchOrders(positioning.address);
 
         await USDC.approveTest(erc1271Test.address, vault.address, convert("1000"));
-        await USDC.approveTest(erc1271Test.address, volmexPerpPeriphery.address, convert("1000"));
+        await USDC.approveTest(erc1271Test.address, PerpPeriphery.address, convert("1000"));
 
         await USDC.mint(account1.address, convert("1000"));
         await USDC.mint(erc1271Test.address, convert("1000"));
 
         await USDC.connect(account1).approve(vault.address, convert("1000"));
         await USDC.connect(account2).approve(vault.address, convert("1000"));
-        await USDC.connect(account1).approve(volmexPerpPeriphery.address, convert("1000"));
-        await USDC.connect(account2).approve(volmexPerpPeriphery.address, convert("1000"));
+        await USDC.connect(account1).approve(PerpPeriphery.address, convert("1000"));
+        await USDC.connect(account2).approve(PerpPeriphery.address, convert("1000"));
 
         await vaultController
           .connect(account1)
-          .deposit(volmexPerpPeriphery.address, USDC.address, account1.address, convert("1000"));
+          .deposit(PerpPeriphery.address, USDC.address, account1.address, convert("1000"));
         await vaultController
           .connect(account2)
           .deposit(
-            volmexPerpPeriphery.address,
+            PerpPeriphery.address,
             USDC.address,
             erc1271Test.address,
             convert("1000"),
@@ -3098,7 +3098,7 @@ describe("Positioning", function () {
           ORDER,
           deadline,
           account1.address,
-          Asset(volmexBaseToken.address, "20000000000000000000"),
+          Asset(BaseToken.address, "20000000000000000000"),
           Asset(virtualToken.address, "20000000000000000000"),
           1,
           0,
@@ -3110,7 +3110,7 @@ describe("Positioning", function () {
           deadline,
           erc1271Test.address,
           Asset(virtualToken.address, "20000000000000000000"),
-          Asset(volmexBaseToken.address, "20000000000000000000"),
+          Asset(BaseToken.address, "20000000000000000000"),
           1,
           0,
           false,
@@ -3133,15 +3133,15 @@ describe("Positioning", function () {
 
         await USDC.connect(account1).approve(vault.address, convert("1000"));
         await USDC.connect(account2).approve(vault.address, convert("1000"));
-        await USDC.connect(account1).approve(volmexPerpPeriphery.address, convert("1000"));
-        await USDC.connect(account2).approve(volmexPerpPeriphery.address, convert("1000"));
+        await USDC.connect(account1).approve(PerpPeriphery.address, convert("1000"));
+        await USDC.connect(account2).approve(PerpPeriphery.address, convert("1000"));
 
         await vaultController
           .connect(account1)
-          .deposit(volmexPerpPeriphery.address, USDC.address, account1.address, convert("1000"));
+          .deposit(PerpPeriphery.address, USDC.address, account1.address, convert("1000"));
         await vaultController
           .connect(account2)
-          .deposit(volmexPerpPeriphery.address, USDC.address, account2.address, convert("1000"));
+          .deposit(PerpPeriphery.address, USDC.address, account2.address, convert("1000"));
 
         await (await matchingEngine.connect(account1).cancelAllOrders(100)).wait();
 
@@ -3149,7 +3149,7 @@ describe("Positioning", function () {
           ORDER,
           deadline,
           account1.address,
-          Asset(volmexBaseToken.address, "20000000000000000000"),
+          Asset(BaseToken.address, "20000000000000000000"),
           Asset(virtualToken.address, "20000000000000000000"),
           1,
           0,
@@ -3161,7 +3161,7 @@ describe("Positioning", function () {
           deadline,
           account2.address,
           Asset(virtualToken.address, "20000000000000000000"),
-          Asset(volmexBaseToken.address, "20000000000000000000"),
+          Asset(BaseToken.address, "20000000000000000000"),
           1,
           0,
           false,

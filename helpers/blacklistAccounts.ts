@@ -1,7 +1,7 @@
 import { ethers, web3 } from "hardhat";
 import { blacklistedAddresses } from "../utils/blacklistedAddresses";
 const blacklistAccounts = async () => {
-  const Periphery = await ethers.getContractFactory("VolmexPerpPeriphery");
+  const Periphery = await ethers.getContractFactory("PerpPeriphery");
   const periphery = Periphery.attach(`${process.env.PERIPHERY_ADDRESS}`);
   const iterations = Number((blacklistedAddresses.length / 50).toFixed(0));
   const isBlacklist = new Array(blacklistedAddresses.length).fill(true);

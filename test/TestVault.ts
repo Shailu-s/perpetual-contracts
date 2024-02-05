@@ -22,12 +22,12 @@ describe("Vault", function () {
   let positioning;
   let EthPositioning;
   let ethPositioning;
-  let VolmexPerpPeriphery;
-  let volmexPerpPeriphery;
+  let PerpPeriphery;
+  let PerpPeriphery;
   let FundingRate;
   let fundingRate;
   let perpViewFake;
-  let volmexPerpPeripheryEth;
+  let PerpPeripheryEth;
   let owner, alice, relayer, bob, cole;
   const proofHash = "0x6c00000000000000000000000000000000000000000000000000000000000000";
   const chainlinkTokenIndex1 =
@@ -38,12 +38,12 @@ describe("Vault", function () {
   const twapType = "0x1444f8cf";
 
   beforeEach(async function () {
-    VolmexPerpPeriphery = await ethers.getContractFactory("VolmexPerpPeriphery");
+    PerpPeriphery = await ethers.getContractFactory("PerpPeriphery");
     [owner, alice, relayer, bob, cole] = await ethers.getSigners();
     PerpetualOracle = await ethers.getContractFactory("PerpetualOracle");
     FundingRate = await ethers.getContractFactory("FundingRate");
     MatchingEngine = await ethers.getContractFactory("MatchingEngineTest");
-    perpViewFake = await smock.fake("VolmexPerpView");
+    perpViewFake = await smock.fake("PerpView");
 
     const tokenFactory = await ethers.getContractFactory("TestERC20");
     const USDC1 = await tokenFactory.deploy();
@@ -159,14 +159,14 @@ describe("Vault", function () {
 
     await DAI.mint(owner.address, daiAmount);
 
-    volmexPerpPeriphery = await upgrades.deployProxy(VolmexPerpPeriphery, [
+    PerpPeriphery = await upgrades.deployProxy(PerpPeriphery, [
       perpViewFake.address,
       perpetualOracle.address,
       [vault.address, vault.address],
       owner.address,
       relayer.address,
     ]);
-    await vaultController.setPeriphery(volmexPerpPeriphery.address);
+    await vaultController.setPeriphery(PerpPeriphery.address);
   });
   describe("deployment", function () {
     it("should fail to deploy vault", async () => {
@@ -226,13 +226,13 @@ describe("Vault", function () {
 
       const USDCVaultContract = await vaultFactory.attach(USDCVaultAddress);
       await USDC.connect(alice).approve(USDCVaultAddress, amount);
-      await USDC.connect(alice).approve(volmexPerpPeriphery.address, amount);
+      await USDC.connect(alice).approve(PerpPeriphery.address, amount);
 
       // check event has been sent
       await expect(
         vaultController
           .connect(alice)
-          .deposit(volmexPerpPeriphery.address, USDC.address, alice.address, amount),
+          .deposit(PerpPeriphery.address, USDC.address, alice.address, amount),
       )
         .to.emit(USDCVaultContract, "Deposited")
         .withArgs(USDC.address, alice.address, amount);
@@ -259,12 +259,12 @@ describe("Vault", function () {
 
       const USDCVaultContract = await vaultFactory.attach(USDCVaultAddress);
       await USDC.connect(alice).approve(USDCVaultAddress, "200000000000000000000");
-      await USDC.connect(alice).approve(volmexPerpPeriphery.address, "200000000000000000000");
+      await USDC.connect(alice).approve(PerpPeriphery.address, "200000000000000000000");
       await expect(
         vaultController
           .connect(alice)
           .deposit(
-            volmexPerpPeriphery.address,
+            PerpPeriphery.address,
             USDC.address,
             alice.address,
             "200000000000000000000",
@@ -279,16 +279,16 @@ describe("Vault", function () {
       const USDCVaultAddress = await vaultController.getVault(USDC.address);
       const USDCVaultContract = await vaultFactory.attach(USDCVaultAddress);
       await USDC.connect(alice).approve(USDCVaultAddress, amount);
-      await USDC.connect(alice).approve(volmexPerpPeriphery.address, amount);
+      await USDC.connect(alice).approve(PerpPeriphery.address, amount);
       await USDC.connect(bob).approve(USDCVaultAddress, amount);
-      await USDC.connect(bob).approve(volmexPerpPeriphery.address, amount);
+      await USDC.connect(bob).approve(PerpPeriphery.address, amount);
       await USDC.connect(cole).approve(USDCVaultAddress, amount);
-      await USDC.connect(cole).approve(volmexPerpPeriphery.address, amount);
+      await USDC.connect(cole).approve(PerpPeriphery.address, amount);
 
       await expect(
         vaultController
           .connect(alice)
-          .deposit(volmexPerpPeriphery.address, USDC.address, alice.address, amount),
+          .deposit(PerpPeriphery.address, USDC.address, alice.address, amount),
       )
         .to.emit(USDCVaultContract, "Deposited")
         .withArgs(USDC.address, alice.address, amount);
@@ -299,7 +299,7 @@ describe("Vault", function () {
       await expect(
         vaultController
           .connect(bob)
-          .deposit(volmexPerpPeriphery.address, USDC.address, bob.address, amount),
+          .deposit(PerpPeriphery.address, USDC.address, bob.address, amount),
       )
         .to.emit(USDCVaultContract, "Deposited")
         .withArgs(USDC.address, bob.address, amount);
@@ -309,7 +309,7 @@ describe("Vault", function () {
       await expect(
         vaultController
           .connect(cole)
-          .deposit(volmexPerpPeriphery.address, USDC.address, cole.address, amount),
+          .deposit(PerpPeriphery.address, USDC.address, cole.address, amount),
       ).to.be.revertedWith("V_GTSTBC");
     });
     it("Negative Test For desposit from vault after setting token balance cap for multiple users also with funds withdrawn", async () => {
@@ -320,15 +320,15 @@ describe("Vault", function () {
       const USDCVaultAddress = await vaultController.getVault(USDC.address);
       const USDCVaultContract = await vaultFactory.attach(USDCVaultAddress);
       await USDC.approve(USDCVaultAddress, amount);
-      await USDC.approve(volmexPerpPeriphery.address, amount);
+      await USDC.approve(PerpPeriphery.address, amount);
 
       await USDC.connect(bob).approve(USDCVaultAddress, amount);
-      await USDC.connect(bob).approve(volmexPerpPeriphery.address, amount);
+      await USDC.connect(bob).approve(PerpPeriphery.address, amount);
       await USDC.connect(cole).approve(USDCVaultAddress, amount);
-      await USDC.connect(cole).approve(volmexPerpPeriphery.address, amount);
+      await USDC.connect(cole).approve(PerpPeriphery.address, amount);
 
       await expect(
-        vaultController.deposit(volmexPerpPeriphery.address, USDC.address, owner.address, amount),
+        vaultController.deposit(PerpPeriphery.address, USDC.address, owner.address, amount),
       )
         .to.emit(USDCVaultContract, "Deposited")
         .withArgs(USDC.address, owner.address, amount);
@@ -339,7 +339,7 @@ describe("Vault", function () {
       await expect(
         vaultController
           .connect(bob)
-          .deposit(volmexPerpPeriphery.address, USDC.address, bob.address, amount),
+          .deposit(PerpPeriphery.address, USDC.address, bob.address, amount),
       )
         .to.emit(USDCVaultContract, "Deposited")
         .withArgs(USDC.address, bob.address, amount);
@@ -359,16 +359,16 @@ describe("Vault", function () {
       await expect(
         vaultController
           .connect(cole)
-          .deposit(volmexPerpPeriphery.address, USDC.address, cole.address, amount),
+          .deposit(PerpPeriphery.address, USDC.address, cole.address, amount),
       )
         .to.emit(USDCVaultContract, "Deposited")
         .withArgs(USDC.address, cole.address, amount);
 
       await USDC.approve(USDCVaultAddress, amount);
-      await USDC.approve(volmexPerpPeriphery.address, amount);
+      await USDC.approve(PerpPeriphery.address, amount);
       await expect(
         vaultController.deposit(
-          volmexPerpPeriphery.address,
+          PerpPeriphery.address,
           USDC.address,
           owner.address,
           parseUnits("1000000000000000000", await USDC.decimals()),
@@ -385,15 +385,15 @@ describe("Vault", function () {
       const USDCVaultAddress = await vaultController.getVault(USDC.address);
       const USDCVaultContract = await vaultFactory.attach(USDCVaultAddress);
       await USDC.approve(USDCVaultAddress, amount);
-      await USDC.approve(volmexPerpPeriphery.address, amount);
+      await USDC.approve(PerpPeriphery.address, amount);
 
       await USDC.connect(bob).approve(USDCVaultAddress, amount);
-      await USDC.connect(bob).approve(volmexPerpPeriphery.address, amount);
+      await USDC.connect(bob).approve(PerpPeriphery.address, amount);
       await USDC.connect(cole).approve(USDCVaultAddress, amount);
-      await USDC.connect(cole).approve(volmexPerpPeriphery.address, amount);
+      await USDC.connect(cole).approve(PerpPeriphery.address, amount);
 
       await expect(
-        vaultController.deposit(volmexPerpPeriphery.address, USDC.address, owner.address, amount),
+        vaultController.deposit(PerpPeriphery.address, USDC.address, owner.address, amount),
       )
         .to.emit(USDCVaultContract, "Deposited")
         .withArgs(USDC.address, owner.address, amount);
@@ -404,7 +404,7 @@ describe("Vault", function () {
       await expect(
         vaultController
           .connect(bob)
-          .deposit(volmexPerpPeriphery.address, USDC.address, bob.address, amount),
+          .deposit(PerpPeriphery.address, USDC.address, bob.address, amount),
       )
         .to.emit(USDCVaultContract, "Deposited")
         .withArgs(USDC.address, bob.address, amount);
@@ -423,11 +423,11 @@ describe("Vault", function () {
       ).to.be.revertedWith("Pausable: paused");
     });
     it("shoud not allow whitdraw when reentered", async () => {
-      VolmexPerpPeriphery = await ethers.getContractFactory("VolmexPerpPeriphery");
+      PerpPeriphery = await ethers.getContractFactory("PerpPeriphery");
       [owner, alice, relayer, bob, cole] = await ethers.getSigners();
       PerpetualOracle = await ethers.getContractFactory("PerpetualOracle");
       MatchingEngine = await ethers.getContractFactory("MatchingEngineTest");
-      perpViewFake = await smock.fake("VolmexPerpView");
+      perpViewFake = await smock.fake("PerpView");
 
       const tokenFactory = await ethers.getContractFactory("TestERC20");
       const USDC1 = await tokenFactory.deploy();
@@ -535,7 +535,7 @@ describe("Vault", function () {
 
       await DAI.mint(owner.address, daiAmount);
 
-      volmexPerpPeriphery = await upgrades.deployProxy(VolmexPerpPeriphery, [
+      PerpPeriphery = await upgrades.deployProxy(PerpPeriphery, [
         perpViewFake.address,
         perpetualOracle.address,
         [vault.address, vault.address],
@@ -548,17 +548,17 @@ describe("Vault", function () {
       const USDCVaultAddress = await vaultController.getVault(USDC.address);
       const USDCVaultContract = await vaultFactory.attach(USDCVaultAddress);
       await USDC.approve(USDCVaultAddress, amount);
-      await USDC.approve(volmexPerpPeriphery.address, amount);
+      await USDC.approve(PerpPeriphery.address, amount);
 
       await USDC.connect(bob).approve(USDCVaultAddress, amount);
-      await USDC.connect(bob).approve(volmexPerpPeriphery.address, amount);
+      await USDC.connect(bob).approve(PerpPeriphery.address, amount);
       await USDC.connect(cole).approve(USDCVaultAddress, amount);
-      await USDC.connect(cole).approve(volmexPerpPeriphery.address, amount);
+      await USDC.connect(cole).approve(PerpPeriphery.address, amount);
 
       await expect(
         vaultController
           .connect(bob)
-          .deposit(volmexPerpPeriphery.address, USDC.address, bob.address, amount),
+          .deposit(PerpPeriphery.address, USDC.address, bob.address, amount),
       )
         .to.emit(USDCVaultContract, "Deposited")
         .withArgs(USDC.address, bob.address, amount);
@@ -580,12 +580,12 @@ describe("Vault", function () {
     });
 
     it("shoud not allow  deposit when reentered", async () => {
-      VolmexPerpPeriphery = await ethers.getContractFactory("VolmexPerpPeriphery");
+      PerpPeriphery = await ethers.getContractFactory("PerpPeriphery");
       [owner, alice, relayer, bob, cole] = await ethers.getSigners();
       PerpetualOracle = await ethers.getContractFactory("PerpetualOracle");
 
       MatchingEngine = await ethers.getContractFactory("MatchingEngineTest");
-      perpViewFake = await smock.fake("VolmexPerpView");
+      perpViewFake = await smock.fake("PerpView");
 
       const tokenFactory = await ethers.getContractFactory("TestERC20");
       const USDC1 = await tokenFactory.deploy();
@@ -693,7 +693,7 @@ describe("Vault", function () {
 
       await DAI.mint(owner.address, daiAmount);
 
-      volmexPerpPeriphery = await upgrades.deployProxy(VolmexPerpPeriphery, [
+      PerpPeriphery = await upgrades.deployProxy(PerpPeriphery, [
         perpViewFake.address,
         perpetualOracle.address,
         [vault.address, vault.address],
@@ -706,12 +706,12 @@ describe("Vault", function () {
       const USDCVaultAddress = await vaultController.getVault(USDC.address);
       const USDCVaultContract = await vaultFactory.attach(USDCVaultAddress);
       await USDC.approve(USDCVaultAddress, amount);
-      await USDC.approve(volmexPerpPeriphery.address, amount);
+      await USDC.approve(PerpPeriphery.address, amount);
 
       await USDC.connect(bob).approve(USDCVaultAddress, amount);
-      await USDC.connect(bob).approve(volmexPerpPeriphery.address, amount);
+      await USDC.connect(bob).approve(PerpPeriphery.address, amount);
       await USDC.connect(cole).approve(USDCVaultAddress, amount);
-      await USDC.connect(cole).approve(volmexPerpPeriphery.address, amount);
+      await USDC.connect(cole).approve(PerpPeriphery.address, amount);
       const devilERC20 = await ethers.getContractFactory("DevilTestERC20");
       const devil = await devilERC20.deploy();
       await devil.deployed();
@@ -726,7 +726,7 @@ describe("Vault", function () {
       await expect(
         vaultController1
           .connect(bob)
-          .deposit(volmexPerpPeriphery.address, bob.address, amount, vault.address),
+          .deposit(PerpPeriphery.address, bob.address, amount, vault.address),
       ).to.be.revertedWith("ReentrancyGuard: reentrant call");
     });
 
@@ -749,13 +749,13 @@ describe("Vault", function () {
 
       const USDCVaultContract = await vaultFactory.attach(USDCVaultAddress);
       await USDC.connect(alice).approve(USDCVaultAddress, userBalance);
-      await USDC.connect(alice).approve(volmexPerpPeriphery.address, userBalance);
+      await USDC.connect(alice).approve(PerpPeriphery.address, userBalance);
 
       // Deposit max amount equal to balance of the user
       await expect(
         vaultController
           .connect(alice)
-          .deposit(volmexPerpPeriphery.address, USDC.address, alice.address, userBalance),
+          .deposit(PerpPeriphery.address, USDC.address, alice.address, userBalance),
       )
         .to.emit(USDCVaultContract, "Deposited")
         .withArgs(USDC.address, alice.address, userBalance);
@@ -776,7 +776,7 @@ describe("Vault", function () {
       const userBalance = await USDC.balanceOf(alice.address);
       // Deposit max amount equal to balance of the user
       await expect(
-        vault.deposit(volmexPerpPeriphery.address, userBalance, alice.address),
+        vault.deposit(PerpPeriphery.address, userBalance, alice.address),
       ).to.be.revertedWith("V_OVC");
     });
 
@@ -796,12 +796,12 @@ describe("Vault", function () {
 
       const USDCVaultContract = await vaultFactory.attach(USDCVaultAddress);
       await USDC.connect(alice).approve(USDCVaultAddress, userBalance2x);
-      await USDC.connect(alice).approve(volmexPerpPeriphery.address, userBalance2x);
+      await USDC.connect(alice).approve(PerpPeriphery.address, userBalance2x);
 
       // Deposit max amount equal to balance of the user
       await expect(
         vaultController.connect(alice).deposit(
-          volmexPerpPeriphery.address,
+          PerpPeriphery.address,
           USDC.address,
           alice.address,
           userBalance2x, // 2x - user balance
@@ -817,7 +817,7 @@ describe("Vault", function () {
       await expect(
         vaultController
           .connect(alice)
-          .deposit(volmexPerpPeriphery.address, USDC.address, alice.address, userBalance),
+          .deposit(PerpPeriphery.address, USDC.address, alice.address, userBalance),
       ).to.be.revertedWith("Pausable: paused");
     });
 
@@ -831,7 +831,7 @@ describe("Vault", function () {
       await expect(
         vaultController
           .connect(owner)
-          .deposit(volmexPerpPeriphery.address, USDC.address, owner.address, amount),
+          .deposit(PerpPeriphery.address, USDC.address, owner.address, amount),
       ).to.be.revertedWith("ERC20: insufficient allowance");
     });
 
@@ -842,13 +842,13 @@ describe("Vault", function () {
 
       const USDCVaultAddress = await vaultController.getVault(USDC.address);
       const USDCVaultContract = await vaultFactory.attach(USDCVaultAddress);
-      await USDC.connect(alice).approve(volmexPerpPeriphery.address, amount);
+      await USDC.connect(alice).approve(PerpPeriphery.address, amount);
 
       await USDC.connect(alice).approve(USDCVaultAddress, amount);
       await expect(
         vaultController
           .connect(alice)
-          .deposit(volmexPerpPeriphery.address, USDC.address, alice.address, amount),
+          .deposit(PerpPeriphery.address, USDC.address, alice.address, amount),
       ).to.be.revertedWith("V_GTSTBC");
     });
 
@@ -860,13 +860,13 @@ describe("Vault", function () {
       const USDCVaultContract = await vaultFactory.attach(USDCVaultAddress);
 
       await USDC.connect(alice).approve(USDCVaultAddress, amount);
-      await USDC.connect(alice).approve(volmexPerpPeriphery.address, amount);
+      await USDC.connect(alice).approve(PerpPeriphery.address, amount);
 
       USDC.setTransferFeeRatio(50);
       await expect(
         vaultController
           .connect(alice)
-          .deposit(volmexPerpPeriphery.address, USDC.address, alice.address, amount),
+          .deposit(PerpPeriphery.address, USDC.address, alice.address, amount),
       ).to.be.revertedWith("V_IBA");
       USDC.setTransferFeeRatio(0);
     });
@@ -893,12 +893,12 @@ describe("Vault", function () {
       expect(await vault.getTotalDebt()).to.eq(parseUnits("100", await USDC.decimals()));
     });
     it("Negative Test for transferFundToVault", async () => {
-      VolmexPerpPeriphery = await ethers.getContractFactory("VolmexPerpPeriphery");
+      PerpPeriphery = await ethers.getContractFactory("PerpPeriphery");
       const [owner, alice, relayer, bob, cole] = await ethers.getSigners();
       PerpetualOracle = await ethers.getContractFactory("PerpetualOracle");
 
       MatchingEngine = await ethers.getContractFactory("MatchingEngineTest");
-      perpViewFake = await smock.fake("VolmexPerpView");
+      perpViewFake = await smock.fake("PerpView");
 
       const tokenFactory = await ethers.getContractFactory("TestERC20");
       const USDC1 = await tokenFactory.deploy();
@@ -1006,7 +1006,7 @@ describe("Vault", function () {
 
       await DAI.mint(owner.address, daiAmount);
 
-      volmexPerpPeriphery = await upgrades.deployProxy(VolmexPerpPeriphery, [
+      PerpPeriphery = await upgrades.deployProxy(PerpPeriphery, [
         perpViewFake.address,
         perpetualOracle.address,
         [vault.address, vault.address],
@@ -1019,12 +1019,12 @@ describe("Vault", function () {
       const USDCVaultAddress = await vaultController.getVault(USDC.address);
       const USDCVaultContract = await vaultFactory.attach(USDCVaultAddress);
       await USDC.approve(USDCVaultAddress, amount);
-      await USDC.approve(volmexPerpPeriphery.address, amount);
+      await USDC.approve(PerpPeriphery.address, amount);
 
       await USDC.connect(bob).approve(USDCVaultAddress, amount);
-      await USDC.connect(bob).approve(volmexPerpPeriphery.address, amount);
+      await USDC.connect(bob).approve(PerpPeriphery.address, amount);
       await USDC.connect(cole).approve(USDCVaultAddress, amount);
-      await USDC.connect(cole).approve(volmexPerpPeriphery.address, amount);
+      await USDC.connect(cole).approve(PerpPeriphery.address, amount);
       const devilERC20 = await ethers.getContractFactory("VaultTestERC20");
       const devil = await devilERC20.deploy();
       await devil.deployed();
